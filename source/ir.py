@@ -78,6 +78,11 @@ class IRMeshGeometry:
     color: list[tuple[float, float, float, float]] = field(default_factory=list)
     material_slot: int = 0
     source_mesh: str | None = None
+    # Original Blender vertex index for every split vertex (skinning needs it).
+    orig_vertex_index: list[int] = field(default_factory=list)
+    # When set, ``coord`` is empty and ``coord_index`` points into the named
+    # humanoid's shared skinCoord Coordinate node.
+    skin_coord_def: str | None = None
 
 
 @dataclass
@@ -153,6 +158,7 @@ class IRAnimation:
     """
 
     target: str
+    target_kind: str = "transform"  # "transform" (OB_ DEF) or "joint" (HAnimJoint DEF)
     keys: list[float] = field(default_factory=list)
     translations: list[tuple[float, float, float]] = field(default_factory=list)
     rotations: list[tuple[float, float, float, float]] = field(default_factory=list)
@@ -181,6 +187,7 @@ class IRInstance:
     children: list["IRInstance"] = field(default_factory=list)
     light: IRLight | None = None
     viewpoint: IRViewpoint | None = None
+    humanoid_name: str | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -199,6 +206,37 @@ class IRInstance:
 
 
 @dataclass
+class IRJoint:
+    """One HAnimJoint: a Blender bone. ``center`` is the bone head in humanoid space."""
+
+    name: str
+    center: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    children: list["IRJoint"] = field(default_factory=list)
+    skin_coord_index: list[int] = field(default_factory=list)
+    skin_coord_weight: list[float] = field(default_factory=list)
+
+    def iter_joints(self):
+        yield self
+        for child in self.children:
+            yield from child.iter_joints()
+
+
+@dataclass
+class IRHumanoid:
+    """An HAnimHumanoid built from one armature and the meshes it deforms."""
+
+    name: str
+    transform: IRTransform = field(default_factory=IRTransform)
+    root_joints: list[IRJoint] = field(default_factory=list)
+    skin_coord: list[tuple[float, float, float]] = field(default_factory=list)
+    skin_shapes: list[IRShape] = field(default_factory=list)
+
+    def iter_joints(self):
+        for root in self.root_joints:
+            yield from root.iter_joints()
+
+
+@dataclass
 class IRScene:
     name: str
     source_version: str = "blender"
@@ -213,6 +251,7 @@ class IRScene:
     navigation_types: list[str] = field(default_factory=list)
     diagnostics: list[str] = field(default_factory=list)
     animations: list[IRAnimation] = field(default_factory=list)
+    humanoids: list[IRHumanoid] = field(default_factory=list)
     cycle_interval: float | None = None
     background_color: tuple[float, float, float] | None = None
 

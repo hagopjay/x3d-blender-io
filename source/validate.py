@@ -151,6 +151,8 @@ def validate_tree_with_x3d_py(root, x3d_module) -> ValidationResult:
                     continue
                 try:
                     node_class(**{name: _coerce_field(value, declared[name])})
+                except SystemExit as exc:  # x3d.py halts on some HAnim problems
+                    errors.append(f"<{tag} {name}=...>: x3d.py halted ({exc})")
                 except Exception as exc:
                     errors.append(f"<{tag} {name}=...>: {exc}")
         for child in element:

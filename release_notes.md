@@ -2,6 +2,7 @@
 - New **X3D Version** export option: X3D 3.3 (unchanged upstream writer) or X3D 4.0 (PhysicalMaterial / UnlitMaterial, PBR textures, UVs, normals, vertex colours, per-material Shapes, DEF/USE sharing, path-mode texture handling, self-validation).
 - Importer understands PhysicalMaterial and UnlitMaterial, Appearance alphaMode/alphaCutoff and IndexedFaceSet solid; object and mesh names survive round trips.
 - X3D 4.0 path now writes nested Transform hierarchy, PointLight/SpotLight/DirectionalLight, Viewpoint, NavigationInfo, Background, curve/surface/text objects as meshes, and optional sampled animation (TimeSensor, interpolators, ROUTEs).
+- Armatures export as HAnim 2.0 humanoids: joint hierarchy, skinned meshes with weights, and joint rotation animation relative to rest.
 - Importer rebuilds keyframe animation from XML ROUTEs (TimeSensor + interpolators) as world-space keyframes on the affected objects.
 - Importer reads plain SFString attributes (e.g. Viewpoint description) in the XML encoding.
 - Swatch-book fixture (`tools/swatch_book.py`) and export → validate → reimport test under Blender 5.2.
