@@ -4322,6 +4322,199 @@ def translateTimeSensor(node, action, ancestry):
         time_cu.extend = Blender.IpoCurve.ExtendTypes.CYCLIC  # or - EXTRAP, CYCLIC_EXTRAP, CONST,
 
 
+# -----------------------------------------------------------------------------------
+# X3D XML ROUTE-driven animation (TimeSensor -> interpolators -> Transform)
+
+
+def _x3d_transform_matrix(tx, rot, sca, cent=None, scaori=None):
+    """Compose an X3D Transform matrix: T * C * R * SR * S * -SR * -C."""
+    mat = Matrix.Translation(tx) if tx else Matrix()
+    if cent:
+        mat = mat @ Matrix.Translation(cent)
+    if rot:
+        mat = mat @ translateRotation(rot)
+    if scaori:
+        mat = mat @ translateRotation(scaori)
+    if sca:
+        mat = mat @ translateScale(sca)
+    if scaori:
+        mat = mat @ translateRotation(scaori).inverted()
+    if cent:
+        mat = mat @ Matrix.Translation(cent).inverted()
+    return mat
+
+
+def _interpolate_channel(keys, values, time, kind):
+    """Linear (or slerp for rotations) interpolation of an X3D interpolator at ``time``."""
+    if not keys:
+        return None
+    if time <= keys[0]:
+        return values[0]
+    if time >= keys[-1]:
+        return values[-1]
+    for index in range(1, len(keys)):
+        if keys[index] >= time:
+            span = keys[index] - keys[index - 1]
+            factor = 0.0 if span <= 0.0 else (time - keys[index - 1]) / span
+            left, right = values[index - 1], values[index]
+            if kind == "rotation":
+                q_left = Quaternion(Vector(left[:3]).normalized() if Vector(left[:3]).length else Vector((0, 0, 1)), left[3])
+                q_right = Quaternion(Vector(right[:3]).normalized() if Vector(right[:3]).length else Vector((0, 0, 1)), right[3])
+                q = q_left.slerp(q_right, factor)
+                axis, angle = q.to_axis_angle()
+                return (axis.x, axis.y, axis.z, angle)
+            return tuple(a + (b - a) * factor for a, b in zip(left, right))
+    return values[-1]
+
+
+def importRoutesXML(all_nodes, global_matrix, bpycontext):
+    """Turn XML <ROUTE> chains into keyframes on the objects under animated Transforms.
+
+    Objects are imported flat (world matrices), so for every key the world
+    matrix is rebuilt as global * ancestors * animated Transform * descendants.
+    """
+    routes = []
+    for node, _ancestry in all_nodes:
+        if getattr(node, "x3dNode", None) is None or node.getSpec() != 'ROUTE':
+            continue
+        attrs = {name: _attribute_raw(node, name) for name in ('fromNode', 'fromField', 'toNode', 'toField')}
+        if all(attrs.values()):
+            routes.append(attrs)
+    if not routes:
+        return
+
+    root = all_nodes[0][0]
+    defDict = root.getDefDict()
+
+    timers_for_interp = {}
+    channels = {}  # target DEF -> {'translation': node, 'rotation': node, 'scale': node}
+    for route in routes:
+        from_field = route['fromField'].replace('_changed', '')
+        to_field = route['toField'].replace('set_', '')
+        if from_field == 'fraction' and to_field == 'fraction':
+            timers_for_interp[route['toNode']] = route['fromNode']
+        elif from_field == 'value' and to_field in {'translation', 'rotation', 'scale'}:
+            channels.setdefault(route['toNode'], {})[to_field] = route['fromNode']
+
+    scene = bpycontext.scene
+    fps = scene.render.fps / scene.render.fps_base
+    frame_start = scene.frame_start
+    last_frame = frame_start
+
+    for target_def, channel_defs in channels.items():
+        target = defDict.get(target_def)
+        if target is None or target.getSpec() != 'Transform':
+            logger.warning("ROUTE target %r is not a Transform; skipped", target_def)
+            continue
+
+        key_lists = {}
+        value_lists = {}
+        cycle_interval = None
+        loop = False
+        for field, interp_def in channel_defs.items():
+            interp = defDict.get(interp_def)
+            if interp is None:
+                continue
+            width = 4 if field == 'rotation' else 3
+            keys = [float(k) for k in interp.getFieldAsArray('key', 0, ())]
+            values = [tuple(float(v) for v in value) for value in interp.getFieldAsArray('keyValue', width, ())]
+            if not keys or len(values) < len(keys):
+                continue
+            key_lists[field] = keys
+            value_lists[field] = values[:len(keys)]
+            timer = defDict.get(timers_for_interp.get(interp_def, ''))
+            if timer is not None and cycle_interval is None:
+                cycle_interval = timer.getFieldAsFloat('cycleInterval', 1.0, ())
+                loop = timer.getFieldAsBool('loop', False, ())
+        if not key_lists:
+            continue
+        cycle_interval = cycle_interval or 1.0
+        union_keys = sorted({k for keys in key_lists.values() for k in keys})
+
+        # Static fields of the animated Transform
+        static_tx = target.getFieldAsFloatTuple('translation', None, ())
+        static_rot = target.getFieldAsFloatTuple('rotation', None, ())
+        static_sca = target.getFieldAsFloatTuple('scale', None, ())
+        cent = target.getFieldAsFloatTuple('center', None, ())
+        scaori = target.getFieldAsFloatTuple('scaleOrientation', None, ())
+
+        # Objects whose ancestry passes through the animated Transform
+        for node, ancestry in all_nodes:
+            bpyob = getattr(node, 'blendObject', None)
+            if bpyob is None or target not in ancestry:
+                continue
+            index = ancestry.index(target)
+            above = Matrix()
+            for anc in ancestry[:index]:
+                if anc.getSpec() == 'Transform':
+                    above = above @ translateTransform(anc, ancestry)
+            below = Matrix()
+            for anc in ancestry[index + 1:]:
+                if anc.getSpec() == 'Transform':
+                    below = below @ translateTransform(anc, ancestry)
+            if node.getSpec() == 'Transform':
+                below = below @ translateTransform(node, ancestry)
+
+            # Non-Transform nodes (lights, viewpoints) carry their own local offset
+            # in the static world matrix; recover it so it is kept per key.
+            static_world = bpyob.matrix_world.copy()
+            static_chain = global_matrix @ above @ _x3d_transform_matrix(static_tx, static_rot, static_sca, cent, scaori) @ below
+            try:
+                own_offset = static_chain.inverted() @ static_world
+            except ValueError:
+                own_offset = Matrix()
+
+            if bpyob.animation_data is None:
+                bpyob.animation_data_create()
+            action = bpy.data.actions.new(f"{bpyob.name}_x3d")
+            bpyob.animation_data.action = action
+            try:  # Blender 4.4+ slotted actions
+                if hasattr(action, "slots") and not action.slots:
+                    slot = action.slots.new(id_type='OBJECT', name=bpyob.name)
+                    bpyob.animation_data.action_slot = slot
+            except Exception:
+                pass
+            bpyob.rotation_mode = 'QUATERNION'
+
+            for key in union_keys:
+                tx = _interpolate_channel(key_lists.get('translation'), value_lists.get('translation'), key, 'translation') or static_tx
+                rot = _interpolate_channel(key_lists.get('rotation'), value_lists.get('rotation'), key, 'rotation') or static_rot
+                sca = _interpolate_channel(key_lists.get('scale'), value_lists.get('scale'), key, 'scale') or static_sca
+                world = global_matrix @ above @ _x3d_transform_matrix(tx, rot, sca, cent, scaori) @ below @ own_offset
+                if bpyob.parent is not None:
+                    world = bpyob.parent.matrix_world.inverted() @ world
+                frame = frame_start + key * cycle_interval * fps
+                last_frame = max(last_frame, frame)
+                loc, quat, scale = world.decompose()
+                bpyob.location = loc
+                bpyob.rotation_quaternion = quat
+                bpyob.scale = scale
+                bpyob.keyframe_insert("location", frame=frame)
+                bpyob.keyframe_insert("rotation_quaternion", frame=frame)
+                bpyob.keyframe_insert("scale", frame=frame)
+
+            # TimeSensor loop is deliberately not turned into a CYCLES modifier:
+            # the modifier wraps the last key onto the first, which hides the
+            # final pose; users can add cycling in the graph editor.
+            del loop
+            for fcu in _action_fcurves(action):
+                for kf in fcu.keyframe_points:
+                    kf.interpolation = 'LINEAR'
+
+    if last_frame > scene.frame_end:
+        scene.frame_end = int(round(last_frame))
+
+
+def _action_fcurves(action):
+    fcurves = getattr(action, "fcurves", None)
+    if fcurves is not None and len(fcurves):
+        return fcurves
+    try:
+        return action.layers[0].strips[0].channelbag(action.slots[0]).fcurves
+    except Exception:
+        return fcurves if fcurves is not None else []
+
+
 def importRoute(node, ancestry):
     """
     Animation route only at the moment
@@ -4480,6 +4673,10 @@ def load_web3d(
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
         importRoute(node, ancestry)
+    try:
+        importRoutesXML(all_nodes, global_matrix, bpycontext)
+    except Exception as exc:  # animation must never break a geometry import
+        logger.error("XML ROUTE animation import failed: %s", exc, exc_info=True)
 
     for node, ancestry in all_nodes:
         if node.isRoot():

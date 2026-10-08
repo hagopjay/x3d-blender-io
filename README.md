@@ -33,7 +33,7 @@ python -m unittest test_emit_x3d40 test_parse_x3d40 test_material_analysis   # n
 python -m unittest test_roundtrip_bpy   # needs Blender's `bpy` module (pip install bpy) or run inside Blender
 ```
 
-`tools/scene_fixture.py` builds a parented cube, three lights, a camera, a text object and a keyframed cube; its round-trip test checks nesting, light types, viewpoint, text geometry, interpolators and ROUTEs, and that everything lands back in world space on import. Known gap: the importer does not yet rebuild keyframes from XML `ROUTE`s (its animation reader is VRML-only), so animation is export-only for now.
+`tools/scene_fixture.py` builds a parented cube, three lights, a camera, a text object and a keyframed cube; its round-trip test checks nesting, light types, viewpoint, text geometry, interpolators and ROUTEs, and that everything lands back in world space on import. On import, XML `ROUTE` chains (TimeSensor → PositionInterpolator / OrientationInterpolator / scale → Transform) become linear keyframes on every object under the animated Transform, in world space, so animated files round-trip; the TimeSensor `loop` flag is not turned into a cycle modifier.
 
 `tools/swatch_book.py` builds the seven-swatch fixture scene (dielectric, metal, glass, unlit, textured,
 two-material smooth sphere with vertex colours, shared-mesh cubes) that the round-trip test exports,

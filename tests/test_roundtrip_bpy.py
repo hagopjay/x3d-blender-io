@@ -280,6 +280,32 @@ class SceneStructureRoundTripTests(unittest.TestCase):
         cam_delta = (camera.matrix_world.to_translation() - Vector((7.0, -7.0, 5.0))).length
         self.assertLess(cam_delta, 1e-2)
 
+    def test_reimport_restores_animation(self):
+        import bpy
+        from mathutils import Vector
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.context.scene.frame_start = 1
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.export_path), {"FINISHED"})
+        mover = next(obj for obj in bpy.context.scene.objects if "Mover" in obj.name)
+        self.assertIsNotNone(mover.animation_data)
+        self.assertIsNotNone(mover.animation_data.action)
+        scene = bpy.context.scene
+        self.assertGreaterEqual(scene.frame_end, 24)
+        scene.frame_set(1)
+        bpy.context.view_layer.update()
+        start = mover.matrix_world.to_translation()
+        scene.frame_set(24)
+        bpy.context.view_layer.update()
+        end = mover.matrix_world.to_translation()
+        self.assertLess((start - Vector((0.0, 3.0, 0.0))).length, 1e-2, start)
+        self.assertLess((end - Vector((3.0, 3.0, 1.0))).length, 1e-2, end)
+        axis, angle = mover.matrix_world.to_quaternion().to_axis_angle()
+        self.assertAlmostEqual(abs(angle), 1.5708, places=2)
+        self.assertAlmostEqual(abs(axis.z), 1.0, places=2)
+        static = next(obj for obj in bpy.context.scene.objects if "ChildCube" in obj.name)
+        self.assertIsNone(static.animation_data)
+
 
 if __name__ == "__main__":
     unittest.main()
