@@ -280,6 +280,111 @@ class SceneStructureRoundTripTests(unittest.TestCase):
         cam_delta = (camera.matrix_world.to_translation() - Vector((7.0, -7.0, 5.0))).length
         self.assertLess(cam_delta, 1e-2)
 
+    def test_reimport_restores_animation(self):
+        import bpy
+        from mathutils import Vector
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.context.scene.frame_start = 1
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.export_path), {"FINISHED"})
+        mover = next(obj for obj in bpy.context.scene.objects if "Mover" in obj.name)
+        self.assertIsNotNone(mover.animation_data)
+        self.assertIsNotNone(mover.animation_data.action)
+        scene = bpy.context.scene
+        self.assertGreaterEqual(scene.frame_end, 24)
+        scene.frame_set(1)
+        bpy.context.view_layer.update()
+        start = mover.matrix_world.to_translation()
+        scene.frame_set(24)
+        bpy.context.view_layer.update()
+        end = mover.matrix_world.to_translation()
+        self.assertLess((start - Vector((0.0, 3.0, 0.0))).length, 1e-2, start)
+        self.assertLess((end - Vector((3.0, 3.0, 1.0))).length, 1e-2, end)
+        axis, angle = mover.matrix_world.to_quaternion().to_axis_angle()
+        self.assertAlmostEqual(abs(angle), 1.5708, places=2)
+        self.assertAlmostEqual(abs(axis.z), 1.0, places=2)
+        static = next(obj for obj in bpy.context.scene.objects if "ChildCube" in obj.name)
+        self.assertIsNone(static.animation_data)
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class HAnimExportTests(unittest.TestCase):
+    """Armature + skinned mesh -> HAnimHumanoid with joints, skin and joint animation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_hanim_")
+        _register_extension(cls.tmpdir)
+        if str(TOOLS_DIR) not in sys.path:
+            sys.path.insert(0, str(TOOLS_DIR))
+        import bpy
+        from hanim_fixture import build_hanim_fixture
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        cls.objects = build_hanim_fixture()
+        cls.vertex_count = len(cls.objects["skin"].data.vertices)
+        cls.export_path = os.path.join(cls.tmpdir, "hanim.x3d")
+        result = bpy.ops.export_scene.x3d(
+            filepath=cls.export_path, x3d_version="X3D40", use_animation=True, use_selection=False
+        )
+        assert result == {"FINISHED"}, result
+        cls.xml_text = Path(cls.export_path).read_text(encoding="utf-8")
+        cls.root = ET.fromstring(cls.xml_text)
+
+    def test_validates(self):
+        sys.path.insert(0, str(SOURCE_DIR))
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        self.assertTrue(validate_xml_file(self.export_path).valid)
+        semantic = validate_with_x3d_py(self.export_path)
+        if semantic is not None:
+            self.assertEqual(semantic.errors, [], semantic.errors)
+            if os.environ.get("X3D_STRICT_VALIDATION") == "1":
+                self.assertEqual(semantic.warnings, [], semantic.warnings)
+
+    def test_humanoid_skeleton_and_skin(self):
+        humanoid = self.root.find(".//HAnimHumanoid")
+        self.assertIsNotNone(humanoid)
+        self.assertEqual(humanoid.attrib["version"], "2.0")
+        lower = humanoid.find("HAnimJoint[@containerField='skeleton']")
+        self.assertIsNotNone(lower)
+        self.assertEqual(lower.attrib["name"], "lower")
+        upper = lower.find("HAnimJoint")
+        self.assertIsNotNone(upper, "child bone must nest inside its parent joint")
+        self.assertEqual(upper.attrib["name"], "upper")
+        self.assertEqual(upper.attrib["center"], "0.000000 0.000000 1.000000")
+        joint_refs = humanoid.findall("HAnimJoint[@containerField='joints']")
+        self.assertEqual(len(joint_refs), 2)
+        skin_coord = humanoid.find("Coordinate[@containerField='skinCoord']")
+        self.assertIsNotNone(skin_coord)
+        self.assertGreaterEqual(len(skin_coord.attrib["point"].split()) // 3, self.vertex_count)
+        skin_shape = humanoid.find("Shape[@containerField='skin']")
+        self.assertIsNotNone(skin_shape)
+        self.assertEqual(skin_shape.find("IndexedFaceSet/Coordinate").attrib["USE"], skin_coord.attrib["DEF"])
+        # every skin vertex is weighted by at least one joint
+        weighted = set()
+        for joint in (lower, upper):
+            indices = [int(i) for i in joint.attrib["skinCoordIndex"].split()]
+            weights = [float(w) for w in joint.attrib["skinCoordWeight"].split()]
+            self.assertEqual(len(indices), len(weights))
+            weighted.update(indices)
+        self.assertEqual(len(weighted), len(skin_coord.attrib["point"].split()) // 3)
+        # the skinned mesh is not also written as a plain Shape
+        self.assertIsNone(self.root.find(".//Transform[@DEF='OB_Arm']"))
+
+    def test_joint_animation_routed(self):
+        upper_def = self.root.find(".//HAnimJoint[@name='upper']").attrib["DEF"]
+        interp = self.root.find("Scene/OrientationInterpolator")
+        self.assertIsNotNone(interp)
+        routes = {(r.attrib["fromNode"], r.attrib["toNode"], r.attrib["toField"]) for r in self.root.findall("Scene/ROUTE")}
+        self.assertIn((interp.attrib["DEF"], upper_def, "set_rotation"), routes)
+        values = [float(v) for v in interp.attrib["keyValue"].split()]
+        last = values[-4:]
+        self.assertAlmostEqual(abs(last[3]), 1.0472, places=2)  # 60 degrees
+        self.assertAlmostEqual(abs(last[0]), 1.0, places=2)      # about the X axis
+        lower_def = self.root.find(".//HAnimJoint[@name='lower']").attrib["DEF"]
+        self.assertFalse(any(r[1] == lower_def for r in routes), "unposed bone must not be animated")
+
 
 if __name__ == "__main__":
     unittest.main()

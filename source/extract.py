@@ -13,10 +13,10 @@ from __future__ import annotations
 import math
 
 try:
-    from .ir import IRAnimation, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
     from .material import analyze_material
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
     from material import analyze_material
 
 
@@ -76,8 +76,12 @@ def extract_mesh_geometries(
     material_slots=None,
     use_triangulate: bool = False,
     use_normals: bool = False,
+    vertex_matrix=None,
 ) -> list[IRMeshGeometry]:
     """Split a Blender mesh into one IRMeshGeometry per used material slot.
+
+    ``vertex_matrix`` (optional) transforms every vertex (used to express a
+    skinned mesh in its armature's space).
 
     Vertices are split on (vertex, uv, color, normal) so that all X3D arrays
     share ``coordIndex``. Normals are only exported when ``use_normals`` is
@@ -120,6 +124,7 @@ def extract_mesh_geometries(
         tex_coord: list[tuple[float, float]] = []
         color: list[tuple[float, float, float, float]] = []
         coord_index: list[int] = []
+        orig_index: list[int] = []
         any_smooth = False
 
         def emit_vertex(vertex_index, loop_index):
@@ -140,7 +145,11 @@ def extract_mesh_geometries(
             if index is None:
                 index = len(coord)
                 vertex_map[key] = index
-                coord.append(tuple(float(value) for value in vertices[vertex_index].co[:3]))
+                position = vertices[vertex_index].co
+                if vertex_matrix is not None:
+                    position = vertex_matrix @ position
+                coord.append(tuple(float(value) for value in position[:3]))
+                orig_index.append(int(vertex_index))
                 if uv is not None:
                     tex_coord.append((float(uv[0]), float(uv[1])))
                 if col is not None:
@@ -183,9 +192,156 @@ def extract_mesh_geometries(
                 color=color,
                 material_slot=slot_index,
                 source_mesh=name,
+                orig_vertex_index=orig_index,
             )
         )
     return geometries
+
+
+# ---------------------------------------------------------------------------
+# HAnim (armatures)
+
+
+def _skinned_meshes(armature, candidates):
+    """Mesh objects deformed by ``armature`` through an Armature modifier or armature parenting."""
+    skinned = []
+    for obj in candidates:
+        if obj.type != "MESH":
+            continue
+        if any(m.type == "ARMATURE" and m.object == armature for m in obj.modifiers):
+            skinned.append(obj)
+        elif obj.parent == armature and obj.parent_type == "ARMATURE":
+            skinned.append(obj)
+    return skinned
+
+
+def _build_joint_tree(armature):
+    """Return (root IRJoints, {bone name: IRJoint}) from the armature's rest bones."""
+    joints = {}
+    for bone in armature.data.bones:
+        head = bone.head_local
+        joints[bone.name] = IRJoint(name=bone.name, center=(float(head[0]), float(head[1]), float(head[2])))
+    roots = []
+    for bone in armature.data.bones:
+        joint = joints[bone.name]
+        if bone.parent is not None and bone.parent.name in joints:
+            joints[bone.parent.name].children.append(joint)
+        else:
+            roots.append(joint)
+    return roots, joints
+
+
+def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_triangulate=False):
+    """Build an HAnimHumanoid for ``armature`` with ``skinned`` meshes as skin.
+
+    Skin vertices are expressed in armature space and pooled into one
+    skinCoord list; each joint receives the vertex indices and weights of
+    its vertex group. ``material_sink(material)`` registers a material and
+    returns its name. Returns (humanoid, skin geometries).
+    """
+    roots, joints = _build_joint_tree(armature)
+    skin_geometries: list[IRMeshGeometry] = []
+    humanoid = IRHumanoid(name=armature.name, transform=_matrix_transform(local_matrix), root_joints=roots)
+    skin_def = f"hanim_{_safe_key(armature.name)}_skinCoord"
+    armature_inverse = armature.matrix_world.inverted()
+
+    for mesh_obj in skinned:
+        mesh = mesh_obj.data
+        if use_triangulate and hasattr(mesh, "calc_loop_triangles"):
+            mesh.calc_loop_triangles()
+        geometries = extract_mesh_geometries(
+            mesh,
+            name=f"{mesh_obj.name}_skin",
+            material_slots=mesh_obj.material_slots,
+            use_triangulate=use_triangulate,
+            use_normals=False,
+            vertex_matrix=armature_inverse @ mesh_obj.matrix_world,
+        )
+        group_names = [group.name for group in mesh_obj.vertex_groups]
+        for geometry in geometries:
+            offset = len(humanoid.skin_coord)
+            humanoid.skin_coord.extend(geometry.coord)
+            for split_index, vertex_index in enumerate(geometry.orig_vertex_index):
+                for element in mesh.vertices[vertex_index].groups:
+                    if element.weight <= 0.0 or element.group >= len(group_names):
+                        continue
+                    joint = joints.get(group_names[element.group])
+                    if joint is None:
+                        continue
+                    joint.skin_coord_index.append(offset + split_index)
+                    joint.skin_coord_weight.append(float(element.weight))
+            geometry.coord_index = [index + offset if index >= 0 else -1 for index in geometry.coord_index]
+            geometry.coord = []
+            geometry.skin_coord_def = skin_def
+            slots = mesh_obj.material_slots
+            material = slots[geometry.material_slot].material if slots and geometry.material_slot < len(slots) else None
+            humanoid.skin_shapes.append(
+                IRShape(geometry_name=geometry.name, material_name=material_sink(material) if material else None)
+            )
+        skin_geometries.extend(geometries)
+    return humanoid, skin_geometries
+
+
+def _safe_key(name: str) -> str:
+    return "".join(char if (char.isalnum() or char == "_") else "_" for char in name)
+
+
+def _sample_joint_animation(scene, armatures, frames, keys):
+    """Per-frame HAnim joint rotation/translation relative to rest, for every bone.
+
+    For bone b with rest matrix L_b (armature space) and posed matrix P_b,
+    D_b = P_b @ L_b^-1 maps rest-space skin to posed skin. The joint's own
+    transform is J_b = D_parent^-1 @ D_b, which HAnim applies about the joint
+    center c: J = T(t) T(c) R T(-c), so t = J.translation - (c - R c).
+    """
+    samples = {}
+    for frame in frames:
+        scene.frame_set(frame)
+        for armature in armatures:
+            pose = armature.pose
+            deltas = {}
+            for bone in armature.data.bones:
+                pose_bone = pose.bones.get(bone.name)
+                if pose_bone is None:
+                    continue
+                deltas[bone.name] = pose_bone.matrix @ bone.matrix_local.inverted()
+            for bone in armature.data.bones:
+                delta = deltas.get(bone.name)
+                if delta is None:
+                    continue
+                parent_delta = deltas.get(bone.parent.name) if bone.parent is not None else None
+                joint_matrix = (parent_delta.inverted() @ delta) if parent_delta is not None else delta
+                rotation = joint_matrix.to_quaternion()
+                center = bone.head_local
+                translation = joint_matrix.to_translation() - (center - rotation @ center)
+                axis, angle = rotation.to_axis_angle()
+                if abs(angle) < 1e-9:
+                    axis, angle = (0.0, 0.0, 1.0), 0.0
+                key = f"{armature.name}:{bone.name}"
+                samples.setdefault(key, []).append(
+                    (
+                        (float(axis[0]), float(axis[1]), float(axis[2]), float(angle)),
+                        (float(translation[0]), float(translation[1]), float(translation[2])),
+                    )
+                )
+    animations = []
+    for key, values in samples.items():
+        rotations = [value[0] for value in values]
+        translations = [value[1] for value in values]
+        rotating = any(abs(rotation[3]) > 1e-6 for rotation in rotations)
+        moving = any(max(abs(component) for component in translation) > 1e-6 for translation in translations)
+        if not (rotating or moving):
+            continue
+        animations.append(
+            IRAnimation(
+                target=key,
+                target_kind="joint",
+                keys=list(keys),
+                translations=translations if moving else [],
+                rotations=rotations if rotating else [],
+            )
+        )
+    return animations
 
 
 def _matrix_transform(matrix) -> IRTransform:
@@ -251,7 +407,7 @@ def _extract_viewpoint(obj, local_matrix) -> IRViewpoint:
     )
 
 
-def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, frame_step=1):
+def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, frame_step=1, armatures=()):
     """Sample every exported object's local transform per frame.
 
     Returns (animations, cycle_interval). Objects whose transform never changes
@@ -276,12 +432,13 @@ def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, f
                 elif global_matrix is not None:
                     matrix = global_matrix @ matrix
                 samples[name].append(_matrix_transform(matrix))
+        span = float(frame_end - frame_start)
+        keys = [(frame - frame_start) / span for frame in frames]
+        joint_animations = _sample_joint_animation(scene, list(armatures), frames, keys) if armatures else []
     finally:
         scene.frame_set(current)
 
-    span = float(frame_end - frame_start)
-    keys = [(frame - frame_start) / span for frame in frames]
-    animations = []
+    animations = list(joint_animations)
     for name, transforms in samples.items():
         first = transforms[0]
         moving = any(t.translation != first.translation for t in transforms)
@@ -364,6 +521,19 @@ def extract_scene(
     geometries_by_key: dict[str, list[IRMeshGeometry]] = {}
     skipped_types: dict[str, int] = {}
     objects_by_name: dict[str, tuple] = {}
+    armatures = [obj for obj in exported if obj.type == "ARMATURE"]
+    skinned_by_armature = {armature.name: _skinned_meshes(armature, exported) for armature in armatures}
+    skinned_names = {mesh.name for meshes in skinned_by_armature.values() for mesh in meshes}
+
+    def register_material(material):
+        if material is None:
+            return None
+        if material.name not in material_names:
+            analyzed = analyze_material(material)
+            if analyzed:
+                ir_scene.materials.append(analyzed)
+                material_names.add(material.name)
+        return material.name
 
     def mesh_shapes(obj):
         """Return the IRShape list for a mesh-like object, extracting geometry on first sight."""
@@ -434,7 +604,25 @@ def extract_scene(
         )
         objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
 
-        if obj.type in MESH_LIKE_TYPES:
+        if obj.name in skinned_names:
+            # Written as HAnim skin under its armature instead of a plain Shape.
+            objects_by_name.pop(obj.name, None)
+            return None
+
+        if obj.type == "ARMATURE":
+            humanoid, skin_geometries = extract_humanoid(
+                obj,
+                skinned_by_armature.get(obj.name, []),
+                local_matrix=local_matrix,
+                material_sink=register_material,
+                use_triangulate=use_triangulate,
+            )
+            ir_scene.geometries.extend(skin_geometries)
+            ir_scene.humanoids.append(humanoid)
+            ir_scene.object_names.append(obj.name)
+            objects_by_name.pop(obj.name, None)
+            instance.humanoid_name = humanoid.name
+        elif obj.type in MESH_LIKE_TYPES:
             source_key, shapes = mesh_shapes(obj)
             instance.source_key = source_key
             instance.shapes = shapes
@@ -478,13 +666,14 @@ def extract_scene(
             if instance is not None:
                 ir_scene.instances.append(instance)
 
-    if use_animation and objects_by_name:
+    if use_animation and (objects_by_name or armatures):
         ir_scene.animations, ir_scene.cycle_interval = _sample_animation(
             scene,
             objects_by_name,
             use_hierarchy=use_hierarchy,
             global_matrix=global_matrix,
             frame_step=animation_step,
+            armatures=armatures,
         )
 
     for object_type, count in sorted(skipped_types.items()):

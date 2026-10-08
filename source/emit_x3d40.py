@@ -218,7 +218,10 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     if geometry.crease_angle is not None and geometry.crease_angle > 0.0:
         attrs.append(f'creaseAngle="{_fmt(geometry.crease_angle)}"')
     xml = [f"{indent}<IndexedFaceSet {' '.join(attrs)}>\n"]
-    xml.append(f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n')
+    if geometry.skin_coord_def:
+        xml.append(f'{indent}  <Coordinate USE="{geometry.skin_coord_def}" />\n')
+    else:
+        xml.append(f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n')
     if geometry.normal:
         xml.append(f'{indent}  <Normal vector="{" ".join(_fmt3(vector) for vector in geometry.normal)}" />\n')
     if geometry.tex_coord:
@@ -285,7 +288,8 @@ def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
     return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
 
 
-def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None):
+def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None):
+    humanoids = humanoids or {}
     tx, ty, tz = instance.transform.translation
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
     sx, sy, sz = instance.transform.scale
@@ -309,13 +313,75 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         else:
             xml.append(_primitive_geometry_xml(shape.geometry_hint, indent + "    "))
         xml.append(f"{indent}  </Shape>\n")
+    if instance.humanoid_name and instance.humanoid_name in humanoids:
+        humanoid = humanoids[instance.humanoid_name]
+        placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
+                                skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes)
+        xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir))
     if instance.light is not None:
         xml.append(_light_xml(instance.light, defs, indent + "  "))
     if instance.viewpoint is not None:
         xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
     for child in instance.children:
-        xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir))
+        xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids))
     xml.append(f"{indent}</Transform>\n")
+    return "".join(xml)
+
+
+def _joint_def(defs: _DefNames, humanoid_name, joint_name):
+    return defs.get("joint", f"{humanoid_name}:{joint_name}", "hanim_")
+
+
+def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children"):
+    joint_def = _joint_def(defs, humanoid_name, joint.name)
+    attrs = [f'DEF="{joint_def}"', f"name={quoteattr(joint.name)}", f'center="{_fmt3(joint.center)}"']
+    if container_field != "children":
+        attrs.append(f'containerField="{container_field}"')
+    if joint.skin_coord_index:
+        attrs.append(f'skinCoordIndex="{_fmt_ints(joint.skin_coord_index)}"')
+        attrs.append(f'skinCoordWeight="{" ".join(_fmt(weight) for weight in joint.skin_coord_weight)}"')
+    if not joint.children:
+        return f"{indent}<HAnimJoint {' '.join(attrs)} />\n"
+    xml = [f"{indent}<HAnimJoint {' '.join(attrs)}>\n"]
+    for child in joint.children:
+        xml.append(_joint_xml(child, humanoid_name, defs, indent + "  "))
+    xml.append(f"{indent}</HAnimJoint>\n")
+    return "".join(xml)
+
+
+def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, output_dir=None):
+    humanoid_def = defs.get("humanoid", humanoid.name, "hanim_")
+    tx = humanoid.transform
+    xml = [
+        f'{indent}<HAnimHumanoid DEF="{humanoid_def}" name={quoteattr(humanoid.name)} version="2.0" '
+        f'skeletalConfiguration="BLENDER" '
+        f'translation="{_fmt3(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
+        f'scale="{_fmt3(tx.scale)}">\n'
+    ]
+    for root in humanoid.root_joints:
+        xml.append(_joint_xml(root, humanoid.name, defs, indent + "  ", container_field="skeleton"))
+    for joint in humanoid.iter_joints():
+        xml.append(f'{indent}  <HAnimJoint USE="{_joint_def(defs, humanoid.name, joint.name)}" containerField="joints" />\n')
+    if humanoid.skin_coord:
+        skin_def = next((geometries[s.geometry_name].skin_coord_def for s in humanoid.skin_shapes
+                         if s.geometry_name in geometries and geometries[s.geometry_name].skin_coord_def), None)
+        if skin_def:
+            xml.append(
+                f'{indent}  <Coordinate DEF="{skin_def}" containerField="skinCoord" '
+                f'point="{" ".join(_fmt3(point) for point in humanoid.skin_coord)}" />\n'
+            )
+    for shape in humanoid.skin_shapes:
+        xml.append(f'{indent}  <Shape containerField="skin">\n')
+        material = materials.get(shape.material_name) if shape.material_name else None
+        if material is not None:
+            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir))
+        else:
+            xml.append(_default_appearance_xml(indent + "    "))
+        geometry = geometries.get(shape.geometry_name)
+        if geometry is not None:
+            xml.append(_geometry_xml(geometry, defs, indent + "    "))
+        xml.append(f"{indent}  </Shape>\n")
+    xml.append(f"{indent}</HAnimHumanoid>\n")
     return "".join(xml)
 
 
@@ -327,7 +393,11 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
     xml = [f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(cycle)}" loop="true" />\n']
     routes = []
     for animation in ir_scene.animations:
-        target_def = defs.get("transform", animation.target, "OB_")
+        if animation.target_kind == "joint":
+            humanoid_name, _, joint_name = animation.target.partition(":")
+            target_def = _joint_def(defs, humanoid_name, joint_name)
+        else:
+            target_def = defs.get("transform", animation.target, "OB_")
         keys = " ".join(_fmt(key) for key in animation.keys)
         safe_target = _safe_name(animation.target)
         if animation.translations:
@@ -404,8 +474,9 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d")
     )
     if ir_scene.background_color is not None:
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
+    humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     for instance in ir_scene.instances:
-        write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir))
+        write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids))
     write(_animation_xml(ir_scene, defs, "    "))
 
     write("  </Scene>\n")
