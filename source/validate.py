@@ -116,7 +116,7 @@ def _coerce_field(value: str, declaration):
         if field_type in {"SFFloat", "SFDouble", "SFTime", "SFInt32"}:
             return numbers[0] if numbers else 0
         return tuple(numbers)
-    width = (("ColorRGBA", 4), ("Color", 3), ("Vec2", 2), ("Vec3", 3), ("Vec4", 4), ("Rotation", 4))
+    width = (("ColorRGBA", 4), ("Color", 3), ("Vec2", 2), ("Vec3", 3), ("Vec4", 4), ("Rotation", 4), ("Quaternion", 4))
     for key, size in width:
         if key in field_type and "Matrix" not in field_type:
             return [tuple(numbers[index:index + size]) for index in range(0, len(numbers), size)]

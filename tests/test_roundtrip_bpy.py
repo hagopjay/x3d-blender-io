@@ -434,5 +434,220 @@ class HAnimExportTests(unittest.TestCase):
         self.assertGreater((end_tip - start_tip).length, 0.5, (start_tip, end_tip))
 
 
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class GaussianSplatRoundTripTests(unittest.TestCase):
+    """Splat mesh -> X3D 4.1 GaussianSplats -> splat mesh, and the 4.0 PointSet fallback."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_splats_")
+        _register_extension(cls.tmpdir)
+        if str(TOOLS_DIR) not in sys.path:
+            sys.path.insert(0, str(TOOLS_DIR))
+        import bpy
+        from splat_fixture import build_splat_fixture
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        cls.fixture = build_splat_fixture(count=40)
+        cls.splats = cls.fixture["splats"]
+        bpy.context.view_layer.update()
+        cls.helix_world = cls.fixture["helix"].matrix_world.copy()
+        cls.export_path = os.path.join(cls.tmpdir, "splats.x3d")
+        result = bpy.ops.export_scene.x3d(filepath=cls.export_path, x3d_version="X3D41", use_selection=False)
+        assert result == {"FINISHED"}, result
+        cls.root = ET.parse(cls.export_path).getroot()
+        cls.fallback_path = os.path.join(cls.tmpdir, "splats40.x3d")
+        result = bpy.ops.export_scene.x3d(filepath=cls.fallback_path, x3d_version="X3D40", use_selection=False)
+        assert result == {"FINISHED"}, result
+
+    def test_document_is_x3d41_and_validates(self):
+        sys.path.insert(0, str(SOURCE_DIR))
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        self.assertEqual(self.root.attrib["version"], "4.1")
+        self.assertIsNotNone(self.root.find("head/component[@name='GaussianSplats']"))
+        self.assertTrue(validate_xml_file(self.export_path).valid)
+        semantic = validate_with_x3d_py(self.export_path)
+        if semantic is not None:
+            self.assertTrue(semantic.valid, semantic.errors)
+            if os.environ.get("X3D_STRICT_VALIDATION"):
+                self.assertEqual(semantic.warnings, [])
+
+    def test_node_carries_every_splat_field(self):
+        node = self.root.find(".//GaussianSplats")
+        self.assertIsNotNone(node)
+        count = len(self.splats)
+        self.assertEqual(len(node.attrib["positions"].split()), 3 * count)
+        self.assertEqual(len(node.attrib["scales"].split()), 3 * count)
+        self.assertEqual(len(node.attrib["orientations"].split()), 4 * count)
+        self.assertEqual(len(node.attrib["opacities"].split()), count)
+        self.assertEqual(len(node.attrib["sphericalHarmonicsDegree0Coef0"].split()), 3 * count)
+        self.assertEqual(len(node.attrib["sphericalHarmonicsDegree1Coef2"].split()), 3 * count)
+        self.assertNotIn("sphericalHarmonicsDegree2Coef0", node.attrib)
+        # the quaternion of the last splat: twist about Z by half of 4 pi
+        qx, qy, qz, qw = [float(v) for v in node.attrib["orientations"].split()[-4:]]
+        self.assertAlmostEqual(qx, 0.0, places=5)
+        self.assertAlmostEqual(abs(qz * qz + qw * qw), 1.0, places=4)
+
+    def test_x3d40_fallback_is_pointset(self):
+        root = ET.parse(self.fallback_path).getroot()
+        self.assertIsNone(root.find(".//GaussianSplats"))
+        point_set = root.find(".//PointSet")
+        self.assertIsNotNone(point_set)
+        self.assertEqual(len(point_set.find("Coordinate").attrib["point"].split()), 3 * len(self.splats))
+        self.assertIsNotNone(point_set.find("ColorRGBA"))
+        self.assertTrue(any("PointSet" in (m.attrib.get("content") or "") for m in root.findall("head/meta")))
+
+    def test_reimport_restores_splat_attributes(self):
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.export_path), {"FINISHED"})
+        helix = bpy.context.scene.objects.get("Helix")
+        self.assertIsNotNone(helix, [o.name for o in bpy.context.scene.objects])
+        mesh = helix.data
+        self.assertTrue(mesh.get("x3d_gaussian_splats"))
+        self.assertEqual(len(mesh.vertices), len(self.splats))
+        self.assertEqual(len(mesh.polygons), 0)
+        for name in ("splat_scale", "splat_rotation", "splat_opacity", "splat_sh0_0", "splat_sh1_0", "splat_sh1_2", "Color"):
+            self.assertIn(name, mesh.attributes.keys(), name)
+        for a, b in zip(helix.matrix_world.translation, self.helix_world.translation):
+            self.assertAlmostEqual(a, b, places=4)
+        last = len(self.splats) - 1
+        scale = mesh.attributes["splat_scale"].data[last].vector
+        for a, b in zip(scale, self.splats.scales[last]):
+            self.assertAlmostEqual(a, b, places=4)
+        w, x, y, z = mesh.attributes["splat_rotation"].data[last].value
+        ex, ey, ez, ew = self.splats.orientations[last]
+        self.assertAlmostEqual(abs(w * ew + x * ex + y * ey + z * ez), 1.0, places=4)
+        self.assertAlmostEqual(mesh.attributes["splat_opacity"].data[last].value, self.splats.opacities[last], places=4)
+        self.assertEqual(mesh.color_attributes.active_color.name, "Color")
+
+        # and the imported mesh exports again as the same node (second generation)
+        again = os.path.join(self.tmpdir, "splats_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=again, x3d_version="X3D41", use_selection=False), {"FINISHED"})
+        node = ET.parse(again).getroot().find(".//GaussianSplats")
+        self.assertEqual(len(node.attrib["opacities"].split()), len(self.splats))
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class InlineBridgeRoundTripTests(unittest.TestCase):
+    """Inline of X3D, glTF and splat files: imported under a placeholder empty, exported back as Inline."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_inline_")
+        _register_extension(cls.tmpdir)
+        if str(TOOLS_DIR) not in sys.path:
+            sys.path.insert(0, str(TOOLS_DIR))
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))
+        import bpy
+        from splat_fixture import helix_splats
+        from splat_io import write_ply
+
+        # 1. a child X3D file with one cube
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, 0.0))
+        bpy.context.active_object.name = "Part"
+        cls.part_path = os.path.join(cls.tmpdir, "part.x3d")
+        assert bpy.ops.export_scene.x3d(filepath=cls.part_path, x3d_version="X3D40", use_selection=False) == {"FINISHED"}
+        # 2. a glb with one cube one unit up
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, 1.0))
+        bpy.context.active_object.name = "Wheel"
+        cls.glb_path = os.path.join(cls.tmpdir, "wheel.glb")
+        assert bpy.ops.export_scene.gltf(filepath=cls.glb_path, export_format="GLB") == {"FINISHED"}
+        # 3. a splat PLY
+        cls.ply_path = os.path.join(cls.tmpdir, "cloud.ply")
+        cls.cloud = helix_splats(16, sh_degree=0)
+        write_ply(cls.ply_path, cls.cloud)
+
+        # the master scene: three placeholder empties referencing the files
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        cls.placements = {}
+        for name, url, location in (("PartRef", "part.x3d", (3.0, 0.0, 0.0)),
+                                     ("WheelRef", "wheel.glb", (0.0, 3.0, 0.0)),
+                                     ("CloudRef", "cloud.ply", (0.0, 0.0, 3.0))):
+            empty = bpy.data.objects.new(name, None)
+            empty.location = location
+            empty.rotation_euler = (0.0, 0.0, 0.5)
+            empty["x3d_inline_url"] = url
+            bpy.context.scene.collection.objects.link(empty)
+            bpy.context.view_layer.update()
+            cls.placements[name] = empty.matrix_world.copy()
+        cls.master_path = os.path.join(cls.tmpdir, "master.x3d")
+        assert bpy.ops.export_scene.x3d(filepath=cls.master_path, x3d_version="X3D40", use_selection=False) == {"FINISHED"}
+        cls.root = ET.parse(cls.master_path).getroot()
+
+    def test_master_has_three_inlines_and_validates(self):
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        inlines = self.root.findall(".//Inline")
+        self.assertEqual(sorted(i.attrib["url"] for i in inlines), ['"cloud.ply"', '"part.x3d"', '"wheel.glb"'])
+        self.assertTrue(validate_xml_file(self.master_path).valid)
+        semantic = validate_with_x3d_py(self.master_path)
+        if semantic is not None:
+            self.assertTrue(semantic.valid, semantic.errors)
+
+    def test_import_loads_assets_under_placeholders(self):
+        import bpy
+        from mathutils import Vector
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.master_path), {"FINISHED"})
+        objects = bpy.context.scene.objects
+        for name in ("PartRef", "WheelRef", "CloudRef"):
+            empty = objects.get(name)
+            self.assertIsNotNone(empty, [o.name for o in objects])
+            self.assertEqual(empty.type, "EMPTY")
+            self.assertIn("x3d_inline_url", empty.keys())
+            for a, b in zip(empty.matrix_world.translation, self.placements[name].translation):
+                self.assertAlmostEqual(a, b, places=4)
+
+        bpy.context.view_layer.update()
+        part = next((o for o in objects if o.type == "MESH" and o.parent is not None and o.parent.name == "PartRef"), None)
+        self.assertIsNotNone(part, [(o.name, o.parent and o.parent.name) for o in objects])
+        self.assertEqual(len(part.data.polygons), 6)
+        self.assertEqual(part.get("x3d_inline_source"), "part.x3d")
+        self.assertLess((part.matrix_world.translation - Vector((3.0, 0.0, 0.0))).length, 1e-3)
+
+        wheel = next((o for o in objects if o.type == "MESH" and o.parent is not None and o.parent.name == "WheelRef"), None)
+        self.assertIsNotNone(wheel, [(o.name, o.parent and o.parent.name) for o in objects])
+        self.assertIn(len(wheel.data.vertices), (8, 24))  # glTF may keep per-normal splits
+        # the glb cube sat one unit up in Blender; it must land one unit above the WheelRef empty
+        expected = self.placements["WheelRef"] @ Vector((0.0, 0.0, 1.0))
+        centre = wheel.matrix_world @ (sum((v.co for v in wheel.data.vertices), Vector()) / 8.0)
+        self.assertLess((centre - expected).length, 1e-3, (centre, expected))
+
+        cloud = next((o for o in objects if o.type == "MESH" and o.parent is not None and o.parent.name == "CloudRef"), None)
+        self.assertIsNotNone(cloud)
+        self.assertTrue(cloud.data.get("x3d_gaussian_splats"))
+        self.assertEqual(len(cloud.data.vertices), len(self.cloud))
+        self.assertIn("splat_opacity", cloud.data.attributes.keys())
+
+        # re-export: the loaded content stays behind the Inline references
+        again = os.path.join(self.tmpdir, "master_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=again, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        root = ET.parse(again).getroot()
+        self.assertEqual(len(root.findall(".//Inline")), 3)
+        self.assertEqual(len(root.findall(".//IndexedFaceSet")), 0)
+        self.assertEqual(len(root.findall(".//PointSet")), 0)
+
+    def test_self_inline_is_refused(self):
+        import bpy
+
+        looped = os.path.join(self.tmpdir, "loop.x3d")
+        Path(looped).write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n<X3D version="4.0" profile="Immersive"><Scene>'
+            "<Transform DEF=\"OB_Loop\"><Inline url='\"loop.x3d\"' /></Transform></Scene></X3D>\n",
+            encoding="utf-8",
+        )
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=looped), {"FINISHED"})
+        empties = [o for o in bpy.context.scene.objects if o.type == "EMPTY"]
+        self.assertEqual(len(empties), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

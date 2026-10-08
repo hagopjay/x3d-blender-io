@@ -13,14 +13,105 @@ from __future__ import annotations
 import math
 
 try:
-    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .material import analyze_material
+    from .splat_io import rgb_to_sh0
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from material import analyze_material
+    from splat_io import rgb_to_sh0
 
 
 MESH_LIKE_TYPES = {"MESH", "CURVE", "SURFACE", "FONT"}
+
+# Custom properties and point attributes that mark a mesh as Gaussian splats.
+SPLAT_PROPERTY = "x3d_gaussian_splats"
+SPLAT_COLOR_SPACE_PROPERTY = "x3d_splat_color_space"
+SPLAT_SCALE_ATTR = "splat_scale"
+SPLAT_ROTATION_ATTR = "splat_rotation"
+SPLAT_OPACITY_ATTR = "splat_opacity"
+SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
+INLINE_URL_PROPERTY = "x3d_inline_url"
+INLINE_SOURCE_PROPERTY = "x3d_inline_source"
+
+
+def is_splat_mesh(obj) -> bool:
+    data = getattr(obj, "data", None)
+    return obj.type == "MESH" and data is not None and bool(data.get(SPLAT_PROPERTY))
+
+
+def inline_root(obj):
+    """The Inline placeholder empty this object was imported under, or None."""
+    if obj.get(INLINE_SOURCE_PROPERTY) is None:
+        return None
+    parent = obj.parent
+    while parent is not None:
+        if parent.get(INLINE_URL_PROPERTY):
+            return parent
+        parent = parent.parent
+    return None
+
+
+def asset_frame(global_matrix):
+    """Rotation taking a Y-up asset (glTF, X3D, splat file) into Blender's Z-up frame.
+
+    Content under an Inline placeholder empty is laid out the way Blender's own
+    importers would place it; the Inline's Transform therefore carries this
+    extra rotation so the X3D browser sees the asset in its native frame.
+    """
+    from mathutils import Matrix
+
+    if global_matrix is None:
+        return Matrix.Identity(4)
+    rotation = global_matrix.to_3x3()
+    rotation.normalize()
+    return rotation.inverted().to_4x4()
+
+
+def extract_splats(mesh, *, name: str) -> IRGaussianSplats:
+    """Read a splat mesh (vertices plus splat_* point attributes) into IRGaussianSplats."""
+    splats = IRGaussianSplats(name=name, color_space=str(mesh.get(SPLAT_COLOR_SPACE_PROPERTY, "SRGB_REC709_DISPLAY")))
+    count = len(mesh.vertices)
+    splats.positions = [tuple(round(c, _ROUND) for c in vertex.co) for vertex in mesh.vertices]
+    attributes = mesh.attributes
+
+    def vectors(attr_name, width):
+        attr = attributes.get(attr_name)
+        if attr is None or attr.domain != "POINT" or len(attr.data) != count:
+            return None
+        key = "vector" if attr.data_type == "FLOAT_VECTOR" else "color" if attr.data_type == "FLOAT_COLOR" else "value"
+        return [tuple(float(c) for c in getattr(item, key)[:width]) for item in attr.data]
+
+    scales = vectors(SPLAT_SCALE_ATTR, 3)
+    splats.scales = scales if scales else [(0.01, 0.01, 0.01)] * count
+    rotation = attributes.get(SPLAT_ROTATION_ATTR)
+    if rotation is not None and rotation.domain == "POINT" and len(rotation.data) == count:
+        if rotation.data_type == "QUATERNION":
+            # Blender quaternions are (w, x, y, z); the IR and X3D carry (x, y, z, w)
+            splats.orientations = [(q.value[1], q.value[2], q.value[3], q.value[0]) for q in rotation.data]
+        elif rotation.data_type == "FLOAT_COLOR":
+            splats.orientations = [tuple(float(c) for c in q.color[:4]) for q in rotation.data]
+    if not splats.orientations:
+        splats.orientations = [(0.0, 0.0, 0.0, 1.0)] * count
+    opacity = attributes.get(SPLAT_OPACITY_ATTR)
+    if opacity is not None and opacity.domain == "POINT" and len(opacity.data) == count:
+        splats.opacities = [max(0.0, min(1.0, float(item.value))) for item in opacity.data]
+    else:
+        splats.opacities = [1.0] * count
+    dc = vectors(SPLAT_SH_ATTR.format(degree=0, coef=0), 3)
+    if dc is None:
+        color_attr = attributes.get("Color") or getattr(mesh, "color_attributes", None) and mesh.color_attributes.active_color
+        if color_attr is not None and color_attr.domain == "POINT" and len(color_attr.data) == count:
+            dc = [rgb_to_sh0(tuple(float(c) for c in item.color[:3])) for item in color_attr.data]
+    if dc:
+        splats.sh[(0, 0)] = dc
+    for degree in (1, 2, 3):
+        for coef in range(2 * degree + 1):
+            values = vectors(SPLAT_SH_ATTR.format(degree=degree, coef=coef), 3)
+            if values is None:
+                break
+            splats.sh[(degree, coef)] = values
+    return splats
 
 
 _ROUND = 6
@@ -509,6 +600,14 @@ def extract_scene(
         )
     )
     exported_names = {obj.name for obj in exported}
+    # Objects imported from an Inline are represented by their placeholder empty's Inline node.
+    inline_children = [obj for obj in exported if (root := inline_root(obj)) is not None and root.name in exported_names]
+    if inline_children:
+        exported = [obj for obj in exported if obj not in inline_children]
+        exported_names = {obj.name for obj in exported}
+        ir_scene.diagnostics.append(
+            f"{len(inline_children)} object(s) imported from Inline assets are referenced by Inline rather than re-exported."
+        )
 
     def exported_parent(obj):
         parent = obj.parent
@@ -590,11 +689,18 @@ def extract_scene(
             shapes.append(IRShape(geometry_name=geometry.name, material_name=material_name))
         return source_key, shapes
 
+    content_frame = asset_frame(global_matrix)
+
     def build_instance(obj, parent):
         if use_hierarchy and parent is not None:
             local_matrix = parent.matrix_world.inverted() @ obj.matrix_world
+            if parent.get(INLINE_URL_PROPERTY):
+                # the parent's Transform includes the asset frame; take it back out
+                local_matrix = content_frame.inverted() @ local_matrix
         else:
             local_matrix = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+        if obj.type == "EMPTY" and obj.get(INLINE_URL_PROPERTY):
+            local_matrix = local_matrix @ content_frame
 
         instance = IRInstance(
             source_key=f"{obj.type}:{obj.name}",
@@ -622,6 +728,13 @@ def extract_scene(
             ir_scene.object_names.append(obj.name)
             objects_by_name.pop(obj.name, None)
             instance.humanoid_name = humanoid.name
+        elif is_splat_mesh(obj):
+            splats_name = obj.data.name
+            if splats_name not in {splats.name for splats in ir_scene.splats}:
+                ir_scene.splats.append(extract_splats(obj.data, name=splats_name))
+            instance.source_key = f"SPLATS:{splats_name}"
+            instance.splats_name = splats_name
+            ir_scene.object_names.append(obj.name)
         elif obj.type in MESH_LIKE_TYPES:
             source_key, shapes = mesh_shapes(obj)
             instance.source_key = source_key
@@ -640,6 +753,9 @@ def extract_scene(
             instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__())
             ir_scene.object_names.append(obj.name)
         elif obj.type == "EMPTY":
+            inline_url = obj.get(INLINE_URL_PROPERTY)
+            if inline_url:
+                instance.inline = IRInlineAsset(url=str(inline_url))
             ir_scene.object_names.append(obj.name)
         else:
             skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1

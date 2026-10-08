@@ -1904,9 +1904,10 @@ def save(context,
         from .emit_x3d40 import export_ir_scene
         from .validate import validate_xml_file, validate_with_x3d_py
 
-        logger.info("Writing X3D 4.0 to %r", export_file)
+        logger.info("Writing X3D %s to %r", settings.document_version, export_file)
         with (gzip_open_utf8(export_file, 'w') if settings.use_compress else open(export_file, 'w', encoding='utf-8')) as file:
-            export_ir_scene(file, ir_scene, generator=f"{bl_info_copy['name']} v{'.'.join(map(str, bl_info_copy['version']))}")
+            export_ir_scene(file, ir_scene, generator=f"{bl_info_copy['name']} v{'.'.join(map(str, bl_info_copy['version']))}",
+                            version=settings.document_version)
         for message in ir_scene.diagnostics:
             logger.info("X3D 4.0 export note: %s", message)
         if settings.use_compress:

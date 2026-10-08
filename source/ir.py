@@ -126,6 +126,31 @@ class IRInlineAsset:
 
 
 @dataclass
+class IRGaussianSplats:
+    """One X3D 4.1 GaussianSplats node worth of data (or a PointSet fallback in 4.0).
+
+    ``orientations`` are unit quaternions as (x, y, z, w). ``scales`` are
+    linear (not log) per-axis extents, ``opacities`` are 0..1 (not logits).
+    ``sh`` maps (degree, coefficient) to a per-splat list of RGB coefficients;
+    (0, 0) is the DC term the reconstructed colour comes from.
+    """
+
+    name: str
+    positions: list[tuple[float, float, float]] = field(default_factory=list)
+    scales: list[tuple[float, float, float]] = field(default_factory=list)
+    orientations: list[tuple[float, float, float, float]] = field(default_factory=list)
+    opacities: list[float] = field(default_factory=list)
+    sh: dict[tuple[int, int], list[tuple[float, float, float]]] = field(default_factory=dict)
+    color_space: str = "SRGB_REC709_DISPLAY"
+
+    def sh_degree(self) -> int:
+        return max((degree for degree, _coef in self.sh), default=-1)
+
+    def __len__(self) -> int:
+        return len(self.positions)
+
+
+@dataclass
 class IRViewpoint:
     description: str | None = None
     transform: IRTransform = field(default_factory=IRTransform)
@@ -188,6 +213,10 @@ class IRInstance:
     light: IRLight | None = None
     viewpoint: IRViewpoint | None = None
     humanoid_name: str | None = None
+    # Set when the instance stands for an external asset referenced by Inline.
+    inline: IRInlineAsset | None = None
+    # Name of an IRGaussianSplats in IRScene.splats carried by this instance.
+    splats_name: str | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -197,6 +226,8 @@ class IRInstance:
         """
         if self.shapes:
             yield from self.shapes
+        elif self.inline is not None or self.splats_name:
+            return
         elif self.geometry_name or self.material_name or self.object_type == "MESH":
             yield IRShape(
                 geometry_name=self.geometry_name,
@@ -252,6 +283,7 @@ class IRScene:
     diagnostics: list[str] = field(default_factory=list)
     animations: list[IRAnimation] = field(default_factory=list)
     humanoids: list[IRHumanoid] = field(default_factory=list)
+    splats: list[IRGaussianSplats] = field(default_factory=list)
     cycle_interval: float | None = None
     background_color: tuple[float, float, float] | None = None
 
@@ -262,6 +294,9 @@ class IRScene:
             instance = stack.pop()
             yield instance
             stack.extend(reversed(instance.children))
+
+    def splats_by_name(self) -> dict[str, IRGaussianSplats]:
+        return {splats.name: splats for splats in self.splats}
 
     def has_lights(self) -> bool:
         return any(instance.light is not None for instance in self.iter_instances())

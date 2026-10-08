@@ -16,8 +16,10 @@ from xml.sax.saxutils import escape, quoteattr
 
 try:
     from .ir import IRScene
+    from .splat_io import sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRScene
+    from splat_io import sh0_to_rgb
 
 
 def _safe_name(name: str, fallback: str = "Node") -> str:
@@ -288,8 +290,10 @@ def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
     return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
 
 
-def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None):
+def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
+                  splats=None, version="4.0"):
     humanoids = humanoids or {}
+    splats = splats or {}
     tx, ty, tz = instance.transform.translation
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
     sx, sy, sz = instance.transform.scale
@@ -318,12 +322,18 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
                                 skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes)
         xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir))
+    if instance.inline is not None:
+        inline_def = defs.get("inline", instance.object_name, "IN_")
+        xml.append(f"{indent}  <Inline DEF=\"{inline_def}\" url='{_mfstring([instance.inline.url])}' />\n")
+    if instance.splats_name and instance.splats_name in splats:
+        xml.append(_splats_xml(splats[instance.splats_name], defs, indent + "  ", version=version))
     if instance.light is not None:
         xml.append(_light_xml(instance.light, defs, indent + "  "))
     if instance.viewpoint is not None:
         xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
     for child in instance.children:
-        xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids))
+        xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids,
+                                 splats=splats, version=version))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
 
@@ -432,12 +442,64 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
     return "".join(xml)
 
 
+_SH_FIELD = "sphericalHarmonicsDegree{degree}Coef{coef}"
+
+
+def _splats_xml(splats, defs: _DefNames, indent, *, version="4.0"):
+    """GaussianSplats node for X3D 4.1; a coloured PointSet for earlier versions."""
+    splats_def = defs.get("splats", splats.name, "GS_")
+    if version == "4.1":
+        if not defs.first_use("splats", splats.name):
+            return f'{indent}<GaussianSplats USE="{splats_def}" />\n'
+        attrs = [f'DEF="{splats_def}"']
+        if splats.color_space != "SRGB_REC709_DISPLAY":
+            attrs.append(f'colorSpace="{escape(splats.color_space)}"')
+        attrs.append(f'positions="{" ".join(_fmt3(p) for p in splats.positions)}"')
+        if splats.scales:
+            attrs.append(f'scales="{" ".join(_fmt3(s) for s in splats.scales)}"')
+        if splats.orientations:
+            attrs.append(f'orientations="{" ".join(_fmt4(q) for q in splats.orientations)}"')
+        if splats.opacities:
+            attrs.append(f'opacities="{" ".join(_fmt(o) for o in splats.opacities)}"')
+        for (degree, coef), values in sorted(splats.sh.items()):
+            if values:
+                attrs.append(f'{_SH_FIELD.format(degree=degree, coef=coef)}="{" ".join(_fmt3(v) for v in values)}"')
+        return f"{indent}<GaussianSplats {' '.join(attrs)} />\n"
+    # 4.0 fallback: centres as a PointSet with the reconstructed base colour
+    xml = [f"{indent}<Shape>\n"]
+    if not defs.first_use("splats", splats.name):
+        xml.append(f'{indent}  <PointSet USE="{splats_def}" />\n')
+    else:
+        xml.append(f'{indent}  <PointSet DEF="{splats_def}">\n')
+        xml.append(f'{indent}    <Coordinate point="{" ".join(_fmt3(p) for p in splats.positions)}" />\n')
+        dc = splats.sh.get((0, 0))
+        if dc:
+            colors = (sh0_to_rgb(c) + (max(0.0, min(1.0, splats.opacities[i])) if i < len(splats.opacities) else 1.0,)
+                      for i, c in enumerate(dc))
+            xml.append(f'{indent}    <ColorRGBA color="{" ".join(_fmt4(c) for c in colors)}" />\n')
+        xml.append(f"{indent}  </PointSet>\n")
+    xml.append(f"{indent}</Shape>\n")
+    return "".join(xml)
+
+
 def _meta(name, content):
     return f"    <meta name={quoteattr(name)} content={quoteattr(str(content))} />\n"
 
 
-def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d") -> None:
-    """Write ``ir_scene`` as an X3D 4.0 XML document to ``file``."""
+def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d", version: str = "4.0") -> None:
+    """Write ``ir_scene`` as an X3D 4.0 (or 4.1 draft) XML document to ``file``.
+
+    With ``version`` "4.1" Gaussian splats are written as the GaussianSplats
+    node (component GaussianSplats level 1); with "4.0" they degrade to a
+    coloured PointSet and a diagnostic says so.
+    """
+    if version not in {"4.0", "4.1"}:
+        raise ValueError(f"Unsupported X3D version for the modern writer: {version!r}")
+    diagnostics = list(ir_scene.diagnostics)
+    if version == "4.0" and ir_scene.splats:
+        diagnostics.append(
+            f"{len(ir_scene.splats)} Gaussian splat object(s) written as PointSet; choose X3D 4.1 for the GaussianSplats node."
+        )
 
     write = file.write
     output_dir = None
@@ -446,20 +508,24 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d")
         output_dir = os.path.dirname(os.path.abspath(output_name))
 
     write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    write('<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">\n')
+    write(f'<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D {version}//EN" "https://www.web3d.org/specifications/x3d-{version}.dtd">\n')
     write(
-        '<X3D version="4.0" profile="Immersive" '
+        f'<X3D version="{version}" profile="Immersive" '
         'xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" '
-        'xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">\n'
+        f'xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-{version}.xsd">\n'
     )
     write("  <head>\n")
+    if version == "4.1" and ir_scene.splats:
+        write('    <component name="GaussianSplats" level="1" />\n')
+    if ir_scene.humanoids:
+        write('    <component name="HAnim" level="1" />\n')
     write(_meta("generator", generator))
     metadata = ir_scene.metadata
     for name in ("filename", "title", "creator", "description", "keywords", "reference", "license"):
         value = getattr(metadata, name, None)
         if value:
             write(_meta(name, value))
-    for message in ir_scene.diagnostics:
+    for message in diagnostics:
         write(_meta("info", message))
     write("  </head>\n")
     write("  <Scene>\n")
@@ -475,8 +541,10 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d")
     if ir_scene.background_color is not None:
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
+    splats = ir_scene.splats_by_name()
     for instance in ir_scene.instances:
-        write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids))
+        write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids,
+                            splats=splats, version=version))
     write(_animation_xml(ir_scene, defs, "    "))
 
     write("  </Scene>\n")

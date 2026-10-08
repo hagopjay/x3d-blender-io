@@ -15,7 +15,10 @@ if str(SOURCE_DIR) not in sys.path:
     sys.path.insert(0, str(SOURCE_DIR))
 
 from emit_x3d40 import export_ir_scene
-from ir import IRInstance, IRMeshGeometry, IRMetadata, IRPBRMaterial, IRScene, IRShape, IRTextureRef, IRTextureTransform, IRTransform
+from ir import (
+    IRGaussianSplats, IRInlineAsset, IRInstance, IRMeshGeometry, IRMetadata, IRPBRMaterial, IRScene, IRShape, IRTextureRef,
+    IRTextureTransform, IRTransform,
+)
 from validate import validate_xml_text
 
 
@@ -234,6 +237,66 @@ class EmitX3D40Tests(unittest.TestCase):
         self.assertNotIn("<IndexedFaceSet USE=", xml_text)
         validation = validate_xml_text(xml_text)
         self.assertTrue(validation.valid, msg=f"Validation errors: {validation.errors}")
+
+
+class EmitSplatsAndInlineTests(unittest.TestCase):
+    def _splat_scene(self):
+        splats = IRGaussianSplats(
+            name="Cloud",
+            positions=[(0.0, 0.0, 0.0), (1.0, 2.0, 3.0)],
+            scales=[(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+            orientations=[(0.0, 0.0, 0.0, 1.0), (0.0, 0.707107, 0.0, 0.707107)],
+            opacities=[1.0, 0.5],
+            sh={(0, 0): [(1.0, 0.0, 0.0), (0.0, 0.0, 1.0)], (1, 0): [(0.1, 0.1, 0.1), (0.2, 0.2, 0.2)]},
+        )
+        return IRScene(
+            name="Splats",
+            splats=[splats],
+            instances=[IRInstance(source_key="SPLATS:Cloud", object_name="Cloud", object_type="MESH", splats_name="Cloud")],
+        )
+
+    def test_x3d41_writes_gaussian_splats_node(self):
+        buffer = io.StringIO()
+        export_ir_scene(buffer, self._splat_scene(), version="4.1")
+        xml = buffer.getvalue()
+        self.assertIn('<X3D version="4.1"', xml)
+        self.assertIn('x3d-4.1.dtd', xml)
+        self.assertIn('<component name="GaussianSplats" level="1" />', xml)
+        self.assertIn('<GaussianSplats DEF="GS_Cloud"', xml)
+        self.assertIn('orientations="0.000000 0.000000 0.000000 1.000000 0.000000 0.707107 0.000000 0.707107"', xml)
+        self.assertIn('opacities="1.000000 0.500000"', xml)
+        self.assertIn('sphericalHarmonicsDegree0Coef0="1.000000 0.000000 0.000000 0.000000 0.000000 1.000000"', xml)
+        self.assertIn('sphericalHarmonicsDegree1Coef0=', xml)
+        self.assertNotIn("PointSet", xml)
+        self.assertTrue(validate_xml_text(xml).valid)
+
+    def test_x3d40_degrades_splats_to_pointset(self):
+        buffer = io.StringIO()
+        export_ir_scene(buffer, self._splat_scene(), version="4.0")
+        xml = buffer.getvalue()
+        self.assertIn('<X3D version="4.0"', xml)
+        self.assertNotIn("GaussianSplats", xml.split("<Scene>")[1])
+        self.assertIn('<PointSet DEF="GS_Cloud">', xml)
+        self.assertIn("<ColorRGBA", xml)
+        self.assertIn("written as PointSet", xml)
+
+    def test_inline_written_in_transform(self):
+        scene = IRScene(
+            name="Inline",
+            instances=[IRInstance(source_key="EMPTY:Part", object_name="Part", object_type="EMPTY",
+                                  transform=IRTransform(translation=(1.0, 2.0, 3.0)),
+                                  inline=IRInlineAsset(url="parts/wheel.glb"))],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene)
+        xml = buffer.getvalue()
+        self.assertIn('<Transform DEF="OB_Part" translation="1.000000 2.000000 3.000000"', xml)
+        self.assertIn("<Inline DEF=\"IN_Part\" url='\"parts/wheel.glb\"' />", xml)
+        self.assertTrue(validate_xml_text(xml).valid)
+
+    def test_unknown_version_rejected(self):
+        with self.assertRaises(ValueError):
+            export_ir_scene(io.StringIO(), IRScene(name="x"), version="3.3")
 
 
 if __name__ == "__main__":
