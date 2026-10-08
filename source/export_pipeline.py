@@ -100,6 +100,8 @@ class ExportSettings:
     meta_license: str | None = None
     export_target: str = "AUTO"
     x3d_version: str = "X3D33"
+    use_animation: bool = False
+    animation_step: int = 1
 
     @property
     def use_modern_path(self) -> bool:
@@ -158,6 +160,8 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
                 use_mesh_modifiers=settings.use_mesh_modifiers,
                 use_triangulate=settings.use_triangulate,
                 use_normals=settings.use_normals,
+                use_animation=settings.use_animation,
+                animation_step=settings.animation_step,
                 metadata=_scene_metadata(settings, export_file),
             )
             resolve_texture_urls(ir_scene, export_file, settings.path_mode, copy_set)

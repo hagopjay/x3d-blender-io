@@ -28,6 +28,7 @@ if "bpy" in locals():
 
 import bpy
 from bpy.props import (
+    IntProperty,
     BoolProperty,
     EnumProperty,
     FloatProperty,
@@ -209,6 +210,18 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
              "Physically based materials with glTF-style textures, UVs, normals, vertex colours and DEF/USE sharing. Meshes only for now"),
         ),
         default='X3D33',
+    )
+    use_animation: BoolProperty(
+        name="Animation",
+        description="X3D 4.0 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes",
+        default=False,
+    )
+    animation_step: IntProperty(
+        name="Frame Step",
+        description="Sample every Nth frame when exporting animation",
+        default=1,
+        min=1,
+        max=100,
     )
 
     def _batch_mode_update(self, context):
@@ -554,6 +567,12 @@ def export_ui_mesh(layout, operator):
         line.prop(operator, "use_normals")
         line = body.row(align=True)
         line.prop(operator, "use_compress")
+        sub = body.column()
+        sub.enabled = operator.x3d_version == 'X3D40'
+        sub.prop(operator, "use_animation")
+        row = sub.row()
+        row.enabled = operator.use_animation
+        row.prop(operator, "animation_step")
 
 def export_ui_external_resource(layout, operator):
     header, body = layout.panel("EXPORT_SCENE_OT_x3d_external_resource", default_closed=False)

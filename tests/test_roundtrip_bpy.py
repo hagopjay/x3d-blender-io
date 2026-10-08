@@ -180,5 +180,106 @@ class SwatchBookRoundTripTests(unittest.TestCase):
         self.assertGreaterEqual(len(shared), 1)
 
 
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class SceneStructureRoundTripTests(unittest.TestCase):
+    """Hierarchy, lights, camera, text and animation on the X3D 4.0 path."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_scene_")
+        _register_extension(cls.tmpdir)
+        if str(TOOLS_DIR) not in sys.path:
+            sys.path.insert(0, str(TOOLS_DIR))
+        import bpy
+        from scene_fixture import build_scene_fixture
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        cls.objects = build_scene_fixture()
+        cls.child_world = cls.objects["child"].matrix_world.copy()
+        cls.camera_angle = float(cls.objects["camera"].data.angle)
+        cls.export_path = os.path.join(cls.tmpdir, "scene.x3d")
+        result = bpy.ops.export_scene.x3d(
+            filepath=cls.export_path, x3d_version="X3D40", use_hierarchy=True,
+            use_animation=True, use_selection=False,
+        )
+        assert result == {"FINISHED"}, result
+        cls.xml_text = Path(cls.export_path).read_text(encoding="utf-8")
+        cls.root = ET.fromstring(cls.xml_text)
+
+    def test_validates(self):
+        sys.path.insert(0, str(SOURCE_DIR))
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        self.assertTrue(validate_xml_file(self.export_path).valid)
+        semantic = validate_with_x3d_py(self.export_path)
+        if semantic is not None:
+            self.assertEqual(semantic.errors, [], semantic.errors)
+            if os.environ.get("X3D_STRICT_VALIDATION") == "1":
+                self.assertEqual(semantic.warnings, [], semantic.warnings)
+
+    def test_hierarchy_is_nested(self):
+        rig = self.root.find(".//Transform[@DEF='OB_Rig']")
+        self.assertIsNotNone(rig)
+        child = rig.find("Transform[@DEF='OB_ChildCube']")
+        self.assertIsNotNone(child, "child Transform must be nested inside its parent")
+        self.assertEqual(child.attrib["translation"].split()[0], "1.000000")  # local offset survives
+        self.assertIsNotNone(child.find("Shape/IndexedFaceSet"))
+
+    def test_lights_camera_and_navigation(self):
+        self.assertIsNotNone(self.root.find(".//Transform[@DEF='OB_KeyLight']/PointLight"))
+        self.assertIsNotNone(self.root.find(".//Transform[@DEF='OB_Spot']/SpotLight"))
+        self.assertIsNotNone(self.root.find(".//Transform[@DEF='OB_Sun']/DirectionalLight"))
+        point = self.root.find(".//PointLight")
+        self.assertEqual(point.attrib["color"], "1.000000 0.900000 0.800000")
+        view = self.root.find(".//Transform[@DEF='OB_MainCamera']/Viewpoint")
+        self.assertIsNotNone(view)
+        self.assertEqual(view.attrib["fieldOfView"], "%.6f" % self.camera_angle)
+        nav = self.root.find("Scene/NavigationInfo")
+        self.assertEqual(nav.attrib["headlight"], "false")
+        self.assertIsNotNone(self.root.find("Scene/Background"))
+
+    def test_text_becomes_mesh(self):
+        label = self.root.find(".//Transform[@DEF='OB_Label']/Shape/IndexedFaceSet")
+        self.assertIsNotNone(label)
+        self.assertGreater(len(label.attrib["coordIndex"].split()), 20)
+
+    def test_animation_nodes_and_routes(self):
+        timer = self.root.find("Scene/TimeSensor")
+        self.assertIsNotNone(timer)
+        self.assertEqual(timer.attrib["cycleInterval"], "%.6f" % (23 / 24))
+        self.assertEqual(timer.attrib["loop"], "true")
+        self.assertIsNotNone(self.root.find("Scene/PositionInterpolator[@DEF='PI_Mover']"))
+        self.assertIsNotNone(self.root.find("Scene/OrientationInterpolator[@DEF='OI_Mover']"))
+        self.assertIsNone(self.root.find("Scene/PositionInterpolator[@DEF='PI_ChildCube']"))
+        routes = self.root.findall("Scene/ROUTE")
+        pairs = {(r.attrib["fromNode"], r.attrib["toNode"], r.attrib["toField"]) for r in routes}
+        self.assertIn(("PI_Mover", "OB_Mover", "set_translation"), pairs)
+        self.assertIn(("OI_Mover", "OB_Mover", "set_rotation"), pairs)
+        keys = self.root.find("Scene/PositionInterpolator[@DEF='PI_Mover']").attrib["key"].split()
+        self.assertEqual(keys[0], "0.000000")
+        self.assertEqual(keys[-1], "1.000000")
+
+    def test_reimport_restores_structure(self):
+        import bpy
+        from mathutils import Vector
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.export_path), {"FINISHED"})
+        by_type = {}
+        for obj in bpy.context.scene.objects:
+            by_type.setdefault(obj.type, []).append(obj)
+        self.assertEqual(len(by_type.get("LIGHT", [])), 3)
+        self.assertEqual(len(by_type.get("CAMERA", [])), 1)
+        light_types = sorted(obj.data.type for obj in by_type["LIGHT"])
+        self.assertEqual(light_types, ["POINT", "SPOT", "SUN"])
+        child = next(obj for obj in by_type["MESH"] if "ChildCube" in obj.name or "ChildCube" in obj.data.name)
+        delta = (child.matrix_world.to_translation() - self.child_world.to_translation()).length
+        self.assertLess(delta, 1e-3, "child cube must land where it was in world space")
+        camera = by_type["CAMERA"][0]
+        self.assertAlmostEqual(camera.data.angle, self.camera_angle, places=3)
+        cam_delta = (camera.matrix_world.to_translation() - Vector((7.0, -7.0, 5.0))).length
+        self.assertLess(cam_delta, 1e-2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,14 +8,14 @@ so Blender can trade physically based scenes with X3D 4 browsers (X_ITE, X3DOM, 
 and with AI tooling built on the X3D Consortium's validated encodings. Everything upstream
 still works unchanged; the new path is opt-in.
 
-## What the fork adds (Milestone 1: geometry and PBR parity)
+## What the fork adds (Milestones 1 and 2: PBR materials and scene structure)
 
 Export dialog, **Include** panel, new **X3D Version** selector:
 
 | Option | What you get |
 | --- | --- |
 | **X3D 3.3 (Material, classic)** — default | The upstream exporter, unchanged: Phong `Material`, lights, cameras, hierarchy, text, curves. |
-| **X3D 4.0 (PhysicalMaterial, PBR)** | Principled BSDF → `PhysicalMaterial` (baseColor, metallic, roughness, emissiveColor, transparency, normalScale, occlusionStrength) with glTF-style `baseTexture` / `metallicRoughnessTexture` / `normalTexture` / `emissiveTexture` / `occlusionTexture` children; Emission-only trees → `UnlitMaterial`; `Appearance alphaMode="BLEND|MASK"`; `IndexedFaceSet` with `Coordinate`, `Normal` (when *Normals* is on), `TextureCoordinate` (active UV map) and `ColorRGBA` (active colour attribute); one `Shape` per material slot; `solid` from *Backface Culling*; `creaseAngle` from smooth shading; modifiers and triangulation honoured; shared mesh data and materials written once with `DEF` and reused with `USE`; texture paths follow the *Path Mode* setting exactly as the 3.3 exporter does. Lights, cameras, animation and text are **not** on this path yet and are listed in `<meta name="info">`. |
+| **X3D 4.0 (PhysicalMaterial, PBR)** | Principled BSDF → `PhysicalMaterial` (baseColor, metallic, roughness, emissiveColor, transparency, normalScale, occlusionStrength) with glTF-style `baseTexture` / `metallicRoughnessTexture` / `normalTexture` / `emissiveTexture` / `occlusionTexture` children; Emission-only trees → `UnlitMaterial`; `Appearance alphaMode="BLEND|MASK"`; `IndexedFaceSet` with `Coordinate`, `Normal` (when *Normals* is on), `TextureCoordinate` (active UV map) and `ColorRGBA` (active colour attribute); one `Shape` per material slot; `solid` from *Backface Culling*; `creaseAngle` from smooth shading; modifiers and triangulation honoured; shared mesh data and materials written once with `DEF` and reused with `USE`; texture paths follow the *Path Mode* setting exactly as the 3.3 exporter does. Nested `Transform` hierarchy (*Hierarchy* on) or flat world transforms; lights as `PointLight` / `SpotLight` / `DirectionalLight` (headlight off when present); cameras as `Viewpoint`; curves, surfaces and text objects as meshes; world colour as `Background`; optional **Animation** sampling of object transforms over the frame range into one `TimeSensor` with `PositionInterpolator` / `OrientationInterpolator` nodes and `ROUTE`s. Object types the path cannot write yet are listed in `<meta name="info">`. |
 
 Import: `PhysicalMaterial` and `UnlitMaterial` now become Principled BSDF node trees
 (metallic/roughness texture split into G and B channels, normal map with strength, occlusion kept as a labelled node,
@@ -32,6 +32,8 @@ cd tests
 python -m unittest test_emit_x3d40 test_parse_x3d40 test_material_analysis   # no Blender needed
 python -m unittest test_roundtrip_bpy   # needs Blender's `bpy` module (pip install bpy) or run inside Blender
 ```
+
+`tools/scene_fixture.py` builds a parented cube, three lights, a camera, a text object and a keyframed cube; its round-trip test checks nesting, light types, viewpoint, text geometry, interpolators and ROUTEs, and that everything lands back in world space on import. Known gap: the importer does not yet rebuild keyframes from XML `ROUTE`s (its animation reader is VRML-only), so animation is export-only for now.
 
 `tools/swatch_book.py` builds the seven-swatch fixture scene (dielectric, metal, glass, unlit, textured,
 two-material smooth sphere with vertex colours, shared-mesh cubes) that the round-trip test exports,

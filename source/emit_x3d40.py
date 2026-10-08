@@ -249,6 +249,42 @@ def _primitive_geometry_xml(hint, indent):
 # Scene
 
 
+def _light_xml(light, defs: _DefNames, indent):
+    light_def = defs.get("light", light.name, "LA_")
+    attrs = [
+        f'DEF="{light_def}"',
+        f'color="{_fmt3(light.color)}"',
+        f'intensity="{_fmt(light.intensity)}"',
+        f'ambientIntensity="{_fmt(light.ambient_intensity)}"',
+    ]
+    if light.light_type == "DIRECTIONAL":
+        attrs.append(f'direction="{_fmt3(light.direction)}"')
+        return f"{indent}<DirectionalLight {' '.join(attrs)} />\n"
+    attrs.append(f'location="{_fmt3(light.location)}"')
+    if light.radius is not None:
+        attrs.append(f'radius="{_fmt(light.radius)}"')
+    if light.light_type == "SPOT":
+        attrs.append(f'direction="{_fmt3(light.direction)}"')
+        if light.beam_width is not None:
+            attrs.append(f'beamWidth="{_fmt(light.beam_width)}"')
+        if light.cut_off_angle is not None:
+            attrs.append(f'cutOffAngle="{_fmt(light.cut_off_angle)}"')
+        return f"{indent}<SpotLight {' '.join(attrs)} />\n"
+    return f"{indent}<PointLight {' '.join(attrs)} />\n"
+
+
+def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
+    view_def = defs.get("viewpoint", viewpoint.name or viewpoint.description or "Viewpoint", "CA_")
+    attrs = [f'DEF="{view_def}"']
+    if viewpoint.description:
+        attrs.append(f"description={quoteattr(viewpoint.description)}")
+    attrs.append(f'position="{_fmt3(viewpoint.transform.translation)}"')
+    attrs.append(f'orientation="{_fmt4(viewpoint.transform.rotation_axis_angle)}"')
+    if viewpoint.field_of_view is not None:
+        attrs.append(f'fieldOfView="{_fmt(viewpoint.field_of_view)}"')
+    return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
+
+
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None):
     tx, ty, tz = instance.transform.translation
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
@@ -273,7 +309,56 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         else:
             xml.append(_primitive_geometry_xml(shape.geometry_hint, indent + "    "))
         xml.append(f"{indent}  </Shape>\n")
+    if instance.light is not None:
+        xml.append(_light_xml(instance.light, defs, indent + "  "))
+    if instance.viewpoint is not None:
+        xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
+    for child in instance.children:
+        xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir))
     xml.append(f"{indent}</Transform>\n")
+    return "".join(xml)
+
+
+def _animation_xml(ir_scene, defs: _DefNames, indent):
+    if not ir_scene.animations:
+        return ""
+    cycle = ir_scene.cycle_interval or 1.0
+    timer_def = defs.get("timer", "SceneTimer", "")
+    xml = [f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(cycle)}" loop="true" />\n']
+    routes = []
+    for animation in ir_scene.animations:
+        target_def = defs.get("transform", animation.target, "OB_")
+        keys = " ".join(_fmt(key) for key in animation.keys)
+        safe_target = _safe_name(animation.target)
+        if animation.translations:
+            node_def = f"PI_{safe_target}"
+            xml.append(
+                f'{indent}<PositionInterpolator DEF="{node_def}" key="{keys}" '
+                f'keyValue="{" ".join(_fmt3(value) for value in animation.translations)}" />\n'
+            )
+            routes.append((timer_def, "fraction_changed", node_def, "set_fraction"))
+            routes.append((node_def, "value_changed", target_def, "set_translation"))
+        if animation.rotations:
+            node_def = f"OI_{safe_target}"
+            xml.append(
+                f'{indent}<OrientationInterpolator DEF="{node_def}" key="{keys}" '
+                f'keyValue="{" ".join(_fmt4(value) for value in animation.rotations)}" />\n'
+            )
+            routes.append((timer_def, "fraction_changed", node_def, "set_fraction"))
+            routes.append((node_def, "value_changed", target_def, "set_rotation"))
+        if animation.scales:
+            node_def = f"SI_{safe_target}"
+            xml.append(
+                f'{indent}<PositionInterpolator DEF="{node_def}" key="{keys}" '
+                f'keyValue="{" ".join(_fmt3(value) for value in animation.scales)}" />\n'
+            )
+            routes.append((timer_def, "fraction_changed", node_def, "set_fraction"))
+            routes.append((node_def, "value_changed", target_def, "set_scale"))
+    for from_node, from_field, to_node, to_field in routes:
+        xml.append(
+            f'{indent}<ROUTE fromNode="{from_node}" fromField="{from_field}" '
+            f'toNode="{to_node}" toField="{to_field}" />\n'
+        )
     return "".join(xml)
 
 
@@ -312,8 +397,16 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d")
     defs = _DefNames()
     geometries = ir_scene.geometry_by_name()
     materials = ir_scene.material_by_name()
+    has_lights = ir_scene.has_lights()
+    write(
+        f'    <NavigationInfo headlight="{"false" if has_lights else "true"}" '
+        "type='\"EXAMINE\" \"ANY\"' />\n"
+    )
+    if ir_scene.background_color is not None:
+        write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
     for instance in ir_scene.instances:
         write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir))
+    write(_animation_xml(ir_scene, defs, "    "))
 
     write("  </Scene>\n")
     write("</X3D>\n")

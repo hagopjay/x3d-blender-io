@@ -1493,6 +1493,21 @@ class x3dNode(vrmlNode):
         else:
             return None
 
+    def getFieldAsString(self, field, default, ancestry):
+        # In the XML encoding an SFString attribute is plain text; only the
+        # classic (VRML) encoding wraps it in quotes. Accept both.
+        self_real = self.getRealNode()
+        field_xml = self_real.x3dNode.getAttributeNode(field)
+        if field_xml is None:
+            return default
+        value = field_xml.value
+        if len(value) > 1 and value[0] == '"' and value[-1] == '"':
+            try:
+                return mfstring.slash_decode(value[1:-1])
+            except mfstring.SlashEncodingError:
+                return default
+        return value
+
     def canHaveReferences(self):
         return self.x3dNode.getAttributeNode('DEF')
 

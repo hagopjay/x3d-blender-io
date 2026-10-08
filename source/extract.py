@@ -13,11 +13,14 @@ from __future__ import annotations
 import math
 
 try:
-    from .ir import IRInstance, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform
+    from .ir import IRAnimation, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
     from .material import analyze_material
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRInstance, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform
+    from ir import IRAnimation, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint
     from material import analyze_material
+
+
+MESH_LIKE_TYPES = {"MESH", "CURVE", "SURFACE", "FONT"}
 
 
 _ROUND = 6
@@ -185,10 +188,7 @@ def extract_mesh_geometries(
     return geometries
 
 
-def _object_transform(obj, global_matrix) -> IRTransform:
-    matrix = obj.matrix_world
-    if global_matrix is not None:
-        matrix = global_matrix @ matrix
+def _matrix_transform(matrix) -> IRTransform:
     loc, rot, scale = matrix.decompose()
     axis, angle = rot.to_axis_angle()
     if abs(angle) < 1e-9:
@@ -214,6 +214,93 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
         yield obj
 
 
+def _direction_neg_z(matrix):
+    vector = matrix.to_3x3() @ type(matrix.to_translation())((0.0, 0.0, -1.0))
+    vector.normalize()
+    return (float(vector[0]), float(vector[1]), float(vector[2]))
+
+
+def _extract_light(obj, local_matrix) -> IRLight:
+    """Mirror the legacy exporter's light mapping; values are local to the object's Transform."""
+    data = obj.data
+    light_type = {"POINT": "POINT", "SPOT": "SPOT", "SUN": "DIRECTIONAL"}.get(data.type, "DIRECTIONAL")
+    light = IRLight(
+        name=obj.name,
+        light_type=light_type,
+        color=tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3]),
+        intensity=min(float(data.energy) / 1.75, 1.0) if data.type != "SUN" else min(float(data.energy), 1.0),
+        location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
+        direction=_direction_neg_z(local_matrix),
+    )
+    cutoff = float(getattr(data, "cutoff_distance", 0.0) or 0.0)
+    if light_type == "POINT":
+        light.radius = cutoff if cutoff > 0.0 else 100.0
+    elif light_type == "SPOT":
+        light.beam_width = float(data.spot_size) * 0.37
+        light.cut_off_angle = min(light.beam_width * 1.3, math.pi / 2.0)
+        light.radius = (cutoff * math.cos(light.beam_width)) if cutoff > 0.0 else 100.0
+    return light
+
+
+def _extract_viewpoint(obj, local_matrix) -> IRViewpoint:
+    return IRViewpoint(
+        name=obj.name,
+        description=obj.name,
+        transform=_matrix_transform(local_matrix),
+        field_of_view=float(obj.data.angle) if obj.data.type == "PERSP" else None,
+    )
+
+
+def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, frame_step=1):
+    """Sample every exported object's local transform per frame.
+
+    Returns (animations, cycle_interval). Objects whose transform never changes
+    produce no animation.
+    """
+    frame_start, frame_end = scene.frame_start, scene.frame_end
+    if frame_end <= frame_start:
+        return [], None
+    fps = scene.render.fps / scene.render.fps_base
+    current = scene.frame_current
+    frames = list(range(frame_start, frame_end + 1, max(1, int(frame_step))))
+    if frames[-1] != frame_end:
+        frames.append(frame_end)
+    samples: dict[str, list] = {name: [] for name in objects_by_name}
+    try:
+        for frame in frames:
+            scene.frame_set(frame)
+            for name, (obj, parent) in objects_by_name.items():
+                matrix = obj.matrix_world
+                if use_hierarchy and parent is not None:
+                    matrix = parent.matrix_world.inverted() @ matrix
+                elif global_matrix is not None:
+                    matrix = global_matrix @ matrix
+                samples[name].append(_matrix_transform(matrix))
+    finally:
+        scene.frame_set(current)
+
+    span = float(frame_end - frame_start)
+    keys = [(frame - frame_start) / span for frame in frames]
+    animations = []
+    for name, transforms in samples.items():
+        first = transforms[0]
+        moving = any(t.translation != first.translation for t in transforms)
+        rotating = any(t.rotation_axis_angle != first.rotation_axis_angle for t in transforms)
+        scaling = any(t.scale != first.scale for t in transforms)
+        if not (moving or rotating or scaling):
+            continue
+        animations.append(
+            IRAnimation(
+                target=name,
+                keys=keys,
+                translations=[t.translation for t in transforms] if moving else [],
+                rotations=[t.rotation_axis_angle for t in transforms] if rotating else [],
+                scales=[t.scale for t in transforms] if scaling else [],
+            )
+        )
+    return animations, span / fps
+
+
 def extract_scene(
     scene,
     *,
@@ -227,16 +314,17 @@ def extract_scene(
     use_mesh_modifiers: bool = False,
     use_triangulate: bool = False,
     use_normals: bool = False,
+    use_animation: bool = False,
+    animation_step: int = 1,
     metadata: dict | None = None,
 ) -> IRScene:
     """Build the scene IR used by the X3D 4.0 emitter.
 
-    Objects are written flat with their world transform (parenting survives
-    only through the resulting matrices); hierarchy emission is a later
-    milestone. Non-mesh objects are counted in ``diagnostics`` and skipped.
+    With ``use_hierarchy`` every exported object becomes a Transform whose
+    matrix is relative to its exported parent; otherwise objects are written
+    flat with world matrices. Meshes, curves, surfaces and text become
+    IndexedFaceSets; lights and cameras become X3D lights and Viewpoints.
     """
-
-    del use_hierarchy
 
     metadata = metadata or {}
     meta = IRMetadata(
@@ -250,51 +338,70 @@ def extract_scene(
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    world = getattr(scene, "world", None)
+    if world is not None and getattr(world, "color", None) is not None:
+        ir_scene.background_color = tuple(max(0.0, min(1.0, float(channel))) for channel in world.color[:3])
+
+    exported = list(
+        _iter_export_objects(
+            scene,
+            view_layer,
+            use_selection=use_selection,
+            use_visible=use_visible,
+            use_active_collection=use_active_collection,
+        )
+    )
+    exported_names = {obj.name for obj in exported}
+
+    def exported_parent(obj):
+        parent = obj.parent
+        while parent is not None and parent.name not in exported_names:
+            parent = parent.parent
+        return parent
 
     source_keys: dict[str, str] = {}
     material_names: set[str] = set()
     geometries_by_key: dict[str, list[IRMeshGeometry]] = {}
     skipped_types: dict[str, int] = {}
+    objects_by_name: dict[str, tuple] = {}
 
-    for obj in _iter_export_objects(
-        scene,
-        view_layer,
-        use_selection=use_selection,
-        use_visible=use_visible,
-        use_active_collection=use_active_collection,
-    ):
-        if obj.type != "MESH":
-            skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1
-            continue
-
-        ir_scene.object_names.append(obj.name)
-
-        modified = bool(use_mesh_modifiers and depsgraph is not None and obj.is_modified(scene, "PREVIEW"))
-        geometry_key = obj.name if modified else obj.data.name
-        source_key = f"MESH:{geometry_key}"
+    def mesh_shapes(obj):
+        """Return the IRShape list for a mesh-like object, extracting geometry on first sight."""
+        needs_eval = obj.type != "MESH" or bool(
+            use_mesh_modifiers and depsgraph is not None and obj.is_modified(scene, "PREVIEW")
+        )
+        geometry_key = obj.name if needs_eval else obj.data.name
+        source_key = f"{obj.type}:{geometry_key}"
         source_keys.setdefault(source_key, obj.name)
 
         geometries = geometries_by_key.get(geometry_key)
         if geometries is None:
-            mesh_owner = obj.evaluated_get(depsgraph) if modified else obj
             mesh = None
+            owner = obj
             try:
-                if modified:
-                    mesh = mesh_owner.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+                if needs_eval:
+                    owner = obj.evaluated_get(depsgraph) if depsgraph is not None else obj
+                    try:
+                        mesh = owner.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+                    except TypeError:
+                        mesh = owner.to_mesh()
                 else:
                     mesh = obj.data
-                if use_triangulate and hasattr(mesh, "calc_loop_triangles"):
-                    mesh.calc_loop_triangles()
-                geometries = extract_mesh_geometries(
-                    mesh,
-                    name=geometry_key,
-                    material_slots=obj.material_slots,
-                    use_triangulate=use_triangulate,
-                    use_normals=use_normals,
-                )
+                if mesh is not None:
+                    if use_triangulate and hasattr(mesh, "calc_loop_triangles"):
+                        mesh.calc_loop_triangles()
+                    geometries = extract_mesh_geometries(
+                        mesh,
+                        name=geometry_key,
+                        material_slots=obj.material_slots,
+                        use_triangulate=use_triangulate,
+                        use_normals=use_normals,
+                    )
+                else:
+                    geometries = []
             finally:
-                if modified and mesh is not None:
-                    mesh_owner.to_mesh_clear()
+                if needs_eval and mesh is not None:
+                    owner.to_mesh_clear()
             geometries_by_key[geometry_key] = geometries
             ir_scene.geometries.extend(geometries)
 
@@ -311,21 +418,73 @@ def extract_scene(
                     ir_scene.materials.append(analyzed)
                     material_names.add(material.name)
             shapes.append(IRShape(geometry_name=geometry.name, material_name=material_name))
+        return source_key, shapes
 
-        if not shapes:
-            ir_scene.diagnostics.append(f"Object {obj.name!r} has no exportable faces and was skipped.")
-            continue
+    def build_instance(obj, parent):
+        if use_hierarchy and parent is not None:
+            local_matrix = parent.matrix_world.inverted() @ obj.matrix_world
+        else:
+            local_matrix = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
 
-        ir_scene.instances.append(
-            IRInstance(
-                source_key=source_key,
-                object_name=obj.name,
-                object_type=obj.type,
-                geometry_name=shapes[0].geometry_name,
-                material_name=shapes[0].material_name,
-                transform=_object_transform(obj, global_matrix),
-                shapes=shapes,
-            )
+        instance = IRInstance(
+            source_key=f"{obj.type}:{obj.name}",
+            object_name=obj.name,
+            object_type=obj.type,
+            transform=_matrix_transform(local_matrix),
+        )
+        objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
+
+        if obj.type in MESH_LIKE_TYPES:
+            source_key, shapes = mesh_shapes(obj)
+            instance.source_key = source_key
+            instance.shapes = shapes
+            if shapes:
+                instance.geometry_name = shapes[0].geometry_name
+                instance.material_name = shapes[0].material_name
+            else:
+                ir_scene.diagnostics.append(f"Object {obj.name!r} has no exportable faces.")
+            ir_scene.object_names.append(obj.name)
+        elif obj.type == "LIGHT":
+            # Light values are local to the object's Transform, which carries the matrix.
+            instance.light = _extract_light(obj, local_matrix.__class__())
+            ir_scene.object_names.append(obj.name)
+        elif obj.type == "CAMERA":
+            instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__())
+            ir_scene.object_names.append(obj.name)
+        elif obj.type == "EMPTY":
+            ir_scene.object_names.append(obj.name)
+        else:
+            skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1
+            if not use_hierarchy:
+                return None
+
+        if use_hierarchy:
+            for child in exported:
+                if exported_parent(child) is obj:
+                    child_instance = build_instance(child, obj)
+                    if child_instance is not None:
+                        instance.children.append(child_instance)
+        return instance
+
+    if use_hierarchy:
+        roots = [obj for obj in exported if exported_parent(obj) is None]
+        for obj in roots:
+            instance = build_instance(obj, None)
+            if instance is not None:
+                ir_scene.instances.append(instance)
+    else:
+        for obj in exported:
+            instance = build_instance(obj, None)
+            if instance is not None:
+                ir_scene.instances.append(instance)
+
+    if use_animation and objects_by_name:
+        ir_scene.animations, ir_scene.cycle_interval = _sample_animation(
+            scene,
+            objects_by_name,
+            use_hierarchy=use_hierarchy,
+            global_matrix=global_matrix,
+            frame_step=animation_step,
         )
 
     for object_type, count in sorted(skipped_types.items()):
@@ -336,10 +495,11 @@ def extract_scene(
     if not ir_scene.object_names:
         ir_scene.diagnostics.append("No exportable objects matched the current filters.")
     else:
+        instances = list(ir_scene.iter_instances())
         shared_sources = {
             source_key: owner_name
             for source_key, owner_name in source_keys.items()
-            if sum(1 for instance in ir_scene.instances if instance.source_key == source_key) > 1
+            if sum(1 for instance in instances if instance.source_key == source_key) > 1
         }
         if shared_sources:
             ir_scene.diagnostics.append(

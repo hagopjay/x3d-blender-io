@@ -125,6 +125,38 @@ class IRViewpoint:
     description: str | None = None
     transform: IRTransform = field(default_factory=IRTransform)
     field_of_view: float | None = None
+    name: str | None = None
+
+
+@dataclass
+class IRLight:
+    """A light written inside its owning Transform (location 0, direction -Z)."""
+
+    name: str
+    light_type: str = "POINT"  # POINT, SPOT, DIRECTIONAL
+    color: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    intensity: float = 1.0
+    ambient_intensity: float = 0.0
+    radius: float | None = None
+    beam_width: float | None = None
+    cut_off_angle: float | None = None
+    location: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    direction: tuple[float, float, float] = (0.0, 0.0, -1.0)
+
+
+@dataclass
+class IRAnimation:
+    """Sampled transform animation for one instance.
+
+    ``keys`` are fractions of the cycle in [0, 1]; the value lists are
+    parallel to ``keys``. Empty value lists mean that channel is static.
+    """
+
+    target: str
+    keys: list[float] = field(default_factory=list)
+    translations: list[tuple[float, float, float]] = field(default_factory=list)
+    rotations: list[tuple[float, float, float, float]] = field(default_factory=list)
+    scales: list[tuple[float, float, float]] = field(default_factory=list)
 
 
 @dataclass
@@ -146,6 +178,9 @@ class IRInstance:
     material_name: str | None = None
     transform: IRTransform = field(default_factory=IRTransform)
     shapes: list[IRShape] = field(default_factory=list)
+    children: list["IRInstance"] = field(default_factory=list)
+    light: IRLight | None = None
+    viewpoint: IRViewpoint | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -177,6 +212,20 @@ class IRScene:
     viewpoints: list[IRViewpoint] = field(default_factory=list)
     navigation_types: list[str] = field(default_factory=list)
     diagnostics: list[str] = field(default_factory=list)
+    animations: list[IRAnimation] = field(default_factory=list)
+    cycle_interval: float | None = None
+    background_color: tuple[float, float, float] | None = None
+
+    def iter_instances(self):
+        """Depth-first walk over every instance, nested children included."""
+        stack = list(reversed(self.instances))
+        while stack:
+            instance = stack.pop()
+            yield instance
+            stack.extend(reversed(instance.children))
+
+    def has_lights(self) -> bool:
+        return any(instance.light is not None for instance in self.iter_instances())
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

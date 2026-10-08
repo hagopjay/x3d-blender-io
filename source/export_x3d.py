@@ -1832,6 +1832,8 @@ def save(context,
          meta_reference=None,
          meta_license=None,
          x3d_version='X3D33',
+         use_animation=False,
+         animation_step=1,
          ):
     from .export_pipeline import ExportSettings, save as pipeline_save
 
@@ -1865,6 +1867,8 @@ def save(context,
         meta_license=meta_license,
         export_target=export_target,
         x3d_version=x3d_version,
+        use_animation=use_animation,
+        animation_step=animation_step,
     )
 
     def _legacy_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
