@@ -1,3 +1,8 @@
+## Unreleased (x3d-blender-io fork)
+- New **X3D Version** export option: X3D 3.3 (unchanged upstream writer) or X3D 4.0 (PhysicalMaterial / UnlitMaterial, PBR textures, UVs, normals, vertex colours, per-material Shapes, DEF/USE sharing, path-mode texture handling, self-validation).
+- Importer understands PhysicalMaterial and UnlitMaterial, Appearance alphaMode/alphaCutoff and IndexedFaceSet solid; object and mesh names survive round trips.
+- Swatch-book fixture (`tools/swatch_book.py`) and export → validate → reimport test under Blender 5.2.
+
 # Release Notes
 
 > Note: These release notes are also published on the extensions page and contain the most important changes of each release.

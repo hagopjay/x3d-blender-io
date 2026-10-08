@@ -3207,6 +3207,180 @@ def appearance_Create(vrmlname, material, tex_node, ancestry, node, is_vcol):
     return (bpymat_wrap.material, bpyima, tex_has_alpha)
 
 
+# -----------------------------------------------------------------------------------
+# X3D 4.0 PhysicalMaterial / UnlitMaterial (PBR) import
+
+
+def _attribute_raw(x3d_node, name, default=None):
+    """Read a plain attribute (not an SFString with quotes) from an X3D node."""
+    real = x3d_node.getRealNode()
+    attr = real.x3dNode.getAttributeNode(name) if getattr(real, "x3dNode", None) is not None else None
+    return attr.value if attr else default
+
+
+def _pbr_texture_children(mat_node):
+    """Return {containerField: ImageTexture node} for a PhysicalMaterial/UnlitMaterial."""
+    found = {}
+    for child in mat_node.getRealNode().getChildrenBySpec(('ImageTexture', 'PixelTexture', 'MovieTexture')):
+        container = _attribute_raw(child, 'containerField', None)
+        if not container:
+            # X3D 4.0 default containerField for a texture inside a material is baseTexture
+            container = 'baseTexture'
+        found[container] = child
+    return found
+
+
+def _place_image_node(node_tree, bpyima, location, label, non_color=False):
+    image_node = node_tree.nodes.new("ShaderNodeTexImage")
+    image_node.image = bpyima
+    image_node.location = location
+    image_node.label = label
+    if non_color and bpyima is not None:
+        try:
+            bpyima.colorspace_settings.name = 'Non-Color'
+        except TypeError:
+            pass
+    return image_node
+
+
+def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
+    """Create a Principled (or Emission) Blender material from PhysicalMaterial / UnlitMaterial."""
+    spec = mat.getSpec()
+    unlit = spec == 'UnlitMaterial'
+    mat_name = mat.getDefName()
+    bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
+    bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
+    node_tree = bpymat.node_tree
+    bsdf = bpymat_wrap.node_principled_bsdf
+
+    textures = _pbr_texture_children(mat)
+    images = {}
+    for container, tex_node in textures.items():
+        try:
+            images[container] = appearance_LoadTexture(tex_node, ancestry, node)
+        except Exception as exc:  # keep the import going when one texture is missing
+            logger.warning("Could not load %s for %s: %s", container, bpymat.name, exc)
+
+    transparency = mat.getFieldAsFloat('transparency', 0.0, ancestry)
+    alpha = max(0.0, min(1.0, 1.0 - transparency))
+
+    if unlit:
+        emissive = mat.getFieldAsFloatTuple('emissiveColor', [1.0, 1.0, 1.0], ancestry)
+        bpymat_wrap.base_color = emissive
+        bpymat_wrap.emission_color = emissive
+        if bsdf:
+            bsdf.inputs["Emission Strength"].default_value = 1.0
+            # An unlit surface shows its emission only: no diffuse/specular response.
+            bsdf.inputs["Base Color"].default_value = (0.0, 0.0, 0.0, 1.0)
+            if "Specular IOR Level" in bsdf.inputs:
+                bsdf.inputs["Specular IOR Level"].default_value = 0.0
+        bpyima = images.get('emissiveTexture') or images.get('baseTexture')
+        if bpyima is not None:
+            bpymat_wrap.emission_color_texture.image = bpyima
+            bpymat_wrap.emission_color_texture.image.colorspace_settings.name = 'sRGB'
+    else:
+        base_color = mat.getFieldAsFloatTuple('baseColor', [0.8, 0.8, 0.8], ancestry)
+        emissive = mat.getFieldAsFloatTuple('emissiveColor', [0.0, 0.0, 0.0], ancestry)
+        bpymat_wrap.base_color = base_color
+        bpymat_wrap.metallic = mat.getFieldAsFloat('metallic', 1.0, ancestry)
+        bpymat_wrap.roughness = mat.getFieldAsFloat('roughness', 1.0, ancestry)
+        bpymat_wrap.emission_color = emissive
+        if bsdf and tuple(emissive) != (0.0, 0.0, 0.0):
+            bsdf.inputs["Emission Strength"].default_value = 1.0
+
+        bpyima = images.get('baseTexture')
+        if bpyima is not None:
+            bpymat_wrap.base_color_texture.image = bpyima
+
+        bpyima = images.get('emissiveTexture')
+        if bpyima is not None:
+            bpymat_wrap.emission_color_texture.image = bpyima
+            if bsdf:
+                bsdf.inputs["Emission Strength"].default_value = 1.0
+
+        bpyima = images.get('metallicRoughnessTexture')
+        if bpyima is not None and bsdf:
+            # glTF / X3D 4.0 packing: G = roughness, B = metallic
+            image_node = _place_image_node(node_tree, bpyima, (-700, -200), "Metallic Roughness", non_color=True)
+            separate = node_tree.nodes.new("ShaderNodeSeparateColor")
+            separate.location = (-400, -200)
+            node_tree.links.new(image_node.outputs["Color"], separate.inputs["Color"])
+            node_tree.links.new(separate.outputs["Green"], bsdf.inputs["Roughness"])
+            node_tree.links.new(separate.outputs["Blue"], bsdf.inputs["Metallic"])
+
+        bpyima = images.get('occlusionTexture')
+        if bpyima is not None:
+            # Blender has no occlusion input on Principled; keep the map in the tree
+            # so the exporter (and the user) can find it.
+            occlusion_node = _place_image_node(node_tree, bpyima, (-700, -500), "Occlusion", non_color=True)
+            occlusion_node.name = "Occlusion"
+            strength = mat.getFieldAsFloat('occlusionStrength', 1.0, ancestry)
+            value_node = node_tree.nodes.new("ShaderNodeValue")
+            value_node.name = value_node.label = "occlusion_strength"
+            value_node.location = (-700, -720)
+            value_node.outputs[0].default_value = strength
+
+    bpyima = images.get('normalTexture')
+    if bpyima is not None:
+        bpymat_wrap.normalmap_texture.image = bpyima
+        bpymat_wrap.normalmap_strength = mat.getFieldAsFloat('normalScale', 1.0, ancestry)
+        try:
+            bpyima.colorspace_settings.name = 'Non-Color'
+        except TypeError:
+            pass
+
+    bpymat_wrap.alpha = alpha
+    alpha_mode = (_attribute_raw(appr, 'alphaMode', 'AUTO') or 'AUTO').strip().strip('"').upper()
+    base_image = images.get('baseTexture')
+    if (not unlit and base_image is not None and bsdf is not None and alpha_mode in {'BLEND', 'MASK'}
+            and base_image.alpha_mode not in {'NONE', 'CHANNEL_PACKED'}):
+        # Reuse the base colour image node: its Alpha output feeds Principled Alpha
+        base_node = next((n for n in node_tree.nodes if n.type == 'TEX_IMAGE' and n.image == base_image), None)
+        if base_node is not None:
+            node_tree.links.new(base_node.outputs["Alpha"], bsdf.inputs["Alpha"])
+    if alpha_mode == 'BLEND' or (alpha_mode == 'AUTO' and alpha < 1.0):
+        bpymat.surface_render_method = 'BLENDED'
+    elif alpha_mode == 'MASK':
+        bpymat.surface_render_method = 'DITHERED'
+        cutoff = _attribute_raw(appr, 'alphaCutoff', None)
+        if cutoff is not None and bsdf and bpymat_wrap.alpha_texture.image is not None:
+            try:
+                threshold = float(cutoff)
+            except ValueError:
+                threshold = 0.5
+            math_node = node_tree.nodes.new("ShaderNodeMath")
+            math_node.operation = 'GREATER_THAN'
+            math_node.inputs[1].default_value = threshold
+            math_node.location = (-200, -400)
+            alpha_link = next((link for link in node_tree.links if link.to_socket == bsdf.inputs["Alpha"]), None)
+            if alpha_link is not None:
+                source = alpha_link.from_socket
+                node_tree.links.remove(alpha_link)
+                node_tree.links.new(source, math_node.inputs[0])
+                node_tree.links.new(math_node.outputs[0], bsdf.inputs["Alpha"])
+
+    # Two-sided rendering follows the geometry's solid field, which importShape applies later.
+    return bpymat
+
+
+def importShape_LoadPBRAppearance(vrmlname, appr, mat_node, ancestry, node):
+    if appr.reference and appr.getRealNode().parsed:
+        return appearance_ExpandCachedMaterial(appr.getRealNode().parsed)
+    if mat_node.reference and mat_node.getRealNode().parsed:
+        return appearance_ExpandCachedMaterial(mat_node.getRealNode().parsed)
+    cache_key = ("PBR", appr.desc())
+    if cache_key in material_cache:
+        bpymat = material_cache[cache_key]
+    else:
+        bpymat = appearance_CreatePBRMaterial(vrmlname, mat_node, appr, ancestry, node)
+        material_cache[cache_key] = bpymat
+    if appr.canHaveReferences():
+        appr.parsed = bpymat
+    if mat_node.canHaveReferences():
+        mat_node.parsed = bpymat
+    return (bpymat, None, False)
+
+
 def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     """
     Material creation takes nontrivial time on large models.
@@ -3249,6 +3423,11 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     # First, check entire-appearance cache
     if appr.reference and appr.getRealNode().parsed:
         return appearance_ExpandCachedMaterial(appr.getRealNode().parsed)
+
+    # X3D 4.0 physically based materials carry their textures as children
+    pbr_material = appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial'))
+    if pbr_material:
+        return importShape_LoadPBRAppearance(vrmlname, appr, pbr_material, ancestry, node)
 
     tex_node = appr.getChildBySpec(('ImageTexture', 'PixelTexture', 'MovieTexture'))
     # Other texture nodes are: MultiTexture
@@ -3343,8 +3522,11 @@ def importShape_ProcessObject(
         bpymat, has_alpha, texmtx, ancestry,
         global_matrix, solidify, solidify_value):
 
-    vrmlname += "_" + geom_spec
-    bpydata.name = vrmlname
+    geom_name = geom.getDefName() if hasattr(geom, "getDefName") else None
+    if geom_name:
+        bpydata.name = geom_name[3:] if geom_name.startswith("ME_") and len(geom_name) > 3 else geom_name
+    else:
+        bpydata.name = vrmlname + "_" + geom_spec
 
     # curves like IndexedLineSet can also have a material,
     # although it won't be visible until the curve has some depth
@@ -3688,6 +3870,14 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 
     vrmlname = node.getDefName()
     if not vrmlname:
+        # Exporters usually DEF the enclosing Transform rather than the Shape;
+        # reuse that name so object names survive a round trip.
+        for parent in reversed(ancestry):
+            parent_name = parent.getDefName() if hasattr(parent, "getDefName") else None
+            if parent_name:
+                vrmlname = parent_name[3:] if parent_name.startswith("OB_") and len(parent_name) > 3 else parent_name
+                break
+    if not vrmlname:
         vrmlname = 'Shape'
 
     appr = node.getChildBySpec('Appearance')
@@ -3712,6 +3902,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         textx = appr.getChildBySpec('TextureTransform')
         if textx:
             texmtx = translateTexTransform(textx, ancestry)
+        if bpymat is not None and appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
+            # X3D 4.0 path: a solid surface is single sided in Blender terms
+            bpymat.use_backface_culling = geom.getFieldAsBool('solid', True, ancestry)
     elif is_vcol:
         # this may be a rare case, however sometimes vertex colors get used without material
         # in such case a default material has to get forced

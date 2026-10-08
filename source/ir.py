@@ -1,6 +1,14 @@
-# SPDX-FileCopyrightText: 2026 OpenAI
+# SPDX-FileCopyrightText: 2026 HagopJay
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Intermediate representation (IR) shared by the X3D 4.0 export and import paths.
+
+This module must stay free of ``bpy`` imports so that it can be unit-tested
+outside Blender. Extractors turn Blender data into these dataclasses, emitters
+turn them into X3D, parsers turn X3D into them, and populators turn them back
+into Blender data.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +16,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
-@dataclass(slots=True)
+@dataclass
 class IRMetadata:
     creator: str | None = None
     title: str | None = None
@@ -16,16 +24,17 @@ class IRMetadata:
     keywords: str | None = None
     reference: str | None = None
     license: str | None = None
+    filename: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class IRTransform:
     translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
     rotation_axis_angle: tuple[float, float, float, float] = (0.0, 0.0, 1.0, 0.0)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
 
 
-@dataclass(slots=True)
+@dataclass
 class IRTextureTransform:
     translation: tuple[float, float] = (0.0, 0.0)
     rotation: float = 0.0
@@ -33,7 +42,7 @@ class IRTextureTransform:
     texcoord_set: int = 0
 
 
-@dataclass(slots=True)
+@dataclass
 class IRTextureRef:
     image_name: str | None = None
     filepath: str | None = None
@@ -42,18 +51,36 @@ class IRTextureRef:
     extension: str | None = None
     transform: IRTextureTransform | None = None
     usage: str | None = None
+    # Final URL written into the X3D file. Filled in by the export pipeline
+    # after path-mode resolution (COPY / RELATIVE / STRIP); when None the
+    # emitter falls back to ``filepath``.
+    url: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class IRMeshGeometry:
+    """One IndexedFaceSet worth of mesh data.
+
+    Vertices are already split so that ``coord``, ``normal``, ``tex_coord``
+    and ``color`` are parallel arrays indexed by ``coord_index`` (X3D
+    ``normalPerVertex`` / ``colorPerVertex`` true with shared indices).
+    A Blender mesh with several material slots becomes several geometries,
+    one per slot, with ``material_slot`` recording which.
+    """
+
     name: str
     coord: list[tuple[float, float, float]] = field(default_factory=list)
     coord_index: list[int] = field(default_factory=list)
     solid: bool = True
     crease_angle: float | None = None
+    normal: list[tuple[float, float, float]] = field(default_factory=list)
+    tex_coord: list[tuple[float, float]] = field(default_factory=list)
+    color: list[tuple[float, float, float, float]] = field(default_factory=list)
+    material_slot: int = 0
+    source_mesh: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class IRPBRMaterial:
     name: str
     base_color: tuple[float, float, float, float] = (0.8, 0.8, 0.8, 1.0)
@@ -72,8 +99,20 @@ class IRPBRMaterial:
     occlusion_texture: IRTextureRef | None = None
     emissive_texture: IRTextureRef | None = None
 
+    def texture_refs(self):
+        """Yield (containerField, IRTextureRef) pairs for every assigned texture."""
+        for container_field, texture_ref in (
+            ("baseTexture", self.base_color_texture),
+            ("metallicRoughnessTexture", self.metallic_roughness_texture),
+            ("normalTexture", self.normal_texture),
+            ("emissiveTexture", self.emissive_texture),
+            ("occlusionTexture", self.occlusion_texture),
+        ):
+            if texture_ref is not None:
+                yield container_field, texture_ref
 
-@dataclass(slots=True)
+
+@dataclass
 class IRInlineAsset:
     url: str
     asset_type: str = "x3d"
@@ -81,14 +120,23 @@ class IRInlineAsset:
     import_policy: str = "native"
 
 
-@dataclass(slots=True)
+@dataclass
 class IRViewpoint:
     description: str | None = None
     transform: IRTransform = field(default_factory=IRTransform)
     field_of_view: float | None = None
 
 
-@dataclass(slots=True)
+@dataclass
+class IRShape:
+    """One Shape inside an instance: a geometry paired with a material."""
+
+    geometry_name: str | None = None
+    material_name: str | None = None
+    geometry_hint: str = "Sphere"
+
+
+@dataclass
 class IRInstance:
     source_key: str
     object_name: str
@@ -97,9 +145,25 @@ class IRInstance:
     geometry_name: str | None = None
     material_name: str | None = None
     transform: IRTransform = field(default_factory=IRTransform)
+    shapes: list[IRShape] = field(default_factory=list)
+
+    def iter_shapes(self):
+        """Yield the shapes of this instance.
+
+        Instances built before multi-material support carry a single
+        ``geometry_name`` / ``material_name`` pair; those are still honoured.
+        """
+        if self.shapes:
+            yield from self.shapes
+        elif self.geometry_name or self.material_name or self.object_type == "MESH":
+            yield IRShape(
+                geometry_name=self.geometry_name,
+                material_name=self.material_name,
+                geometry_hint=self.geometry_hint,
+            )
 
 
-@dataclass(slots=True)
+@dataclass
 class IRScene:
     name: str
     source_version: str = "blender"
@@ -116,3 +180,14 @@ class IRScene:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    def geometry_by_name(self) -> dict[str, IRMeshGeometry]:
+        return {geometry.name: geometry for geometry in self.geometries}
+
+    def material_by_name(self) -> dict[str, IRPBRMaterial]:
+        return {material.name: material for material in self.materials}
+
+    def iter_texture_refs(self):
+        for material in self.materials:
+            for _container_field, texture_ref in material.texture_refs():
+                yield texture_ref

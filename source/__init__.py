@@ -197,6 +197,20 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
     filename_ext = ".x3d"
     filter_glob: StringProperty(default="*.x3d", options={'HIDDEN'})
 
+    x3d_version: EnumProperty(
+        name="X3D Version",
+        description="Which X3D encoding to write",
+        items=(
+            ('X3D33',
+             "X3D 3.3 (Material, classic)",
+             "Legacy exporter: Phong Material, lights, cameras, hierarchy. Widest viewer support"),
+            ('X3D40',
+             "X3D 4.0 (PhysicalMaterial, PBR)",
+             "Physically based materials with glTF-style textures, UVs, normals, vertex colours and DEF/USE sharing. Meshes only for now"),
+        ),
+        default='X3D33',
+    )
+
     def _batch_mode_update(self, context):
         if self.batch_mode == 'SCENE' or self.batch_mode == 'COLLECTION':
             self.use_visible = False
@@ -487,6 +501,7 @@ def export_ui_include(layout, operator):
     header, body = layout.panel("EXPORT_SCENE_OT_x3d_include", default_closed=False)
     header.label(text=translate(lang, "label_include"))
     if body:
+        body.prop(operator, "x3d_version")
         row = body.row(align=True)
         row.prop(operator, "batch_mode")
         sub = row.row(align=True)

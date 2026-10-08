@@ -1,4 +1,50 @@
-# Web3D X3D/VRML2 format Add-on
+# Web3D X3D/VRML2 format Add-on — X3D 4.0 fork
+
+This repository is HagopJay's working fork of the Blender extension
+[Web3D X3D/VRML2 format](https://extensions.blender.org/add-ons/web3d-x3d-vrml2-format)
+(upstream: [projects.blender.org/extensions/io_scene_x3d](https://projects.blender.org/extensions/io_scene_x3d)).
+Its purpose is to bring the exporter and importer up to **X3D 4.0** (ISO/IEC 19775-1:2023)
+so Blender can trade physically based scenes with X3D 4 browsers (X_ITE, X3DOM, Castle, FreeWRL)
+and with AI tooling built on the X3D Consortium's validated encodings. Everything upstream
+still works unchanged; the new path is opt-in.
+
+## What the fork adds (Milestone 1: geometry and PBR parity)
+
+Export dialog, **Include** panel, new **X3D Version** selector:
+
+| Option | What you get |
+| --- | --- |
+| **X3D 3.3 (Material, classic)** — default | The upstream exporter, unchanged: Phong `Material`, lights, cameras, hierarchy, text, curves. |
+| **X3D 4.0 (PhysicalMaterial, PBR)** | Principled BSDF → `PhysicalMaterial` (baseColor, metallic, roughness, emissiveColor, transparency, normalScale, occlusionStrength) with glTF-style `baseTexture` / `metallicRoughnessTexture` / `normalTexture` / `emissiveTexture` / `occlusionTexture` children; Emission-only trees → `UnlitMaterial`; `Appearance alphaMode="BLEND|MASK"`; `IndexedFaceSet` with `Coordinate`, `Normal` (when *Normals* is on), `TextureCoordinate` (active UV map) and `ColorRGBA` (active colour attribute); one `Shape` per material slot; `solid` from *Backface Culling*; `creaseAngle` from smooth shading; modifiers and triangulation honoured; shared mesh data and materials written once with `DEF` and reused with `USE`; texture paths follow the *Path Mode* setting exactly as the 3.3 exporter does. Lights, cameras, animation and text are **not** on this path yet and are listed in `<meta name="info">`. |
+
+Import: `PhysicalMaterial` and `UnlitMaterial` now become Principled BSDF node trees
+(metallic/roughness texture split into G and B channels, normal map with strength, occlusion kept as a labelled node,
+`alphaMode` → *Blended* / *Dithered* with an alpha-cutoff node), `solid` → *Backface Culling*,
+and object and mesh names survive the round trip (`OB_` / `ME_` / `MA_` prefixes are stripped).
+
+The X3D 4.0 writer validates its own output: XML well-formedness always, and field types and
+ranges through the Web3D `x3d` Python package when it is installed (`pip install x3d`).
+
+### Tests
+
+```
+cd tests
+python -m unittest test_emit_x3d40 test_parse_x3d40 test_material_analysis   # no Blender needed
+python -m unittest test_roundtrip_bpy   # needs Blender's `bpy` module (pip install bpy) or run inside Blender
+```
+
+`tools/swatch_book.py` builds the seven-swatch fixture scene (dielectric, metal, glass, unlit, textured,
+two-material smooth sphere with vertex colours, shared-mesh cubes) that the round-trip test exports,
+validates, and reimports. Verified on Blender 5.2 (`bpy` wheel). Blender 4.2 is the minimum.
+
+### Architecture of the 4.0 path
+
+`extract.py` (Blender → IR) → `ir.py` (plain dataclasses, no `bpy`) → `emit_x3d40.py` (IR → XML) → `validate.py`.
+The legacy exporter is untouched; `export_pipeline.py` chooses the writer from the version option.
+Planning notes live in `docs/planning/`.
+
+## Upstream README
+
 
 ## Features & Documentation
 see [Web3D X3D/VRML2 Documentation](https://projects.blender.org/extensions/io_scene_x3d/wiki)

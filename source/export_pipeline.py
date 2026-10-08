@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 OpenAI
+# SPDX-FileCopyrightText: 2026 HagopJay
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -9,11 +9,70 @@ import os
 from typing import Callable
 
 import bpy
+from bpy_extras.io_utils import path_reference, path_reference_copy
 
 try:
     from .extract import extract_scene
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import extract_scene
+
+
+def resolve_texture_urls(ir_scene, export_file: str, path_mode: str, copy_set: set) -> None:
+    """Fill ``IRTextureRef.url`` for every texture according to the path mode.
+
+    Mirrors the legacy exporter: COPY places files next to the X3D file,
+    RELATIVE/ABSOLUTE/STRIP/MATCH/RELATIVE_ALL follow ``path_reference``.
+    Packed images with no file on disk are written next to the X3D file.
+    """
+
+    base_dst = os.path.dirname(os.path.abspath(export_file))
+    base_src = os.path.dirname(bpy.data.filepath) if bpy.data.filepath else base_dst
+    seen: dict[str, str] = {}
+    for texture_ref in ir_scene.iter_texture_refs():
+        image = bpy.data.images.get(texture_ref.image_name) if texture_ref.image_name else None
+        if image is None:
+            continue
+        if image.name in seen:
+            texture_ref.url = seen[image.name]
+            continue
+        filepath = bpy.path.abspath(image.filepath_raw or image.filepath, library=image.library)
+        has_file = bool(filepath) and os.path.exists(filepath)
+        if not has_file:
+            if path_mode == "STRIP" or image.packed_file is None and not image.has_data:
+                url = os.path.basename(filepath) or image.name
+                texture_ref.url = url
+                seen[image.name] = url
+                ir_scene.diagnostics.append(f"Texture {image.name!r} has no file on disk; wrote bare name {url!r}.")
+                continue
+            ext = {"PNG": ".png", "JPEG": ".jpg", "BMP": ".bmp", "TARGA": ".tga", "TIFF": ".tif"}.get(
+                image.file_format, ".png"
+            )
+            target = os.path.join(base_dst, bpy.path.clean_name(os.path.splitext(image.name)[0]) + ext)
+            try:
+                image.save(filepath=target)
+            except TypeError:  # older API without the filepath keyword
+                previous = image.filepath_raw
+                image.filepath_raw = target
+                try:
+                    image.save()
+                finally:
+                    image.filepath_raw = previous
+            except RuntimeError as exc:
+                ir_scene.diagnostics.append(f"Could not write packed texture {image.name!r}: {exc}")
+                continue
+            filepath = target
+        url = path_reference(
+            filepath,
+            base_src,
+            base_dst,
+            path_mode,
+            "",
+            copy_set,
+            image.library,
+        )
+        url = url.replace("\\", "/")
+        texture_ref.url = url
+        seen[image.name] = url
 
 
 @dataclass(slots=True)
@@ -40,10 +99,21 @@ class ExportSettings:
     meta_reference: str | None = None
     meta_license: str | None = None
     export_target: str = "AUTO"
+    x3d_version: str = "X3D33"
+
+    @property
+    def use_modern_path(self) -> bool:
+        target = (self.export_target or "AUTO").upper()
+        if target in {"MODERN", "X3D40", "MODERN_SCAFFOLD"}:
+            return True
+        if target == "AUTO":
+            return self.x3d_version.upper() in {"X3D40", "4.0"}
+        return False
 
 
-def _scene_metadata(settings: ExportSettings) -> dict[str, str | None]:
+def _scene_metadata(settings: ExportSettings, export_file: str) -> dict[str, str | None]:
     return {
+        "filename": os.path.basename(export_file),
         "creator": settings.meta_creator,
         "title": settings.meta_title,
         "description": settings.meta_description,
@@ -73,14 +143,24 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
         return os.path.join(export_dir, f"{bpy.path.clean_name(name)}{suffix}")
 
     def run_writer(export_file, depsgraph, local_scene, view_layer):
-        ir_scene = extract_scene(
-            local_scene,
-            use_selection=settings.use_selection,
-            use_active_collection=settings.use_active_collection,
-            use_visible=settings.use_visible,
-            use_hierarchy=settings.use_hierarchy,
-            metadata=_scene_metadata(settings),
-        )
+        ir_scene = None
+        copy_set = set()
+        if settings.use_modern_path:
+            ir_scene = extract_scene(
+                local_scene,
+                view_layer=view_layer,
+                depsgraph=depsgraph,
+                global_matrix=settings.global_matrix,
+                use_selection=settings.use_selection,
+                use_active_collection=settings.use_active_collection,
+                use_visible=settings.use_visible,
+                use_hierarchy=settings.use_hierarchy,
+                use_mesh_modifiers=settings.use_mesh_modifiers,
+                use_triangulate=settings.use_triangulate,
+                use_normals=settings.use_normals,
+                metadata=_scene_metadata(settings, export_file),
+            )
+            resolve_texture_urls(ir_scene, export_file, settings.path_mode, copy_set)
         writer(
             export_file=export_file,
             depsgraph=depsgraph,
@@ -89,6 +169,8 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
             ir_scene=ir_scene,
             settings=settings,
         )
+        if copy_set:
+            path_reference_copy(copy_set)
 
     base_dir = os.path.dirname(filepath)
     prefix = os.path.basename(filepath).replace(".x3d", "").replace(".x3dz", "")

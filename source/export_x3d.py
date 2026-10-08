@@ -1831,11 +1831,14 @@ def save(context,
          meta_keywords=None,
          meta_reference=None,
          meta_license=None,
+         x3d_version='X3D33',
          ):
     from .export_pipeline import ExportSettings, save as pipeline_save
 
     logger.info("save: context %r to filepath %r" % (context, filepath))
 
+    # The UI option decides the path; the environment variable remains as a
+    # developer override for headless scripts.
     export_target = os.environ.get("BLENDER_X3D_EXPORT_TARGET", "AUTO").upper()
 
     settings = ExportSettings(
@@ -1861,6 +1864,7 @@ def save(context,
         meta_reference=meta_reference,
         meta_license=meta_license,
         export_target=export_target,
+        x3d_version=x3d_version,
     )
 
     def _legacy_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
@@ -1891,28 +1895,36 @@ def save(context,
                 meta_license=settings.meta_license,
             )
 
-    def _modern_scaffold_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
-        del depsgraph, scene, view_layer, settings
+    def _modern_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
+        del depsgraph, scene, view_layer
         from .emit_x3d40 import export_ir_scene
-        from .validate import validate_xml_file
+        from .validate import validate_xml_file, validate_with_x3d_py
 
-        logger.info("Export orchestration active; writing modern X3D 4.0 scaffold to %r", export_file)
-        with (gzip_open_utf8(export_file, 'w') if use_compress else open(export_file, 'w', encoding='utf-8')) as file:
+        logger.info("Writing X3D 4.0 to %r", export_file)
+        with (gzip_open_utf8(export_file, 'w') if settings.use_compress else open(export_file, 'w', encoding='utf-8')) as file:
             export_ir_scene(file, ir_scene, generator=f"{bl_info_copy['name']} v{'.'.join(map(str, bl_info_copy['version']))}")
-        if use_compress:
-            logger.warning("Skipping XML validation for compressed modern scaffold export: %r", export_file)
+        for message in ir_scene.diagnostics:
+            logger.info("X3D 4.0 export note: %s", message)
+        if settings.use_compress:
+            logger.warning("Skipping XML validation for compressed export: %r", export_file)
             return
 
         validation = validate_xml_file(export_file)
         if validation.valid:
             for warning in validation.warnings:
-                logger.warning("Modern scaffold validation warning for %r: %s", export_file, warning)
+                logger.warning("X3D 4.0 validation warning for %r: %s", export_file, warning)
         else:
             for error in validation.errors:
-                logger.error("Modern scaffold validation error for %r: %s", export_file, error)
-            raise ValueError(f"Modern scaffold export validation failed for {export_file}")
+                logger.error("X3D 4.0 validation error for %r: %s", export_file, error)
+            raise ValueError(f"X3D 4.0 export validation failed for {export_file}")
+        semantic = validate_with_x3d_py(export_file)
+        if semantic is not None:
+            for warning in semantic.warnings:
+                logger.warning("x3d.py: %s", warning)
+            for error in semantic.errors:
+                logger.error("x3d.py: %s", error)
 
-    writer = _modern_scaffold_writer if settings.export_target in {"MODERN", "X3D40", "MODERN_SCAFFOLD"} else _legacy_writer
+    writer = _modern_writer if settings.use_modern_path else _legacy_writer
     result = pipeline_save(context, settings, writer)
     logger.info("Export completed")
     return result
