@@ -1,0 +1,7 @@
+# Default owner for everything: review is requested automatically on every pull request.
+# Add more owners per path as maintainers join (for example: /source/material.py @someone).
+*       @hagopjay
+
+# Repository plumbing: CI, review automation, templates.
+/.github/   @hagopjay
+/CONTRIBUTING.md  @hagopjay

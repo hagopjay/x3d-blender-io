@@ -1,0 +1,53 @@
+name: Bug report
+description: Something imports, exports or validates wrongly.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The fastest fix comes from a small reproducible file, so please attach one if you can.
+  - type: input
+    id: blender_version
+    attributes:
+      label: Blender version
+      placeholder: "4.5.3 LTS / 5.1.0"
+    validations:
+      required: true
+  - type: input
+    id: extension_version
+    attributes:
+      label: Extension version
+      description: From Blender Preferences > Get Extensions > Installed, or blender_manifest.toml.
+      placeholder: "2.6.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: ["Windows", "macOS", "Linux", "Other"]
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: ["Import (.x3d/.x3dv/.wrl)", "Export (.x3d/.x3dz)", "Materials / PBR", "glTF Inline bridge", "Animation / HAnim", "Packaging / install", "Other"]
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: Short description, then exact steps to reproduce. Paste console output in a code block.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: files
+    attributes:
+      label: Sample files
+      description: Drag a small .x3d, .wrl or .blend here (zip it if GitHub rejects the extension).

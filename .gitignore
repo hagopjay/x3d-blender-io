@@ -1,0 +1,29 @@
+# Generic files to ignore (inherited from the upstream Blender extension repo).
+.*
+
+# Repository plumbing that must be tracked despite the rule above.
+!.gitignore
+!.gitea/
+!.github/
+!.coderabbit.yaml
+
+# Python temp paths.
+__pycache__/
+*.py[cod]
+
+# Editors.
+*~
+*.swp
+*.swo
+*#
+
+# Local patches.
+/*.patch
+/*.diff
+
+# Locally built extensions and CI downloads.
+/*.zip
+/dist/
+/output/
+/.blender/
+/.blender-profile/
