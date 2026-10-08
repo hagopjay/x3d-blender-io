@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/hagopjay/x3d-blender-io/discussions
+    about: Ask how to use the extension or propose an idea before filing a feature request.
+  - name: Web3D Consortium X3D resources
+    url: https://www.web3d.org/x3d/content/examples/X3dResources.html
+    about: Specifications, examples and tooling for the X3D format itself.

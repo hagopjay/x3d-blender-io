@@ -1,0 +1,51 @@
+# CodeRabbit configuration (https://docs.coderabbit.ai/reference/configuration).
+# CodeRabbit is the complement to the Claude Code review: it runs as a GitHub App, so it also
+# covers pull requests from forks, and it posts the PR walkthrough and summary.
+# Free for public repositories; below 10 stars reviews are triggered with "@coderabbitai review".
+language: "en-US"
+tone_instructions: "Concise and specific. Point at the line, say what is wrong and what to change. Skip style nits on legacy files."
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false   # advisory only; the human approval is the merge gate
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches: ["main"]
+  path_filters:
+    - "!**/*.pyc"
+    - "!**/__pycache__/**"
+    - "!**/*.x3d"
+    - "!**/*.x3dv"
+    - "!**/*.wrl"
+    - "!**/*.glb"
+    - "!**/*.gltf"
+  path_instructions:
+    - path: "source/**/*.py"
+      instructions: |
+        This is a Blender extension (bpy API) that imports and exports X3D 4.0 and VRML2.
+        Check X3D node and field names against ISO/IEC 19775-1 V4.0, DEF/USE and ROUTE validity,
+        MFString quoting, and Blender 4.5 LTS versus 5.x API differences (Python 3.11 vs 3.13,
+        removed bpy APIs such as scene.node_tree and legacy Action fcurves).
+        Flag behaviour changes that have no test under tests/.
+    - path: "tests/**"
+      instructions: "Tests must run with plain unittest or pytest without Blender unless they import bpy explicitly."
+    - path: ".github/**"
+      instructions: "Workflow changes: check pinned action versions, least-privilege permissions, and that secrets are never exposed to fork pull requests."
+  tools:
+    ruff:
+      enabled: true
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: false
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false

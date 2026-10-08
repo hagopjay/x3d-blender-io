@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose an X3D node, encoding or workflow the extension should support.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The workflow or X3D feature, with a link to the relevant part of the X3D 4.0 or 4.1 specification if it applies.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: How it should work
+      description: Expected Blender UI, options, and output. Mock-ups and sample files welcome.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: ["Import", "Export", "Materials / PBR", "Animation / HAnim", "Gaussian splats / 4.1", "MCP / agent interface", "Packaging / CI", "Other"]
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to open a pull request for this
