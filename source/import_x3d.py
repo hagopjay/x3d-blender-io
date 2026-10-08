@@ -4367,6 +4367,234 @@ def _interpolate_channel(keys, values, time, kind):
     return values[-1]
 
 
+# -----------------------------------------------------------------------------------
+# HAnim import: HAnimHumanoid -> armature, HAnimJoint -> bone, skin Shapes -> skinned meshes
+
+
+def _hanim_joint_children(joint):
+    """Child HAnimJoints of a joint node, excluding USE references (the joints list)."""
+    return [child for child in joint.getRealNode().getChildrenBySpec('HAnimJoint') if not child.reference]
+
+
+def _hanim_skeleton_roots(humanoid):
+    roots = []
+    for child in humanoid.getRealNode().getChildrenBySpec('HAnimJoint'):
+        if child.reference:
+            continue
+        if _attribute_raw(child, 'containerField', 'skeleton') in {'skeleton', 'children'}:
+            roots.append(child)
+    return roots
+
+
+def _hanim_local_matrix(node, ancestry):
+    """World matrix of an HAnimHumanoid: enclosing Transforms times its own transform fields."""
+    own = translateTransform(node, ancestry)  # humanoid shares Transform's translation/rotation/scale/center fields
+    return getFinalMatrix(node, own, ancestry, Matrix())
+
+
+def importHumanoid(bpycollection, node, ancestry, global_matrix):
+    """Create an armature for an HAnimHumanoid and skinned meshes for its skin Shapes."""
+    real = node.getRealNode()
+    name = node.getDefName() or _attribute_raw(real, 'name', None) or 'Humanoid'
+    if name.startswith('hanim_') and len(name) > 6:
+        name = name[6:]
+
+    armature_data = bpy.data.armatures.new(name)
+    armature = bpy.data.objects.new(name, armature_data)
+    bpycollection.objects.link(armature)
+    armature.matrix_world = global_matrix @ _hanim_local_matrix(real, ancestry)
+    node.blendData = node.blendObject = armature
+
+    roots = _hanim_skeleton_roots(real)
+    if not roots:
+        logger.warning("HAnimHumanoid %r has no skeleton joints", name)
+
+    # Bones need edit mode; the object must be active and visible in the view layer.
+    previous_active = bpy.context.view_layer.objects.active
+    bpy.context.view_layer.objects.active = armature
+    armature.select_set(True)
+    joint_bones = {}
+    try:
+        bpy.ops.object.mode_set(mode='EDIT')
+        edit_bones = armature_data.edit_bones
+
+        def add_joint(joint, parent_bone, parent_center):
+            joint_name = _attribute_raw(joint, 'name', None) or joint.getDefName() or 'joint'
+            center = joint.getFieldAsFloatTuple('center', (0.0, 0.0, 0.0), ancestry)
+            head = Vector(center)
+            bone = edit_bones.new(joint_name)
+            bone.head = head
+            children = _hanim_joint_children(joint)
+            if children:
+                tail = Vector((0.0, 0.0, 0.0))
+                for child in children:
+                    tail += Vector(child.getFieldAsFloatTuple('center', center, ancestry))
+                tail /= len(children)
+            elif parent_center is not None and (head - Vector(parent_center)).length > 1e-6:
+                tail = head + (head - Vector(parent_center)).normalized() * max(0.1, (head - Vector(parent_center)).length * 0.5)
+            else:
+                tail = head + Vector((0.0, 0.1, 0.0))
+            if (tail - head).length < 1e-6:
+                tail = head + Vector((0.0, 0.1, 0.0))
+            bone.tail = tail
+            if parent_bone is not None:
+                bone.parent = parent_bone
+                bone.use_connect = (Vector(parent_bone.tail) - head).length < 1e-6
+            joint_bones[joint.getRealNode()] = bone.name
+            joint.getRealNode().blendData = armature  # lets ROUTEs find the armature
+            for child in children:
+                add_joint(child, bone, center)
+
+        for root in roots:
+            add_joint(root, None, None)
+    finally:
+        try:
+            bpy.ops.object.mode_set(mode='OBJECT')
+        except RuntimeError:
+            pass
+        bpy.context.view_layer.objects.active = previous_active
+
+    # Record joint -> bone name on the humanoid for the animation pass
+    real.hanim_bones = {joint_node.getDefName() or '': bone_name for joint_node, bone_name in joint_bones.items()}
+    real.hanim_joint_nodes = {joint_node: bone_name for joint_node, bone_name in joint_bones.items()}
+
+    # Skin: shared skinCoord points and the Shapes marked containerField="skin"
+    skin_coord = None
+    for coord in real.getChildrenBySpec('Coordinate'):
+        if _attribute_raw(coord, 'containerField', '') == 'skinCoord':
+            skin_coord = coord
+            break
+    skin_points = skin_coord.getFieldAsArray('point', 3, ancestry, conversion_scale) if skin_coord is not None else []
+    if skin_coord is not None and skin_coord.canHaveReferences():
+        skin_coord.parsed = skin_points
+
+    # Per-joint weights indexed into skin_points
+    weights = {}  # bone name -> list of (index, weight)
+    for joint_node, bone_name in joint_bones.items():
+        indices = joint_node.getFieldAsArray('skinCoordIndex', 0, ancestry)
+        values = joint_node.getFieldAsArray('skinCoordWeight', 0, ancestry)
+        if indices and values:
+            weights[bone_name] = list(zip([int(i) for i in indices], [float(w) for w in values]))
+
+    for shape in real.getChildrenBySpec('Shape'):
+        if _attribute_raw(shape, 'containerField', '') != 'skin':
+            continue
+        _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, weights, global_matrix)
+
+    return armature
+
+
+def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, weights, global_matrix):
+    geom = shape.getChildBySpec('IndexedFaceSet')
+    if geom is None:
+        logger.warning("HAnim skin Shape without IndexedFaceSet is not supported; skipped")
+        return
+    coord = geom.getChildBySpec('Coordinate')
+    points = skin_points
+    if coord is not None:
+        if coord.reference and coord.getRealNode().parsed:
+            points = coord.getRealNode().parsed
+        elif not coord.reference:
+            points = coord.getFieldAsArray('point', 3, ancestry, conversion_scale)
+    index = geom.getFieldAsArray('coordIndex', 0, ancestry)
+    ccw = geom.getFieldAsBool('ccw', True, ancestry)
+    faces = []
+    face = []
+    for value in index:
+        if value == -1:
+            if len(face) >= 3:
+                faces.append(face if ccw else face[::-1])
+            face = []
+        else:
+            face.append(int(value))
+    if len(face) >= 3:
+        faces.append(face if ccw else face[::-1])
+
+    # The exporter splits vertices per normal/UV; weld coincident skin points
+    # that carry identical weights back into one Blender vertex so the
+    # deformation data comes back at the original resolution.
+    signature = {}
+    for bone_name, pairs in weights.items():
+        for vertex_index, weight in pairs:
+            signature.setdefault(vertex_index, []).append((bone_name, round(weight, 6)))
+    welded_index = {}
+    welded_points = []
+    remap = []
+    for old_index, point in enumerate(points):
+        key = (tuple(round(float(c), 6) for c in point), tuple(sorted(signature.get(old_index, ()))))
+        new_index = welded_index.get(key)
+        if new_index is None:
+            new_index = len(welded_points)
+            welded_index[key] = new_index
+            welded_points.append(tuple(point))
+        remap.append(new_index)
+    welded_faces = []
+    loop_sources = []
+    for face in faces:
+        new_face = [remap[i] for i in face]
+        if len(set(new_face)) < 3:
+            continue
+        welded_faces.append(new_face)
+        loop_sources.extend(face)
+
+    mesh_name = geom.getDefName() or shape.getDefName() or f"{armature.name}_skin"
+    if mesh_name.startswith("ME_"):
+        mesh_name = mesh_name[3:]
+    mesh = bpy.data.meshes.new(mesh_name)
+    mesh.from_pydata(welded_points, [], welded_faces)
+    mesh.update()
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+
+    tex_coord = geom.getChildBySpec('TextureCoordinate')
+    if tex_coord is not None:
+        uvs = tex_coord.getFieldAsArray('point', 2, ancestry)
+        if len(uvs) >= len(points) and len(mesh.loops) == len(loop_sources):
+            uv_layer = mesh.uv_layers.new(name="UVMap")
+            for loop in mesh.loops:
+                uv_layer.data[loop.index].uv = uvs[loop_sources[loop.index]]
+
+    appr = shape.getChildBySpec('Appearance')
+    if appr:
+        bpymat, _bpyima, _alpha = importShape_LoadAppearance(mesh_name, appr, ancestry, shape, False)
+        if bpymat is not None:
+            mesh.materials.append(bpymat)
+            if appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
+                bpymat.use_backface_culling = geom.getFieldAsBool('solid', True, ancestry)
+
+    obj = bpy.data.objects.new(mesh_name, mesh)
+    bpycollection.objects.link(obj)
+    obj.parent = armature
+    obj.matrix_world = armature.matrix_world.copy()
+    obj.select_set(True)
+    shape.blendData = shape.blendObject = obj
+
+    vertex_count = len(mesh.vertices)
+    for bone_name, pairs in weights.items():
+        group = obj.vertex_groups.new(name=bone_name)
+        for vertex_index, weight in pairs:
+            if 0 <= vertex_index < len(remap) and weight > 0.0:
+                new_index = remap[vertex_index]
+                if new_index < vertex_count:
+                    group.add([new_index], weight, 'REPLACE')
+    modifier = obj.modifiers.new("Armature", 'ARMATURE')
+    modifier.object = armature
+
+
+def _hanim_joint_target(defDict, target_def):
+    """Return (armature object, bone name) when target_def names an imported HAnimJoint."""
+    joint = defDict.get(target_def)
+    if joint is None or joint.getSpec() != 'HAnimJoint':
+        return None, None
+    armature = getattr(joint.getRealNode(), 'blendData', None)
+    if armature is None or armature.type != 'ARMATURE':
+        return None, None
+    for bone in armature.data.bones:
+        if bone.name == (_attribute_raw(joint, 'name', None) or ''):
+            return armature, bone.name
+    return None, None
+
+
 def importRoutesXML(all_nodes, global_matrix, bpycontext):
     """Turn XML <ROUTE> chains into keyframes on the objects under animated Transforms.
 
@@ -4403,6 +4631,9 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
 
     for target_def, channel_defs in channels.items():
         target = defDict.get(target_def)
+        if target is not None and target.getSpec() == 'HAnimJoint':
+            _animate_joint(defDict, target_def, target, channel_defs, timers_for_interp, scene, fps, frame_start)
+            continue
         if target is None or target.getSpec() != 'Transform':
             logger.warning("ROUTE target %r is not a Transform; skipped", target_def)
             continue
@@ -4501,6 +4732,73 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
                 for kf in fcu.keyframe_points:
                     kf.interpolation = 'LINEAR'
 
+    if last_frame > scene.frame_end:
+        scene.frame_end = int(round(last_frame))
+
+
+def _animate_joint(defDict, target_def, joint, channel_defs, timers_for_interp, scene, fps, frame_start):
+    """Keyframe a pose bone from HAnimJoint rotation/translation interpolators.
+
+    HAnim applies J = T(t) T(c) R T(-c) in the parent joint's frame; the
+    pose bone's basis is L^-1 @ J @ L with L the bone's rest matrix.
+    """
+    armature, bone_name = _hanim_joint_target(defDict, target_def)
+    if armature is None:
+        logger.warning("ROUTE to HAnimJoint %r has no imported bone; skipped", target_def)
+        return
+    key_lists, value_lists = {}, {}
+    cycle_interval = None
+    for field, interp_def in channel_defs.items():
+        interp = defDict.get(interp_def)
+        if interp is None or field not in {'rotation', 'translation'}:
+            continue
+        width = 4 if field == 'rotation' else 3
+        keys = [float(k) for k in interp.getFieldAsArray('key', 0, ())]
+        values = [tuple(float(v) for v in value) for value in interp.getFieldAsArray('keyValue', width, ())]
+        if not keys or len(values) < len(keys):
+            continue
+        key_lists[field] = keys
+        value_lists[field] = values[:len(keys)]
+        timer = defDict.get(timers_for_interp.get(interp_def, ''))
+        if timer is not None and cycle_interval is None:
+            cycle_interval = timer.getFieldAsFloat('cycleInterval', 1.0, ())
+    if not key_lists:
+        return
+    cycle_interval = cycle_interval or 1.0
+    center = Vector(joint.getFieldAsFloatTuple('center', (0.0, 0.0, 0.0), ()))
+    bone = armature.data.bones[bone_name]
+    rest = bone.matrix_local
+    rest_inv = rest.inverted()
+    pose_bone = armature.pose.bones[bone_name]
+    pose_bone.rotation_mode = 'QUATERNION'
+    if armature.animation_data is None:
+        armature.animation_data_create()
+    if armature.animation_data.action is None:
+        action = bpy.data.actions.new(f"{armature.name}_x3d")
+        armature.animation_data.action = action
+        try:
+            if hasattr(action, "slots") and not action.slots:
+                armature.animation_data.action_slot = action.slots.new(id_type='OBJECT', name=armature.name)
+        except Exception:
+            pass
+    last_frame = frame_start
+    for key in sorted({k for keys in key_lists.values() for k in keys}):
+        rot = _interpolate_channel(key_lists.get('rotation'), value_lists.get('rotation'), key, 'rotation') or (0.0, 0.0, 1.0, 0.0)
+        tx = _interpolate_channel(key_lists.get('translation'), value_lists.get('translation'), key, 'translation') or (0.0, 0.0, 0.0)
+        joint_matrix = Matrix.Translation(Vector(tx)) @ Matrix.Translation(center) @ translateRotation(rot) @ Matrix.Translation(-center)
+        basis = rest_inv @ joint_matrix @ rest
+        loc, quat, scale = basis.decompose()
+        pose_bone.location = loc
+        pose_bone.rotation_quaternion = quat
+        pose_bone.scale = scale
+        frame = frame_start + key * cycle_interval * fps
+        last_frame = max(last_frame, frame)
+        pose_bone.keyframe_insert("location", frame=frame)
+        pose_bone.keyframe_insert("rotation_quaternion", frame=frame)
+        pose_bone.keyframe_insert("scale", frame=frame)
+    for fcu in _action_fcurves(armature.animation_data.action):
+        for kf in fcu.keyframe_points:
+            kf.interpolation = 'LINEAR'
     if last_frame > scene.frame_end:
         scene.frame_end = int(round(last_frame))
 
@@ -4651,7 +4949,15 @@ def load_web3d(
             # Note, include this function so the VRML/X3D importer can be extended
             # by an external script. - gets first pick
             pass
-        if spec == 'Shape':
+        if any(parent.getSpec() == 'HAnimHumanoid' for parent in ancestry):
+            # Skin and segment geometry are handled by importHumanoid
+            continue
+        if spec == 'HAnimHumanoid':
+            try:
+                importHumanoid(bpycollection, node, ancestry, global_matrix)
+            except Exception as exc:  # a broken humanoid must not abort the rest of the file
+                logger.error("HAnimHumanoid import failed: %s", exc, exc_info=True)
+        elif spec == 'Shape':
             importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify_value)
         elif spec in {'PointLight', 'DirectionalLight', 'SpotLight'}:
             importLamp(bpycollection, node, spec, ancestry, global_matrix)
