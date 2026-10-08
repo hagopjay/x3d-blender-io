@@ -1,0 +1,24 @@
+name: Feature
+about: Make a feature request.
+labels:
+  - enhancement
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+          Thank you for wanting to submit a suggestion. Please describe the feature you want, why it's needed and how it should look like/work in your opinion. Ideally provide example files, screenshots or mock-ups.           
+  - type: textarea
+    id: body
+    attributes:
+      label: "Description"
+      hide_label: true
+      value: |
+          **System Information**
+           Operating system:
+
+           Blender Version: 
+           Extension Version: 
+           
+          **Suggestion/Feature request**
+             

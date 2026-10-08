@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D version="4.0" profile="Immersive">
+  <head>
+    <meta name="title" content="Blender glTF Inline PoC" />
+    <meta name="creator" content="OpenAI Codex" />
+  </head>
+  <Scene>
+    <WorldInfo title="Blender glTF Inline PoC" info='"Blender-exported GLB loaded through X3D Inline in X_ITE."' />
+    <NavigationInfo type='"EXAMINE" "ANY"' />
+    <Viewpoint description="Investor View" position="0 -7 4" orientation="1 0 0 0.75" />
+    <Transform translation="2 1 0.5" rotation="0 1 0 0.6" scale="1.25 1.25 1.25">
+      <Inline url='"blender_scene.glb"' />
+    </Transform>
+  </Scene>
+</X3D>

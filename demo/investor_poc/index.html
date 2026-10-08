@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blender X3D Investor PoC</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(184, 79, 29, 0.16), transparent 26%),
+        linear-gradient(180deg, #faf5ec 0%, #ece5d9 100%);
+      color: #1f1d1a;
+    }
+    main {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 40px 24px 56px;
+    }
+    h1 {
+      font-size: 3rem;
+      line-height: 0.95;
+      margin: 0 0 12px;
+    }
+    p {
+      line-height: 1.6;
+      max-width: 760px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 28px;
+    }
+    .card {
+      border-radius: 20px;
+      padding: 22px;
+      background: rgba(255, 252, 247, 0.84);
+      border: 1px solid rgba(31, 29, 26, 0.1);
+      box-shadow: 0 24px 80px rgba(70, 52, 34, 0.08);
+    }
+    .card a {
+      color: #b84f1d;
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Blender to X3D 4.0 to X_ITE</h1>
+    <p>This proof package contains direct modern X3D export, multiple Blender-generated GLB interoperability scenes, and one deliberately oversized ellipsoid showcase asset for stress-testing the static preview path.</p>
+    <div class="grid">
+      <article class="card">
+        <h2>Direct Modern X3D</h2>
+        <p>Principled material analysis, <code>PhysicalMaterial</code>, reusable geometry, and shared appearances from the upgraded exporter.</p>
+        <p><a href="./direct_x3d.html">Open direct X3D viewer</a></p>
+      </article>
+      <article class="card">
+        <h2>glTF Inline in X_ITE</h2>
+        <p>Blender exports a GLB, then X3D <code>Inline</code> loads it in X_ITE. This proves the browser-side interoperability target.</p>
+        <p><a href="./gltf_inline.html">Open glTF Inline viewer</a></p>
+      </article>
+      <article class="card">
+        <h2>Multi Inline Composition</h2>
+        <p>The same GLB is instanced twice through separate X3D <code>Inline</code> nodes, each with independent transforms and one authored wide camera.</p>
+        <p><a href="./gltf_multi_inline.html">Open multi-inline viewer</a></p>
+      </article>
+      <article class="card">
+        <h2>Whopper Ellipsoid GLB</h2>
+        <p>A deliberately oversized, richly textured ellipsoid exported as a standalone GLB and wrapped through X3D <code>Inline</code> for a heavyweight runtime showcase.</p>
+        <p><a href="./whopper_glb.html">Open whopper viewer</a></p>
+      </article>
+    </div>
+  </main>
+</body>
+</html>

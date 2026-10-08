@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D version="4.0" profile="Immersive">
+  <head>
+    <meta name="title" content="Blender Whopper Ellipsoid PoC" />
+    <meta name="creator" content="OpenAI Codex" />
+    <meta name="description" content="A deliberately oversized Blender-exported GLB wrapped through X3D Inline for X_ITE presentation." />
+  </head>
+  <Scene>
+    <WorldInfo title="Blender Whopper Ellipsoid PoC" info='"Large GLB ellipsoid showcase loaded through X3D Inline in X_ITE."' />
+    <NavigationInfo type='"EXAMINE" "ANY"' />
+    <Viewpoint description="Whopper View" position="0 -15 6" orientation="1 0 0 0.95" fieldOfView="0.72" />
+    <Transform translation="0 0 0" rotation="0 1 0 0.42" scale="1 1 1">
+      <Inline url='"blender_whopper_ellipsoid.glb"' />
+    </Transform>
+  </Scene>
+</X3D>

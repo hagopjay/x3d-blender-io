@@ -1,0 +1,25 @@
+name: Bug
+about: File a bug report
+labels:
+  - bug
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+          Thank you for wanting to submit a report. Please be as precise as possible and ideally include example files and screenshots.            
+  - type: textarea
+    id: body
+    attributes:
+      label: "Description"
+      hide_label: true
+      value: |
+               **System Information**
+               Operating system:
+
+               Blender Version: 
+               Extension Version: 
+
+               **Short description of error**
+
+               **Exact steps for others to reproduce the error**               

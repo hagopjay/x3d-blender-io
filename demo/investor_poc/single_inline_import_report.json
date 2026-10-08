@@ -1,0 +1,64 @@
+{
+  "scene": "xite_gltf_inline_poc.x3d",
+  "imported_objects": [
+    "Investor View",
+    "InvestorBackdrop",
+    "InvestorBridge",
+    "InvestorCube",
+    "InvestorCubeInstance",
+    "InvestorFinLeft",
+    "InvestorFinRight",
+    "InvestorGround",
+    "InvestorHalo",
+    "InvestorPedestalLeft",
+    "InvestorPedestalRight",
+    "InvestorPlinthLeft",
+    "InvestorPlinthRight",
+    "InvestorRing",
+    "InvestorWingLeft",
+    "InvestorWingRight",
+    "X3DInline_000_blender_scene_glb"
+  ],
+  "inline_roots": [
+    "X3DInline_000_blender_scene_glb"
+  ],
+  "root_transform": {
+    "location": [
+      2.0,
+      1.0,
+      0.5
+    ],
+    "scale": [
+      1.25,
+      1.25,
+      1.25
+    ],
+    "axis_angle": [
+      0.6,
+      0.0,
+      1.0,
+      0.0
+    ]
+  },
+  "scene_camera": {
+    "name": "Investor View",
+    "location": [
+      0.0,
+      -7.0,
+      4.0
+    ],
+    "axis_angle": [
+      0.75,
+      1.0,
+      0.0,
+      0.0
+    ],
+    "fov": 0.6911
+  },
+  "navigation_types": "EXAMINE|ANY",
+  "root_metadata": {
+    "title": "Blender glTF Inline PoC",
+    "creator": "OpenAI Codex",
+    "source_path": "C:\\Users\\Consultant\\Desktop\\x3d_gltf\\demo\\investor_poc\\xite_gltf_inline_poc.x3d"
+  }
+}

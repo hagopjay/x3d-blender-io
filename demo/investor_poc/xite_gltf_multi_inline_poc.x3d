@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D version="4.0" profile="Immersive">
+  <head>
+    <meta name="title" content="Blender glTF Multi Inline PoC" />
+    <meta name="creator" content="OpenAI Codex" />
+    <meta name="description" content="Two Blender-exported GLB instances loaded through X3D Inline with independent transforms." />
+  </head>
+  <Scene>
+    <WorldInfo title="Blender glTF Multi Inline PoC" info='"Two distinct GLB Inline instances composed in one X3D wrapper scene."' />
+    <NavigationInfo type='"EXAMINE" "ANY"' />
+    <Viewpoint description="Wide Investor View" position="0 -14 7" orientation="1 0 0 0.75" fieldOfView="0.9" />
+    <Transform translation="-4 0 0" rotation="0 1 0 0.3" scale="1 1 1">
+      <Inline url='"blender_scene.glb"' />
+    </Transform>
+    <Transform translation="4 0 0" rotation="0 1 0 -0.35" scale="0.8 0.8 0.8">
+      <Inline url='"blender_scene_alt.glb"' />
+    </Transform>
+  </Scene>
+</X3D>

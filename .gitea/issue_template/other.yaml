@@ -1,0 +1,15 @@
+name: Other report
+about: The templates don't fit your needs? No problem, i got you covered.
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+          What's up?            
+  - type: textarea
+    id: body
+    attributes:
+      label: "Description"
+      hide_label: true
+      value: |
+          **Describe your request**

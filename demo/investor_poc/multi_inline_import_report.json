@@ -1,0 +1,92 @@
+{
+  "scene": "xite_gltf_multi_inline_poc.x3d",
+  "inline_roots": [
+    {
+      "name": "X3DInline_000_blender_scene_glb",
+      "source": "blender_scene.glb",
+      "location": [
+        -4.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "children": [
+        "InvestorBackdrop",
+        "InvestorBridge",
+        "InvestorCube",
+        "InvestorCubeInstance",
+        "InvestorFinLeft",
+        "InvestorFinRight",
+        "InvestorGround",
+        "InvestorHalo",
+        "InvestorPedestalLeft",
+        "InvestorPedestalRight",
+        "InvestorPlinthLeft",
+        "InvestorPlinthRight",
+        "InvestorRing",
+        "InvestorWingLeft",
+        "InvestorWingRight"
+      ]
+    },
+    {
+      "name": "X3DInline_001_blender_scene_alt_glb",
+      "source": "blender_scene_alt.glb",
+      "location": [
+        4.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "children": [
+        "InvestorAltGround",
+        "InvestorAltWall",
+        "InvestorColumn",
+        "InvestorSphere"
+      ]
+    }
+  ],
+  "tagged_materials": [
+    [
+      "BackdropWarm",
+      "blender_scene.glb"
+    ],
+    [
+      "GroundUnlit",
+      "blender_scene.glb"
+    ],
+    [
+      "InvestorAltGroundMat",
+      "blender_scene_alt.glb"
+    ],
+    [
+      "InvestorBlue",
+      "blender_scene_alt.glb"
+    ],
+    [
+      "InvestorCopper",
+      "blender_scene_alt.glb"
+    ],
+    [
+      "InvestorPBR",
+      "blender_scene.glb"
+    ]
+  ],
+  "scene_camera": {
+    "name": "Wide Investor View",
+    "location": [
+      0.0,
+      -14.0,
+      7.0
+    ],
+    "fov": 0.9
+  },
+  "navigation_types": "EXAMINE|ANY"
+}
