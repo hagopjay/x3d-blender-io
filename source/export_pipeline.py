@@ -109,8 +109,13 @@ class ExportSettings:
         if target in {"MODERN", "X3D40", "MODERN_SCAFFOLD"}:
             return True
         if target == "AUTO":
-            return self.x3d_version.upper() in {"X3D40", "4.0"}
+            return self.x3d_version.upper() in {"X3D40", "4.0", "X3D41", "4.1"}
         return False
+
+    @property
+    def document_version(self) -> str:
+        """The X3D version string the modern writer puts in the document."""
+        return "4.1" if self.x3d_version.upper() in {"X3D41", "4.1"} else "4.0"
 
 
 def _scene_metadata(settings: ExportSettings, export_file: str) -> dict[str, str | None]:

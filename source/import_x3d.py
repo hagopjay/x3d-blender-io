@@ -4595,6 +4595,206 @@ def _hanim_joint_target(defDict, target_def):
     return None, None
 
 
+# -----------------------------------------------------------------------------------
+# Inline bridge (X3D, VRML, glTF, Gaussian-splat files) and the X3D 4.1 GaussianSplats node
+
+_INLINE_STACK = []  # files being inlined right now, to stop self-references
+_GLTF_TO_BLENDER = None
+
+
+def _gltf_to_blender_matrix():
+    """The Y-up to Z-up conversion Blender's glTF importer applies to its output."""
+    global _GLTF_TO_BLENDER
+    if _GLTF_TO_BLENDER is None:
+        from bpy_extras.io_utils import axis_conversion
+        _GLTF_TO_BLENDER = axis_conversion(from_forward='-Z', from_up='Y', to_forward='Y', to_up='Z').to_4x4()
+    return _GLTF_TO_BLENDER
+
+
+def _resolve_inline_url(node, url):
+    base = os.path.dirname(node.getFilename() or current_file_path or "")
+    candidates = [url, os.path.join(base, url), os.path.join(base, os.path.basename(url))]
+    for candidate in candidates:
+        for variant in (candidate, bpy.path.resolve_ncase(candidate)):
+            if os.path.isfile(variant):
+                return os.path.abspath(variant)
+    return None
+
+
+def _parent_keep_world(obj, parent, *, parent_inverse=None):
+    obj.parent = parent
+    obj.matrix_parent_inverse = parent_inverse if parent_inverse is not None else parent.matrix_world.inverted()
+
+
+def _splat_attributes(mesh, splats):
+    """Store IRGaussianSplats per-point data as mesh attributes."""
+    count = len(mesh.vertices)
+
+    def fill_vector(name, values, data_type="FLOAT_VECTOR", key="vector"):
+        attr = mesh.attributes.new(name, data_type, 'POINT')
+        flat = [float(c) for value in values for c in value]
+        attr.data.foreach_set(key, flat)
+
+    if len(splats.scales) == count:
+        fill_vector("splat_scale", splats.scales)
+    if len(splats.orientations) == count:
+        attr = mesh.attributes.new("splat_rotation", 'QUATERNION', 'POINT')
+        # Blender quaternions are (w, x, y, z)
+        attr.data.foreach_set("value", [float(c) for (x, y, z, w) in splats.orientations for c in (w, x, y, z)])
+    if len(splats.opacities) == count:
+        attr = mesh.attributes.new("splat_opacity", 'FLOAT', 'POINT')
+        attr.data.foreach_set("value", [float(o) for o in splats.opacities])
+    for (degree, coef), values in sorted(splats.sh.items()):
+        if len(values) == count:
+            fill_vector(f"splat_sh{degree}_{coef}", values)
+    dc = splats.sh.get((0, 0))
+    if dc and len(dc) == count:
+        from .splat_io import sh0_to_rgb
+        color = mesh.color_attributes.new("Color", 'FLOAT_COLOR', 'POINT')
+        opacities = splats.opacities if len(splats.opacities) == count else [1.0] * count
+        color.data.foreach_set("color", [c for i, coefficient in enumerate(dc) for c in (*sh0_to_rgb(coefficient), opacities[i])])
+        mesh.color_attributes.active_color = color
+        mesh.color_attributes.render_color_index = 0
+
+
+def _build_splat_object(bpycollection, name, splats):
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata([tuple(p) for p in splats.positions], [], [])
+    mesh.update()
+    mesh["x3d_gaussian_splats"] = True
+    mesh["x3d_splat_color_space"] = splats.color_space
+    _splat_attributes(mesh, splats)
+    obj = bpy.data.objects.new(name, mesh)
+    bpycollection.objects.link(obj)
+    obj.select_set(True)
+    return obj
+
+
+def importGaussianSplats(bpycollection, node, ancestry, global_matrix):
+    """X3D 4.1 GaussianSplats node -> splat mesh (vertices plus splat_* attributes)."""
+    from .ir import IRGaussianSplats
+
+    real = node.getRealNode()
+    existing = getattr(real, "blendObject", None)
+    mesh_name = node.getDefName() or "GaussianSplats"
+    if mesh_name.startswith("GS_") and len(mesh_name) > 3:
+        mesh_name = mesh_name[3:]
+    # Like Shapes, the object takes the enclosing Transform's DEF name when there is one
+    name = mesh_name
+    for parent in reversed(ancestry):
+        parent_name = parent.getDefName() if hasattr(parent, "getDefName") else None
+        if parent_name:
+            name = parent_name[3:] if parent_name.startswith("OB_") and len(parent_name) > 3 else parent_name
+            break
+    if existing is not None:
+        obj = existing.copy()
+        obj.name = name
+        bpycollection.objects.link(obj)
+    else:
+        splats = IRGaussianSplats(name=mesh_name, color_space=_attribute_raw(real, 'colorSpace', 'SRGB_REC709_DISPLAY'))
+        splats.positions = [tuple(p) for p in real.getFieldAsArray('positions', 3, ancestry, conversion_scale)]
+        splats.scales = [tuple(s) for s in real.getFieldAsArray('scales', 3, ancestry)]
+        splats.orientations = [tuple(q) for q in real.getFieldAsArray('orientations', 4, ancestry)]
+        splats.opacities = [float(o) for o in real.getFieldAsArray('opacities', 0, ancestry)]
+        for degree in range(4):
+            for coef in range(2 * degree + 1):
+                values = real.getFieldAsArray(f'sphericalHarmonicsDegree{degree}Coef{coef}', 3, ancestry)
+                if values:
+                    splats.sh[(degree, coef)] = [tuple(v) for v in values]
+        obj = _build_splat_object(bpycollection, name, splats)
+        obj.data.name = mesh_name
+        real.blendData = real.blendObject = obj
+    obj.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
+    node.blendData = node.blendObject = obj
+    return obj
+
+
+def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PREF_CIRCLE_DIV, solidify, solidify_value):
+    """Inline node -> placeholder empty with the referenced asset loaded underneath it.
+
+    X3D and VRML files go through this importer recursively, glTF through
+    Blender's glTF importer, and .ply / .splat files become splat meshes.
+    The empty keeps the URL in ``x3d_inline_url`` so the exporter writes an
+    Inline again instead of the loaded content.
+    """
+    global current_file_path, material_cache
+
+    urls = node.getFieldAsMFStringArray('url', [], ancestry)
+    name = node.getDefName() or (os.path.splitext(os.path.basename(urls[0]))[0] if urls else "Inline")
+    if name.startswith("IN_") and len(name) > 3:
+        name = name[3:]
+    # The placeholder's frame is Blender's; the asset underneath is converted Y-up -> Z-up
+    # like Blender's own importers do, so the Inline's matrix carries that rotation.
+    frame = _gltf_to_blender_matrix()
+    empty = bpy.data.objects.new(name, None)
+    empty.empty_display_type = 'PLAIN_AXES'
+    empty.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix) @ frame.inverted()
+    empty["x3d_inline_url"] = urls[0] if urls else ""
+    bpycollection.objects.link(empty)
+    empty.select_set(True)
+    node.blendData = node.blendObject = empty
+    if not urls:
+        logger.warning("Inline %r has no url", name)
+        return empty
+
+    resolved = None
+    for url in urls:
+        resolved = _resolve_inline_url(node, url)
+        if resolved:
+            break
+    if resolved is None:
+        logger.warning("Inline URL could not be found: %s", urls)
+        empty["x3d_inline_missing"] = True
+        return empty
+    if resolved in _INLINE_STACK or resolved == os.path.abspath(current_file_path or ""):
+        logger.warning("Can't Inline a file that is already being loaded: %s", resolved)
+        return empty
+    empty["x3d_inline_resolved_path"] = resolved
+
+    before = set(bpy.data.objects)
+    lower = resolved.lower()
+    parent_inverse = None
+    _INLINE_STACK.append(resolved)
+    saved_file, saved_cache = current_file_path, material_cache
+    try:
+        if lower.endswith(('.x3d', '.x3dz', '.x3dv', '.wrl', '.wrz')):
+            load_web3d(bpy.context, resolved, PREF_FLAT=PREF_FLAT, PREF_CIRCLE_DIV=PREF_CIRCLE_DIV,
+                       global_scale=conversion_scale, global_matrix=empty.matrix_world @ frame,
+                       solidify=solidify, solidify_value=solidify_value)
+            parent_inverse = empty.matrix_world.inverted()
+        elif lower.endswith(('.gltf', '.glb')):
+            from .bridge_gltf import import_gltf
+            import_gltf(resolved)
+            parent_inverse = Matrix()  # already Z-up, exactly the placeholder's frame
+        elif lower.endswith(('.ply', '.splat')):
+            from .splat_io import read_splats
+            splats = read_splats(resolved, name=name)
+            _build_splat_object(bpycollection, name + "_splats", splats)
+            parent_inverse = frame  # splat files are Y-up like X3D
+        else:
+            logger.warning("Inline asset type not supported: %s", resolved)
+            empty["x3d_inline_unsupported"] = True
+    except Exception as exc:
+        logger.error("Inline %r failed to load: %s", resolved, exc, exc_info=True)
+    finally:
+        _INLINE_STACK.pop()
+        current_file_path, material_cache = saved_file, saved_cache
+
+    for obj in bpy.data.objects:
+        if obj in before or obj.parent is not None:
+            continue
+        if obj.name not in bpycollection.objects:
+            try:
+                bpycollection.objects.link(obj)
+            except RuntimeError:
+                pass
+        _parent_keep_world(obj, empty, parent_inverse=parent_inverse)
+    for obj in bpy.data.objects:
+        if obj not in before:
+            obj["x3d_inline_source"] = urls[0]
+    return empty
+
+
 def importRoutesXML(all_nodes, global_matrix, bpycontext):
     """Turn XML <ROUTE> chains into keyframes on the objects under animated Transforms.
 
@@ -4959,6 +5159,11 @@ def load_web3d(
                 logger.error("HAnimHumanoid import failed: %s", exc, exc_info=True)
         elif spec == 'Shape':
             importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify_value)
+        elif spec == 'Inline':
+            importInline(bpycollection, node, ancestry, global_matrix, PREF_FLAT=PREF_FLAT,
+                         PREF_CIRCLE_DIV=PREF_CIRCLE_DIV, solidify=solidify, solidify_value=solidify_value)
+        elif spec == 'GaussianSplats':
+            importGaussianSplats(bpycollection, node, ancestry, global_matrix)
         elif spec in {'PointLight', 'DirectionalLight', 'SpotLight'}:
             importLamp(bpycollection, node, spec, ancestry, global_matrix)
         elif spec == 'Viewpoint':

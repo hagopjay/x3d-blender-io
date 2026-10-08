@@ -207,13 +207,18 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
              "Legacy exporter: Phong Material, lights, cameras, hierarchy. Widest viewer support"),
             ('X3D40',
              "X3D 4.0 (PhysicalMaterial, PBR)",
-             "Physically based materials with glTF-style textures, UVs, normals, vertex colours and DEF/USE sharing. Meshes only for now"),
+             "Physically based materials with glTF-style textures, UVs, normals, vertex colours, DEF/USE sharing, "
+             "hierarchy, lights, cameras, animation and HAnim. Gaussian splats degrade to PointSet"),
+            ('X3D41',
+             "X3D 4.1 draft (GaussianSplats)",
+             "Everything in 4.0 plus the draft GaussianSplats node for splat point clouds. "
+             "No shipping browser renders the node yet"),
         ),
         default='X3D33',
     )
     use_animation: BoolProperty(
         name="Animation",
-        description="X3D 4.0 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes",
+        description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes",
         default=False,
     )
     animation_step: IntProperty(
@@ -568,7 +573,7 @@ def export_ui_mesh(layout, operator):
         line = body.row(align=True)
         line.prop(operator, "use_compress")
         sub = body.column()
-        sub.enabled = operator.x3d_version == 'X3D40'
+        sub.enabled = operator.x3d_version in {'X3D40', 'X3D41'}
         sub.prop(operator, "use_animation")
         row = sub.row()
         row.enabled = operator.use_animation

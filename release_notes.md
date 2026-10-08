@@ -4,6 +4,8 @@
 - X3D 4.0 path now writes nested Transform hierarchy, PointLight/SpotLight/DirectionalLight, Viewpoint, NavigationInfo, Background, curve/surface/text objects as meshes, and optional sampled animation (TimeSensor, interpolators, ROUTEs).
 - Armatures export as HAnim 2.0 humanoids: joint hierarchy, skinned meshes with weights, and joint rotation animation relative to rest.
 - HAnim import: HAnimHumanoid becomes an armature with bones, skinned meshes with vertex groups and an Armature modifier, and joint ROUTE animation becomes pose-bone keyframes.
+- Inline bridge: an Empty with `x3d_inline_url` exports as Inline; Inline imports as that Empty with the asset underneath (X3D/VRML recursively, glTF via Blender's importer, .ply/.splat as splat meshes), and inlined content is not re-exported.
+- New **X3D 4.1 draft** export option writes Gaussian-splat meshes as the draft GaussianSplats node; the 4.0 option degrades them to a coloured PointSet. The importer reads the node back into a splat mesh.
 - Importer rebuilds keyframe animation from XML ROUTEs (TimeSensor + interpolators) as world-space keyframes on the affected objects.
 - Importer reads plain SFString attributes (e.g. Viewpoint description) in the XML encoding.
 - Swatch-book fixture (`tools/swatch_book.py`) and export → validate → reimport test under Blender 5.2.
