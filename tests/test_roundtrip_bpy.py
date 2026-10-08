@@ -385,6 +385,54 @@ class HAnimExportTests(unittest.TestCase):
         lower_def = self.root.find(".//HAnimJoint[@name='lower']").attrib["DEF"]
         self.assertFalse(any(r[1] == lower_def for r in routes), "unposed bone must not be animated")
 
+    def test_reimport_builds_armature_and_skin(self):
+        import bpy
+        from mathutils import Vector
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.context.scene.frame_start = 1
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.export_path), {"FINISHED"})
+        armatures = [obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE"]
+        self.assertEqual(len(armatures), 1)
+        armature = armatures[0]
+        self.assertEqual(sorted(bone.name for bone in armature.data.bones), ["lower", "upper"])
+        upper = armature.data.bones["upper"]
+        self.assertEqual(upper.parent.name, "lower")
+        self.assertLess((upper.head_local - Vector((0.0, 0.0, 1.0))).length, 1e-4, upper.head_local)
+        self.assertLess((armature.data.bones["lower"].head_local - Vector((0.0, 0.0, 0.0))).length, 1e-4)
+
+        meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+        self.assertEqual(len(meshes), 1, [obj.name for obj in meshes])
+        skin = meshes[0]
+        self.assertEqual(skin.parent, armature)
+        self.assertEqual(len(skin.data.vertices), self.vertex_count)
+        self.assertEqual(sorted(group.name for group in skin.vertex_groups), ["lower", "upper"])
+        self.assertTrue(any(m.type == "ARMATURE" and m.object == armature for m in skin.modifiers))
+        self.assertEqual(skin.data.materials[0].name, "MA_Skin")
+        weighted = sum(1 for v in skin.data.vertices if v.groups)
+        self.assertEqual(weighted, self.vertex_count)
+
+        # the posed keyframe comes back on the upper bone: 60 degrees about the bone's rest X
+        self.assertIsNotNone(armature.animation_data)
+        scene = bpy.context.scene
+        scene.frame_set(24)
+        bpy.context.view_layer.update()
+        pose_upper = armature.pose.bones["upper"]
+        axis, angle = pose_upper.rotation_quaternion.to_axis_angle()
+        self.assertAlmostEqual(abs(angle), 1.0472, places=2)
+        scene.frame_set(1)
+        bpy.context.view_layer.update()
+        axis, angle = armature.pose.bones["upper"].rotation_quaternion.to_axis_angle()
+        self.assertAlmostEqual(abs(angle), 0.0, places=3)
+        # the deformed tip of the arm actually moves between the two frames
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        tip_index = max(range(self.vertex_count), key=lambda i: skin.data.vertices[i].co.z)
+        start_tip = (skin.evaluated_get(depsgraph).matrix_world @ skin.evaluated_get(depsgraph).data.vertices[tip_index].co).copy()
+        scene.frame_set(24)
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        end_tip = skin.evaluated_get(depsgraph).matrix_world @ skin.evaluated_get(depsgraph).data.vertices[tip_index].co
+        self.assertGreater((end_tip - start_tip).length, 0.5, (start_tip, end_tip))
+
 
 if __name__ == "__main__":
     unittest.main()
