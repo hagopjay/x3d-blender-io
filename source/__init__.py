@@ -3,15 +3,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 bl_info = {
-    "name":"Web3D X3D/VRML2 format",
+    "name": "X3D Blender I/O",
     "description": "Import-Export X3D, Import VRML2",
-    "author": "maintainer: Bujus_Krachus",
-    "version": (2, 5, 1),
+    "author": "HagopJay; upstream maintainer: Bujus_Krachus",
+    "version": (2, 6, 0),
     "blender": (4, 2, 0),
     "location": "",
     "warning": "",
     "doc_url": "",
-    'tracker_url': "https://projects.blender.org/extensions/io_scene_x3d",
+    'tracker_url': "https://github.com/hagopjay/x3d-blender-io/issues",
     'support': 'COMMUNITY',
     "category": "IO",
 }

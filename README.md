@@ -1,4 +1,4 @@
-# Web3D X3D/VRML2 format Add-on — X3D 4.0 fork
+# X3D Blender I/O — X3D 4.0/4.1 fork of the Web3D X3D/VRML2 add-on
 
 This repository is HagopJay's working fork of the Blender extension
 [Web3D X3D/VRML2 format](https://extensions.blender.org/add-ons/web3d-x3d-vrml2-format)
@@ -7,6 +7,11 @@ Its purpose is to bring the exporter and importer up to **X3D 4.0** (ISO/IEC 197
 so Blender can trade physically based scenes with X3D 4 browsers (X_ITE, X3DOM, Castle, FreeWRL)
 and with AI tooling built on the Web3D Consortium's validated encodings. Everything upstream
 still works unchanged; the new path is opt-in.
+
+**Installs alongside the official extension.** Since 2.6.0 this fork ships under its own extension id
+`x3d_blender_io` (name "X3D Blender I/O") instead of upstream's `web3d_x3d_vrml2_format`, so Blender
+no longer treats the two as one extension and an upstream update cannot replace it. Both register the
+`import_scene.x3d` / `export_scene.x3d` operators, so enable one of them at a time.
 
 ## What the fork adds (Milestones 1 to 4: PBR materials, scene structure, animation, HAnim, asset bridge)
 
@@ -17,7 +22,7 @@ Export dialog, **Include** panel, new **X3D Version** selector:
 | **X3D 3.3 (Material, classic)** — default | The upstream exporter, unchanged: Phong `Material`, lights, cameras, hierarchy, text, curves. |
 | **X3D 4.0 (PhysicalMaterial, PBR)** | Principled BSDF → `PhysicalMaterial` (baseColor, metallic, roughness, emissiveColor, transparency, normalScale, occlusionStrength) with glTF-style `baseTexture` / `metallicRoughnessTexture` / `normalTexture` / `emissiveTexture` / `occlusionTexture` children; Emission-only trees → `UnlitMaterial`; `Appearance alphaMode="BLEND|MASK"`; `IndexedFaceSet` with `Coordinate`, `Normal` (when *Normals* is on), `TextureCoordinate` (active UV map) and `ColorRGBA` (active colour attribute); one `Shape` per material slot; `solid` from *Backface Culling*; `creaseAngle` from smooth shading; modifiers and triangulation honoured; shared mesh data and materials written once with `DEF` and reused with `USE`; texture paths follow the *Path Mode* setting exactly as the 3.3 exporter does. Nested `Transform` hierarchy (*Hierarchy* on) or flat world transforms; lights as `PointLight` / `SpotLight` / `DirectionalLight` (headlight off when present); cameras as `Viewpoint`; curves, surfaces and text objects as meshes; world colour as `Background`; optional **Animation** sampling of object transforms over the frame range into one `TimeSensor` with `PositionInterpolator` / `OrientationInterpolator` nodes and `ROUTE`s. Object types the path cannot write yet are listed in `<meta name="info">`. |
 
-| **X3D 4.1 draft (GaussianSplats)** | Everything the 4.0 option writes, plus Gaussian-splat objects as the draft `GaussianSplats` node (component `GaussianSplats` level 1): `positions`, `scales`, `orientations`, `opacities` and the `sphericalHarmonicsDegree*Coef*` arrays. With the 4.0 option the same objects degrade to a coloured `PointSet` and a `<meta name="info">` says so. X_ITE 16.4.3 renders the node, including a 500,000-splat scene written by this exporter. |
+| **X3D 4.1 draft (GaussianSplats)** | Everything the 4.0 option writes, plus Gaussian-splat objects as the draft `GaussianSplats` node (component `GaussianSplats` level 1): `positions`, `scales`, `orientations`, `opacities` and the `sphericalHarmonicsDegree*Coef*` arrays. With the 4.0 option the same objects degrade to a coloured `PointSet` and a `<meta name="info">` says so. X_ITE 16.4.3 renders the node, including a 500,000-splat scene written by this exporter. Blender 5.3's native splat PointClouds (what its PLY, SPZ, glTF and USD importers create) export the same way, and on 5.3+ the importer reads the node back into one. |
 
 Import: `PhysicalMaterial` and `UnlitMaterial` now become Principled BSDF node trees
 (metallic/roughness texture split into G and B channels, normal map with strength, occlusion kept as a labelled node,

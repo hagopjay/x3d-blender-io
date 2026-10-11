@@ -51,6 +51,19 @@ def _register_extension(tmpdir: str):
     return module
 
 
+def _force_splat_import(test: unittest.TestCase, target: str):
+    """Pin the importer's splat target ('mesh' or 'pointcloud') for one test."""
+    previous = os.environ.get("X3D_SPLAT_IMPORT")
+    os.environ["X3D_SPLAT_IMPORT"] = target
+
+    def restore():
+        if previous is None:
+            os.environ.pop("X3D_SPLAT_IMPORT", None)
+        else:
+            os.environ["X3D_SPLAT_IMPORT"] = previous
+    test.addCleanup(restore)
+
+
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class SwatchBookRoundTripTests(unittest.TestCase):
     @classmethod
@@ -509,6 +522,7 @@ class GaussianSplatRoundTripTests(unittest.TestCase):
     def test_reimport_restores_splat_attributes(self):
         import bpy
 
+        _force_splat_import(self, "mesh")
         bpy.ops.wm.read_factory_settings(use_empty=True)
         self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.export_path), {"FINISHED"})
         helix = bpy.context.scene.objects.get("Helix")
@@ -536,6 +550,118 @@ class GaussianSplatRoundTripTests(unittest.TestCase):
         self.assertEqual(bpy.ops.export_scene.x3d(filepath=again, x3d_version="X3D41", use_selection=False), {"FINISHED"})
         node = ET.parse(again).getroot().find(".//GaussianSplats")
         self.assertEqual(len(node.attrib["opacities"].split()), len(self.splats))
+
+
+def _pointcloud_resizable() -> bool:
+    return HAVE_BPY and "resize" in bpy.types.PointCloud.bl_rna.functions
+
+
+@unittest.skipUnless(_pointcloud_resizable(), "needs bpy with PointCloud.resize (Blender 5.1+)")
+class NativeSplatPointCloudTests(unittest.TestCase):
+    """Blender's native splat PointCloud (5.3 layout) -> X3D 4.1 GaussianSplats -> PointCloud."""
+
+    DEGREE = 3
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_native_splats_")
+        _register_extension(cls.tmpdir)
+        for path in (str(TOOLS_DIR), str(SOURCE_DIR)):
+            if path not in sys.path:
+                sys.path.insert(0, path)
+        import bpy
+        from splat_fixture import helix_splats
+        from splat_native import build_native_splat_pointcloud
+
+        splats = helix_splats(24, sh_degree=1)
+        count = len(splats.positions)
+        for degree in (2, 3):  # fill degrees 2 and 3 so every radiance:sh_ index 0..14 is exercised
+            for coef in range(2 * degree + 1):
+                splats.sh[(degree, coef)] = [(0.01 * degree, 0.001 * coef, -0.002 * i) for i in range(count)]
+        cls.splats = splats
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        # the same layout Blender 5.3's PLY / SPZ / glTF / USD splat importers produce
+        pointcloud = build_native_splat_pointcloud("NativeSplats", splats)
+        obj = bpy.data.objects.new("Native", pointcloud)
+        obj.location = (0.5, 0.0, 1.0)
+        bpy.context.scene.collection.objects.link(obj)
+        bpy.context.view_layer.update()
+        cls.world = obj.matrix_world.copy()
+        cls.export_path = os.path.join(cls.tmpdir, "native.x3d")
+        result = bpy.ops.export_scene.x3d(filepath=cls.export_path, x3d_version="X3D41", use_selection=False)
+        assert result == {"FINISHED"}, result
+        cls.node = ET.parse(cls.export_path).getroot().find(".//GaussianSplats")
+
+    @staticmethod
+    def _floats(node, field):
+        return [float(v) for v in node.attrib[field].split()]
+
+    def test_pointcloud_layout_matches_blender_53(self):
+        import bpy
+        from splat_native import pointcloud_type_supported
+
+        pointcloud = bpy.data.pointclouds["NativeSplats"]
+        names = set(pointcloud.attributes.keys())
+        self.assertLessEqual({"position", "scale", "rotation", "radiance:base"}, names)
+        self.assertLessEqual({f"radiance:sh_{i}" for i in range(15)}, names)
+        # FLOAT4 exists from Blender 5.2; 4.5 and 5.1 fall back to a four-channel colour
+        expected = "FLOAT4" if bpy.app.version >= (5, 2, 0) else "FLOAT_COLOR"
+        self.assertEqual(pointcloud.attributes["radiance:base"].data_type, expected)
+        self.assertEqual(pointcloud.attributes["rotation"].data_type, "QUATERNION")
+        if pointcloud_type_supported():
+            self.assertEqual(pointcloud.type, "GAUSSIAN_SPLAT")
+
+    def test_export_writes_every_field(self):
+        self.assertIsNotNone(self.node)
+        count = len(self.splats.positions)
+        self.assertEqual(len(self._floats(self.node, "positions")), 3 * count)
+        self.assertEqual(len(self._floats(self.node, "opacities")), count)
+        for degree in range(self.DEGREE + 1):
+            for coef in range(2 * degree + 1):
+                field = f"sphericalHarmonicsDegree{degree}Coef{coef}"
+                self.assertEqual(len(self._floats(self.node, field)), 3 * count, field)
+        # quaternions leave Blender's (w, x, y, z) as X3D's (x, y, z, w)
+        orientations = self._floats(self.node, "orientations")
+        for i in (0, count // 2, count - 1):
+            for a, b in zip(orientations[4 * i:4 * i + 4], self.splats.orientations[i]):
+                self.assertAlmostEqual(a, b, places=5)
+        opacities = self._floats(self.node, "opacities")
+        for a, b in zip(opacities, self.splats.opacities):
+            self.assertAlmostEqual(a, b, places=5)
+        last = self._floats(self.node, "sphericalHarmonicsDegree3Coef6")[-3:]
+        for a, b in zip(last, self.splats.sh[(3, 6)][-1]):
+            self.assertAlmostEqual(a, b, places=5)
+
+    def test_export_validates(self):
+        from validate import validate_xml_file
+
+        self.assertTrue(validate_xml_file(self.export_path).valid)
+
+    def test_import_as_pointcloud_and_reexport_is_identical(self):
+        import bpy
+
+        _force_splat_import(self, "pointcloud")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.export_path), {"FINISHED"})
+        native = next((o for o in bpy.context.scene.objects if o.type == "POINTCLOUD"), None)
+        self.assertIsNotNone(native, [(o.name, o.type) for o in bpy.context.scene.objects])
+        self.assertEqual(len(native.data.points), len(self.splats.positions))
+        self.assertIn("radiance:sh_14", native.data.attributes.keys())
+        for a, b in zip(native.matrix_world.translation, self.world.translation):
+            self.assertAlmostEqual(a, b, places=4)
+        again = os.path.join(self.tmpdir, "native_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=again, x3d_version="X3D41", use_selection=False), {"FINISHED"})
+        node = ET.parse(again).getroot().find(".//GaussianSplats")
+        for field, value in self.node.attrib.items():
+            if field in ("DEF", "USE"):
+                continue
+            first, second = value.split(), node.attrib.get(field, "").split()
+            self.assertEqual(len(first), len(second), field)
+            try:
+                for a, b in zip(first, second):
+                    self.assertAlmostEqual(float(a), float(b), places=5, msg=field)
+            except ValueError:
+                self.assertEqual(first, second, field)
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
@@ -602,6 +728,7 @@ class InlineBridgeRoundTripTests(unittest.TestCase):
         import bpy
         from mathutils import Vector
 
+        _force_splat_import(self, "mesh")
         bpy.ops.wm.read_factory_settings(use_empty=True)
         self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.master_path), {"FINISHED"})
         objects = bpy.context.scene.objects
