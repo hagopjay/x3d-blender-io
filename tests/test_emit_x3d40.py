@@ -16,8 +16,8 @@ if str(SOURCE_DIR) not in sys.path:
 
 from emit_x3d40 import export_ir_scene
 from ir import (
-    IRGaussianSplats, IRInlineAsset, IRInstance, IRMeshGeometry, IRMetadata, IRPBRMaterial, IRScene, IRShape, IRTextureRef,
-    IRTextureTransform, IRTransform,
+    IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRPBRMaterial, IRScene, IRShape,
+    IRTextureRef, IRTextureTransform, IRTransform,
 )
 from validate import validate_xml_text
 
@@ -238,6 +238,54 @@ class EmitX3D40Tests(unittest.TestCase):
         validation = validate_xml_text(xml_text)
         self.assertTrue(validation.valid, msg=f"Validation errors: {validation.errors}")
 
+    def test_shape_component_declared_when_physical_or_unlit_material_written(self):
+        # X3DUOM's Immersive node list leaves out PhysicalMaterial and UnlitMaterial.
+        component = '<component name="Shape" level="2" />'
+        for unlit in (False, True):
+            with self.subTest(unlit=unlit):
+                scene = IRScene(
+                    name="Header",
+                    materials=[IRPBRMaterial(name="Paint", unlit=unlit)],
+                    instances=[IRInstance(source_key="MESH:Ball", object_name="Ball", object_type="MESH",
+                                          geometry_hint="Sphere", material_name="Paint")],
+                )
+                buffer = io.StringIO()
+                export_ir_scene(buffer, scene, generator="unit-test")
+                head, body = buffer.getvalue().split("</head>")
+                self.assertIn("<UnlitMaterial" if unlit else "<PhysicalMaterial", body)
+                self.assertEqual(head.count(component), 1)
+                self.assertLess(head.index(component), head.index('<meta name="generator"'))
+
+    def test_shape_component_absent_without_physical_or_unlit_material(self):
+        scene = IRScene(
+            name="NoShapes",
+            instances=[
+                IRInstance(source_key="EMPTY:Part", object_name="Part", object_type="EMPTY",
+                           inline=IRInlineAsset(url="part.x3d")),
+                IRInstance(source_key="LIGHT:Sun", object_name="Sun", object_type="LIGHT",
+                           light=IRLight(name="Sun", light_type="DIRECTIONAL")),
+            ],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        xml_text = buffer.getvalue()
+        self.assertNotIn("Material", xml_text)
+        self.assertNotIn("<component", xml_text)
+
+    def test_geometry2d_component_declared_for_circle2d_fallback(self):
+        scene = IRScene(
+            name="Disc",
+            instances=[IRInstance(source_key="MESH:Disc", object_name="Disc", object_type="MESH",
+                                  geometry_hint="Circle2D")],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        xml_text = buffer.getvalue()
+        self.assertIn("<Circle2D", xml_text)
+        self.assertIn(
+            '    <component name="Geometry2D" level="2" />\n    <component name="Shape" level="2" />\n', xml_text
+        )
+
 
 class EmitSplatsAndInlineTests(unittest.TestCase):
     def _splat_scene(self):
@@ -279,6 +327,7 @@ class EmitSplatsAndInlineTests(unittest.TestCase):
         self.assertIn('<PointSet DEF="GS_Cloud">', xml)
         self.assertIn("<ColorRGBA", xml)
         self.assertIn("written as PointSet", xml)
+        self.assertNotIn("<component", xml)  # the PointSet Shape has no material
 
     def test_inline_written_in_transform(self):
         scene = IRScene(
