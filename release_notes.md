@@ -1,4 +1,5 @@
 ## Unreleased (x3d-blender-io fork)
+- Extension renamed for side-by-side installs: id `x3d_blender_io`, name "X3D Blender I/O", version 2.6.0 (upstream keeps `web3d_x3d_vrml2_format`). Enable one of the two at a time; both register `import_scene.x3d` and `export_scene.x3d`.
 - New **X3D Version** export option: X3D 3.3 (unchanged upstream writer) or X3D 4.0 (PhysicalMaterial / UnlitMaterial, PBR textures, UVs, normals, vertex colours, per-material Shapes, DEF/USE sharing, path-mode texture handling, self-validation).
 - Importer understands PhysicalMaterial and UnlitMaterial, Appearance alphaMode/alphaCutoff and IndexedFaceSet solid; object and mesh names survive round trips.
 - X3D 4.0 path now writes nested Transform hierarchy, PointLight/SpotLight/DirectionalLight, Viewpoint, NavigationInfo, Background, curve/surface/text objects as meshes, and optional sampled animation (TimeSensor, interpolators, ROUTEs).

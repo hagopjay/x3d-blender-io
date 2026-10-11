@@ -1,4 +1,4 @@
-# Web3D X3D/VRML2 format Add-on — X3D 4.0 fork
+# X3D Blender I/O — X3D 4.0/4.1 fork of the Web3D X3D/VRML2 add-on
 
 This repository is HagopJay's working fork of the Blender extension
 [Web3D X3D/VRML2 format](https://extensions.blender.org/add-ons/web3d-x3d-vrml2-format)
@@ -7,6 +7,11 @@ Its purpose is to bring the exporter and importer up to **X3D 4.0** (ISO/IEC 197
 so Blender can trade physically based scenes with X3D 4 browsers (X_ITE, X3DOM, Castle, FreeWRL)
 and with AI tooling built on the Web3D Consortium's validated encodings. Everything upstream
 still works unchanged; the new path is opt-in.
+
+**Installs alongside the official extension.** Since 2.6.0 this fork ships under its own extension id
+`x3d_blender_io` (name "X3D Blender I/O") instead of upstream's `web3d_x3d_vrml2_format`, so Blender
+no longer treats the two as one extension and an upstream update cannot replace it. Both register the
+`import_scene.x3d` / `export_scene.x3d` operators, so enable one of them at a time.
 
 ## What the fork adds (Milestones 1 to 4: PBR materials, scene structure, animation, HAnim, asset bridge)
 
