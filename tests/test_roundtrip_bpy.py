@@ -654,5 +654,30 @@ class InlineBridgeRoundTripTests(unittest.TestCase):
         self.assertEqual(len(empties), 1)
 
 
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class WorldBackgroundExportTests(unittest.TestCase):
+    """The X3D Background takes the colour the render shows: the world's node-tree Background, not World.color."""
+
+    def test_background_follows_world_nodes(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_world_")
+        _register_extension(tmpdir)
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.mesh.primitive_cube_add(size=1.0)
+        world = bpy.data.worlds.new("Night")
+        bpy.context.scene.world = world
+        world.use_nodes = True
+        background = world.node_tree.nodes["Background"]
+        background.inputs["Color"].default_value = (0.02, 0.01, 0.04, 1.0)
+        background.inputs["Strength"].default_value = 2.0
+        world.color = (0.5, 0.5, 0.5)
+        path = os.path.join(tmpdir, "world.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        sky = ET.parse(path).getroot().find("Scene/Background").attrib["skyColor"]
+        self.assertEqual([round(float(v), 4) for v in sky.split()], [0.04, 0.02, 0.08])
+
+
 if __name__ == "__main__":
     unittest.main()

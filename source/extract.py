@@ -491,6 +491,22 @@ def _extract_light(obj, local_matrix) -> IRLight:
     return light
 
 
+def _world_color(world):
+    """What the render shows behind the scene: the node-tree Background colour x strength when the world uses
+    nodes and nothing is linked into it, else the viewport ``World.color``."""
+    tree = getattr(world, "node_tree", None)
+    if tree is not None and getattr(world, "use_nodes", True):
+        for node in tree.nodes:
+            if node.type != "BACKGROUND":
+                continue
+            color, strength = node.inputs.get("Color"), node.inputs.get("Strength")
+            if color is None or color.is_linked or (strength is not None and strength.is_linked):
+                break
+            k = float(strength.default_value) if strength is not None else 1.0
+            return tuple(float(c) * k for c in color.default_value[:3])
+    return tuple(world.color[:3])
+
+
 def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
     field_of_view = None
     if obj.data.type == "PERSP":
@@ -596,7 +612,7 @@ def extract_scene(
     ir_scene = IRScene(name=scene.name, metadata=meta)
     world = getattr(scene, "world", None)
     if world is not None and getattr(world, "color", None) is not None:
-        ir_scene.background_color = tuple(max(0.0, min(1.0, float(channel))) for channel in world.color[:3])
+        ir_scene.background_color = tuple(max(0.0, min(1.0, float(channel))) for channel in _world_color(world)[:3])
 
     exported = list(
         _iter_export_objects(
