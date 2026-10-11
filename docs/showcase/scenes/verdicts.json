@@ -1,0 +1,302 @@
+{
+ "validator": "hagopjay/x3d_mcp integration/validator-fixes @ c9c9788 (XSD by declared version + semantic + X3DUOM profile check)",
+ "scenes": {
+  "annotation-standard.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 3858,
+   "sha256": "04f34529824c4593",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "annotation.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 3922,
+   "sha256": "2b84108c49e6d5bb",
+   "xsd": false,
+   "xsd_errors": [
+    "Line 5: Element 'component', attribute 'name': [facet 'enumeration'] The value 'Annotation' is not an element of the set {'Core', 'CADGeometry', 'CubeMapTexturing', 'DIS', 'EnvironmentalEffects', 'EnvironmentalSensor', '",
+    "Line 44: Element 'AnnotationTarget': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, Background, ColorInterpolator, Coo"
+   ],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "ellipsoid-earth.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 2213,
+   "sha256": "e0244629159d3f92",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "ellipsoid-moon.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 2217,
+   "sha256": "c7e0547aa31a1f27",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "geolod-no-origin.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 3729,
+   "sha256": "38e8a700231759e3",
+   "xsd": false,
+   "xsd_errors": [
+    "Line 17: Element 'GeoLOD': Missing child element(s). Expected is one of ( Background, ColorInterpolator, CoordinateInterpolator, DirectionalLight, Group, NavigationInfo, NormalInterpolator, OrientationInterpolator, Posit"
+   ],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "geolod-origin.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 3764,
+   "sha256": "e438e19b1a0a24c3",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "lights-after.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 39254,
+   "sha256": "e509c59affbd71b0",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "lights-before.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 39233,
+   "sha256": "1ee6a27cc57b697a",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "lod-control.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 693,
+   "sha256": "01e8e617aa79f40b",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "lod-scaled.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 754,
+   "sha256": "98ffdff76cba1225",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "nurbs-weights-premultiplied.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 7800,
+   "sha256": "bcadfc42e891e57f",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "nurbs-weights.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 8548,
+   "sha256": "66c83525ce4949d3",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "profile-tables-fixed.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 3671,
+   "sha256": "72936e713c137e5b",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "profile-tables.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 3631,
+   "sha256": "2feb56a381795167",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 1,
+   "semantic_warnings": 0,
+   "profile_ok": false,
+   "profile_missing": [
+    "PhysicalMaterial"
+   ]
+  },
+  "quaternion-wxyz.x3d": {
+   "version": "4.1",
+   "profile": "Immersive",
+   "bytes": 19467,
+   "sha256": "4d962a1976c457d4",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "quaternion-xyzw.x3d": {
+   "version": "4.1",
+   "profile": "Immersive",
+   "bytes": 19467,
+   "sha256": "6c759b994c743b75",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "repair-0-written.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 2679,
+   "sha256": "b5eaef4dd5b02aca",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 1,
+   "semantic_warnings": 0,
+   "profile_ok": false,
+   "profile_missing": [
+    "PhysicalMaterial"
+   ]
+  },
+  "repair-1-validator.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 2709,
+   "sha256": "a4475d0710ad780c",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "repair-2-render.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 3010,
+   "sha256": "ea4e431582bf8c5d",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "stars-splats.x3d": {
+   "version": "4.1",
+   "profile": "Immersive",
+   "bytes": 146655,
+   "sha256": "be2ab7dd82f14762",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "stars-view.x3d": {
+   "version": "4.1",
+   "profile": "Immersive",
+   "bytes": 1318,
+   "sha256": "aa9fdfba7af8cd32",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "stilllife-splats-24k.x3d": {
+   "version": "4.1",
+   "profile": "Immersive",
+   "bytes": 3159852,
+   "sha256": "f64ab37f4ab7c92a",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "stilllife-stage.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 1223,
+   "sha256": "858415160ce9bcd3",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "stilllife-x3d40.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 1312295,
+   "sha256": "2cbf9392fe3e29b1",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  }
+ }
+}

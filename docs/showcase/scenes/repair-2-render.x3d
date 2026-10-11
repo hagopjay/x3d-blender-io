@@ -1,0 +1,79 @@
+<X3D profile='Immersive' version='4.0' xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance' xsd:noNamespaceSchemaLocation='https://www.web3d.org/specifications/x3d-4.0.xsd'>
+  <head>
+    <component name='EnvironmentalEffects' level='3'/>
+    <component name='Shape' level='2'/>
+    <component name='Lighting' level='3'/>
+  </head>
+  <Scene>
+    <WorldInfo title='Solar System X3D 4.0'/>
+    <!-- Adjusted Viewpoint to see the whole system clearly -->
+    <Viewpoint description='Solar System Overview' position='0 40 80' orientation='1 0 0 -0.5'/>
+    <Background skyColor='0.05 0.05 0.1'/>
+    
+    <!-- The Sun: Uses emissive color and a strong light source -->
+    <Transform>
+      <Shape>
+        <Appearance>
+          <Material emissiveColor='1 0.9 0.2' diffuseColor='0 0 0'/>
+        </Appearance>
+        <Sphere radius='4'/>
+      </Shape>
+      <!-- PointLight placed at center to illuminate planets -->
+      <PointLight color='1 1 1' intensity='10' radius='100' global='true'/>
+    </Transform>
+
+    <!-- Planet 1: Inner -->
+    <Transform DEF='Orbit1'>
+      <Transform translation='12 0 0'>
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor='0.8 0.4 0.2' roughness='0.8'/>
+          </Appearance>
+          <Sphere radius='0.8'/>
+        </Shape>
+      </Transform>
+    </Transform>
+
+    <!-- Planet 2: Middle -->
+    <Transform DEF='Orbit2'>
+      <Transform translation='22 0 0'>
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor='0.2 0.6 0.9' roughness='0.4'/>
+          </Appearance>
+          <Sphere radius='1.5'/>
+        </Shape>
+      </Transform>
+    </Transform>
+
+    <!-- Planet 3: Outer -->
+    <Transform DEF='Orbit3'>
+      <Transform translation='35 0 0'>
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor='0.9 0.8 0.6' roughness='0.6'/>
+          </Appearance>
+          <Sphere radius='2.2'/>
+        </Shape>
+      </Transform>
+    </Transform>
+
+    <!-- Animation Timers with distinct speeds -->
+    <TimeSensor DEF='Timer1' cycleInterval='5' loop='true'/>
+    <TimeSensor DEF='Timer2' cycleInterval='12' loop='true'/>
+    <TimeSensor DEF='Timer3' cycleInterval='25' loop='true'/>
+
+    <!-- Shared Interpolator for full rotation -->
+    <OrientationInterpolator DEF='Rotator' key='0 0.5 1' keyValue='0 1 0 0, 0 1 0 3.14159, 0 1 0 6.28318'/>
+
+    <!-- Routes for orbital motion -->
+    <ROUTE fromNode='Timer1' fromField='fraction_changed' toNode='Rotator' toField='set_fraction'/>
+    <ROUTE fromNode='Rotator' fromField='value_changed' toNode='Orbit1' toField='rotation'/>
+    
+    <ROUTE fromNode='Timer2' fromField='fraction_changed' toNode='Rotator' toField='set_fraction'/>
+    <ROUTE fromNode='Rotator' fromField='value_changed' toNode='Orbit2' toField='rotation'/>
+    
+    <ROUTE fromNode='Timer3' fromField='fraction_changed' toNode='Rotator' toField='set_fraction'/>
+    <ROUTE fromNode='Rotator' fromField='value_changed' toNode='Orbit3' toField='rotation'/>
+  </Scene>
+</X3D>

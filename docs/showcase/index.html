@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkable 3D</title>
+<meta name="description" content="Open research on X3D in the AI era: a validator loop that checks AI-written 3D, a Blender bridge to X3D 4 and the 4.1 Gaussian splats draft, and live X3D demos in the browser. Every number names the tool that measured it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;650;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f4ef; --bg2:#efece4; --panel:#ffffff; --panel2:#f3f0e8; --line:#ddd6c8; --line2:#cfc6b3;
+  --fg:#16181f; --muted:#555b6b; --dim:#80869a;
+  --amber:#b8741a; --teal:#0f8a80; --violet:#6b56d6; --coral:#d9573a; --sky:#2f6fc0; --sage:#4a8a35; --red:#c8382c;
+  --amberbg:#fbf0de; --tealbg:#e0f3f1; --violetbg:#ece8ff; --coralbg:#fde9e3; --skybg:#e4eefb; --sagebg:#e7f3e1; --redbg:#fbe4e1;
+  --stage:#0c1120; --shadow:0 1px 2px rgba(20,20,30,.06),0 8px 24px rgba(20,20,30,.06);
+  --sans:Archivo,"Helvetica Neue",Arial,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b0f1a; --bg2:#0f1424; --panel:#131a2c; --panel2:#19223a; --line:#26304a; --line2:#34405f;
+    --fg:#e9edf6; --muted:#a3adc8; --dim:#6f7a98;
+    --amber:#f0b45e; --teal:#4fd1c5; --violet:#a99bff; --coral:#ff8f73; --sky:#7cb7ff; --sage:#9fd98a; --red:#ff6b6b;
+    --amberbg:#2a2214; --tealbg:#0f2a2a; --violetbg:#1d1a38; --coralbg:#2d1a16; --skybg:#13223a; --sagebg:#16261a; --redbg:#2d1616;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.25); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --bg2:#0f1424; --panel:#131a2c; --panel2:#19223a; --line:#26304a; --line2:#34405f;
+  --fg:#e9edf6; --muted:#a3adc8; --dim:#6f7a98;
+  --amber:#f0b45e; --teal:#4fd1c5; --violet:#a99bff; --coral:#ff8f73; --sky:#7cb7ff; --sage:#9fd98a; --red:#ff6b6b;
+  --amberbg:#2a2214; --tealbg:#0f2a2a; --violetbg:#1d1a38; --coralbg:#2d1a16; --skybg:#13223a; --sagebg:#16261a; --redbg:#2d1616;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.25); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--sky);text-decoration:none} a:hover{text-decoration:underline}
+code,.mono{font-family:var(--mono);font-size:.86em}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+@media (min-width:720px){.wrap{padding:0 32px}}
+/* nav */
+nav.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav.top .wrap{display:flex;align-items:center;gap:18px;height:56px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.3px;color:var(--fg);white-space:nowrap}
+.brand svg{flex:none}
+.navlinks{display:flex;gap:16px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{color:var(--muted);font-size:14px;white-space:nowrap}
+.navlinks a:hover{color:var(--fg);text-decoration:none}
+.iconbtn{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;height:32px;padding:0 12px;font:500 13px var(--sans);cursor:pointer}
+/* hero */
+header.hero{padding:56px 0 28px;position:relative}
+.eyebrow{font:600 12px var(--mono);letter-spacing:2px;color:var(--amber);text-transform:uppercase}
+h1{font:800 clamp(38px,6.4vw,76px)/1.02 var(--sans);letter-spacing:-1.5px;margin:14px 0 18px;max-width:14ch}
+h1 em{font-style:normal;color:var(--teal)}
+.lede{font-size:clamp(17px,2vw,20px);color:var(--muted);max-width:62ch;margin:0 0 22px}
+.cta{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:11px 16px;font:650 15px var(--sans);border:1px solid var(--line2);background:var(--panel);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn:hover{text-decoration:none;filter:brightness(1.05)}
+.heroGrid{display:grid;gap:28px;align-items:end}
+@media (min-width:980px){.heroGrid{grid-template-columns:1.15fr .85fr}}
+.heroCard{border-radius:16px;overflow:hidden;background:var(--stage);box-shadow:var(--shadow);position:relative;aspect-ratio:16/10}
+.heroCard img{width:100%;height:100%;object-fit:cover;display:block}
+.heroCard .tag{position:absolute;left:12px;bottom:12px;right:12px;display:flex;justify-content:space-between;gap:8px;font:500 12px var(--mono);color:#e9edf6}
+.heroCard .tag span{background:rgba(10,14,26,.72);padding:5px 9px;border-radius:7px}
+.sayit{margin:22px 0 0;padding:14px 16px;border-left:3px solid var(--teal);background:var(--tealbg);border-radius:0 10px 10px 0;font:italic 600 18px var(--sans);color:var(--teal);max-width:44ch}
+/* sections */
+section{padding:44px 0;border-top:1px solid var(--line)}
+h2{font:800 clamp(26px,3.4vw,38px)/1.1 var(--sans);letter-spacing:-.6px;margin:8px 0 10px}
+.sub{color:var(--muted);max-width:70ch;margin:0 0 22px}
+h3{font:650 18px/1.25 var(--sans);margin:0 0 6px}
+/* stat tiles */
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 12px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--amber))}
+.stat .k{font:600 11px var(--mono);letter-spacing:1.6px;color:var(--c,var(--amber));text-transform:uppercase}
+.stat .v{font:800 38px/1.05 var(--sans);letter-spacing:-.6px;margin:8px 0 2px}
+.stat .l{color:var(--muted);font-size:14px;min-height:42px}
+.bars{margin:10px 0 8px;display:grid;gap:5px}
+.bar{display:grid;grid-template-columns:96px 1fr 44px;gap:8px;align-items:center;font:400 11.5px var(--mono);color:var(--muted)}
+.bar i{display:block;height:9px;border-radius:3px;background:var(--panel2);position:relative;overflow:hidden}
+.bar i b{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--bc,var(--amber))}
+.bar span:last-child{color:var(--fg);text-align:right}
+.src{font:400 11px/1.4 var(--mono);color:var(--dim);border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+/* loop */
+.loop{display:grid;gap:10px;grid-template-columns:1fr;counter-reset:st}
+@media (min-width:860px){.loop{grid-template-columns:repeat(5,1fr)}}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;position:relative}
+.step .n{font:600 11px var(--mono);letter-spacing:1.6px;color:var(--c)}
+.step h3{margin:6px 0 4px}
+.step p{margin:0;color:var(--muted);font-size:14px}
+.step ul{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:5px}
+.step li{font:500 11px var(--mono);border:1px solid var(--line2);border-radius:999px;padding:2px 8px;color:var(--fg)}
+.feedback{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.fb{font:500 12.5px var(--mono);padding:7px 11px;border-radius:9px;border:1px dashed var(--c);color:var(--c);background:var(--cb)}
+.layers{width:100%;border-collapse:collapse;margin-top:18px;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.layers th,.layers td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.layers th{font:600 11px var(--mono);letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);background:var(--panel2)}
+.layers tr:last-child td{border-bottom:0}
+.layers .hl td{background:var(--amberbg)}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* theatre */
+.theatre{display:grid;gap:16px}
+@media (min-width:1000px){.theatre{grid-template-columns:260px 1fr}}
+.dlist{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+@media (min-width:1000px){.dlist{flex-direction:column;overflow:visible}}
+.dgroup{font:600 10.5px var(--mono);letter-spacing:1.6px;color:var(--dim);text-transform:uppercase;margin:10px 2px 2px;display:none}
+@media (min-width:1000px){.dgroup{display:block}}
+.ditem{flex:none;text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:11px;padding:9px 11px;cursor:pointer;font:500 14px var(--sans);display:flex;gap:9px;align-items:center;max-width:240px}
+.ditem .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+.ditem small{display:block;color:var(--dim);font:400 11px var(--mono)}
+.ditem[aria-selected="true"]{border-color:var(--c);box-shadow:0 0 0 1px var(--c) inset;background:var(--panel2)}
+.stagebox{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.stage{position:relative;background:var(--stage);aspect-ratio:16/10;max-height:68vh;width:100%}
+.stage x3d-canvas,.stage .poster{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stage .poster{object-fit:contain;background:var(--stage)}
+.stage .poster.hidden{display:none}
+.stage .overlay{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;pointer-events:none}
+.stage .overlay>*{pointer-events:auto}
+.live{font:650 14px var(--sans);border:0;border-radius:10px;padding:10px 14px;background:#f0b45e;color:#16120a;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.live[disabled]{opacity:.7;cursor:progress}
+.badge{font:500 11.5px var(--mono);color:#e9edf6;background:rgba(10,14,26,.78);padding:5px 9px;border-radius:7px}
+.vtabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 14px 0}
+.vtab{font:500 13px var(--sans);border:1px solid var(--line2);background:var(--panel);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer}
+.vtab[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.dinfo{display:grid;gap:18px;padding:14px 14px 16px}
+@media (min-width:900px){.dinfo{grid-template-columns:1.1fr .9fr}}
+.dinfo h3{font-size:22px;letter-spacing:-.3px}
+.dinfo p{margin:6px 0;color:var(--muted)}
+.dsay{margin-top:10px;font:italic 600 16px var(--sans);color:var(--c)}
+.facts{width:100%;border-collapse:collapse;font-size:13.5px}
+.facts td{padding:6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.facts td:first-child{color:var(--muted);padding-right:10px;width:38%}
+.facts td:nth-child(2){font-weight:650;white-space:nowrap;padding-right:10px}
+.facts td:last-child{font:400 11px/1.45 var(--mono);color:var(--dim)}
+.verdict{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+.chip{font:500 11.5px var(--mono);padding:3px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--fg);background:var(--panel2)}
+.chip.ok{border-color:var(--sage);color:var(--sage);background:var(--sagebg)}
+.chip.bad{border-color:var(--red);color:var(--red);background:var(--redbg)}
+.filelinks{font:400 12px var(--mono);color:var(--dim);margin-top:8px;word-break:break-all}
+.cmp{position:relative;overflow:hidden;border-radius:12px;background:var(--stage);aspect-ratio:16/10;user-select:none;touch-action:pan-y}
+.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.cmp .top{clip-path:inset(0 0 0 50%)}
+.cmp .handle{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#f0b45e}
+.cmp .lab{position:absolute;top:10px;font:500 11.5px var(--mono);color:#e9edf6;background:rgba(10,14,26,.78);padding:4px 8px;border-radius:6px}
+.cmp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
+/* findings */
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.card .k{font:600 11px var(--mono);letter-spacing:1.6px;color:var(--c);text-transform:uppercase}
+.card h3{margin:8px 0 6px}
+.card p,.card li{color:var(--muted);font-size:14.5px}
+.card ul{padding-left:18px;margin:6px 0}
+.card .src{margin-top:auto}
+.figure{margin:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--stage)}
+.figure img{display:block;width:100%;height:auto}
+.figure figcaption{background:var(--panel);color:var(--muted);font-size:13.5px;padding:10px 12px;border-top:1px solid var(--line)}
+.twocol{display:grid;gap:16px}
+@media (min-width:900px){.twocol{grid-template-columns:1fr 1fr}}
+/* questions */
+.qs{display:grid;gap:10px;counter-reset:q}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px 12px 50px;position:relative}
+.q::before{counter-increment:q;content:counter(q);position:absolute;left:14px;top:12px;width:24px;height:24px;border-radius:50%;background:var(--violetbg);color:var(--violet);font:600 12px/24px var(--mono);text-align:center}
+.q b{display:block}
+.q span{color:var(--muted);font-size:14px}
+.q a{font:500 12px var(--mono)}
+/* ecosystem */
+.rank{display:grid;gap:8px}
+.ritem{display:grid;grid-template-columns:34px 1fr 64px;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.ritem .r{font:800 20px var(--sans);color:var(--dim);text-align:center}
+.ritem b{display:block;font-weight:650}
+.ritem span{color:var(--muted);font-size:13.5px}
+.ritem .s{font:600 12px var(--mono);text-align:right;color:var(--c)}
+.ritem .s i{display:block;height:6px;border-radius:3px;background:var(--panel2);margin-top:4px;overflow:hidden}
+.ritem .s i b{display:block;height:100%;background:var(--c)}
+/* timeline */
+.tl{position:relative;display:grid;gap:0;margin-top:6px}
+.tli{display:grid;grid-template-columns:110px 18px 1fr;gap:10px;align-items:start;padding:6px 0}
+.tli time{font:500 12.5px var(--mono);color:var(--dim);text-align:right;padding-top:1px}
+.tli .pin{width:12px;height:12px;border-radius:50%;background:var(--c);margin:4px auto 0;box-shadow:0 0 0 4px var(--cb)}
+.tli p{margin:0;font-size:14.5px}
+.tli p small{color:var(--dim)}
+/* changelog + footer */
+.log{font:400 13px/1.6 var(--mono);color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.log b{color:var(--fg);font-weight:600}
+footer{padding:36px 0 60px;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}
+footer .cols{display:grid;gap:18px}
+@media (min-width:800px){footer .cols{grid-template-columns:1.3fr 1fr 1fr}}
+footer h4{font:600 11px var(--mono);letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+footer ul{list-style:none;padding:0;margin:0;display:grid;gap:4px}
+.k-amber{--c:var(--amber);--cb:var(--amberbg)} .k-teal{--c:var(--teal);--cb:var(--tealbg)} .k-violet{--c:var(--violet);--cb:var(--violetbg)}
+.k-coral{--c:var(--coral);--cb:var(--coralbg)} .k-sky{--c:var(--sky);--cb:var(--skybg)} .k-sage{--c:var(--sage);--cb:var(--sagebg)} .k-red{--c:var(--red);--cb:var(--redbg)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<nav class="top" aria-label="Sections">
+ <div class="wrap">
+  <a class="brand" href="#top" aria-label="Checkable 3D, top">
+   <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2 23 7.5v11L13 24 3 18.5v-11z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m8.5 13 3 3 6-6.5" fill="none" stroke="#0f8a80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+   Checkable 3D
+  </a>
+  <div class="navlinks">
+   <a href="#numbers">Numbers</a><a href="#loop">The loop</a><a href="#demos">Live demos</a><a href="#findings">Findings</a><a href="#splats">Splats</a><a href="#blender">Blender</a><a href="#questions">Spec questions</a><a href="#timeline">Timeline</a><a href="#changelog">Changelog</a>
+  </div>
+  <button class="iconbtn" id="theme" type="button" aria-label="Switch colour theme">Theme</button>
+ </div>
+</nav>
+
+<header class="hero" id="top">
+ <div class="wrap heroGrid">
+  <div>
+   <div class="eyebrow">X3D in the AI era · open research · October 2026</div>
+   <h1>3D an AI can be <em>checked</em> against.</h1>
+   <p class="lede">Language models got good at code because code can be checked: the compiler says no, the model reads the error, it tries again. 3D never had that loop. X3D can have it: an ISO standard with a schema, profiles, and a machine-readable model of every node. This page shows what we built on that idea, what it measured, and what it found, with the 3D running live in your browser.</p>
+   <div class="cta"><a class="btn primary" href="#demos">▶ Run the live demos</a><a class="btn" href="#findings">Read the findings</a><a class="btn" href="https://github.com/hagopjay/x3d-blender-io/tree/main/docs/showcase">View the source</a></div>
+   <p class="sayit">“Valid is not the same as visible.”</p>
+  </div>
+  <figure class="heroCard" style="margin:0">
+   <img src="img/splat-xite.webp" alt="A Blender still life of a vase, fruit and a marble block, rebuilt as Gaussian splats and rendered as X3D 4.1 in X_ITE" width="960" height="600">
+   <figcaption class="tag"><span>Synthetic still life → 132,923 Gaussian splats → X3D 4.1</span><span>X_ITE</span></figcaption>
+  </figure>
+ </div>
+</header>
+
+<section id="numbers">
+ <div class="wrap">
+  <div class="eyebrow">What it has measured</div>
+  <h2>Eight numbers, each naming the tool that measured it</h2>
+  <p class="sub">Nothing here is a benchmark result in the published sense: these are small, reproducible runs with their method stated. The source line under each number says which validator, renderer or model produced it.</p>
+  <div class="stats">
+   <div class="stat k-amber"><div class="k">X3D-Bench slice · 30 prompts, 6 kinds</div><div class="v">30 / 30</div><div class="l">scenes valid after one repair round</div>
+    <div class="bars"><div class="bar"><span>first try</span><i><b style="width:80%"></b></i><span>24</span></div><div class="bar" style="--bc:var(--sage)"><span>after repair</span><i><b style="width:100%;background:var(--sage)"></b></i><span>30</span></div><div class="bar"><span>looks right</span><i><b style="width:93.3%;background:var(--teal)"></b></i><span>28</span></div></div>
+    <div class="src">Validator fork (XSD + semantic + profile) · X_ITE 16.4.3 headless · Claude writer, 8 Oct 2026</div></div>
+   <div class="stat k-amber"><div class="k">Validator fork · 324 tests</div><div class="v">5 of 6</div><div class="l">real defects that only the profile check caught; schema and browser both missed them</div>
+    <div class="bars"><div class="bar"><span>schema</span><i><b style="width:16.7%;background:var(--sky)"></b></i><span>1</span></div><div class="bar"><span>profile</span><i><b style="width:83.3%"></b></i><span>5</span></div><div class="bar"><span>browser</span><i><b style="width:0"></b></i><span>0</span></div></div>
+    <div class="src">Same 30 scenes · fork vs the official-style 4.1-only XSD check · X_ITE loaded all 30</div></div>
+   <div class="stat k-teal"><div class="k">Live cloud loop · one sentence</div><div class="v">27.9 s</div><div class="l">from a sentence to a checked, rendered picture</div>
+    <div class="bars"><div class="bar"><span>rejected</span><i><b style="width:41%;background:var(--red)"></b></i><span>11.5 s</span></div><div class="bar"><span>valid</span><i><b style="width:22%;background:var(--sage)"></b></i><span>6.2 s</span></div><div class="bar"><span>render</span><i><b style="width:37%;background:var(--teal)"></b></i><span>10.3 s</span></div></div>
+    <div class="src">Gemini 3 Flash writer · 4.0 XSD judge · X_ITE 16.4.3 on Cloud Run. Try 1 used a 4.1-only attribute; the judge caught it.</div></div>
+   <div class="stat k-violet"><div class="k">Scoreboard · 12 models</div><div class="v">263</div><div class="l">scored runs, one-shot versus with the judge in the loop</div>
+    <div class="bars"><div class="bar"><span>Claude 1-shot</span><i><b style="width:80%;background:var(--violet)"></b></i><span>80%</span></div><div class="bar"><span>Claude + loop</span><i><b style="width:100%;background:var(--sage)"></b></i><span>100%</span></div></div>
+    <div class="src">BigQuery table · 11 Gemini variants + Claude · same validator fork</div></div>
+   <div class="stat k-coral"><div class="k">Gaussian splats · X3D 4.1 draft</div><div class="v">970,654</div><div class="l">splats of the Great Pyramid as one standard X3D node, live in a browser; plus a 500,000-splat Pantheon</div>
+    <div class="src">X_ITE 16.4.3 · GaussianSplats node · parse 12.1 to 15.8 s on a laptop GPU</div></div>
+   <div class="stat k-sky"><div class="k">One scene, every scale</div><div class="v">10<sup style="font-size:.55em">17.7</sup>×</div><div class="l">a single X3D file from 1 m on a campus lawn to the 978 stars within 50 light-years</div>
+    <div class="src">X_ITE 16.4.3 · Earth, Moon, planets, 978 HYG stars · 59 to 62 fps</div></div>
+   <div class="stat k-violet"><div class="k">Evolved light · MAP-Elites</div><div class="v">65%</div><div class="l">of grid cells won by a Gemini “director” against random mutation (52 to 56%)</div>
+    <div class="bars"><div class="bar"><span>director</span><i><b style="width:65%;background:var(--violet)"></b></i><span>65%</span></div><div class="bar"><span>random ops</span><i><b style="width:54%;background:var(--dim)"></b></i><span>~54%</span></div></div>
+    <div class="src">Blender Cycles (CPU) · p = 0.017 · one seed per arm · 42 vs 31 of 64 cells filled</div></div>
+   <div class="stat k-sage"><div class="k">X3D Blender I/O · v2.6.0</div><div class="v">60 tests</div><div class="l">on Blender 4.5, 5.1 and 5.2 on every push; X3D 4.0 PBR export and import, 4.1 splats</div>
+    <div class="src">GitHub Actions · headless Blender (bpy) · hagopjay/x3d-blender-io</div></div>
+  </div>
+ </div>
+</section>
+
+<section id="loop">
+ <div class="wrap">
+  <div class="eyebrow">The method</div>
+  <h2>Make, declare, judge, render, ship</h2>
+  <p class="sub">Every scene on this page went through the same five stations. The two feedback arrows are the point: a schema error goes back to the writer with the fix spelled out, and a scene that is valid but looks wrong goes back too.</p>
+  <div class="loop">
+   <div class="step k-coral"><div class="n">01 · MAKE</div><h3>Anyone writes 3D</h3><p>A language model from a sentence, an artist in Blender, or a capture of a real place.</p><ul><li>LLM</li><li>Blender</li><li>splat capture</li></ul></div>
+   <div class="step k-sky"><div class="n">02 · DECLARE</div><h3>X3D says what it needs</h3><p>Version, profile and components in the header: a licence the browser can read before it plays the file.</p><ul><li>4.0 ISO</li><li>4.1 draft</li></ul></div>
+   <div class="step k-amber"><div class="n">03 · JUDGE</div><h3>A strict validator</h3><p>Schema chosen by declared version, wiring, and a profile check read from the Consortium's own object model (X3DUOM).</p><ul><li>XSD</li><li>semantic</li><li>profile</li><li>repair</li></ul></div>
+   <div class="step k-teal"><div class="n">04 · RENDER</div><h3>A headless browser</h3><p>X_ITE draws every scene to a picture that a person or a vision model can judge.</p><ul><li>X_ITE 16.4.3</li><li>Chromium</li></ul></div>
+   <div class="step k-sage"><div class="n">05 · SHIP</div><h3>Out to everywhere</h3><p>The open web with no plugin, back into Blender, a public scoreboard, a cloud loop.</p><ul><li>WebXR</li><li>Blender</li><li>BigQuery</li></ul></div>
+  </div>
+  <div class="feedback">
+   <span class="fb k-amber">judge → error with the fix spelled out → writer repairs → re-check</span>
+   <span class="fb k-teal">render looks wrong → vision critic → regenerate</span>
+  </div>
+  <div class="tablewrap">
+  <table class="layers" aria-label="Five layers of validity">
+   <thead><tr><th>Layer</th><th>Question it answers</th><th>Example failure</th><th>Who checks it</th></tr></thead>
+   <tbody>
+    <tr><td>1 · Well-formed</td><td>Is it parseable XML?</td><td>Unclosed tag</td><td>Any XML parser</td></tr>
+    <tr><td>2 · Schema</td><td>Are these real nodes and fields, in legal places?</td><td><code>&lt;Sphere colour="red"/&gt;</code></td><td>Validator, now per declared version</td></tr>
+    <tr class="hl"><td>3 · Profile</td><td>Has the file declared the capabilities it uses?</td><td><code>PhysicalMaterial</code> under Immersive without <code>Shape</code> level 2</td><td><b>Only the fork</b></td></tr>
+    <tr><td>4 · Wiring</td><td>Do DEF/USE and ROUTEs connect real fields of matching types?</td><td>ROUTE to a field that does not exist</td><td>Validator, made ROUTE-aware</td></tr>
+    <tr><td>5 · Meaning</td><td>Is it the scene that was asked for?</td><td>A “red chair” that is a blue cube</td><td>Render + a human or model judge</td></tr>
+   </tbody>
+  </table>
+  </div>
+ </div>
+</section>
+
+<section id="demos">
+ <div class="wrap">
+  <div class="eyebrow">Live demos</div>
+  <h2>The scenes themselves, running in your browser</h2>
+  <p class="sub">Each demo starts as a still taken by the same headless renderer. Press <b>Load live 3D</b> to fetch X_ITE 16.4.3 and the real X3D file; drag to orbit, scroll to zoom. Under every scene is the verdict of the validator fork on that exact file.</p>
+  <div class="theatre">
+   <div class="dlist" id="dlist" role="tablist" aria-label="Demos"></div>
+   <div class="stagebox">
+    <div class="stage" id="stage">
+     <img class="poster" id="poster" alt="">
+     <div class="overlay"><button class="live" id="liveBtn" type="button">▶ Load live 3D</button><span class="badge" id="stageBadge"></span></div>
+    </div>
+    <div class="vtabs" id="vtabs" role="tablist" aria-label="Variants"></div>
+    <div class="dinfo">
+     <div>
+      <h3 id="dTitle"></h3>
+      <div id="dBody"></div>
+      <div class="dsay" id="dSay"></div>
+     </div>
+     <div>
+      <table class="facts"><tbody id="dFacts"></tbody></table>
+      <div class="verdict" id="dVerdict"></div>
+      <div class="filelinks" id="dFiles"></div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section id="findings">
+ <div class="wrap">
+  <div class="eyebrow">Findings</div>
+  <h2>What the work found</h2>
+  <p class="sub">The landscape research, the validator work and the experiments boil down to these. Each card names where the evidence lives.</p>
+  <div class="cards">
+   <div class="card k-amber"><div class="k">The thesis</div><h3>X3D's edge is verifiability, not fluency</h3><p>On small scenes, a model wrote X3D and three.js correctly at about the same rate. The difference is the error class: X3D's failures were version drift and profile drift, which a machine can name and fix; three.js failures are runtime or silent visual errors that nothing checks.</p><div class="src">3 X3D + 3 three.js scenes, 8 Oct 2026 · lxml XSD · X_ITE 16.4.3 · three.js r186</div></div>
+   <div class="card k-red"><div class="k">The trap</div><h3>A lenient browser is not a validator</h3><p>X_ITE loaded all 30 bench scenes, including the five profile violations and one schema-invalid GeoLOD scene, and drew them. “It rendered” proves nothing about conformance, and conformance is what lets a file outlive the browser it was made for.</p><div class="src">X3D-Bench slice, 30 scenes · X_ITE 16.4.3 · validator fork</div></div>
+   <div class="card k-teal"><div class="k">The second trap</div><h3>Valid is not the same as visible</h3><p>Two geospatial scenes passed every check and rendered only sky. A render check (pixels that change when shapes are removed) plus a vision judge catches what a schema cannot: a camera pointed at nothing, a light that lights nothing.</p><div class="src">Bench run 1: 28 of 30 visually right · render check + vision judge</div></div>
+   <div class="card k-amber"><div class="k">The asset</div><h3>X3DUOM is the Consortium's secret weapon</h3><p>The profile check, the version hints and the repair tool read node sets, components and levels from the unified object model that already generates the Python and Java bindings. No hand-kept tables, nothing to drift as the standard moves.</p><div class="src">hagopjay/x3d_mcp · src/validation/profile.py</div></div>
+   <div class="card k-sky"><div class="k">The loop</div><h3>Error text is part of the loop's quality</h3><p>A GeoLOD scene needed three repair rounds because lxml truncates its expected-element list and omits the one element that mattered. A validator that quotes the content model closes the loop in one round; a repair tool applies the mechanical fixes so the model only sees errors that need judgment.</p><div class="src">validator fork · repair_x3d · 13 tests</div></div>
+   <div class="card k-sage"><div class="k">The noise</div><h3>In an agent loop, a false warning is a defect</h3><p>The upstream check flagged every DEF used only by a ROUTE as unused (six warnings on a six-ROUTE animation) and every reused Shape as empty (62 on one chess board). A model acts on noise; “fixing” a correct scene makes it worse.</p><div class="src">validator fork · ROUTE-aware DEF analysis · Shape USE completeness</div></div>
+   <div class="card k-coral"><div class="k">The landscape</div><h3>Splats became a standard in 2026, everywhere at once</h3><p>glTF ratified KHR_gaussian_splatting, OpenUSD 26.03 has a splat schema, 3D Tiles 2.0 names them in scope, and the X3D 4.1 draft carries a GaussianSplats node. Generated objects ship as GLB; no generator vendor mentions X3D.</p><div class="src">AI-native 3D landscape review, 8 Oct 2026 · primary sources linked in the source document</div></div>
+   <div class="card k-violet"><div class="k">The standard</div><h3>Rigorous, durable, thinly staffed</h3><p>X3D 4.0 has been ISO/IEC 19775-1:2023 since December 2023; its SAI companion passed its final ballot on 17 Sep 2026; a public 4.1 draft adds splats, environment lights and more. X_ITE implements about 95% of the node set. The ecosystem runs on roughly six maintainers.</p><div class="src">State of play review, 8 Oct 2026 · ISO and web3d.org primary sources</div></div>
+   <figure class="figure card" style="padding:0;grid-row:span 2"><img src="img/bench-contact.webp" alt="Contact sheet of the 30 cold-written bench scenes rendered headlessly" loading="lazy" width="1400" height="1167"><figcaption><b>30 scenes, written cold, one try each.</b> Objects, assemblies, animation, interaction, HAnim and geospatial, rendered from each scene's own viewpoint before any repair. <span class="mono">X_ITE 16.4.3 headless, 512×512</span></figcaption></figure>
+   <div class="card k-teal"><div class="k">The browser</div><h3>X_ITE, field-tested on 16.4.3 and 16.5.0</h3><ul><li>All 259 X3D 4.0 node names exist; 13 are silent stubs.</li><li>A version-4.0 file is refused GaussianSplats, FontLibrary and other 4.1 nodes: versions are enforced.</li><li>It ships an unregistered Annotation component from the v4 working drafts.</li><li>Formats are sniffed by content (11 parsers); KTX2 is the one suffix-bound format.</li><li>Script nodes run in the page's realm: schema-valid is not safe.</li></ul><div class="src">X_ITE field guide · every finding re-run on 16.5.0, none changed</div></div>
+  </div>
+ </div>
+</section>
+
+<section id="splats">
+ <div class="wrap">
+  <div class="eyebrow">Synthetic data to splats</div>
+  <h2>No camera, no photos: a Blender scene becomes trained Gaussian splats</h2>
+  <p class="sub">A still life built in Blender was rendered by Cycles from known camera poses, a Gaussian splat model was trained on those renders on one cloud GPU, and the add-on wrote it out as the X3D 4.1 GaussianSplats node. Against the Cycles reference, the splats score higher than the mesh export.</p>
+  <div class="twocol">
+   <figure class="figure"><img src="img/splat-compare.webp" alt="Side by side: the Cycles reference, the mesh exported to X3D 4.0, and the trained splats as X3D 4.1, all in the same camera" loading="lazy" width="1400" height="468"><figcaption>Cycles reference vs X3D in X_ITE, same camera. Splats SSIM <b>0.977</b>; mesh export SSIM <b>0.905</b>. <span class="mono">SSIM whole frame, 960×600, X_ITE tone mapping off</span></figcaption></figure>
+   <figure class="figure"><img src="img/splat-train-curve.webp" alt="Training curve: loss falling over 15,000 steps" loading="lazy" width="1200" height="432"><figcaption>15,000 gsplat steps in 247 s on one NVIDIA L4; Cycles rendered 181 frames in 107 s; 132,923 splats out. <span class="mono">training log and receipt</span></figcaption></figure>
+  </div>
+  <figure class="figure" style="margin-top:16px"><img src="img/splat-views.webp" alt="Contact sheet of the synthetic training views orbiting the still life" loading="lazy" width="1400" height="583"><figcaption>The training set: synthetic views from known poses. Every pixel is labelled data, so no photo is needed and no pose is estimated.</figcaption></figure>
+ </div>
+</section>
+
+<section id="blender">
+ <div class="wrap">
+  <div class="eyebrow">The Blender bridge and its ecosystem</div>
+  <h2>Blender 5.3 imports splats and exports none. The add-on exports them.</h2>
+  <p class="sub">Blender 5.3 (branch cut 9 Oct 2026, release 10 Nov) adds native Gaussian splats as a PointCloud type, with PLY, SPZ, glTF and USD import but no export. X3D Blender I/O 2.6.0 reads that native layout and writes X3D 4.1, which makes it, today, the only way to get splats back out of Blender. A daily watch tracks the upstream projects that matter; the top of its ranked map:</p>
+  <div class="twocol">
+   <div class="rank" id="rank"></div>
+   <div>
+    <figure class="figure"><img src="img/lights-before-after.webp" alt="Before and after: a scene exported with lights wrapped in Transforms renders black; with global lights it renders lit" loading="lazy" width="1288" height="360"><figcaption><b>Found by the evolver, fixed in the add-on.</b> The exporter wrapped each light in a Transform, so a DirectionalLight with the default <code>global="false"</code> lit nothing outside it. Exporting <code>global="true"</code> fixes it. <span class="mono">X_ITE 16.4.3 · live in the demos</span></figcaption></figure>
+    <figure class="figure" style="margin-top:14px"><img src="img/evolved-elites.webp" alt="Twelve evolved light sculptures: attractors, curl-flow ribbons and Hopf fibrations in neon colours" loading="lazy" width="1600" height="675"><figcaption><b>Evolved light.</b> The 12 best of 42 elites from a MAP-Elites run in which Gemini directs the mutations; rendered by Blender Cycles, scored by an image critic, and exported to X3D 4.0 (16 elites validate and load in X_ITE; the glow is lost, since X3D 4.0 has no emissive strength).</figcaption></figure>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section id="questions">
+ <div class="wrap">
+  <div class="eyebrow">Questions for the standard</div>
+  <h2>Nine places where the spec, the schema and the browser disagree</h2>
+  <p class="sub">Each was reproduced with a minimal scene; the ones with a ▶ link are live in the demo theatre above. They are questions, not bug reports: the point is that a checkable standard makes them findable.</p>
+  <div class="qs">
+   <div class="q"><b>Which order are GaussianSplats orientations written in?</b><span>The 4.1 draft does not say. X_ITE reads x y z w (the glTF order); 3DGS PLY files store w x y z. Same 197 splats, only the order differs, very different picture.</span> <a href="#demo=quaternion">▶ demo</a></div>
+   <div class="q"><b>Are NurbsCurve control points already weight-multiplied?</b><span>X_ITE computes Σ N P / Σ N w, so the curve passes (0.60, −0.20); Piegl–Tiller tools give (1.50, −0.80). Clause 27 names no convention.</span> <a href="#demo=nurbs">▶ demo</a></div>
+   <div class="q"><b>Does Immersive cover PhysicalMaterial?</b><span>Annex E Table E.2 and Table 12.4 say yes; Table E.3 and the X3DUOM Immersive node list say no. One component line settles it in practice.</span> <a href="#demo=profile">▶ demo</a></div>
+   <div class="q"><b>Should the XSD require a GeoOrigin inside GeoLOD?</b><span>The 4.0 schema's content model demands one between inline children; the spec text makes geoOrigin optional and discourages GeoOrigin.</span> <a href="#demo=geolod">▶ demo</a></div>
+   <div class="q"><b>What is the status of the Annotation component?</b><span>Clause 43 of the v4 working drafts; X_ITE ships it unregistered; it is in neither 4.0 nor the 4.1 object model, so the schema rejects it.</span> <a href="#demo=annotation">▶ demo</a></div>
+   <div class="q"><b>Can geospatial X3D leave Earth?</b><span>The spec's ellipsoids are all Earth's. X_ITE already accepts the Moon through Pluto (its Uranus is ten times too thin). “The browser has already been to the Moon. The standard hasn't.”</span> <a href="#demo=bodies">▶ demo</a></div>
+   <div class="q"><b>Is LOD range measured before or after a Transform scale?</b><span>The same LOD, scaled by 0.001 with its range scaled to match, switches to a different level in X_ITE.</span> <a href="#demo=lod">▶ demo</a></div>
+   <div class="q"><b>Should splats be loadable by URL?</b><span>The 4.1 node holds all data inline (a 500,000-splat file runs to tens of megabytes of XML). X_ITE already loads a 3DGS PLY through Inline.</span></div>
+   <div class="q"><b>Is 1 m geospatial placement possible in single precision?</b><span>A 1 m survey grid placed by geographic coordinates lands with 0.16 m RMS error (0.28 m max): float32 spacing at that point on Earth is 0.06 to 0.5 m.</span></div>
+  </div>
+ </div>
+</section>
+
+<section id="timeline">
+ <div class="wrap">
+  <div class="eyebrow">Context</div>
+  <h2>Timeline</h2>
+  <div class="tl">
+   <div class="tli k-violet"><time>2023-12-20</time><span class="pin"></span><p>X3D 4.0 published as ISO/IEC 19775-1:2023 <small>(PBR aligned with glTF, Web Audio, HAnim 2)</small></p></div>
+   <div class="tli k-violet"><time>2026-09-17</time><span class="pin"></span><p>X3D Scene Access Interface (19775-2) passes its final ballot</p></div>
+   <div class="tli k-coral"><time>2026-09-29</time><span class="pin"></span><p>X3D 4.1 draft documents a GaussianSplats node</p></div>
+   <div class="tli k-amber"><time>2026-10-08</time><span class="pin"></span><p>Bench slice: 30 cold-written scenes, 30/30 valid after repair; validator fork at 324 tests</p></div>
+   <div class="tli k-sage"><time>2026-10-09</time><span class="pin"></span><p>Blender 5.3 branch cut: native splats, import only</p></div>
+   <div class="tli k-teal"><time>2026-10-11</time><span class="pin"></span><p>X_ITE 16.5.0 released; X3D Blender I/O 2.6.0 exports Blender's native splats to X3D 4.1; this page</p></div>
+   <div class="tli k-sky"><time>2026-10-13</time><span class="pin"></span><p>Web3D 2026 conference opens (13 to 15 Oct)</p></div>
+   <div class="tli k-sage"><time>2026-11-10</time><span class="pin"></span><p>Blender 5.3 release (planned); the add-on's CI adds 5.3</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="changelog">
+ <div class="wrap">
+  <div class="eyebrow">Version-controlled</div>
+  <h2>Changelog</h2>
+  <p class="sub">This page is a static folder in <a href="https://github.com/hagopjay/x3d-blender-io/tree/main/docs/showcase">hagopjay/x3d-blender-io/docs/showcase</a>: plain HTML, the X3D scenes, and a <code>verdicts.json</code> written by the validator. Every change is a commit; the scene list and its verdicts are rebuilt by <code>tools/showcase_verdicts.py</code>.</p>
+  <div class="log" id="log"><b>2026-10-11</b> · First version: eight sourced numbers, the five-station loop, 12 live demos (24 X3D files, every one checked by the validator fork), findings, splats, Blender ecosystem ranking, nine spec questions.</div>
+ </div>
+</section>
+
+<footer>
+ <div class="wrap cols">
+  <div><h4>Checkable 3D</h4><p>Open research on X3D in the AI era. Built on the Web3D Consortium's x3d_mcp and X3DUOM, X_ITE by Holger Seelig, and Blender. Scenes are made for this research; star positions from the HYG v4.1 catalogue.</p></div>
+  <div><h4>Code</h4><ul><li><a href="https://github.com/hagopjay/x3d-blender-io">hagopjay/x3d-blender-io</a> · Blender ↔ X3D 4</li><li><a href="https://github.com/hagopjay/x3d_mcp">hagopjay/x3d_mcp</a> · validator fork</li><li><a href="https://github.com/create3000/x_ite">create3000/x_ite</a> · the browser</li></ul></div>
+  <div><h4>Method</h4><ul><li>Validator: fork <code>integration/validator-fixes</code> @ c9c9788</li><li>Renderer: X_ITE 16.4.3, Chromium (SwiftShader) for stills</li><li>Every number names its tool</li></ul></div>
+ </div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+var XITE_SOURCES = ['vendor/x_ite/x_ite.min.js', 'https://cdn.jsdelivr.net/npm/x_ite@16.4.3/dist/x_ite.min.js'];
+
+/* theme */
+var root = document.documentElement, tbtn = document.getElementById('theme');
+function getTheme(){ try { return localStorage.getItem('c3d-theme'); } catch (e) { return null; } }
+function applyTheme(t){ if (t) root.setAttribute('data-theme', t); else root.removeAttribute('data-theme'); tbtn.textContent = (t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark' ? '☀ Light' : '☾ Dark'; }
+applyTheme(getTheme());
+tbtn.addEventListener('click', function(){
+  var cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  var next = cur === 'dark' ? 'light' : 'dark'; applyTheme(next);
+  try { localStorage.setItem('c3d-theme', next); } catch (e) {}
+});
+
+/* ecosystem ranking (ECOSYSTEM.md, 11 Oct 2026) */
+var RANK = [
+  ['Native Gaussian splats in Blender 5.3', 'PointCloud type GAUSSIAN_SPLAT; import only. Adapter shipped in 2.6.0.', 15, 'coral'],
+  ['Extension id collision with the upstream add-on', 'Same id as the bundled X3D add-on; renamed to x3d_blender_io in 2.6.0.', 12, 'amber'],
+  ['glTF KHR_gaussian_splatting import', 'Blender\'s glTF importer reads splats; rotates SH into Z-up.', 12, 'sky'],
+  ['Official Blender MCP server', 'Blender Lab\'s MCP server (v1.0.3): agents drive Blender directly.', 10, 'violet'],
+  ['X_ITE 16.5.0', 'Every field-guide finding re-checked; none changed. Pages stay on 16.4.3.', 9, 'teal']
+];
+var rk = document.getElementById('rank');
+RANK.forEach(function(r, i){
+  var d = document.createElement('div'); d.className = 'ritem k-' + r[3];
+  d.innerHTML = '<div class="r">' + (i + 1) + '</div><div><b></b><span></span></div><div class="s">' + r[2] + ' pts<i><b style="width:' + Math.round(r[2] / 15 * 100) + '%"></b></i></div>';
+  d.querySelector('div b').textContent = r[0]; d.querySelector('div span').textContent = r[1]; rk.appendChild(d);
+});
+var foot = document.createElement('div'); foot.className = 'src'; foot.textContent = 'Score = impact × urgency from the daily ecosystem watch (git, PyPI and npm signals over 9 repositories and 6 packages) · 11 Oct 2026';
+rk.appendChild(foot);
+
+/* demos */
+var DEMOS = [
+ {id:'repair', group:'The loop', k:'amber', title:'A repair loop, round by round', short:'3 rounds · profile fix',
+  body:'<p>A model was asked for a small solar system. Round 0 is grammatical XML that passes the schema, but uses <code>PhysicalMaterial</code> under profile Immersive without declaring Shape level 2: a strict browser or x3d-tidy refuses it. The validator names the node and prints the exact component line; round 1 adds it. The render check then saw a dim scene, and round 2 brightened the light and moved the camera.</p><p>X_ITE draws round 0 anyway. That is the trap.</p>',
+  say:'“The browser drew it. The judge refused it. Both were right about different things.”',
+  variants:[['Round 0 · as written','repair-0-written'],['Round 1 · validator repair','repair-1-validator'],['Round 2 · render repair','repair-2-render']],
+  facts:[['Writer','Gemini 3 Flash','bench writer A, 11 Oct 2026'],['Round 0','profile fail','PhysicalMaterial outside Immersive'],['Round 1 fix','1 line','<component name="Shape" level="2"/>'],['Wall time per round','5.1 / 4.5 / 4.5 s','API time, result.json']]},
+ {id:'stilllife', group:'The bridge', k:'sage', title:'Blender to X3D 4.0, measured against Cycles', short:'mesh · PBR · SSIM 0.905',
+  body:'<p>A still life built in Blender and exported by X3D Blender I/O as X3D 4.0 with <code>PhysicalMaterial</code>. The comparison slider shows the Cycles path-traced reference against the X3D scene in X_ITE from the same camera.</p>',
+  say:'“Round trip, measured: a real-time browser within SSIM 0.905 of a path tracer.”',
+  variants:[['Live X3D','stilllife-stage'],['Cycles vs X_ITE','@cmp']], cmp:['img/bridge-cycles.webp','img/bridge-xite.webp','Blender Cycles','X3D in X_ITE'],
+  facts:[['SSIM, whole frame','0.905','Cycles vs X_ITE, 960×600, tone mapping off'],['Colour difference','ΔE2000 4.50','mean, same frame'],['Materials','PhysicalMaterial','X3D 4.0, exported by the add-on'],['Load','0.8 to 1.8 s','X_ITE 16.4.3, laptop GPU']]},
+ {id:'splats', group:'Splats', k:'coral', title:'A synthetic still life as Gaussian splats', short:'24,000 splats · X3D 4.1',
+  body:'<p>The same still life, rendered by Cycles from known poses, trained into 132,923 Gaussian splats on one GPU, and written by the add-on as the X3D 4.1 draft <code>GaussianSplats</code> node. To keep the repository light this page carries the 24,000 splats with the largest opacity × size, colour only (spherical-harmonic degree 0).</p>',
+  say:'“No camera, no photos: synthetic data in, a standard X3D node out.”',
+  variants:[['Live X3D · 24k splats','stilllife-splats-24k'],['Full model vs Cycles','@img:img/splat-compare.webp']],
+  facts:[['Full model','132,923 splats','gsplat, 15,000 steps, 247 s on an NVIDIA L4'],['SSIM vs Cycles','0.977','full model; the mesh export scores 0.905'],['This file','24,000 splats','top by opacity × size, SH degree 0'],['Writer','X3D Blender I/O 2.6.0','export_scene.x3d, X3D41']]},
+ {id:'stars', group:'Splats', k:'sky', title:'The 978 stars within 50 light-years', short:'978 stars · splats',
+  body:'<p>Every star of the HYG v4.1 catalogue within 50 light-years, at its true 3D position around the Sun, as two isotropic splats each: a core sized by absolute magnitude and a faint halo. In the full scale scene this is the last stop of a zoom that starts at 1 m on a lawn.</p><p>Drag to orbit the bubble.</p>',
+  say:'“One scene, one standard, 10^17.7 times.”',
+  variants:[['Live X3D','stars-view']],
+  facts:[['Stars','978 + the Sun','HYG v4.1, within 50 ly'],['Splats','2 per star','core + halo at opacity 0.18'],['Colour','from B−V','blackbody approximation'],['Units','10^12 m','one Transform scale']]},
+ {id:'lights', group:'The bridge', k:'sage', title:'A lighting bug the evolver found', short:'global="true"',
+  body:'<p>Evolved scenes exported from Blender came out black in X_ITE. The exporter wrapped each light in a Transform, and a DirectionalLight with the default <code>global="false"</code> only lights its siblings: so it lit nothing. Exporting lights as global fixed every scene.</p>',
+  say:'“Valid, loaded, and completely dark: exactly what a render check is for.”',
+  variants:[['Before · lights scoped','lights-before'],['After · global lights','lights-after']],
+  facts:[['Cause','global="false"','X3D 4.0 default for DirectionalLight'],['Fix','global="true"','in the add-on\'s exporter'],['Both files','valid','schema, semantic and profile all pass']]},
+ {id:'quaternion', group:'Spec questions', k:'violet', title:'Splat quaternion order', short:'x y z w or w x y z?',
+  body:'<p>197 splats (gold tangent dashes, pale dashes, radial rays, a core) written twice; only the four numbers of each orientation are reordered. The 4.1 draft does not say which order is meant. X_ITE reads x y z w, the glTF order; 3DGS PLY files store w x y z.</p>',
+  say:'“Both files are valid. Only one is the picture the author meant.”',
+  variants:[['x y z w','quaternion-xyzw'],['w x y z','quaternion-wxyz']],
+  facts:[['Splats','197','synthesised, X3D 4.1'],['X_ITE reads','x y z w','16.4.3 and 16.5.0'],['4.1 draft','silent','GaussianSplats orientations field']]},
+ {id:'nurbs', group:'Spec questions', k:'violet', title:'NURBS weights: pre-multiplied or not?', short:'Σ N P / Σ N w',
+  body:'<p>One NurbsCurve with weights 1 1 3 1 1, drawn against markers computed both ways. X_ITE treats <code>controlPoint</code> as already multiplied by its weight; Piegl–Tiller tools assume the opposite. ISO/IEC 19775-1 clause 27 names no convention.</p>',
+  say:'“Two correct implementations, two different curves, one silent clause.”',
+  variants:[['Plain control points','nurbs-weights'],['Middle point pre-multiplied','nurbs-weights-premultiplied']],
+  facts:[['At u = 0.5 (X_ITE reading)','(0.60, −0.20)','numpy, Cox–de Boor, 2001 samples'],['At u = 0.5 (Piegl–Tiller)','(1.50, −0.80)','same knots, order 3']]},
+ {id:'profile', group:'Spec questions', k:'violet', title:'Does Immersive cover PhysicalMaterial?', short:'Annex E tables',
+  body:'<p>A PBR sphere under profile Immersive, with and without one <code>&lt;component name="Shape" level="2"/&gt;</code> line. Annex E Table E.2 and Table 12.4 imply it is covered; Table E.3 and the X3DUOM Immersive node list leave it out. The fork follows X3DUOM, so the first file fails its profile check.</p>',
+  say:'“The spec answers yes and no. The object model picks no.”',
+  variants:[['Without the component line','profile-tables'],['With it','profile-tables-fixed']],
+  facts:[['Difference','1 line','Shape level 2 component'],['Fork verdict','fail / pass','X3DUOM profile check']]},
+ {id:'geolod', group:'Spec questions', k:'violet', title:'GeoLOD and GeoOrigin', short:'schema vs spec',
+  body:'<p>A GeoLOD with inline root children, with and without a GeoOrigin. The 4.0 schema requires one; the specification makes it optional and discourages GeoOrigin. Browsers draw both.</p>',
+  say:'“Here the schema is stricter than the standard it encodes.”',
+  variants:[['Without GeoOrigin','geolod-no-origin'],['With GeoOrigin','geolod-origin']],
+  facts:[['XSD 4.0','invalid / valid','lxml, bundled schema'],['ISO/IEC 19775-1','geoOrigin optional','and discouraged']]},
+ {id:'annotation', group:'Spec questions', k:'violet', title:'An unregistered component', short:'Annotation, clause 43',
+  body:'<p>X_ITE ships the Annotation component from the X3D v4 working drafts (clause 43: AnnotationTarget, TextAnnotation and more). It is in neither X3D 4.0 nor the 4.1 object model, so the schema rejects the component name. The standard version uses a Billboard and Text.</p>',
+  variants:[['Annotation component','annotation'],['Standard X3D 4.0','annotation-standard']],
+  facts:[['Component','Annotation','v4 working drafts WD2, WD3'],['XSD 4.0','rejects the name','component enumeration']]},
+ {id:'bodies', group:'Spec questions', k:'violet', title:'Can geospatial X3D leave Earth?', short:'the Moon, by ellipsoid',
+  body:'<p>The same GeoElevationGrid, once on Earth\'s ellipsoid and once on <code>"GD" "MOON"</code>. The specification lists only Earth ellipsoids; X_ITE accepts the Moon through Pluto (its Uranus is about ten times too thin), and the schema does not object to the string.</p>',
+  say:'“The browser has already been to the Moon. The standard hasn\'t.”',
+  variants:[['Earth (WE)','ellipsoid-earth'],['Moon','ellipsoid-moon']],
+  facts:[['Spec ellipsoids','Earth only','ISO/IEC 19775-1 Geospatial'],['X_ITE','Moon to Pluto','16.4.3']]},
+ {id:'lod', group:'Spec questions', k:'violet', title:'LOD under a scale', short:'local or world range?',
+  body:'<p>Control: a LOD with range 5, viewed from 10 units away, shows its far level (red). Test: the same LOD with shapes and range scaled by 1000 inside a Transform scaled by 0.001, so the world looks identical. X_ITE shows the near level (green).</p>',
+  variants:[['Control','lod-control'],['Scaled','lod-scaled']],
+  facts:[['Viewer distance','10 units','both scenes'],['Expected','far level','if range is in local coordinates']]}
+];
+var VERDICTS = null;
+var list = document.getElementById('dlist'), vtabs = document.getElementById('vtabs');
+var poster = document.getElementById('poster'), liveBtn = document.getElementById('liveBtn'), badge = document.getElementById('stageBadge');
+var stage = document.getElementById('stage');
+var cur = null, curVar = 0, liveOn = false, canvas = null, xiteState = 'none', cmpEl = null, loadToken = 0;
+
+var lastGroup = '';
+DEMOS.forEach(function(d){
+  if (d.group !== lastGroup) { var g = document.createElement('div'); g.className = 'dgroup'; g.textContent = d.group; list.appendChild(g); lastGroup = d.group; }
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'ditem k-' + d.k; b.setAttribute('role', 'tab'); b.dataset.id = d.id;
+  b.innerHTML = '<span class="dot"></span><span><span class="t"></span><small></small></span>';
+  b.querySelector('.t').textContent = d.title; b.querySelector('small').textContent = d.short;
+  b.addEventListener('click', function(){ select(d.id, 0, true); });
+  list.appendChild(b);
+});
+
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function fmtBytes(n){ return n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : (n / 1e3).toFixed(1) + ' kB'; }
+
+function select(id, v, userAction){
+  var d = DEMOS.find(function(x){ return x.id === id; }) || DEMOS[0];
+  cur = d; curVar = v || 0;
+  [].forEach.call(list.querySelectorAll('.ditem'), function(b){ b.setAttribute('aria-selected', b.dataset.id === d.id ? 'true' : 'false'); });
+  document.querySelector('.stagebox').className = 'stagebox k-' + d.k;
+  document.getElementById('dTitle').textContent = d.title;
+  document.getElementById('dBody').innerHTML = d.body;
+  document.getElementById('dSay').textContent = d.say || '';
+  document.getElementById('dFacts').innerHTML = d.facts.map(function(f){ return '<tr><td>' + esc(f[0]) + '</td><td>' + esc(f[1]) + '</td><td>' + esc(f[2]) + '</td></tr>'; }).join('');
+  vtabs.innerHTML = '';
+  d.variants.forEach(function(vv, i){
+    var t = document.createElement('button'); t.type = 'button'; t.className = 'vtab'; t.textContent = vv[0]; t.setAttribute('role', 'tab');
+    t.setAttribute('aria-selected', i === curVar ? 'true' : 'false');
+    t.addEventListener('click', function(){ select(d.id, i, true); });
+    vtabs.appendChild(t);
+  });
+  vtabs.style.display = d.variants.length > 1 ? '' : 'none';
+  showVariant();
+  if (userAction) { try { history.replaceState(null, '', '#demo=' + d.id); } catch (e) {} }
+}
+
+function showVariant(){
+  var vv = cur.variants[curVar], key = vv[1];
+  if (cmpEl) { cmpEl.remove(); cmpEl = null; }
+  loadToken++;
+  if (key === '@cmp' || key.indexOf('@img:') === 0) {
+    poster.classList.add('hidden'); if (canvas) canvas.style.visibility = 'hidden'; liveBtn.style.display = 'none';
+    cmpEl = document.createElement('div'); cmpEl.style.cssText = 'position:absolute;inset:0';
+    if (key === '@cmp') {
+      var c = cur.cmp;
+      cmpEl.innerHTML = '<div class="cmp" style="position:absolute;inset:0;aspect-ratio:auto;border-radius:0"><img alt="' + esc(c[2]) + '" src="' + c[0] + '"><img class="top" alt="' + esc(c[3]) + '" src="' + c[1] + '"><div class="handle"></div><span class="lab" style="left:10px">' + esc(c[2]) + '</span><span class="lab" style="right:10px">' + esc(c[3]) + '</span><input type="range" min="0" max="100" value="50" aria-label="Compare"></div>';
+      var inp = cmpEl.querySelector('input'), top = cmpEl.querySelector('.top'), h = cmpEl.querySelector('.handle');
+      inp.addEventListener('input', function(){ top.style.clipPath = 'inset(0 0 0 ' + inp.value + '%)'; h.style.left = inp.value + '%'; });
+    } else {
+      cmpEl.innerHTML = '<img alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain" src="' + key.slice(5) + '">';
+    }
+    stage.insertBefore(cmpEl, stage.querySelector('.overlay'));
+    badge.textContent = 'image · not live'; renderVerdict(null); return;
+  }
+  liveBtn.style.display = '';
+  var file = 'scenes/' + key + '.x3d';
+  poster.src = 'img/posters/' + key + '.webp'; poster.alt = cur.title + ': ' + vv[0] + ' (still image)';
+  renderVerdict(key);
+  if (liveOn && canvas) { canvas.style.visibility = ''; poster.classList.add('hidden'); loadScene(file); }
+  else { poster.classList.remove('hidden'); if (canvas) canvas.style.visibility = 'hidden'; badge.textContent = 'still · X_ITE 16.4.3 headless'; }
+}
+
+function renderVerdict(key){
+  var el = document.getElementById('dVerdict'), fl = document.getElementById('dFiles');
+  if (!key) { el.innerHTML = ''; fl.innerHTML = ''; return; }
+  var file = key + '.x3d';
+  fl.innerHTML = esc(file) + ' · <a href="scenes/' + file + '" target="_blank" rel="noopener">open the X3D source</a>';
+  if (!VERDICTS || !VERDICTS.scenes[file]) { el.innerHTML = '<span class="chip">verdict loading…</span>'; return; }
+  var v = VERDICTS.scenes[file];
+  var chips = [
+    ['X3D ' + v.version + ' · ' + v.profile, ''],
+    [(v.xsd ? '✓' : '✗') + ' schema', v.xsd ? 'ok' : 'bad'],
+    [(v.semantic_errors ? '✗ ' + v.semantic_errors + ' semantic error' + (v.semantic_errors > 1 ? 's' : '') : '✓ semantic'), v.semantic_errors ? 'bad' : 'ok'],
+    [(v.profile_ok ? '✓ profile' : '✗ profile: ' + v.profile_missing.join(', ')), v.profile_ok ? 'ok' : 'bad'],
+    [fmtBytes(v.bytes) + ' · sha256 ' + v.sha256, '']
+  ];
+  el.innerHTML = chips.map(function(c){ return '<span class="chip ' + c[1] + '">' + esc(c[0]) + '</span>'; }).join('');
+  if (v.xsd_errors && v.xsd_errors.length) fl.innerHTML += '<br><span title="first schema error">' + esc(v.xsd_errors[0].slice(0, 160)) + '…</span>';
+  el.title = VERDICTS.validator;
+}
+
+function loadScript(srcs, i, ok, fail){
+  if (i >= srcs.length) return fail();
+  var s = document.createElement('script'); s.src = srcs[i];
+  s.onload = function(){ window.X3D ? ok(srcs[i]) : loadScript(srcs, i + 1, ok, fail); };
+  s.onerror = function(){ s.remove(); loadScript(srcs, i + 1, ok, fail); };
+  document.head.appendChild(s);
+}
+
+function ensureXite(cb){
+  if (xiteState === 'ready') return cb();
+  liveBtn.disabled = true; liveBtn.textContent = 'Loading X_ITE 16.4.3…';
+  loadScript(XITE_SOURCES, 0, function(src){
+    var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = src.replace('x_ite.min.js', 'x_ite.css'); document.head.appendChild(css);
+    xiteState = 'ready'; cb();
+  }, function(){ liveBtn.disabled = false; liveBtn.textContent = 'Could not load X_ITE: retry'; });
+}
+
+function loadScene(file){
+  var browser = X3D.getBrowser(canvas), t0 = performance.now(), token = loadToken;
+  badge.textContent = 'loading ' + file.split('/').pop() + '…';
+  browser.loadURL(new X3D.MFString(file)).then(function(){
+    if (token !== loadToken) return;
+    badge.textContent = 'live · X_ITE ' + (browser.version || '16.4.3') + ' · ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s load';
+  })
+  .catch(function(e){ if (token === loadToken) badge.textContent = 'load failed: ' + String(e).slice(0, 80); });
+}
+
+liveBtn.addEventListener('click', function(){
+  ensureXite(function(){
+    if (!canvas) {
+      canvas = document.createElement('x3d-canvas');
+      canvas.setAttribute('splashScreen', 'false'); canvas.setAttribute('notifications', 'false'); canvas.setAttribute('contextMenu', 'true');
+      canvas.setAttribute('toneMapping', 'NONE');
+      stage.insertBefore(canvas, poster);
+    }
+    liveOn = true; liveBtn.style.visibility = 'hidden'; liveBtn.disabled = false;
+    showVariant();
+  });
+});
+
+function fromHash(){
+  var m = /demo=([a-z0-9-]+)/.exec(location.hash);
+  if (m) { select(m[1], 0, false); document.getElementById('demos').scrollIntoView(); return true; }
+  return false;
+}
+window.addEventListener('hashchange', fromHash);
+if (!fromHash()) select('repair', 0, false);
+
+fetch('scenes/verdicts.json').then(function(r){ return r.json(); }).then(function(j){ VERDICTS = j; renderVerdict(cur.variants[curVar][1].charAt(0) === '@' ? null : cur.variants[curVar][1]); }).catch(function(){ document.getElementById('dVerdict').innerHTML = '<span class="chip">verdicts.json unavailable</span>'; });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<X3D profile='Immersive' version='4.0' xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance' xsd:noNamespaceSchemaLocation='https://www.web3d.org/specifications/x3d-4.0.xsd'>
+  <head>
+    <component name='EnvironmentalEffects' level='3'/>
+    <component name='Shape' level='2'/>
+  </head>
+  <Scene>
+    <WorldInfo title='Solar System X3D 4.0'/>
+    <Viewpoint description='Solar System Overview' position='0 20 60' orientation='1 0 0 -0.3'/>
+    <Background skyColor='0 0 0'/>
+    
+    <!-- The Sun -->
+    <Transform>
+      <Shape>
+        <Appearance>
+          <Material emissiveColor='1 0.8 0'/>
+        </Appearance>
+        <Sphere radius='3'/>
+      </Shape>
+      <PointLight color='1 1 0.8' intensity='2' radius='100'/>
+    </Transform>
+
+    <!-- Planet 1: Inner -->
+    <Transform DEF='Orbit1'>
+      <Transform translation='8 0 0'>
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor='0.7 0.3 0.2' roughness='0.8'/>
+          </Appearance>
+          <Sphere radius='0.6'/>
+        </Shape>
+      </Transform>
+    </Transform>
+
+    <!-- Planet 2: Middle -->
+    <Transform DEF='Orbit2'>
+      <Transform translation='14 0 0'>
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor='0.2 0.5 0.8' roughness='0.5' metallic='0.1'/>
+          </Appearance>
+          <Sphere radius='1.2'/>
+        </Shape>
+      </Transform>
+    </Transform>
+
+    <!-- Planet 3: Outer -->
+    <Transform DEF='Orbit3'>
+      <Transform translation='22 0 0'>
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor='0.8 0.7 0.5' roughness='0.6'/>
+          </Appearance>
+          <Sphere radius='1.8'/>
+        </Shape>
+      </Transform>
+    </Transform>
+
+    <!-- Animation Timers -->
+    <TimeSensor DEF='Timer1' cycleInterval='4' loop='true'/>
+    <TimeSensor DEF='Timer2' cycleInterval='8' loop='true'/>
+    <TimeSensor DEF='Timer3' cycleInterval='15' loop='true'/>
+
+    <!-- Interpolators for Rotation -->
+    <OrientationInterpolator DEF='Rotator' key='0 0.5 1' keyValue='0 1 0 0, 0 1 0 3.14159, 0 1 0 6.28318'/>
+
+    <!-- Routes -->
+    <ROUTE fromNode='Timer1' fromField='fraction_changed' toNode='Rotator' toField='set_fraction'/>
+    <ROUTE fromNode='Rotator' fromField='value_changed' toNode='Orbit1' toField='rotation'/>
+    
+    <ROUTE fromNode='Timer2' fromField='fraction_changed' toNode='Rotator' toField='set_fraction'/>
+    <ROUTE fromNode='Rotator' fromField='value_changed' toNode='Orbit2' toField='rotation'/>
+    
+    <ROUTE fromNode='Timer3' fromField='fraction_changed' toNode='Rotator' toField='set_fraction'/>
+    <ROUTE fromNode='Rotator' fromField='value_changed' toNode='Orbit3' toField='rotation'/>
+  </Scene>
+</X3D>
