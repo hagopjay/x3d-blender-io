@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import keyword
 from dataclasses import dataclass, field
 from xml.etree.ElementTree import ParseError
 from xml.etree import ElementTree as ET
@@ -146,11 +147,13 @@ def validate_tree_with_x3d_py(root, x3d_module) -> ValidationResult:
             for name, value in element.attrib.items():
                 if name in _SKIP_ATTRIBUTES:
                     continue
-                if name not in declared:
+                # x3d.py appends "_" to fields named after Python keywords (global -> global_)
+                py_name = name + "_" if keyword.iskeyword(name) else name
+                if py_name not in declared:
                     warnings.append(f"<{tag}>: unknown field {name!r}")
                     continue
                 try:
-                    node_class(**{name: _coerce_field(value, declared[name])})
+                    node_class(**{py_name: _coerce_field(value, declared[py_name])})
                 except SystemExit as exc:  # x3d.py halts on some HAnim problems
                     errors.append(f"<{tag} {name}=...>: x3d.py halted ({exc})")
                 except Exception as exc:

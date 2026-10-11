@@ -229,6 +229,9 @@ class SceneStructureRoundTripTests(unittest.TestCase):
         self.assertIsNotNone(self.root.find(".//Transform[@DEF='OB_KeyLight']/PointLight"))
         self.assertIsNotNone(self.root.find(".//Transform[@DEF='OB_Spot']/SpotLight"))
         self.assertIsNotNone(self.root.find(".//Transform[@DEF='OB_Sun']/DirectionalLight"))
+        for tag in ("PointLight", "SpotLight", "DirectionalLight"):
+            # each light sits in its own Transform, so a non-global light would illuminate nothing
+            self.assertEqual(self.root.find(f".//{tag}").attrib.get("global"), "true", tag)
         point = self.root.find(".//PointLight")
         self.assertEqual(point.attrib["color"], "1.000000 0.900000 0.800000")
         view = self.root.find(".//Transform[@DEF='OB_MainCamera']/Viewpoint")
