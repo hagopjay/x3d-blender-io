@@ -9,6 +9,7 @@ import os
 import bpy
 
 from .bridge_gltf import import_gltf, imported_material_names
+from .viewpoint_fov import blender_camera_angle, render_size
 
 
 def _apply_transform(obj, transform):
@@ -105,7 +106,8 @@ def _populate_viewpoints(context, ir_scene):
     for index, viewpoint in enumerate(ir_scene.viewpoints):
         camera_data = bpy.data.cameras.new(f"X3DViewpointCamera_{index:03d}")
         if viewpoint.field_of_view is not None:
-            camera_data.angle = viewpoint.field_of_view
+            camera_data.angle = blender_camera_angle(
+                viewpoint.field_of_view, camera_data.sensor_fit, *render_size(context.scene))
         camera_object = bpy.data.objects.new(
             viewpoint.description or f"X3DViewpoint_{index:03d}",
             camera_data,

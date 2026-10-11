@@ -18,6 +18,7 @@ import mathutils
 from math import sin, cos, pi
 from itertools import chain
 from . import mfstring
+from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
 material_cache = {}
@@ -4070,7 +4071,7 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
 
     bpycam = bpy.data.cameras.new(name)
 
-    bpycam.angle = fieldOfView
+    bpycam.angle = blender_camera_angle(fieldOfView, bpycam.sensor_fit, *render_size(bpy.context.scene))
 
     mtx = Matrix.Translation(Vector(position)) @ translateRotation(orientation)
 

@@ -233,7 +233,12 @@ class SceneStructureRoundTripTests(unittest.TestCase):
         self.assertEqual(point.attrib["color"], "1.000000 0.900000 0.800000")
         view = self.root.find(".//Transform[@DEF='OB_MainCamera']/Viewpoint")
         self.assertIsNotNone(view)
-        self.assertEqual(view.attrib["fieldOfView"], "%.6f" % self.camera_angle)
+        # X3D measures fieldOfView across the smaller side; the fixture's 16:9 camera fits the wider side.
+        import bpy
+        from viewpoint_fov import render_size, x3d_field_of_view
+        expected = x3d_field_of_view(self.camera_angle, "AUTO", *render_size(bpy.context.scene))
+        self.assertLess(expected, self.camera_angle)
+        self.assertEqual(view.attrib["fieldOfView"], "%.6f" % expected)
         nav = self.root.find("Scene/NavigationInfo")
         self.assertEqual(nav.attrib["headlight"], "false")
         self.assertIsNotNone(self.root.find("Scene/Background"))
@@ -647,6 +652,31 @@ class InlineBridgeRoundTripTests(unittest.TestCase):
         self.assertEqual(bpy.ops.import_scene.x3d(filepath=looped), {"FINISHED"})
         empties = [o for o in bpy.context.scene.objects if o.type == "EMPTY"]
         self.assertEqual(len(empties), 1)
+
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class WorldBackgroundExportTests(unittest.TestCase):
+    """The X3D Background takes the colour the render shows: the world's node-tree Background, not World.color."""
+
+    def test_background_follows_world_nodes(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_world_")
+        _register_extension(tmpdir)
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.mesh.primitive_cube_add(size=1.0)
+        world = bpy.data.worlds.new("Night")
+        bpy.context.scene.world = world
+        world.use_nodes = True
+        background = world.node_tree.nodes["Background"]
+        background.inputs["Color"].default_value = (0.02, 0.01, 0.04, 1.0)
+        background.inputs["Strength"].default_value = 2.0
+        world.color = (0.5, 0.5, 0.5)
+        path = os.path.join(tmpdir, "world.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        sky = ET.parse(path).getroot().find("Scene/Background").attrib["skyColor"]
+        self.assertEqual([round(float(v), 4) for v in sky.split()], [0.04, 0.02, 0.08])
 
 
 if __name__ == "__main__":

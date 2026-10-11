@@ -76,6 +76,21 @@ def _fmt3(values):
     return "%.6f %.6f %.6f" % tuple(values[:3])
 
 
+def _sfcolor(values):
+    """Fit an RGB triple into the SFColor range [0, 1] that the X3D 4.0 XSD enforces.
+
+    Blender multiplies Emission Color by Emission Strength, so an emissive
+    material routinely carries channels above 1. X3D 4.0 has no emissive
+    strength field, so channels above 1 are scaled down together, which keeps
+    the hue and drops only the intensity. Negative channels clip to 0.
+    """
+    rgb = [max(0.0, float(channel)) for channel in values[:3]]
+    peak = max(rgb)
+    if peak > 1.0:
+        rgb = [channel / peak for channel in rgb]
+    return tuple(rgb)
+
+
 def _fmt4(values):
     return "%.6f %.6f %.6f %.6f" % tuple(values[:4])
 
@@ -144,7 +159,7 @@ def _material_xml(material, material_def, indent, *, output_dir=None):
     textures = []
 
     if material.unlit:
-        attrs.append(f'emissiveColor="{_fmt3(material.emissive_color)}"')
+        attrs.append(f'emissiveColor="{_fmt3(_sfcolor(material.emissive_color))}"')
         if transparency > 0.0:
             attrs.append(f'transparency="{_fmt(transparency)}"')
         if material.normal_scale is not None and material.normal_scale != 1.0:
@@ -155,7 +170,7 @@ def _material_xml(material, material_def, indent, *, output_dir=None):
         if material.normal_texture is not None:
             textures.append(("normalTexture", material.normal_texture))
     else:
-        attrs.append(f'baseColor="{_fmt3(material.base_color)}"')
+        attrs.append(f'baseColor="{_fmt3(_sfcolor(material.base_color))}"')
         if material.metallic is not None:
             attrs.append(f'metallic="{_fmt(material.metallic)}"')
         if material.roughness is not None:
@@ -165,7 +180,7 @@ def _material_xml(material, material_def, indent, *, output_dir=None):
         if material.occlusion_strength is not None and material.occlusion_strength != 1.0:
             attrs.append(f'occlusionStrength="{_fmt(material.occlusion_strength)}"')
         if any(channel != 0.0 for channel in material.emissive_color[:3]):
-            attrs.append(f'emissiveColor="{_fmt3(material.emissive_color)}"')
+            attrs.append(f'emissiveColor="{_fmt3(_sfcolor(material.emissive_color))}"')
         if transparency > 0.0:
             attrs.append(f'transparency="{_fmt(transparency)}"')
         textures.extend(material.texture_refs())
