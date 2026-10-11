@@ -584,7 +584,7 @@ function renderVerdict(key){
   var el = document.getElementById('dVerdict'), fl = document.getElementById('dFiles');
   if (!key) { el.innerHTML = ''; fl.innerHTML = ''; return; }
   var file = key + '.x3d';
-  fl.innerHTML = '<a href="scenes/' + file + '" download>' + file + '</a> · <a href="scenes/' + file + '" target="_blank" rel="noopener">view source</a>';
+  fl.innerHTML = esc(file) + ' · <a href="scenes/' + file + '" target="_blank" rel="noopener">open the X3D source</a>';
   if (!VERDICTS || !VERDICTS.scenes[file]) { el.innerHTML = '<span class="chip">verdict loading…</span>'; return; }
   var v = VERDICTS.scenes[file];
   var chips = [
