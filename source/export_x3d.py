@@ -486,6 +486,7 @@ def export(file,
         ident_step = ident + (' ' * (-len(ident) +
                                      fw('%s<SpotLight ' % ident)))
         fw('DEF=%s\n' % light_id)
+        fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
         fw(ident_step + 'radius="%.4f"\n' % radius)
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
@@ -515,6 +516,7 @@ def export(file,
         ident_step = ident + (' ' * (-len(ident) +
                                      fw('%s<DirectionalLight ' % ident)))
         fw('DEF=%s\n' % light_id)
+        fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
         fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light.color))
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
@@ -539,6 +541,7 @@ def export(file,
         ident_step = ident + (' ' * (-len(ident) +
                                      fw('%s<PointLight ' % ident)))
         fw('DEF=%s\n' % light_id)
+        fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
         fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light.color))
 

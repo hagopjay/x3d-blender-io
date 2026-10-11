@@ -276,6 +276,10 @@ def _light_xml(light, defs: _DefNames, indent):
         f'color="{_fmt3(light.color)}"',
         f'intensity="{_fmt(light.intensity)}"',
         f'ambientIntensity="{_fmt(light.ambient_intensity)}"',
+        # Each light sits inside its object's Transform. X3D scopes a light whose global field is FALSE to the
+        # siblings in its parent group (DirectionalLight's default), which here is nothing, so it would light no
+        # geometry. Blender lights illuminate the whole scene, so say so explicitly for every light type.
+        'global="true"',
     ]
     if light.light_type == "DIRECTIONAL":
         attrs.append(f'direction="{_fmt3(light.direction)}"')
