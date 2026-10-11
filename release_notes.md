@@ -9,6 +9,7 @@
 - Importer rebuilds keyframe animation from XML ROUTEs (TimeSensor + interpolators) as world-space keyframes on the affected objects.
 - Importer reads plain SFString attributes (e.g. Viewpoint description) in the XML encoding.
 - Swatch-book fixture (`tools/swatch_book.py`) and export → validate → reimport test under Blender 5.2.
+- X3D 4.0 and 4.1 headers declare `<component name="Shape" level="2" />` when PhysicalMaterial or UnlitMaterial is written (the Immersive node lists in Annex E Table E.3 and X3DUOM leave both out), and Geometry2D level 2 when the Circle2D fallback is written.
 
 # Release Notes
 

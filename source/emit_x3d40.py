@@ -486,6 +486,33 @@ def _meta(name, content):
     return f"    <meta name={quoteattr(name)} content={quoteattr(str(content))} />\n"
 
 
+def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
+    """(name, level) of every component statement the Immersive header needs, sorted by name.
+
+    PhysicalMaterial (Shape 2) and UnlitMaterial (Shape 1) are left out of the
+    Immersive node list in Annex E Table E.3 and in X3DUOM, although Table E.2
+    gives Immersive Shape level 2; declaring Shape level 2 is conformant under
+    both readings. Every Shape written for a mesh or a skin carries one of the
+    two (the default appearance is a PhysicalMaterial); the 4.0 splat PointSet
+    has no Appearance. Circle2D is Geometry2D level 2; Immersive has level 1.
+    """
+    components = {}
+    if version == "4.1" and ir_scene.splats:
+        components["GaussianSplats"] = 1
+    if ir_scene.humanoids:
+        components["HAnim"] = 1
+    geometries = ir_scene.geometry_by_name()
+    humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
+    for instance in ir_scene.iter_instances():
+        shapes = list(instance.iter_shapes())
+        humanoid = humanoids.get(instance.humanoid_name)
+        if shapes or (humanoid is not None and humanoid.skin_shapes):
+            components["Shape"] = 2
+        if any(shape.geometry_name not in geometries and shape.geometry_hint == "Circle2D" for shape in shapes):
+            components["Geometry2D"] = 2
+    return sorted(components.items())
+
+
 def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d", version: str = "4.0") -> None:
     """Write ``ir_scene`` as an X3D 4.0 (or 4.1 draft) XML document to ``file``.
 
@@ -515,10 +542,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         f'xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-{version}.xsd">\n'
     )
     write("  <head>\n")
-    if version == "4.1" and ir_scene.splats:
-        write('    <component name="GaussianSplats" level="1" />\n')
-    if ir_scene.humanoids:
-        write('    <component name="HAnim" level="1" />\n')
+    for name, level in _components(ir_scene, version):
+        write(f'    <component name="{name}" level="{level}" />\n')
     write(_meta("generator", generator))
     metadata = ir_scene.metadata
     for name in ("filename", "title", "creator", "description", "keywords", "reference", "license"):
