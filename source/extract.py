@@ -16,11 +16,13 @@ try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .material import analyze_material
     from .splat_io import rgb_to_sh0
+    from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from material import analyze_material
     from splat_io import rgb_to_sh0
+    from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
 
 
@@ -752,10 +754,11 @@ def extract_scene(
             ir_scene.object_names.append(obj.name)
             objects_by_name.pop(obj.name, None)
             instance.humanoid_name = humanoid.name
-        elif is_splat_mesh(obj):
+        elif is_splat_mesh(obj) or is_native_splat_object(obj):
             splats_name = obj.data.name
             if splats_name not in {splats.name for splats in ir_scene.splats}:
-                ir_scene.splats.append(extract_splats(obj.data, name=splats_name))
+                reader = extract_native_splats if obj.type == "POINTCLOUD" else extract_splats
+                ir_scene.splats.append(reader(obj.data, name=splats_name))
             instance.source_key = f"SPLATS:{splats_name}"
             instance.splats_name = splats_name
             ir_scene.object_names.append(obj.name)

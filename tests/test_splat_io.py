@@ -95,5 +95,25 @@ class SplatIOTests(unittest.TestCase):
         self.assertAlmostEqual(b, 0.0, places=5)
 
 
+class NativeSHIndexTests(unittest.TestCase):
+    """radiance:sh_{i} flattening used by Blender 5.3's native splat point clouds."""
+
+    def test_index_round_trip(self):
+        from splat_native import sh_degree_coef, sh_index
+
+        flat = [sh_index(d, c) for d in (1, 2, 3) for c in range(2 * d + 1)]
+        self.assertEqual(flat, list(range(15)))
+        for index in range(15):
+            self.assertEqual(sh_index(*sh_degree_coef(index)), index)
+
+    def test_rejects_degree_zero_and_bad_coef(self):
+        from splat_native import sh_index
+
+        with self.assertRaises(ValueError):
+            sh_index(0, 0)
+        with self.assertRaises(ValueError):
+            sh_index(2, 5)
+
+
 if __name__ == "__main__":
     unittest.main()

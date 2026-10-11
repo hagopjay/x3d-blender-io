@@ -4658,7 +4658,25 @@ def _splat_attributes(mesh, splats):
         mesh.color_attributes.render_color_index = 0
 
 
+def _splat_import_target():
+    """'pointcloud' (Blender's native splat type, 5.3+) or 'mesh' (vertices plus splat_* attributes).
+
+    X3D_SPLAT_IMPORT=pointcloud|mesh overrides the automatic choice.
+    """
+    from .splat_native import pointcloud_type_supported
+    forced = os.environ.get("X3D_SPLAT_IMPORT", "").strip().lower()
+    if forced in {"pointcloud", "mesh"}:
+        return forced
+    return "pointcloud" if pointcloud_type_supported() else "mesh"
+
+
 def _build_splat_object(bpycollection, name, splats):
+    if _splat_import_target() == "pointcloud":
+        from .splat_native import build_native_splat_pointcloud
+        obj = bpy.data.objects.new(name, build_native_splat_pointcloud(name, splats))
+        bpycollection.objects.link(obj)
+        obj.select_set(True)
+        return obj
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata([tuple(p) for p in splats.positions], [], [])
     mesh.update()
@@ -4672,7 +4690,7 @@ def _build_splat_object(bpycollection, name, splats):
 
 
 def importGaussianSplats(bpycollection, node, ancestry, global_matrix):
-    """X3D 4.1 GaussianSplats node -> splat mesh (vertices plus splat_* attributes)."""
+    """X3D 4.1 GaussianSplats node -> native splat PointCloud (Blender 5.3+) or splat mesh."""
     from .ir import IRGaussianSplats
 
     real = node.getRealNode()
