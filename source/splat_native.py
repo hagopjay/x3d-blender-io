@@ -15,7 +15,8 @@ attribute                 meaning
 ``position``              splat centre (float3)
 ``scale``                 linear scale (float3; the PLY importer has already applied exp)
 ``rotation``              quaternion, Blender order (w, x, y, z)
-``radiance:base``         float4: SH degree-0 coefficient (xyz) and opacity 0..1 (w)
+``radiance:base``         float4: SH degree-0 coefficient (xyz) and opacity 0..1 (w);
+                          stored as a FLOAT_COLOR before Blender 5.2, which lacks FLOAT4
 ``radiance:sh_{i}``       float3 SH coefficients of degrees 1..3, ``i = degree**2 - 1 + coef``
 ========================  ============================================================
 
@@ -105,9 +106,9 @@ def extract_native_splats(pointcloud, *, name: str) -> IRGaussianSplats:
         splats.orientations = [(x, y, z, w) for (w, x, y, z) in _flat(rotation, "value", 4, count)]
     else:
         splats.orientations = [(0.0, 0.0, 0.0, 1.0)] * count
-    base = _point_attr(pointcloud, RADIANCE_BASE_ATTR, {"FLOAT4"})
+    base = _point_attr(pointcloud, RADIANCE_BASE_ATTR, {"FLOAT4", "FLOAT_COLOR"})
     if base is not None:
-        rows = _flat(base, "vector", 4, count)
+        rows = _flat(base, "vector" if base.data_type == "FLOAT4" else "color", 4, count)
         splats.sh[(0, 0)] = [row[:3] for row in rows]
         splats.opacities = [max(0.0, min(1.0, row[3])) for row in rows]
     else:
@@ -147,7 +148,12 @@ def build_native_splat_pointcloud(name: str, splats: IRGaussianSplats):
     dc = splats.sh.get((0, 0))
     if not dc or len(dc) != count:
         dc = [(0.0, 0.0, 0.0)] * count
-    put(RADIANCE_BASE_ATTR, "FLOAT4", "vector", [(*rgb, opacity) for rgb, opacity in zip(dc, opacities)])
+    base_rows = [(*rgb, opacity) for rgb, opacity in zip(dc, opacities)]
+    try:
+        put(RADIANCE_BASE_ATTR, "FLOAT4", "vector", base_rows)
+    except TypeError:
+        # FLOAT4 attributes arrived in Blender 5.2; earlier versions keep the four values as a colour
+        put(RADIANCE_BASE_ATTR, "FLOAT_COLOR", "color", base_rows)
     for (degree, coef), values in sorted(splats.sh.items()):
         if degree >= 1 and len(values) == count:
             put(RADIANCE_SH_ATTR.format(index=sh_index(degree, coef)), "FLOAT_VECTOR", "vector", values)

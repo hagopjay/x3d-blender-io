@@ -597,7 +597,9 @@ class NativeSplatPointCloudTests(unittest.TestCase):
         names = set(pointcloud.attributes.keys())
         self.assertLessEqual({"position", "scale", "rotation", "radiance:base"}, names)
         self.assertLessEqual({f"radiance:sh_{i}" for i in range(15)}, names)
-        self.assertEqual(pointcloud.attributes["radiance:base"].data_type, "FLOAT4")
+        # FLOAT4 exists from Blender 5.2; 4.5 and 5.1 fall back to a four-channel colour
+        expected = "FLOAT4" if bpy.app.version >= (5, 2, 0) else "FLOAT_COLOR"
+        self.assertEqual(pointcloud.attributes["radiance:base"].data_type, expected)
         self.assertEqual(pointcloud.attributes["rotation"].data_type, "QUATERNION")
         if pointcloud_type_supported():
             self.assertEqual(pointcloud.type, "GAUSSIAN_SPLAT")
