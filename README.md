@@ -5,7 +5,7 @@ This repository is HagopJay's working fork of the Blender extension
 (upstream: [projects.blender.org/extensions/io_scene_x3d](https://projects.blender.org/extensions/io_scene_x3d)).
 Its purpose is to bring the exporter and importer up to **X3D 4.0** (ISO/IEC 19775-1:2023)
 so Blender can trade physically based scenes with X3D 4 browsers (X_ITE, X3DOM, Castle, FreeWRL)
-and with AI tooling built on the X3D Consortium's validated encodings. Everything upstream
+and with AI tooling built on the Web3D Consortium's validated encodings. Everything upstream
 still works unchanged; the new path is opt-in.
 
 ## What the fork adds (Milestones 1 to 4: PBR materials, scene structure, animation, HAnim, asset bridge)
@@ -17,7 +17,7 @@ Export dialog, **Include** panel, new **X3D Version** selector:
 | **X3D 3.3 (Material, classic)** — default | The upstream exporter, unchanged: Phong `Material`, lights, cameras, hierarchy, text, curves. |
 | **X3D 4.0 (PhysicalMaterial, PBR)** | Principled BSDF → `PhysicalMaterial` (baseColor, metallic, roughness, emissiveColor, transparency, normalScale, occlusionStrength) with glTF-style `baseTexture` / `metallicRoughnessTexture` / `normalTexture` / `emissiveTexture` / `occlusionTexture` children; Emission-only trees → `UnlitMaterial`; `Appearance alphaMode="BLEND|MASK"`; `IndexedFaceSet` with `Coordinate`, `Normal` (when *Normals* is on), `TextureCoordinate` (active UV map) and `ColorRGBA` (active colour attribute); one `Shape` per material slot; `solid` from *Backface Culling*; `creaseAngle` from smooth shading; modifiers and triangulation honoured; shared mesh data and materials written once with `DEF` and reused with `USE`; texture paths follow the *Path Mode* setting exactly as the 3.3 exporter does. Nested `Transform` hierarchy (*Hierarchy* on) or flat world transforms; lights as `PointLight` / `SpotLight` / `DirectionalLight` (headlight off when present); cameras as `Viewpoint`; curves, surfaces and text objects as meshes; world colour as `Background`; optional **Animation** sampling of object transforms over the frame range into one `TimeSensor` with `PositionInterpolator` / `OrientationInterpolator` nodes and `ROUTE`s. Object types the path cannot write yet are listed in `<meta name="info">`. |
 
-| **X3D 4.1 draft (GaussianSplats)** | Everything the 4.0 option writes, plus Gaussian-splat objects as the draft `GaussianSplats` node (component `GaussianSplats` level 1): `positions`, `scales`, `orientations`, `opacities` and the `sphericalHarmonicsDegree*Coef*` arrays. With the 4.0 option the same objects degrade to a coloured `PointSet` and a `<meta name="info">` says so. No shipping X3D browser renders the node yet. |
+| **X3D 4.1 draft (GaussianSplats)** | Everything the 4.0 option writes, plus Gaussian-splat objects as the draft `GaussianSplats` node (component `GaussianSplats` level 1): `positions`, `scales`, `orientations`, `opacities` and the `sphericalHarmonicsDegree*Coef*` arrays. With the 4.0 option the same objects degrade to a coloured `PointSet` and a `<meta name="info">` says so. X_ITE 16.4.3 renders the node, including a 500,000-splat scene written by this exporter. |
 
 Import: `PhysicalMaterial` and `UnlitMaterial` now become Principled BSDF node trees
 (metallic/roughness texture split into G and B channels, normal map with strength, occlusion kept as a labelled node,
@@ -26,6 +26,9 @@ and object and mesh names survive the round trip (`OB_` / `ME_` / `MA_` prefixes
 
 The X3D 4.0 writer validates its own output: XML well-formedness always, and field types and
 ranges through the Web3D `x3d` Python package when it is installed (`pip install x3d`).
+The header declares `<component name="Shape" level="2" />` whenever it writes PhysicalMaterial or UnlitMaterial:
+X3D 4.0 Table E.2 gives Immersive Shape level 2, but the Table E.3 node list and X3DUOM leave both nodes out, and the
+statement is correct under either reading.
 
 ### Inline bridge: glTF, Gaussian splats and other X3D files
 
@@ -42,8 +45,8 @@ A **splat mesh** is an ordinary mesh with only vertices, the custom property `x3
 coefficient) and optional `splat_sh1_0` … `splat_sh3_6`; a `Color` attribute carries the reconstructed base colour for the
 viewport. `source/splat_io.py` reads and writes the reference 3DGS PLY layout and the 32-byte `.splat` layout without `bpy`,
 `tools/splat_fixture.py` builds a test helix. Quaternions are written as `x y z w`, the glTF `KHR_gaussian_splatting` order the
-draft node mirrors; the draft text does not state the order, so this is an assumption to confirm against the first browser that
-implements the node. Blender 5.3's native splat objects are not read yet (that API is still in alpha).
+draft node mirrors. The draft text does not state the order; X_ITE 16.4.3 reads `x y z w`, and the same data written
+`w x y z` renders as streaks. Blender 5.3's native splat objects are not read yet (that API is still in alpha).
 
 ### Tests
 
