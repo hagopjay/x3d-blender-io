@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D version="4.0" profile="Immersive" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="Shape" level="2"/>
+    <meta name="title" content="Stage for the Blender export"/>
+    <meta name="description" content="Inlines stilllife-x3d40.x3d unchanged. Two additions: a Background whose skyColor is the colour Cycles displays behind the scene: sRGB(world colour x exposure pi). X_ITE paints Background colours as display values, the exporter writes Blender's linear world colour. And a copy of the exported camera (Transform + Viewpoint, same numbers), because a Viewpoint inside an Inline is not bound."/>
+  </head>
+  <Scene>
+    <Background skyColor="0.1153 0.1002 0.0873"/>
+    <Transform translation="3.350000 1.850000 3.750000" rotation="-0.324166 0.937877 0.123707 0.772873">
+      <Viewpoint description="Blender camera" position="0 0 0" orientation="0 0 1 0" fieldOfView="0.382369"/>
+    </Transform>
+    <Inline url='"stilllife-x3d40.x3d"'/>
+  </Scene>
+</X3D>

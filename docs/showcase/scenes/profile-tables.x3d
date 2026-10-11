@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile='Immersive' version='4.0' xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance' xsd:noNamespaceSchemaLocation='https://www.web3d.org/specifications/x3d-4.0.xsd'>
+  <head>
+    <meta name='title' content='profile-tables'/>
+    <meta name='description' content='Repro for a spec question: a PhysicalMaterial sphere under profile Immersive. X3D 4.0 Annex E Table E.2 with Table 12.4 says Immersive covers PhysicalMaterial; Table E.3 and the X3DUOM Immersive node list say it does not. profile-tables.x3d has no component statement; profile-tables-fixed.x3d adds the Shape level 2 component statement, and that line is the only difference between the two files.'/>
+    <meta name='creator' content='HagopJay'/>
+    <meta name='generator' content='hand-written Python generator, X3D research showcase'/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"EXAMINE" "ANY"' headlight='false'/>
+    <Background skyColor='0.012 0.010 0.008 0.045 0.033 0.024 0.10 0.068 0.042' skyAngle='1.25 1.57' groundColor='0.008 0.006 0.005 0.030 0.022 0.016 0.10 0.068 0.042' groundAngle='1.35 1.57'/>
+    <Viewpoint DEF='Front' position='0 0.75 6.2' orientation='1 0 0 -0.13' fieldOfView='0.6'/>
+    <DirectionalLight DEF='Key' direction='-0.45 -0.8 -0.4' color='1 0.93 0.82' intensity='2.4' shadows='true' shadowIntensity='0.55'/>
+    <PointLight DEF='WarmFill' location='3.5 1.5 3' color='0.898 0.459 0.122' intensity='0.9' radius='14' attenuation='1 0 0.02'/>
+    <PointLight DEF='MaroonRim' location='-3 2.5 -3' color='0.525 0.122 0.255' intensity='1.8' radius='14' attenuation='1 0 0.02'/>
+    <DirectionalLight DEF='Soft' direction='0.3 -0.2 -1' color='0.85 0.8 0.75' intensity='0.35'/>
+    <Transform DEF='Plinth' translation='0 -0.780 0'>
+      <Shape>
+        <Appearance><Material diffuseColor='0.055 0.045 0.038' specularColor='0.25 0.2 0.14' shininess='0.35'/></Appearance>
+        <Cylinder height='0.06' radius='1.9'/>
+      </Shape>
+      <Transform translation='0 -0.012 0'>
+        <Shape>
+          <Appearance><Material diffuseColor='0.30 0.22 0.11' emissiveColor='0.10 0.07 0.03' specularColor='0.9 0.75 0.45' shininess='0.6'/></Appearance>
+          <Cylinder height='0.04' radius='1.960'/>
+        </Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF='Pedestal' translation='0 -0.5 0'>
+      <Shape>
+        <Appearance><Material diffuseColor='0.08 0.062 0.05' specularColor='0.35 0.28 0.18' shininess='0.45'/></Appearance>
+        <Cylinder height='0.5' radius='0.5'/>
+      </Shape>
+      <Transform translation='0 0.26 0'>
+        <Shape>
+          <Appearance><Material diffuseColor='0.35 0.26 0.12' emissiveColor='0.14 0.10 0.04' specularColor='1 0.85 0.5' shininess='0.7'/></Appearance>
+          <Cylinder height='0.03' radius='0.53'/>
+        </Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF='Orb' translation='0 0.32 0'>
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial DEF='GoldPBR' baseColor='0.96 0.76 0.40' metallic='0.4' roughness='0.3' emissiveColor='0.06 0.04 0.015'/>
+        </Appearance>
+        <Sphere radius='0.55'/>
+      </Shape>
+    </Transform>
+    <Transform translation='0 1.42 0'>
+      <Shape>
+        <Appearance><Material diffuseColor='0 0 0' emissiveColor='0.706 0.586 0.354'/></Appearance>
+        <Text string='"PhysicalMaterial" "profile Immersive"'><FontStyle family='"SANS"' style='BOLD' size='0.17' justify='"MIDDLE" "MIDDLE"' spacing='1.15'/></Text>
+      </Shape>
+    </Transform>
+  </Scene>
+</X3D>

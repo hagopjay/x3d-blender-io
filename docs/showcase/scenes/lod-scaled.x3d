@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile='Immersive' version='4.0' xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance' xsd:noNamespaceSchemaLocation='https://www.web3d.org/specifications/x3d-4.0.xsd'>
+<head><meta name='title' content='R4 LOD range under Transform scale 0.001'/><meta name='creator' content='x3d.io planet-scale thread'/></head>
+<Scene>
+<Viewpoint description='10 units away' position='0 0 10'/>
+<NavigationInfo headlight='true'/>
+<Transform scale='0.001 0.001 0.001'><LOD range='1000'><Shape><Appearance><Material diffuseColor='0 0.8 0'/></Appearance><Box size='2000 2000 2000'/></Shape><Shape><Appearance><Material diffuseColor='0.9 0 0'/></Appearance><Box size='2000 2000 2000'/></Shape></LOD></Transform>
+</Scene>
+</X3D>

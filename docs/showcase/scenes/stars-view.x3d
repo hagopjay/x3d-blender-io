@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.1//EN" "https://www.web3d.org/specifications/x3d-4.1.dtd">
+<X3D profile='Immersive' version='4.1' xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance' xsd:noNamespaceSchemaLocation='https://www.web3d.org/specifications/x3d-4.1.xsd'>
+<head>
+<meta name='title' content='The 978 stars within 50 light-years, as X3D 4.1 Gaussian splats'/>
+<meta name='description' content='Viewer wrapper: Inlines stars-splats.x3d (HYG v4.1 catalogue, two splats per star) with two viewpoints. One unit is one light-year (the Inline is scaled by 1/9.4607e15); the stars sit at true 3D positions around the Sun at the origin.'/>
+</head>
+<Scene>
+<Background skyColor='0 0 0.01'/>
+<NavigationInfo type='"EXAMINE" "ANY"' headlight='false'/>
+<Viewpoint description='Outside the 50 light-year bubble' position='0 22 118' orientation='1 0 0 -0.18' fieldOfView='0.9'/>
+<Viewpoint description='Inside the bubble, 30 light-years out' position='0 3 30' orientation='1 0 0 -0.1' fieldOfView='1.0'/>
+<!-- 1 unit = 1 light-year: with a viewpoint 10^18 units from these splats, X_ITE 16.4.3 did not finish loading within 60 s (headless SwiftShader) -->
+<Transform scale='1.0570e-16 1.0570e-16 1.0570e-16'>
+<Inline url='"stars-splats.x3d"'/>
+</Transform>
+</Scene>
+</X3D>
