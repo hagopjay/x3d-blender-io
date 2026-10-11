@@ -16,10 +16,12 @@ try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .material import analyze_material
     from .splat_io import rgb_to_sh0
+    from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from material import analyze_material
     from splat_io import rgb_to_sh0
+    from viewpoint_fov import render_size, x3d_field_of_view
 
 
 MESH_LIKE_TYPES = {"MESH", "CURVE", "SURFACE", "FONT"}
@@ -489,12 +491,18 @@ def _extract_light(obj, local_matrix) -> IRLight:
     return light
 
 
-def _extract_viewpoint(obj, local_matrix) -> IRViewpoint:
+def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
+    field_of_view = None
+    if obj.data.type == "PERSP":
+        field_of_view = float(obj.data.angle)
+        if scene is not None:
+            # X3D measures fieldOfView across the smaller side of the view, Blender across the fitted side.
+            field_of_view = x3d_field_of_view(field_of_view, obj.data.sensor_fit, *render_size(scene))
     return IRViewpoint(
         name=obj.name,
         description=obj.name,
         transform=_matrix_transform(local_matrix),
-        field_of_view=float(obj.data.angle) if obj.data.type == "PERSP" else None,
+        field_of_view=field_of_view,
     )
 
 
@@ -750,7 +758,7 @@ def extract_scene(
             instance.light = _extract_light(obj, local_matrix.__class__())
             ir_scene.object_names.append(obj.name)
         elif obj.type == "CAMERA":
-            instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__())
+            instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene)
             ir_scene.object_names.append(obj.name)
         elif obj.type == "EMPTY":
             inline_url = obj.get(INLINE_URL_PROPERTY)

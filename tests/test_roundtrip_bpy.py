@@ -233,7 +233,12 @@ class SceneStructureRoundTripTests(unittest.TestCase):
         self.assertEqual(point.attrib["color"], "1.000000 0.900000 0.800000")
         view = self.root.find(".//Transform[@DEF='OB_MainCamera']/Viewpoint")
         self.assertIsNotNone(view)
-        self.assertEqual(view.attrib["fieldOfView"], "%.6f" % self.camera_angle)
+        # X3D measures fieldOfView across the smaller side; the fixture's 16:9 camera fits the wider side.
+        import bpy
+        from viewpoint_fov import render_size, x3d_field_of_view
+        expected = x3d_field_of_view(self.camera_angle, "AUTO", *render_size(bpy.context.scene))
+        self.assertLess(expected, self.camera_angle)
+        self.assertEqual(view.attrib["fieldOfView"], "%.6f" % expected)
         nav = self.root.find("Scene/NavigationInfo")
         self.assertEqual(nav.attrib["headlight"], "false")
         self.assertIsNotNone(self.root.find("Scene/Background"))

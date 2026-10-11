@@ -23,6 +23,7 @@ from bpy_extras.io_utils import create_derived_objects
 from .material_node_search import (imageTexture_in_material, get_diffuse_color, get_emissive_color,
                                    get_vector_mapping_properties, get_movie_texture_properties)
 from . import bl_info_copy
+from .viewpoint_fov import render_size, x3d_field_of_view
 
 # h3d defines
 H3D_TOP_LEVEL = 'TOP_LEVEL_TI'
@@ -405,7 +406,7 @@ def export(file,
         fw(ident_step + 'centerOfRotation="0 0 0"\n')
         fw(ident_step + 'position="%3.2f %3.2f %3.2f"\n' % loc[:])
         fw(ident_step + 'orientation="%3.2f %3.2f %3.2f %3.2f"\n' % rot)
-        fw(ident_step + 'fieldOfView="%.3f"\n' % obj.data.angle)
+        fw(ident_step + 'fieldOfView="%.3f"\n' % x3d_field_of_view(obj.data.angle, obj.data.sensor_fit, *render_size(scene)))
         fw(ident_step + '/>\n')
 
     def writeFog(ident, world):

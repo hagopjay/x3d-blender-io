@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import io
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -215,6 +216,29 @@ class EmitX3D40Tests(unittest.TestCase):
         self.assertIn('emissiveColor="1.000000 0.700000 0.100000"', xml_text)
         validation = validate_xml_text(xml_text)
         self.assertTrue(validation.valid, msg=f"Validation errors: {validation.errors}")
+
+    def test_emission_strength_above_one_fits_sfcolor_range(self):
+        # Blender's Emission Color x Emission Strength can exceed 1; X3D 4.0's XSD caps SFColor at 1.
+        scene = IRScene(
+            name="GlowFixture",
+            materials=[
+                IRPBRMaterial(name="Glow", base_color=(0.0, 0.1, 0.1, 1.0), emissive_color=(0.0, 3.270402, 3.497227, 1.0)),
+                IRPBRMaterial(name="Neon", base_color=(1.0, 1.0, 1.0, 1.0), emissive_color=(5.0, 2.5, -0.1, 1.0), unlit=True),
+            ],
+            instances=[
+                IRInstance(source_key="MESH:Glow", object_name="Glow", object_type="MESH",
+                           geometry_hint="Sphere", material_name="Glow"),
+                IRInstance(source_key="MESH:Neon", object_name="Neon", object_type="MESH",
+                           geometry_hint="Box", material_name="Neon"),
+            ],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        xml_text = buffer.getvalue()
+        self.assertIn('emissiveColor="0.000000 0.935141 1.000000"', xml_text)
+        self.assertIn('emissiveColor="1.000000 0.500000 0.000000"', xml_text)
+        for value in re.findall(r'(?:emissiveColor|baseColor)="([^"]+)"', xml_text):
+            self.assertTrue(all(0.0 <= float(c) <= 1.0 for c in value.split()), value)
 
     def test_falls_back_to_primitive_geometry_when_mesh_payload_missing(self):
         scene = IRScene(
