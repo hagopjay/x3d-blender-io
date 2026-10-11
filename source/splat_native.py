@@ -67,6 +67,13 @@ def pointcloud_type_supported() -> bool:
     return prop is not None and GAUSSIAN_SPLAT_TYPE in {item.identifier for item in prop.enum_items}
 
 
+def pointcloud_buildable() -> bool:
+    """True when Python can size a new PointCloud (``PointCloud.resize``; absent in Blender 4.5)."""
+    import bpy
+
+    return "resize" in bpy.types.PointCloud.bl_rna.functions
+
+
 def is_native_splat_object(obj) -> bool:
     """A PointCloud object holding splats: typed GAUSSIAN_SPLAT, or carrying the splat attributes."""
     if getattr(obj, "type", None) != "POINTCLOUD":

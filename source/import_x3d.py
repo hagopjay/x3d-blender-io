@@ -4663,7 +4663,9 @@ def _splat_import_target():
 
     X3D_SPLAT_IMPORT=pointcloud|mesh overrides the automatic choice.
     """
-    from .splat_native import pointcloud_type_supported
+    from .splat_native import pointcloud_buildable, pointcloud_type_supported
+    if not pointcloud_buildable():
+        return "mesh"
     forced = os.environ.get("X3D_SPLAT_IMPORT", "").strip().lower()
     if forced in {"pointcloud", "mesh"}:
         return forced

@@ -549,7 +549,11 @@ class GaussianSplatRoundTripTests(unittest.TestCase):
         self.assertEqual(len(node.attrib["opacities"].split()), len(self.splats))
 
 
-@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+def _pointcloud_resizable() -> bool:
+    return HAVE_BPY and "resize" in bpy.types.PointCloud.bl_rna.functions
+
+
+@unittest.skipUnless(_pointcloud_resizable(), "needs bpy with PointCloud.resize (Blender 5.1+)")
 class NativeSplatPointCloudTests(unittest.TestCase):
     """Blender's native splat PointCloud (5.3 layout) -> X3D 4.1 GaussianSplats -> PointCloud."""
 
