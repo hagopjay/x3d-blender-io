@@ -76,7 +76,8 @@ def extract_splats(mesh, *, name: str) -> IRGaussianSplats:
     """Read a splat mesh (vertices plus splat_* point attributes) into IRGaussianSplats."""
     splats = IRGaussianSplats(name=name, color_space=str(mesh.get(SPLAT_COLOR_SPACE_PROPERTY, "SRGB_REC709_DISPLAY")))
     count = len(mesh.vertices)
-    splats.positions = [tuple(round(c, _ROUND) for c in vertex.co) for vertex in mesh.vertices]
+    # unrounded: the emitter writes float32-exact text for splat arrays
+    splats.positions = [tuple(vertex.co) for vertex in mesh.vertices]
     attributes = mesh.attributes
 
     def vectors(attr_name, width):
