@@ -11,7 +11,10 @@ duplicated.
 
 from __future__ import annotations
 
+import math
 import os
+import struct
+from itertools import chain
 from xml.sax.saxutils import escape, quoteattr
 
 try:
@@ -463,6 +466,40 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
 
 _SH_FIELD = "sphericalHarmonicsDegree{degree}Coef{coef}"
 
+_FLOAT32 = struct.Struct("<f")
+_FLOAT32_MAX = 3.4028234663852886e38
+
+
+def _float32(value: float) -> float:
+    return _FLOAT32.unpack(_FLOAT32.pack(value))[0]
+
+
+def _fmt_float32(value: float) -> str:
+    """Shortest ``%g`` text (6 to 9 significant digits) that reads back as the same float32."""
+    target = _float32(value)
+    for digits in (6, 7, 8):
+        text = "%.*g" % (digits, target)
+        if _float32(float(text)) == target:
+            return text
+    return "%.9g" % target
+
+
+def _fmt_exact(values, field: str, node: str) -> str:
+    """Space-separated float32-exact text for a GaussianSplats array.
+
+    Splat data is float32 everywhere it comes from (PLY, Blender attributes,
+    trainers), and ``%.6f`` is absolute precision: small scales lost most of
+    their digits and some rounded to 0. The shortest ``%g`` text that reads
+    back as the same float32 costs a few percent more bytes and makes export
+    then import bit-exact. Non-finite values would make the file invalid
+    against the 4.1 schema, so they stop the export with a message instead.
+    """
+    flat = list(chain.from_iterable(values)) if values and isinstance(values[0], (tuple, list)) else list(values)
+    bad = sum(1 for value in flat if not math.isfinite(value) or abs(value) > _FLOAT32_MAX)
+    if bad:
+        raise ValueError(f"GaussianSplats '{node}': {bad} non-finite or out-of-float32-range value(s) in {field}; clean the splat data before exporting")
+    return " ".join(_fmt_float32(value) for value in flat)
+
 
 def _splats_xml(splats, defs: _DefNames, indent, *, version="4.0"):
     """GaussianSplats node for X3D 4.1; a coloured PointSet for earlier versions."""
@@ -473,16 +510,18 @@ def _splats_xml(splats, defs: _DefNames, indent, *, version="4.0"):
         attrs = [f'DEF="{splats_def}"']
         if splats.color_space != "SRGB_REC709_DISPLAY":
             attrs.append(f'colorSpace="{escape(splats.color_space)}"')
-        attrs.append(f'positions="{" ".join(_fmt3(p) for p in splats.positions)}"')
+        name = splats.name
+        attrs.append(f'positions="{_fmt_exact([p[:3] for p in splats.positions], "positions", name)}"')
         if splats.scales:
-            attrs.append(f'scales="{" ".join(_fmt3(s) for s in splats.scales)}"')
+            attrs.append(f'scales="{_fmt_exact([v[:3] for v in splats.scales], "scales", name)}"')
         if splats.orientations:
-            attrs.append(f'orientations="{" ".join(_fmt4(q) for q in splats.orientations)}"')
+            attrs.append(f'orientations="{_fmt_exact([q[:4] for q in splats.orientations], "orientations", name)}"')
         if splats.opacities:
-            attrs.append(f'opacities="{" ".join(_fmt(o) for o in splats.opacities)}"')
+            attrs.append(f'opacities="{_fmt_exact(splats.opacities, "opacities", name)}"')
         for (degree, coef), values in sorted(splats.sh.items()):
-            if values:
-                attrs.append(f'{_SH_FIELD.format(degree=degree, coef=coef)}="{" ".join(_fmt3(v) for v in values)}"')
+            if values and degree <= splats.sh_degree():
+                field = _SH_FIELD.format(degree=degree, coef=coef)
+                attrs.append(f'{field}="{_fmt_exact([v[:3] for v in values], field, name)}"')
         return f"{indent}<GaussianSplats {' '.join(attrs)} />\n"
     # 4.0 fallback: centres as a PointSet with the reconstructed base colour
     xml = [f"{indent}<Shape>\n"]

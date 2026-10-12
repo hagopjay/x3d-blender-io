@@ -319,7 +319,8 @@ class EmitSplatsAndInlineTests(unittest.TestCase):
             scales=[(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
             orientations=[(0.0, 0.0, 0.0, 1.0), (0.0, 0.707107, 0.0, 0.707107)],
             opacities=[1.0, 0.5],
-            sh={(0, 0): [(1.0, 0.0, 0.0), (0.0, 0.0, 1.0)], (1, 0): [(0.1, 0.1, 0.1), (0.2, 0.2, 0.2)]},
+            sh={(0, 0): [(1.0, 0.0, 0.0), (0.0, 0.0, 1.0)], (1, 0): [(0.1, 0.1, 0.1), (0.2, 0.2, 0.2)],
+                (1, 1): [(0.0, 0.0, 0.0), (0.3, 0.3, 0.3)], (1, 2): [(0.5, 0.5, 0.5), (0.0, 0.0, 0.0)]},
         )
         return IRScene(
             name="Splats",
@@ -335,12 +336,53 @@ class EmitSplatsAndInlineTests(unittest.TestCase):
         self.assertIn('x3d-4.1.dtd', xml)
         self.assertIn('<component name="GaussianSplats" level="1" />', xml)
         self.assertIn('<GaussianSplats DEF="GS_Cloud"', xml)
-        self.assertIn('orientations="0.000000 0.000000 0.000000 1.000000 0.000000 0.707107 0.000000 0.707107"', xml)
-        self.assertIn('opacities="1.000000 0.500000"', xml)
-        self.assertIn('sphericalHarmonicsDegree0Coef0="1.000000 0.000000 0.000000 0.000000 0.000000 1.000000"', xml)
+        self.assertIn('orientations="0 0 0 1 0 0.707107 0 0.707107"', xml)
+        self.assertIn('opacities="1 0.5"', xml)
+        self.assertIn('sphericalHarmonicsDegree0Coef0="1 0 0 0 0 1"', xml)
         self.assertIn('sphericalHarmonicsDegree1Coef0=', xml)
         self.assertNotIn("PointSet", xml)
         self.assertTrue(validate_xml_text(xml).valid)
+
+    def test_splat_arrays_are_float32_exact(self):
+        import random
+        import struct
+
+        rng = random.Random(7)
+        f32 = struct.Struct("<f")
+        to32 = lambda v: f32.unpack(f32.pack(v))[0]  # noqa: E731
+        # scales over seven decades: %.6f turned the small ones into 0.000000
+        scales = [tuple(to32(10 ** rng.uniform(-6, 1)) for _ in range(3)) for _ in range(500)]
+        scene = self._splat_scene()
+        cloud = scene.splats[0]
+        cloud.positions = [tuple(to32(rng.uniform(-50, 50)) for _ in range(3)) for _ in range(500)]
+        cloud.scales = scales
+        cloud.orientations = [(0.0, 0.0, 0.0, 1.0)] * 500
+        cloud.opacities = [to32(rng.random()) for _ in range(500)]
+        cloud.sh = {(0, 0): [tuple(to32(rng.gauss(0, 1)) for _ in range(3)) for _ in range(500)]}
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, version="4.1")
+        xml = buffer.getvalue()
+        node = re.search(r"<GaussianSplats [^>]*>", xml).group(0)
+        back = [float(v) for v in re.search(r' scales="([^"]*)"', node).group(1).split()]
+        self.assertEqual(back and [to32(v) for v in back], [c for s in scales for c in s])
+        back = [float(v) for v in re.search(r' positions="([^"]*)"', node).group(1).split()]
+        self.assertEqual([to32(v) for v in back], [c for p in cloud.positions for c in p])
+        self.assertTrue(validate_xml_text(xml).valid)
+
+    def test_partial_sh_degree_is_not_written(self):
+        scene = self._splat_scene()
+        del scene.splats[0].sh[(1, 2)]  # degree 1 now has 2 of its 3 coefficients
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, version="4.1")
+        xml = buffer.getvalue()
+        self.assertIn("sphericalHarmonicsDegree0Coef0=", xml)
+        self.assertNotIn("sphericalHarmonicsDegree1", xml)
+
+    def test_non_finite_splat_value_stops_export(self):
+        scene = self._splat_scene()
+        scene.splats[0].scales[1] = (0.4, float("nan"), 0.6)
+        with self.assertRaisesRegex(ValueError, "scales"):
+            export_ir_scene(io.StringIO(), scene, version="4.1")
 
     def test_x3d40_degrades_splats_to_pointset(self):
         buffer = io.StringIO()

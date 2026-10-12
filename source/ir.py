@@ -144,7 +144,18 @@ class IRGaussianSplats:
     color_space: str = "SRGB_REC709_DISPLAY"
 
     def sh_degree(self) -> int:
-        return max((degree for degree, _coef in self.sh), default=-1)
+        """Highest spherical-harmonic degree present in full, with every lower degree.
+
+        A degree counts only when all 2d+1 coefficients are there: the draft
+        node, KHR_gaussian_splatting and X_ITE all treat a partial degree as
+        absent, so writers drop it rather than emit half of one. -1 = no DC.
+        """
+        complete = -1
+        for degree in range(4):
+            if not all(self.sh.get((degree, coef)) for coef in range(2 * degree + 1)):
+                break
+            complete = degree
+        return complete
 
     def __len__(self) -> int:
         return len(self.positions)

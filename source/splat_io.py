@@ -18,6 +18,10 @@ import math
 import os
 import struct
 
+import logging
+
+_log = logging.getLogger(__name__)
+
 try:
     from .ir import IRGaussianSplats
 except ImportError:  # pragma: no cover - standalone test fallback
@@ -140,7 +144,14 @@ def _rows_to_splats(name, names, rows) -> IRGaussianSplats:
     has_rgb = "red" in column
     rest_count = sum(1 for prop_name in names if prop_name.startswith("f_rest_"))
     rest_per_channel = rest_count // 3
-    sh_slots = SH_REST_SLOTS[:rest_per_channel]
+    # Read whole degrees only (3, 8 or 15 coefficients per channel); the
+    # stride below still uses the file's own count, so degree 4 files read right.
+    whole = max(k for k in (0, 3, 8, 15) if k <= rest_per_channel)
+    if rest_per_channel > 15:
+        _log.warning("%s: spherical harmonics above degree 3 dropped (X3D 4.1 stops at degree 3)", name)
+    elif whole < rest_per_channel:
+        _log.warning("%s: %d f_rest coefficients per channel is not a whole SH degree; kept %d", name, rest_per_channel, whole)
+    sh_slots = SH_REST_SLOTS[:whole]
     for row in rows:
         splats.positions.append((float(get(row, "x", 0.0)), float(get(row, "y", 0.0)), float(get(row, "z", 0.0))))
         if "scale_0" in column:

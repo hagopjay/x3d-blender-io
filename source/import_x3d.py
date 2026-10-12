@@ -1516,6 +1516,32 @@ class x3dNode(vrmlNode):
         return self.getRealNode().x3dNode.toxml()
 
 
+def _make_sax_parser():
+    """An Expat SAX parser with reparse deferral switched off.
+
+    Expat 2.6 and later defers a very large start tag (a multi-megabyte
+    attribute such as GaussianSplats positions or a big Coordinate point list)
+    until the parser is closed. minidom.parseString drives the parser through
+    pulldom, which stops reading events once close() is called, so the deferred
+    element was silently dropped: a 4.1 file with 18,000 or more splats
+    imported nothing. With deferral off every element arrives before close().
+    """
+    import xml.sax
+    from xml.sax import expatreader
+
+    class _NoDeferralExpatParser(expatreader.ExpatParser):
+        def reset(self):
+            super().reset()
+            # Python 3.12.3+ / 3.13 with Expat 2.6+; older builds never defer
+            if hasattr(self._parser, "SetReparseDeferralEnabled"):
+                self._parser.SetReparseDeferralEnabled(False)
+
+    try:
+        return _NoDeferralExpatParser()
+    except Exception:  # pragma: no cover - no Expat in this Python
+        return xml.sax.make_parser()
+
+
 def x3d_parse(path):
     """
     Sets up the root node and returns it so load_web3d() can deal with the blender side of things.
@@ -1542,7 +1568,7 @@ def x3d_parse(path):
         dom_handler.startElementNS = startElementNS
         orig_set_content_handler(dom_handler)
 
-    parser = xml.sax.make_parser()
+    parser = _make_sax_parser()
     orig_set_content_handler = parser.setContentHandler
     parser.setFeature(handler.feature_external_ges, False)
     parser.setFeature(handler.feature_external_pes, False)
@@ -4714,14 +4740,17 @@ def importGaussianSplats(bpycollection, node, ancestry, global_matrix):
     else:
         splats = IRGaussianSplats(name=mesh_name, color_space=_attribute_raw(real, 'colorSpace', 'SRGB_REC709_DISPLAY'))
         splats.positions = [tuple(p) for p in real.getFieldAsArray('positions', 3, ancestry, conversion_scale)]
-        splats.scales = [tuple(s) for s in real.getFieldAsArray('scales', 3, ancestry)]
+        # scales are lengths in the same units as positions
+        splats.scales = [tuple(s) for s in real.getFieldAsArray('scales', 3, ancestry, conversion_scale)]
         splats.orientations = [tuple(q) for q in real.getFieldAsArray('orientations', 4, ancestry)]
         splats.opacities = [float(o) for o in real.getFieldAsArray('opacities', 0, ancestry)]
         for degree in range(4):
-            for coef in range(2 * degree + 1):
-                values = real.getFieldAsArray(f'sphericalHarmonicsDegree{degree}Coef{coef}', 3, ancestry)
-                if values:
-                    splats.sh[(degree, coef)] = [tuple(v) for v in values]
+            coefficients = [real.getFieldAsArray(f'sphericalHarmonicsDegree{degree}Coef{coef}', 3, ancestry)
+                            for coef in range(2 * degree + 1)]
+            if not all(coefficients):
+                break  # a partial degree counts as absent, and so does every degree above it
+            for coef, values in enumerate(coefficients):
+                splats.sh[(degree, coef)] = [tuple(v) for v in values]
         obj = _build_splat_object(bpycollection, name, splats)
         obj.data.name = mesh_name
         real.blendData = real.blendObject = obj

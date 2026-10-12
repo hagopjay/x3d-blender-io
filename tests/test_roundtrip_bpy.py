@@ -552,6 +552,105 @@ class GaussianSplatRoundTripTests(unittest.TestCase):
         self.assertEqual(len(node.attrib["opacities"].split()), len(self.splats))
 
 
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class LargeSplatRoundTripTests(unittest.TestCase):
+    """20,000 degree-3 splats: export then import gives back the same float32 bits.
+
+    Guards two defects: Expat 2.6+ deferring a multi-megabyte start tag past
+    the point where minidom stops reading (the node imported as nothing), and
+    %.6f text rounding small scales to zero.
+    """
+
+    COUNT = 20000
+
+    @classmethod
+    def setUpClass(cls):
+        import numpy as np
+
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_bigsplats_")
+        _register_extension(cls.tmpdir)
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        rng = np.random.default_rng(3)
+        n = cls.COUNT
+        quats = rng.standard_normal((n, 4)).astype(np.float32)
+        quats /= np.linalg.norm(quats, axis=1, keepdims=True)
+        cls.data = {
+            "co": rng.uniform(-20, 20, (n, 3)).astype(np.float32),
+            "splat_scale": (10.0 ** rng.uniform(-5, 0.5, (n, 3))).astype(np.float32),
+            "splat_rotation": quats,  # w x y z, as Blender stores quaternions
+            "splat_opacity": rng.uniform(0, 1, n).astype(np.float32),
+        }
+        mesh = bpy.data.meshes.new("BigCloud")
+        mesh.vertices.add(n)
+        mesh.vertices.foreach_set("co", cls.data["co"].ravel())
+        mesh["x3d_gaussian_splats"] = True
+        mesh.attributes.new("splat_scale", "FLOAT_VECTOR", "POINT").data.foreach_set("vector", cls.data["splat_scale"].ravel())
+        mesh.attributes.new("splat_rotation", "QUATERNION", "POINT").data.foreach_set("value", quats.ravel())
+        mesh.attributes.new("splat_opacity", "FLOAT", "POINT").data.foreach_set("value", cls.data["splat_opacity"])
+        for degree in range(4):
+            for coef in range(2 * degree + 1):
+                name = f"splat_sh{degree}_{coef}"
+                cls.data[name] = rng.standard_normal((n, 3)).astype(np.float32) * (0.5 ** degree)
+                mesh.attributes.new(name, "FLOAT_VECTOR", "POINT").data.foreach_set("vector", cls.data[name].ravel())
+        mesh.update()
+        bpy.context.scene.collection.objects.link(bpy.data.objects.new("BigCloud", mesh))
+        cls.path = os.path.join(cls.tmpdir, "big.x3d")
+        result = bpy.ops.export_scene.x3d(filepath=cls.path, x3d_version="X3D41", use_selection=False)
+        assert result == {"FINISHED"}, result
+
+    def test_file_is_past_the_old_parser_limit(self):
+        self.assertGreater(os.path.getsize(self.path), 4_000_000)
+
+    def test_reimport_is_bit_exact(self):
+        import bpy
+        import numpy as np
+
+        _force_splat_import(self, "mesh")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.path), {"FINISHED"})
+        obj = bpy.context.scene.objects.get("BigCloud")
+        self.assertIsNotNone(obj, [o.name for o in bpy.context.scene.objects])
+        mesh = obj.data
+        n = self.COUNT
+        self.assertEqual(len(mesh.vertices), n)
+
+        def read(name, width, key):
+            out = np.empty(n * width, dtype=np.float32)
+            if name == "co":
+                mesh.vertices.foreach_get("co", out)
+            else:
+                mesh.attributes[name].data.foreach_get(key, out)
+            return out.reshape(n, width) if width > 1 else out
+
+        np.testing.assert_array_equal(read("co", 3, None), self.data["co"])
+        np.testing.assert_array_equal(read("splat_scale", 3, "vector"), self.data["splat_scale"])
+        np.testing.assert_array_equal(read("splat_opacity", 1, "value"), self.data["splat_opacity"])
+        np.testing.assert_array_equal(read("splat_rotation", 4, "value"), self.data["splat_rotation"])
+        for degree in range(4):
+            for coef in range(2 * degree + 1):
+                name = f"splat_sh{degree}_{coef}"
+                np.testing.assert_array_equal(read(name, 3, "vector"), self.data[name], err_msg=name)
+
+    def test_import_unit_scale_applies_to_splat_scales(self):
+        import bpy
+        import numpy as np
+
+        _force_splat_import(self, "mesh")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.path, global_scale=0.01), {"FINISHED"})
+        mesh = bpy.context.scene.objects["BigCloud"].data
+        n = self.COUNT
+        co = np.empty(3 * n, dtype=np.float32)
+        mesh.vertices.foreach_get("co", co)
+        scale = np.empty(3 * n, dtype=np.float32)
+        mesh.attributes["splat_scale"].data.foreach_get("vector", scale)
+        # a Gaussian's extent is a length: it shrinks with the spacing between splats
+        np.testing.assert_allclose(co, self.data["co"].ravel() * 0.01, rtol=1e-5, atol=1e-7)
+        np.testing.assert_allclose(scale, self.data["splat_scale"].ravel() * 0.01, rtol=1e-5)
+
+
 def _pointcloud_resizable() -> bool:
     return HAVE_BPY and "resize" in bpy.types.PointCloud.bl_rna.functions
 

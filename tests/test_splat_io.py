@@ -115,5 +115,39 @@ class NativeSHIndexTests(unittest.TestCase):
             sh_index(2, 5)
 
 
+def _write_raw_ply(path, names, rows):
+    """Minimal binary little-endian PLY with float properties only."""
+    import struct
+
+    header = ["ply", "format binary_little_endian 1.0", f"element vertex {len(rows)}"]
+    header += [f"property float {name}" for name in names] + ["end_header", ""]
+    record = struct.Struct("<" + "f" * len(names))
+    Path(path).write_bytes("\n".join(header).encode() + b"".join(record.pack(*row) for row in rows))
+
+
+class PartialDegreeTests(unittest.TestCase):
+    def test_ply_with_a_partial_degree_reads_whole_degrees_only(self):
+        # 10 f_rest per channel = degrees 1 and 2 (8) plus 2 of degree 3's 7
+        names = ["x", "y", "z", "f_dc_0", "f_dc_1", "f_dc_2"] + [f"f_rest_{i}" for i in range(30)]
+        rows = [[float(i), 0.0, 0.0, 0.1, 0.2, 0.3] + [0.01 * k for k in range(30)] for i in range(3)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "partial.ply")
+            _write_raw_ply(path, names, rows)
+            with self.assertLogs("splat_io", level="WARNING"):
+                back = read_ply(path)
+        self.assertEqual(back.sh_degree(), 2)
+        self.assertNotIn((3, 0), back.sh)
+        # channel-major layout: degree 2 coefficient 4 is slot 7 of each channel's 10
+        self.assertAlmostEqual(back.sh[(2, 4)][0][0], 0.07, places=6)
+        self.assertAlmostEqual(back.sh[(2, 4)][0][1], 0.17, places=6)
+        self.assertAlmostEqual(back.sh[(2, 4)][0][2], 0.27, places=6)
+
+    def test_sh_degree_counts_complete_degrees(self):
+        splats = _sample(count=2, degree=3)
+        self.assertEqual(splats.sh_degree(), 3)
+        del splats.sh[(2, 3)]
+        self.assertEqual(splats.sh_degree(), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
