@@ -120,7 +120,7 @@ jobs:
           "$BLENDER_DIR/blender" -b --python-exit-code 1 \
             --python .github/scripts/run_tests_in_blender.py
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: extension-zip-blender-${{ matrix.blender }}
