@@ -950,5 +950,73 @@ class LightEnergyRoundTripTests(unittest.TestCase):
         self._check("X3D33")
 
 
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class ExportImportExportTests(unittest.TestCase):
+    """Export, import and export again for every fixture, comparing the node inventory of the two files.
+
+    Generation two must equal generation three (the pair is a fixed point). Generation one may lose the nodes
+    in KNOWN_LOSSES, which the importer maps to something else today (vertex colours and normals, UnlitMaterial as a Principled
+    material, the Background node, one extra Transform per shared-mesh object); any other difference is a regression.
+    Importing every fixture twice in one session also guards the importer's texture and material caches."""
+
+    KNOWN_LOSSES = {
+        "swatch": {"ColorRGBA", "Normal", "PhysicalMaterial", "UnlitMaterial", "Coordinate", "TextureCoordinate",
+                   "Transform", "meta"},
+        "scene": {"PhysicalMaterial", "Transform", "Background"},
+        "hanim": set(),
+        "splat": set(),
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        if str(TOOLS_DIR) not in sys.path:
+            sys.path.insert(0, str(TOOLS_DIR))
+
+    @staticmethod
+    def _inventory(path):
+        from collections import Counter
+        return Counter(element.tag for element in ET.parse(path).getroot().iter())
+
+    def _check(self, name, build, version, **export_kwargs):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_eie_")
+        _register_extension(tmpdir)
+        if str(TOOLS_DIR) not in sys.path:
+            sys.path.insert(0, str(TOOLS_DIR))
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        build(tmpdir)
+        inventories = []
+        for generation in range(3):
+            path = os.path.join(tmpdir, "%s_%d.x3d" % (name, generation))
+            self.assertEqual(
+                bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False, **export_kwargs),
+                {"FINISHED"})
+            inventories.append(self._inventory(path))
+            bpy.ops.wm.read_factory_settings(use_empty=True)
+            self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
+        first, second, third = inventories
+        self.assertEqual(second, third, "%s: generation 2 and 3 differ" % name)
+        changed = {tag for tag in set(first) | set(second) if first[tag] != second[tag]}
+        self.assertLessEqual(changed, self.KNOWN_LOSSES[name], "%s: unexpected change in %s" % (
+            name, sorted(changed - self.KNOWN_LOSSES[name])))
+
+    def test_swatch_book(self):
+        from swatch_book import build_swatch_book
+        self._check("swatch", lambda tmpdir: build_swatch_book(texture_dir=tmpdir), "X3D40", use_normals=True)
+
+    def test_scene_fixture(self):
+        from scene_fixture import build_scene_fixture
+        self._check("scene", lambda tmpdir: build_scene_fixture(), "X3D40", use_hierarchy=True, use_animation=True)
+
+    def test_hanim_fixture(self):
+        from hanim_fixture import build_hanim_fixture
+        self._check("hanim", lambda tmpdir: build_hanim_fixture(), "X3D40", use_animation=True)
+
+    def test_splat_fixture(self):
+        from splat_fixture import build_splat_fixture
+        self._check("splat", lambda tmpdir: build_splat_fixture(count=40), "X3D41")
+
+
 if __name__ == "__main__":
     unittest.main()

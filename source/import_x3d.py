@@ -5160,8 +5160,11 @@ def load_web3d(
 
     # NOTE - reset material cache
     # (otherwise we might get "StructRNA of type Material has been removed" errors)
-    global material_cache
+    global material_cache, texture_cache
     material_cache = {}
+    # Same reason for textures: a cached Image outlives File > New and the next import fails with
+    # "StructRNA of type Image has been removed".
+    texture_cache = {}
 
     bpyscene = bpycontext.scene
 
