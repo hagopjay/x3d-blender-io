@@ -3979,6 +3979,10 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 # -----------------------------------------------------------------------------------
 # Lighting
 
+# The exporters write point and spot lights as min(energy / 1.75, 1.0), so import undoes the
+# division. Energies above 1.75 were clamped to intensity 1.0 on export and cannot be recovered.
+LIGHT_ENERGY_PER_INTENSITY = 1.75
+
 
 def importLamp_PointLight(node, ancestry):
     vrmlname = node.getDefName()
@@ -3994,7 +3998,7 @@ def importLamp_PointLight(node, ancestry):
     radius = node.getFieldAsFloat('radius', 100.0, ancestry, conversion_scale)
 
     bpylamp = bpy.data.lights.new(vrmlname, 'POINT')
-    bpylamp.energy = intensity
+    bpylamp.energy = intensity * LIGHT_ENERGY_PER_INTENSITY
     bpylamp.cutoff_distance = radius
     bpylamp.color = color
 
@@ -4015,7 +4019,7 @@ def importLamp_DirectionalLight(node, ancestry):
     # is_on = node.getFieldAsBool('on', True, ancestry) # TODO
 
     bpylamp = bpy.data.lights.new(vrmlname, 'SUN')
-    bpylamp.energy = intensity
+    bpylamp.energy = intensity  # sun strength is exported 1:1 (clamped to 1.0), see extract.py
     bpylamp.color = color
 
     # lamps have their direction as -z, yup
@@ -4043,7 +4047,7 @@ def importLamp_SpotLight(node, ancestry):
     radius = node.getFieldAsFloat('radius', 100.0, ancestry, conversion_scale)
 
     bpylamp = bpy.data.lights.new(vrmlname, 'SPOT')
-    bpylamp.energy = intensity
+    bpylamp.energy = intensity * LIGHT_ENERGY_PER_INTENSITY
     bpylamp.cutoff_distance = radius
     bpylamp.color = color
     bpylamp.spot_size = cutOffAngle

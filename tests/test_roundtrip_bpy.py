@@ -908,5 +908,47 @@ class WorldBackgroundExportTests(unittest.TestCase):
         self.assertEqual([round(float(v), 4) for v in sky.split()], [0.04, 0.02, 0.08])
 
 
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class LightEnergyRoundTripTests(unittest.TestCase):
+    """Light strength survives export then import: point and spot divide by 1.75 out and multiply back in,
+    sun is written unscaled on both export paths. Strengths above the clamp (1.75, or 1.0 for sun) are lost by design."""
+
+    ENERGIES = {"POINT": 1.05, "SPOT": 0.7, "SUN": 0.6}
+
+    def _round_trip(self, version: str):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_light_")
+        _register_extension(tmpdir)
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        for kind, energy in self.ENERGIES.items():
+            data = bpy.data.lights.new(kind.title(), kind)
+            data.energy = energy
+            bpy.context.scene.collection.objects.link(bpy.data.objects.new(kind.title(), data))
+        path = os.path.join(tmpdir, "lights_%s.x3d" % version)
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False), {"FINISHED"})
+        root = ET.parse(path).getroot()
+        written = {tag: float(root.find(".//%s" % tag).attrib["intensity"])
+                   for tag in ("PointLight", "SpotLight", "DirectionalLight")}
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
+        back = {obj.data.type: obj.data.energy for obj in bpy.context.scene.objects if obj.type == "LIGHT"}
+        return written, back
+
+    def _check(self, version: str):
+        written, back = self._round_trip(version)
+        self.assertAlmostEqual(written["PointLight"], 1.05 / 1.75, places=3)
+        self.assertAlmostEqual(written["SpotLight"], 0.7 / 1.75, places=3)
+        self.assertAlmostEqual(written["DirectionalLight"], 0.6, places=3)
+        for kind, energy in self.ENERGIES.items():
+            self.assertAlmostEqual(back[kind], energy, places=3, msg="%s energy via %s" % (kind, version))
+
+    def test_x3d40_path(self):
+        self._check("X3D40")
+
+    def test_legacy_path(self):
+        self._check("X3D33")
+
+
 if __name__ == "__main__":
     unittest.main()
