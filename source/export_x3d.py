@@ -509,7 +509,7 @@ def export(file,
             ambi = 0
             amb_intensity = 0.0
 
-        intensity = min(light.energy / 1.75, 1.0)
+        intensity = min(light.energy, 1.0)  # sun strength is not scaled, matching extract.py
 
         orientation = matrix_direction_neg_z(matrix)
 
