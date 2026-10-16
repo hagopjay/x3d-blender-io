@@ -7,6 +7,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 
 SOURCE_DIR = Path(__file__).resolve().parents[1] / "source"
@@ -14,8 +15,10 @@ if str(SOURCE_DIR) not in sys.path:
     sys.path.insert(0, str(SOURCE_DIR))
 
 from material import (
+    OCCLUSION_IMAGE_KEYWORDS,
     ShaderNodeTypes,
     _find_image_node_from_socket,
+    _find_labeled_image_node,
     _resolve_float_socket,
     _resolve_rgba_socket,
 )
@@ -158,6 +161,38 @@ class MaterialAnalysisHelperTests(unittest.TestCase):
         _link(target, clamp)
 
         self.assertAlmostEqual(_resolve_float_socket(target, 0.0), 0.75)
+
+
+class OcclusionImageLookupTests(unittest.TestCase):
+    """The exporter writes an image as occlusionTexture when its name mentions occlusion or AO."""
+
+    @staticmethod
+    def _is_occlusion(filepath, image_name=None, label=""):
+        node = FakeNode(ShaderNodeTypes.IMAGE_TEXTURE, name="Image Texture")
+        node.label = label
+        file_name = filepath.replace("\\", "/").rsplit("/", 1)[-1]
+        node.image = SimpleNamespace(name=image_name or file_name, filepath=filepath)
+        material = SimpleNamespace(node_tree=SimpleNamespace(nodes=[node]))
+        return _find_labeled_image_node(material, OCCLUSION_IMAGE_KEYWORDS) is node
+
+    def test_folder_names_are_not_searched(self):
+        # The swatch-book checker once became an occlusion map too, because its random temp folder
+        # (/tmp/x3d_roundtrip_ plus 8 characters) happened to contain "ao".
+        self.assertFalse(self._is_occlusion("/tmp/x3d_roundtrip_k2aoq1zz/swatch_checker.png", "swatch_checker"))
+        self.assertFalse(self._is_occlusion("C:\\Users\\Joao\\textures\\brick.png"))
+        self.assertFalse(self._is_occlusion("//ao/brick.png"))
+
+    def test_ao_must_be_a_whole_word(self):
+        for name in ("chaos.png", "cacao_bean.png", "Macao.jpg"):
+            self.assertFalse(self._is_occlusion("//textures/" + name), name)
+        for name in ("rock_AO.png", "RockAO.png", "AOMap.png", "ao.png", "brick-ao-2k.jpg"):
+            self.assertTrue(self._is_occlusion("//textures/" + name), name)
+
+    def test_occlusion_anywhere_in_a_name(self):
+        self.assertTrue(self._is_occlusion("//textures/brickAmbientOcclusion.png"))
+        self.assertTrue(self._is_occlusion("", image_name="T_Brick_occlusionmap"))
+        # The importer labels the image node of an occlusionTexture "Occlusion".
+        self.assertTrue(self._is_occlusion("//textures/brick_2.png", label="Occlusion"))
 
 
 if __name__ == "__main__":

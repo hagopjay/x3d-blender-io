@@ -68,7 +68,8 @@ def _force_splat_import(test: unittest.TestCase, target: str):
 class SwatchBookRoundTripTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_roundtrip_")
+        # "ao" in the folder name on purpose: a folder name must not make the checker an occlusion map.
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_roundtrip_ao_")
         _register_extension(cls.tmpdir)
         if str(TOOLS_DIR) not in sys.path:
             sys.path.insert(0, str(TOOLS_DIR))

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 try:
     from .ir import IRPBRMaterial, IRTextureRef, IRTextureTransform
@@ -115,24 +116,33 @@ def _recursive_find_nodes_by_idname(node_tree, idname, results=None):
     return results
 
 
+# Image nodes whose name mentions one of these hold an ambient occlusion map (see _find_labeled_image_node).
+OCCLUSION_IMAGE_KEYWORDS = ("occlusion", "ambient_occlusion", "ao")
+
+# One word of a node, image or file name: "T_RockAO.png" gives T, Rock, AO, png.
+_NAME_WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|[0-9]+")
+
+
 def _find_labeled_image_node(material, keywords):
+    """Return the first image node whose name, label, image name or file name mentions one of ``keywords``.
+
+    Only the file's own name is searched, not the folders above it. A keyword of three letters or fewer,
+    such as "ao", must be a whole word ("rock_AO.png", "RockAO.png"), so an image in /home/joao/ or one
+    called chaos.png is not taken for an occlusion map.
+    """
     node_tree = getattr(material, "node_tree", None)
     image_nodes = _recursive_find_nodes_by_idname(node_tree, ShaderNodeTypes.IMAGE_TEXTURE, results=[])
     lowered_keywords = tuple(keyword.lower() for keyword in keywords)
     for node in image_nodes:
-        haystack = " ".join(
-            filter(
-                None,
-                (
-                    getattr(node, "name", ""),
-                    getattr(node, "label", ""),
-                    getattr(getattr(node, "image", None), "name", ""),
-                    getattr(getattr(node, "image", None), "filepath", ""),
-                ),
-            )
-        ).lower()
-        if any(keyword in haystack for keyword in lowered_keywords):
-            return node
+        image = getattr(node, "image", None)
+        file_name = (getattr(image, "filepath", "") or "").replace("\\", "/").rsplit("/", 1)[-1]
+        names = [getattr(node, "name", ""), getattr(node, "label", ""), getattr(image, "name", ""), file_name]
+        names = [name for name in names if name]
+        haystack = " ".join(names).lower()
+        words = {word.lower() for name in names for word in _NAME_WORD.findall(name)}
+        for keyword in lowered_keywords:
+            if (keyword in words) if len(keyword) <= 3 else (keyword in haystack):
+                return node
     return None
 
 
@@ -493,7 +503,7 @@ def analyze_material(material):
         emissive_image = _find_image_node_from_socket(emission_node.inputs.get("Color"), usage="emissive")
         pbr.emissive_texture = _texture_ref_from_image_node(emissive_image, "emissive") if emissive_image else None
 
-    occlusion_image = _find_labeled_image_node(material, ("occlusion", "ambient_occlusion", "ao"))
+    occlusion_image = _find_labeled_image_node(material, OCCLUSION_IMAGE_KEYWORDS)
     pbr.occlusion_texture = _texture_ref_from_image_node(occlusion_image, "occlusion") if occlusion_image else None
     occlusion_strength_node = _find_labeled_value_node(material, ("occlusion_strength", "ao_strength"))
     if occlusion_strength_node and getattr(occlusion_strength_node, "outputs", None):
