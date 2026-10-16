@@ -2934,6 +2934,50 @@ def importMesh_Box(geom, ancestry):
     bpymesh.update()
     return bpymesh
 
+
+def importMesh_Rectangle2D(geom, ancestry):
+    # Geometry2D: a rectangle in the local XY plane (z = 0), centred, facing +z.
+    # solid is ignored (Blender meshes are two-sided unless backface culling is set).
+    size = geom.getFieldAsFloatTuple('size', (2.0 * conversion_scale, 2.0 * conversion_scale), ancestry, conversion_scale)
+    hx, hy = size[0] / 2, size[1] / 2
+    bpymesh = bpy.data.meshes.new(name="Rectangle2D")
+    bpymesh.from_pydata([(-hx, -hy, 0.0), (hx, -hy, 0.0), (hx, hy, 0.0), (-hx, hy, 0.0)], [], [(0, 1, 2, 3)])
+    bpymesh.validate()
+    bpymesh.uv_layers.new().data.foreach_set('uv', (0, 0, 1, 0, 1, 1, 0, 1))
+    bpymesh.update()
+    return bpymesh
+
+
+def importMesh_Disk2D(geom, ancestry):
+    # Geometry2D: a disc (innerRadius 0), an annulus (0 < innerRadius < outerRadius)
+    # or, when the radii are equal, a circle, in the local XY plane facing +z.
+    # Texture coordinates map the outer square onto the unit square, as for Disk2D in the spec.
+    outer = geom.getFieldAsFloat('outerRadius', 1.0 * conversion_scale, ancestry, conversion_scale)
+    inner = geom.getFieldAsFloat('innerRadius', 0.0, ancestry, conversion_scale)
+    n = max(8, 2 * GLOBALS['CIRCLE_DETAIL'])
+    ring = [(cos(2 * pi * i / n), sin(2 * pi * i / n)) for i in range(n)]
+    bpymesh = bpy.data.meshes.new(name="Disk2D")
+    if inner <= 0.0:
+        verts = [(outer * c, outer * s_, 0.0) for c, s_ in ring]
+        bpymesh.from_pydata(verts, [], [tuple(range(n))])
+    elif inner < outer:
+        verts = [(outer * c, outer * s_, 0.0) for c, s_ in ring] + [(inner * c, inner * s_, 0.0) for c, s_ in ring]
+        faces = [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+        bpymesh.from_pydata(verts, [], faces)
+    else:
+        verts = [(outer * c, outer * s_, 0.0) for c, s_ in ring]
+        bpymesh.from_pydata(verts, [(i, (i + 1) % n) for i in range(n)], [])
+    bpymesh.validate()
+    if bpymesh.polygons:
+        uv = []
+        for poly in bpymesh.polygons:
+            for vi in poly.vertices:
+                x, y, _z = bpymesh.vertices[vi].co
+                uv += [0.5 + 0.5 * x / outer, 0.5 + 0.5 * y / outer]
+        bpymesh.uv_layers.new().data.foreach_set('uv', uv)
+    bpymesh.update()
+    return bpymesh
+
 # -----------------------------------------------------------------------------------
 # Utilities for importShape
 
@@ -3894,6 +3938,8 @@ geometry_importers = {
     'Box': importMesh_Box,
     'Cylinder': importMesh_Cylinder,
     'Cone': importMesh_Cone,
+    'Rectangle2D': importMesh_Rectangle2D,
+    'Disk2D': importMesh_Disk2D,
     'Text': importText,
 }
 
@@ -4992,6 +5038,12 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
                 loop = timer.getFieldAsBool('loop', False, ())
         if not key_lists:
             continue
+        # TimeSensor loop is deliberately not turned into a CYCLES modifier:
+        # the modifier wraps the last key onto the first, which hides the
+        # final pose; users can add cycling in the graph editor. (Dropped once
+        # per target here: inside the per-object loop below it raised
+        # UnboundLocalError for the second object under the same Transform.)
+        del loop
         cycle_interval = cycle_interval or 1.0
         union_keys = sorted({k for keys in key_lists.values() for k in keys})
 
@@ -5057,10 +5109,6 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
                 bpyob.keyframe_insert("rotation_quaternion", frame=frame)
                 bpyob.keyframe_insert("scale", frame=frame)
 
-            # TimeSensor loop is deliberately not turned into a CYCLES modifier:
-            # the modifier wraps the last key onto the first, which hides the
-            # final pose; users can add cycling in the graph editor.
-            del loop
             for fcu in _action_fcurves(action):
                 for kf in fcu.keyframe_points:
                     kf.interpolation = 'LINEAR'
