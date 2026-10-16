@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 id = "x3d_blender_io"
 name = "X3D Blender I/O"
-version = "2.6.1"
+version = "2.6.2"
 tagline = "X3D 4.0/4.1 import-export: PBR, HAnim, splats; VRML2 import"
 maintainer = "HagopJay"
 type = "add-on"

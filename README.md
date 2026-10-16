@@ -73,6 +73,11 @@ X3D 4.0 path, whose schema sets no upper limit. A light made in Blender is still
 lights, strength 1 for a sun): watts have no fixed X3D scale and the writer emits no attenuation, so Blender's default
 1000 W point light would otherwise white out the scene. The X3D 3.3 writer caps every light at 1, as the 3.x schemas require.
 
+An X3D `Switch` imports every child, so nothing is lost, but shows only the one its `whichChoice` names, as an X3D
+browser does: the others are hidden in the viewport and the render and tagged `x3d_switch_hidden` (-1, the default,
+shows none). The export does not write a Switch back yet: by default it writes every child as a sibling, and with
+*Visible Only* only the chosen one.
+
 ### Tests
 
 ```
