@@ -40,6 +40,8 @@ INLINE_SOURCE_PROPERTY = "x3d_inline_source"
 # X3D light fields with no Blender setting, kept on the light data by the importer.
 LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
+# Viewpoint description read by the importer, kept on the camera object.
+VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 
 
 def is_splat_mesh(obj) -> bool:
@@ -532,15 +534,17 @@ def _world_color(world):
 
 
 def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
+    """The description is the one the importer kept, or the camera's name when there is none."""
     field_of_view = None
     if obj.data.type == "PERSP":
         field_of_view = float(obj.data.angle)
         if scene is not None:
             # X3D measures fieldOfView across the smaller side of the view, Blender across the fitted side.
             field_of_view = x3d_field_of_view(field_of_view, obj.data.sensor_fit, *render_size(scene))
+    description = obj.get(VIEWPOINT_DESCRIPTION_PROPERTY)
     return IRViewpoint(
         name=obj.name,
-        description=obj.name,
+        description=description if isinstance(description, str) and description else obj.name,
         transform=_matrix_transform(local_matrix),
         field_of_view=field_of_view,
     )

@@ -1059,6 +1059,46 @@ class LightShadowRoundTripTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class ViewpointDescriptionRoundTripTests(unittest.TestCase):
+    """An imported Viewpoint description is written back by the X3D 4.0 export; the camera name is only the
+    fallback for a viewpoint that had none (and for cameras made in Blender)."""
+
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<X3D version="4.0" profile="Immersive"><Scene>\n'
+        '<Viewpoint DEF="Arrival" description="Drillfield &amp; Burruss from 300 m" position="330 300 420"'
+        ' orientation="-0.5522 0.8117 0.1904 0.8034" fieldOfView="0.8"/>\n'
+        '<Viewpoint DEF="Overview" position="0 50 0"/>\n'
+        '</Scene></X3D>\n'
+    )
+
+    def test_description_survives_x3d40_round_trip(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_viewpoint_")
+        _register_extension(tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        import bpy
+        from validate import validate_xml_file
+
+        source = os.path.join(tmpdir, "viewpoints.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        objects = bpy.context.scene.objects
+        self.assertEqual(objects["Arrival"].get("x3d_viewpoint_description"), "Drillfield & Burruss from 300 m")
+        self.assertNotIn("x3d_viewpoint_description", objects["Overview"].keys())
+
+        camera = bpy.data.objects.new("BlenderCam", bpy.data.cameras.new("BlenderCam"))
+        bpy.context.scene.collection.objects.link(camera)
+        path = os.path.join(tmpdir, "viewpoints_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        descriptions = {view.attrib["DEF"]: view.get("description") for view in ET.parse(path).getroot().iter("Viewpoint")}
+        self.assertEqual(descriptions, {"CA_Arrival": "Drillfield & Burruss from 300 m", "CA_Overview": "Overview",
+                                        "CA_BlenderCam": "BlenderCam"})
+        self.assertTrue(validate_xml_file(path).valid)
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class ExportImportExportTests(unittest.TestCase):
     """Export, import and export again for every fixture, comparing the node inventory of the two files.
 

@@ -18,7 +18,8 @@ import mathutils
 from math import sin, cos, pi
 from itertools import chain
 from . import mfstring
-from .extract import LIGHT_AMBIENT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY
+from .extract import (LIGHT_AMBIENT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
+                      VIEWPOINT_DESCRIPTION_PROPERTY)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -4127,6 +4128,9 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
     bpycollection.objects.link(bpyob)
     bpyob.select_set(True)
     bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
+    if description:
+        # Blender cameras have no description; keep it for the X3D 4.0 export to write back.
+        bpyob[VIEWPOINT_DESCRIPTION_PROPERTY] = description
 
 
 def importTransform(bpycollection, node, ancestry, global_matrix):
