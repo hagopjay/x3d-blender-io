@@ -1316,6 +1316,50 @@ class ShapeMetadataRoundTripTests(unittest.TestCase):
         if semantic is not None:
             self.assertTrue(semantic.valid, semantic.errors)
 
+    def _import_objects(self, shapes_xml):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_metadata_")
+        _register_extension(tmpdir)
+        import bpy
+
+        source = os.path.join(tmpdir, "metadata.x3d")
+        Path(source).write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+                                f"<X3D profile='Immersive' version='4.0'><Scene>\n{shapes_xml}</Scene></X3D>\n",
+                                encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        return tmpdir, bpy.context.scene.objects
+
+    @staticmethod
+    def _members(kept):
+        return [(member["node"], member["name"], member["value"]) for member in kept["value"]]
+
+    def test_set_that_uses_itself_is_cut_not_fatal(self):
+        # Not valid X3D: S contains itself through USE. Before the importer read metadata, such a file imported;
+        # it must still import, keep S's string member and drop only the loop.
+        import bpy
+
+        tmpdir, objects = self._import_objects(
+            "<Shape DEF='Loop'><MetadataSet DEF='S' name='loop'>"
+            "<MetadataString name='kept' value='\"yes\"'/><MetadataSet USE='S'/></MetadataSet><Box/></Shape>\n")
+        kept = objects["Loop"]["x3d_metadata"]
+        self.assertEqual((kept["node"], kept["name"]), ("MetadataSet", "loop"))
+        self.assertEqual(self._members(kept), [("MetadataString", "kept", '"yes"')])
+
+        path = os.path.join(tmpdir, "metadata_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        loop = ET.parse(path).getroot().find(".//Transform[@DEF='OB_Loop']/Shape/MetadataSet")
+        self.assertEqual([(member.tag, member.attrib) for member in loop],
+                         [("MetadataString", {"name": "kept", "value": '"yes"'})])
+
+    def test_use_has_its_own_container_field(self):
+        # NOTE is DEF'd as the set's own metadata and USEd as a member: a USE names its own containerField
+        # (default value), so the set has exactly one member.
+        _tmpdir, objects = self._import_objects(
+            "<Shape DEF='Reused'><MetadataSet containerField='metadata' name='building'>"
+            "<MetadataString DEF='NOTE' containerField='metadata' name='note' value='\"surveyed\"'/>"
+            "<MetadataString USE='NOTE'/></MetadataSet><Box/></Shape>\n")
+        self.assertEqual(self._members(objects["Reused"]["x3d_metadata"]), [("MetadataString", "note", '"surveyed"')])
+
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class ExportImportExportTests(unittest.TestCase):

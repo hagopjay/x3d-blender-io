@@ -3898,9 +3898,11 @@ geometry_importers = {
 }
 
 
-def importMetadata(node):
+def importMetadata(node, ancestors=()):
     """An X3D (XML) Metadata* node as nested dicts for a custom property: the node type, name and reference, and
-    ``value``, the field's X3D text (for MetadataSet, its members). The X3D 4.0 export writes it back."""
+    ``value``, the field's X3D text (for MetadataSet, its members). The X3D 4.0 export writes it back.
+
+    USE nodes are resolved; a set that contains itself through USE, which X3D does not allow, is cut there."""
     real = node.getRealNode()
     tree = {"node": real.getSpec()}
     for field in ("name", "reference"):
@@ -3908,10 +3910,15 @@ def importMetadata(node):
         if text is not None:
             tree[field] = text
     if tree["node"] == "MetadataSet":
-        # members use containerField value; a child marked containerField metadata describes the set itself
-        tree["value"] = [importMetadata(child) for child in real.children
-                         if child.getSpec() in METADATA_NODE_TYPES
-                         and _attribute_raw(child, "containerField", "value") != "metadata"]
+        inside = ancestors + (real,)
+        members = []
+        for child in real.children:
+            # members use containerField value; a child marked containerField metadata describes the set itself.
+            # The attribute is read from the element itself, since a USE can name a different field than its DEF.
+            container = child.x3dNode.getAttribute("containerField") or "value"
+            if child.getSpec() in METADATA_NODE_TYPES and container != "metadata" and child.getRealNode() not in inside:
+                members.append(importMetadata(child, inside))
+        tree["value"] = members
     else:
         text = _attribute_raw(real, "value", None)
         if text is not None:
@@ -4001,7 +4008,10 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             node.blendObject.visible_shadow = False
         metadata = next((child for child in node.getRealNode().children if child.getSpec() in METADATA_NODE_TYPES), None)
         if metadata is not None and getattr(metadata.getRealNode(), "x3dNode", None) is not None:
-            node.blendObject[METADATA_PROPERTY] = importMetadata(metadata)
+            try:
+                node.blendObject[METADATA_PROPERTY] = importMetadata(metadata)
+            except (TypeError, ValueError, RecursionError) as exc:  # metadata must never stop the import
+                logger.warning("Metadata of shape %r not kept: %s", vrmlname, exc)
     else:
         logger.warning('ImportX3D warning: unsupported type "%s"' % geom_spec)
 
