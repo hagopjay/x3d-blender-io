@@ -183,6 +183,9 @@ class IRLight:
     cut_off_angle: float | None = None
     location: tuple[float, float, float] = (0.0, 0.0, 0.0)
     direction: tuple[float, float, float] = (0.0, 0.0, -1.0)
+    # X3D 4.0 shadows (default FALSE); shadowIntensity (default 1) is written only when set.
+    shadows: bool = False
+    shadow_intensity: float | None = None
 
 
 @dataclass
@@ -228,6 +231,8 @@ class IRInstance:
     inline: IRInlineAsset | None = None
     # Name of an IRGaussianSplats in IRScene.splats carried by this instance.
     splats_name: str | None = None
+    # Shape castShadow (X3D 4.0, default TRUE): Blender's object shadow visibility.
+    cast_shadow: bool = True
 
     def iter_shapes(self):
         """Yield the shapes of this instance.

@@ -296,6 +296,42 @@ class EmitX3D40Tests(unittest.TestCase):
         self.assertNotIn("Material", xml_text)
         self.assertNotIn("<component", xml_text)
 
+    def test_light_shadow_and_ambient_fields(self):
+        scene = IRScene(
+            name="Lights",
+            instances=[
+                IRInstance(source_key="LIGHT:Sun", object_name="Sun", object_type="LIGHT",
+                           light=IRLight(name="Sun", light_type="DIRECTIONAL", intensity=1.067, ambient_intensity=0.12,
+                                         shadows=True, shadow_intensity=0.72)),
+                IRInstance(source_key="LIGHT:SkyFill", object_name="SkyFill", object_type="LIGHT",
+                           light=IRLight(name="SkyFill", light_type="DIRECTIONAL", intensity=0.38)),
+            ],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        xml_text = buffer.getvalue()
+        sun = re.search(r'<DirectionalLight DEF="LA_Sun"[^>]*>', xml_text).group(0)
+        self.assertIn('intensity="1.067000"', sun)
+        self.assertIn('ambientIntensity="0.120000"', sun)
+        self.assertIn('shadows="true"', sun)
+        self.assertIn('shadowIntensity="0.720000"', sun)
+        fill = re.search(r'<DirectionalLight DEF="LA_SkyFill"[^>]*>', xml_text).group(0)
+        self.assertNotIn("shadow", fill)  # shadows defaults to false, shadowIntensity to 1
+        self.assertTrue(validate_xml_text(xml_text).valid)
+
+    def test_shape_cast_shadow_false(self):
+        def instance(name, cast_shadow):
+            return IRInstance(source_key=f"MESH:{name}", object_name=name, object_type="MESH",
+                              geometry_hint="Box", cast_shadow=cast_shadow)
+
+        buffer = io.StringIO()
+        export_ir_scene(buffer, IRScene(name="Shadows", instances=[instance("Ground", False), instance("Tower", True)]))
+        xml_text = buffer.getvalue()
+        self.assertEqual(xml_text.count('<Shape castShadow="false">'), 1)
+        self.assertLess(xml_text.index('<Shape castShadow="false">'), xml_text.index('DEF="OB_Tower"'))
+        self.assertEqual(xml_text.count("<Shape>"), 1)
+        self.assertTrue(validate_xml_text(xml_text).valid)
+
     def test_geometry2d_component_declared_for_circle2d_fallback(self):
         scene = IRScene(
             name="Disc",

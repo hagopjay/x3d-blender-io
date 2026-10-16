@@ -968,6 +968,97 @@ class LightEnergyRoundTripTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class LightShadowRoundTripTests(unittest.TestCase):
+    """X3D 4.0 shadows, shadowIntensity, ambientIntensity and Shape castShadow survive import then X3D 4.0 export.
+
+    The fixture is the lighting of the earth-twin campus scene, cut down to two lights and two boxes."""
+
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<X3D version="4.0" profile="Immersive"><Scene>\n'
+        '<DirectionalLight DEF="Sun" global="true" shadows="true" shadowIntensity="0.72" direction="-0.3 -0.8 -0.5"'
+        ' intensity="1.067" ambientIntensity="0.12"/>\n'
+        '<DirectionalLight DEF="SkyFill" global="true" direction="0 -1 0" intensity="0.38"/>\n'
+        '<Transform DEF="Ground"><Shape castShadow="false"><Box size="10 0.1 10"/></Shape></Transform>\n'
+        '<Transform DEF="Tower" translation="0 2 0"><Shape><Box/></Shape></Transform>\n'
+        '</Scene></X3D>\n'
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_shadow_")
+        _register_extension(cls.tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        cls.fixture_path = os.path.join(cls.tmpdir, "shadows.x3d")
+        Path(cls.fixture_path).write_text(cls.FIXTURE, encoding="utf-8")
+
+    def _import_fixture(self):
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.fixture_path), {"FINISHED"})
+        return bpy.context.scene.objects
+
+    def _export(self, name):
+        import bpy
+
+        path = os.path.join(self.tmpdir, name)
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        return path
+
+    def test_import_maps_shadow_fields(self):
+        objects = self._import_fixture()
+        sun, fill = objects["Sun"].data, objects["SkyFill"].data
+        self.assertTrue(sun.use_shadow)
+        self.assertAlmostEqual(sun["x3d_shadow_intensity"], 0.72, places=5)
+        self.assertAlmostEqual(sun["x3d_ambient_intensity"], 0.12, places=5)
+        self.assertFalse(fill.use_shadow)  # X3D shadows defaults to FALSE
+        self.assertNotIn("x3d_shadow_intensity", fill.keys())
+        self.assertNotIn("x3d_ambient_intensity", fill.keys())
+        self.assertFalse(objects["Ground"].visible_shadow)
+        self.assertTrue(objects["Tower"].visible_shadow)
+
+    def test_x3d40_export_writes_shadow_fields_back(self):
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        self._import_fixture()
+        path = self._export("shadows_again.x3d")
+        root = ET.parse(path).getroot()
+        lights = {light.attrib["DEF"]: light.attrib for light in root.iter("DirectionalLight")}
+        sun, fill = lights["LA_Sun"], lights["LA_SkyFill"]
+        self.assertEqual(sun.get("shadows"), "true")
+        self.assertAlmostEqual(float(sun["shadowIntensity"]), 0.72, places=5)
+        self.assertAlmostEqual(float(sun["ambientIntensity"]), 0.12, places=5)
+        self.assertAlmostEqual(float(sun["intensity"]), 1.067, places=5)
+        self.assertNotIn("shadows", fill)
+        self.assertNotIn("shadowIntensity", fill)
+        self.assertEqual(float(fill["ambientIntensity"]), 0.0)
+        ground = root.find(".//Transform[@DEF='OB_Ground']/Shape")
+        tower = root.find(".//Transform[@DEF='OB_Tower']/Shape")
+        self.assertEqual(ground.get("castShadow"), "false")
+        self.assertIsNone(tower.get("castShadow"))
+        self.assertTrue(validate_xml_file(path).valid)
+        semantic = validate_with_x3d_py(path)
+        if semantic is not None:
+            self.assertTrue(semantic.valid, semantic.errors)
+
+    def test_blender_shadow_switch_exports(self):
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        for name, use_shadow in (("Shadowed", True), ("Unshadowed", False)):
+            data = bpy.data.lights.new(name, "SUN")
+            data.use_shadow = use_shadow
+            bpy.context.scene.collection.objects.link(bpy.data.objects.new(name, data))
+        root = ET.parse(self._export("blender_lights.x3d")).getroot()
+        lights = {light.attrib["DEF"]: light.attrib for light in root.iter("DirectionalLight")}
+        self.assertEqual(lights["LA_Shadowed"].get("shadows"), "true")
+        self.assertNotIn("shadows", lights["LA_Unshadowed"])
+        self.assertNotIn("shadowIntensity", lights["LA_Shadowed"])
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class ExportImportExportTests(unittest.TestCase):
     """Export, import and export again for every fixture, comparing the node inventory of the two files.
 

@@ -18,6 +18,7 @@ import mathutils
 from math import sin, cos, pi
 from itertools import chain
 from . import mfstring
+from .extract import LIGHT_AMBIENT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -3972,6 +3973,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             bpycollection, vrmlname, bpydata, geom, geom_spec,
             node, bpymat, tex_has_alpha, texmtx,
             ancestry, global_matrix, solidify, solidify_value)
+        if not node.getFieldAsBool('castShadow', True, ancestry):
+            # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
+            node.blendObject.visible_shadow = False
     else:
         logger.warning('ImportX3D warning: unsupported type "%s"' % geom_spec)
 
@@ -3990,7 +3994,6 @@ def importLamp_PointLight(node, ancestry):
     if not vrmlname:
         vrmlname = 'PointLight'
 
-    # ambientIntensity = node.getFieldAsFloat('ambientIntensity', 0.0, ancestry) # TODO
     # attenuation = node.getFieldAsFloatTuple('attenuation', (1.0, 0.0, 0.0), ancestry) # TODO
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
     intensity = node.getFieldAsFloat('intensity', 1.0, ancestry)  # max is documented to be 1.0 but some files have higher.
@@ -4013,7 +4016,6 @@ def importLamp_DirectionalLight(node, ancestry):
     if not vrmlname:
         vrmlname = 'DirectLight'
 
-    # ambientIntensity = node.getFieldAsFloat('ambientIntensity', 0.0) # TODO
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
     direction = node.getFieldAsFloatTuple('direction', (0.0, 0.0, -1.0), ancestry)
     intensity = node.getFieldAsFloat('intensity', 1.0, ancestry)  # max is documented to be 1.0 but some files have higher.
@@ -4036,7 +4038,6 @@ def importLamp_SpotLight(node, ancestry):
     if not vrmlname:
         vrmlname = 'SpotLight'
 
-    # ambientIntensity = geom.getFieldAsFloat('ambientIntensity', 0.0, ancestry) # TODO
     # attenuation = geom.getFieldAsFloatTuple('attenuation', (1.0, 0.0, 0.0), ancestry) # TODO
     beamWidth = node.getFieldAsFloat('beamWidth', 1.570796, ancestry)  # max is documented to be 1.0 but some files have higher.
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
@@ -4068,6 +4069,21 @@ def importLamp_SpotLight(node, ancestry):
     return bpylamp, mtx
 
 
+def importLamp_SharedFields(bpylamp, node, ancestry):
+    """X3DLightNode fields common to every light type.
+
+    X3D 4.0 ``shadows`` maps to the light's shadow switch; its X3D default is FALSE, so a light that
+    does not ask for shadows gets none. ambientIntensity and shadowIntensity have no Blender setting:
+    when the file sets them they are kept as custom properties for the X3D 4.0 export to write back.
+    """
+    bpylamp.use_shadow = node.getFieldAsBool('shadows', False, ancestry)
+    for field, prop in (('ambientIntensity', LIGHT_AMBIENT_INTENSITY_PROPERTY),
+                        ('shadowIntensity', LIGHT_SHADOW_INTENSITY_PROPERTY)):
+        value = node.getFieldAsFloat(field, None, ancestry)
+        if value is not None:
+            bpylamp[prop] = value
+
+
 def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     if spec == 'PointLight':
         bpylamp, mtx = importLamp_PointLight(node, ancestry)
@@ -4078,6 +4094,7 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     else:
         logger.warning("Error, not a lamp")
         raise ValueError
+    importLamp_SharedFields(bpylamp, node, ancestry)
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(bpylamp.name, bpylamp)
     bpycollection.objects.link(bpyob)

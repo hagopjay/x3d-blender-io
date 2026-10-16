@@ -37,6 +37,9 @@ SPLAT_OPACITY_ATTR = "splat_opacity"
 SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
 INLINE_URL_PROPERTY = "x3d_inline_url"
 INLINE_SOURCE_PROPERTY = "x3d_inline_source"
+# X3D light fields with no Blender setting, kept on the light data by the importer.
+LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
+LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
 
 
 def is_splat_mesh(obj) -> bool:
@@ -472,11 +475,21 @@ def _direction_neg_z(matrix):
     return (float(vector[0]), float(vector[1]), float(vector[2]))
 
 
+def _unit_interval(value, default):
+    """A custom-property number clamped to [0, 1], or ``default`` when it is unset or not a number."""
+    try:
+        return max(0.0, min(1.0, float(value)))
+    except (TypeError, ValueError):
+        return default
+
+
 def _extract_light(obj, local_matrix) -> IRLight:
     """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
 
     Intensity is not capped at 1: the X3D 4.0 schema gives light intensity no upper limit. The legacy
     X3D 3.x writer keeps its clamp because the 3.x schemas limit intensity to [0, 1].
+    ``shadows`` follows the light's shadow switch; ambientIntensity and shadowIntensity have no Blender
+    setting and come from the custom properties the importer leaves on the light data.
     """
     data = obj.data
     light_type = {"POINT": "POINT", "SPOT": "SPOT", "SUN": "DIRECTIONAL"}.get(data.type, "DIRECTIONAL")
@@ -486,8 +499,11 @@ def _extract_light(obj, local_matrix) -> IRLight:
         light_type=light_type,
         color=tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3]),
         intensity=energy / 1.75 if data.type != "SUN" else energy,
+        ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
         direction=_direction_neg_z(local_matrix),
+        shadows=bool(getattr(data, "use_shadow", False)),
+        shadow_intensity=_unit_interval(data.get(LIGHT_SHADOW_INTENSITY_PROPERTY), None),
     )
     cutoff = float(getattr(data, "cutoff_distance", 0.0) or 0.0)
     if light_type == "POINT":
@@ -772,6 +788,7 @@ def extract_scene(
             source_key, shapes = mesh_shapes(obj)
             instance.source_key = source_key
             instance.shapes = shapes
+            instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
             if shapes:
                 instance.geometry_name = shapes[0].geometry_name
                 instance.material_name = shapes[0].material_name

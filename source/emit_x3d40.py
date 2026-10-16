@@ -284,6 +284,10 @@ def _light_xml(light, defs: _DefNames, indent):
         # geometry. Blender lights illuminate the whole scene, so say so explicitly for every light type.
         'global="true"',
     ]
+    if light.shadows:
+        attrs.append('shadows="true"')
+    if light.shadow_intensity is not None:
+        attrs.append(f'shadowIntensity="{_fmt(light.shadow_intensity)}"')
     if light.light_type == "DIRECTIONAL":
         attrs.append(f'direction="{_fmt3(light.direction)}"')
         return f"{indent}<DirectionalLight {' '.join(attrs)} />\n"
@@ -326,8 +330,9 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         f'rotation="{_fmt4((rx, ry, rz, ra))}" '
         f'scale="{_fmt3((sx, sy, sz))}">\n'
     ]
+    shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
     for shape in instance.iter_shapes():
-        xml.append(f"{indent}  <Shape>\n")
+        xml.append(f"{indent}  <Shape{shape_attrs}>\n")
         material = materials.get(shape.material_name) if shape.material_name else None
         if material is not None:
             xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir))
