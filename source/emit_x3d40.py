@@ -13,15 +13,16 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import struct
 from itertools import chain
 from xml.sax.saxutils import escape, quoteattr
 
 try:
-    from .ir import IRScene
+    from .ir import IRMetadata, IRScene
     from .splat_io import sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRScene
+    from ir import IRMetadata, IRScene
     from splat_io import sh0_to_rgb
 
 
@@ -284,6 +285,10 @@ def _light_xml(light, defs: _DefNames, indent):
         # geometry. Blender lights illuminate the whole scene, so say so explicitly for every light type.
         'global="true"',
     ]
+    if light.shadows:
+        attrs.append('shadows="true"')
+    if light.shadow_intensity is not None:
+        attrs.append(f'shadowIntensity="{_fmt(light.shadow_intensity)}"')
     if light.light_type == "DIRECTIONAL":
         attrs.append(f'direction="{_fmt3(light.direction)}"')
         return f"{indent}<DirectionalLight {' '.join(attrs)} />\n"
@@ -312,6 +317,57 @@ def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
     return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
 
 
+# Upper limits of Background skyAngle and groundAngle in the X3D 4.0 schema and object model: pi and pi/2, rounded up.
+_SKY_ANGLE_MAX = 3.1416
+_GROUND_ANGLE_MAX = 1.5708
+
+
+def _background_xml(background, indent):
+    """A Background with its sky and ground gradients. Colours are clipped to [0, 1] and angles to the ranges the
+    X3D 4.0 schema gives; each angle list is cut to one less than its colours, and the colours to one more than
+    the angles."""
+
+    def clip(values, top):
+        return [min(max(float(value), 0.0), top) for value in values]
+
+    sky_color = [tuple(clip(color, 1.0)) for color in background.sky_color] or [(0.0, 0.0, 0.0)]
+    sky_angle = clip(background.sky_angle, _SKY_ANGLE_MAX)[:len(sky_color) - 1]
+    sky_color = sky_color[:len(sky_angle) + 1]
+    ground_color = [tuple(clip(color, 1.0)) for color in background.ground_color]
+    ground_angle = clip(background.ground_angle, _GROUND_ANGLE_MAX)[:max(len(ground_color) - 1, 0)]
+    ground_color = ground_color[:len(ground_angle) + 1]
+    attrs = []
+    if sky_angle:
+        attrs.append(f'skyAngle="{" ".join(_fmt(angle) for angle in sky_angle)}"')
+    attrs.append(f'skyColor="{" ".join(_fmt3(color) for color in sky_color)}"')
+    if ground_angle:
+        attrs.append(f'groundAngle="{" ".join(_fmt(angle) for angle in ground_angle)}"')
+    if ground_color:
+        attrs.append(f'groundColor="{" ".join(_fmt3(color) for color in ground_color)}"')
+    transparency = clip([background.transparency], 1.0)[0]
+    if transparency:
+        attrs.append(f'transparency="{_fmt(transparency)}"')
+    return f"{indent}<Background {' '.join(attrs)} />\n"
+
+
+def _metadata_xml(node, indent, container_field=None):
+    """A Metadata* node. Inside a MetadataSet the X3D 4.0 default containerField, value, applies; a node's own
+    metadata field needs containerField="metadata"."""
+    attrs = [f'containerField="{container_field}"'] if container_field else []
+    if node.name is not None:
+        attrs.append(f"name={quoteattr(node.name)}")
+    if node.reference is not None:
+        attrs.append(f"reference={quoteattr(node.reference)}")
+    if node.node_type != "MetadataSet":
+        if node.value is not None:
+            attrs.append(f"value={quoteattr(node.value)}")
+        return f"{indent}<{node.node_type} {' '.join(attrs)} />\n"
+    if not node.members:
+        return f"{indent}<MetadataSet {' '.join(attrs)} />\n"
+    members = "".join(_metadata_xml(member, indent + "  ") for member in node.members)
+    return f"{indent}<MetadataSet {' '.join(attrs)}>\n{members}{indent}</MetadataSet>\n"
+
+
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
                   splats=None, version="4.0"):
     humanoids = humanoids or {}
@@ -326,8 +382,11 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         f'rotation="{_fmt4((rx, ry, rz, ra))}" '
         f'scale="{_fmt3((sx, sy, sz))}">\n'
     ]
-    for shape in instance.iter_shapes():
-        xml.append(f"{indent}  <Shape>\n")
+    shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
+    for index, shape in enumerate(instance.iter_shapes()):
+        xml.append(f"{indent}  <Shape{shape_attrs}>\n")
+        if index == 0 and instance.metadata is not None:
+            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata"))
         material = materials.get(shape.material_name) if shape.material_name else None
         if material is not None:
             xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir))
@@ -544,6 +603,57 @@ def _meta(name, content):
     return f"    <meta name={quoteattr(name)} content={quoteattr(str(content))} />\n"
 
 
+# Head meta the export dialog can set, in the order they are written; all but reference take one value.
+_DIALOG_META = ("title", "creator", "description", "keywords", "reference", "license")
+_SINGLE_VALUED_META = frozenset(_DIALOG_META) - {"reference"}
+
+
+def _tool_name(generator: str) -> str:
+    """A generator string without its trailing version number, so two versions of one tool compare equal."""
+    return re.sub(r"\s+v?\d[\w.+-]*$", "", generator.strip())
+
+
+def head_meta(metadata: IRMetadata, generator: str, diagnostics=()) -> list[tuple[str, str]]:
+    """The (name, content) pairs of the head's meta statements, in the order they are written.
+
+    The generator and filename describe this export and come first. Meta read from an imported file follows in
+    file order, repeated names included. A value set in the export dialog replaces the imported meta of that
+    name, except reference, which is added to the imported ones. When the imported file was written by this
+    exporter, its own generator, its ``info`` diagnostics and the licence "NONE" older versions wrote are left
+    out: this export writes its own. A pair that repeats an earlier one exactly is written once.
+    """
+    own_tool = _tool_name(generator)
+
+    def by_this_exporter(name, content):
+        return name in ("generator", "translator") and _tool_name(content) == own_tool
+
+    imported = list(metadata.entries)
+    from_this_exporter = any(by_this_exporter(name, content) for name, content in imported)
+    dialog = {name: getattr(metadata, name) for name in _DIALOG_META if getattr(metadata, name, None)}
+    pairs = [("generator", generator)]
+    if metadata.filename:
+        pairs.append(("filename", metadata.filename))
+    replaced = set()
+    for name, content in imported:
+        if name == "filename" or by_this_exporter(name, content):
+            continue
+        if from_this_exporter and (name == "info" or (name == "license" and content == "NONE")):
+            continue
+        if name in _SINGLE_VALUED_META and name in dialog:
+            if name not in replaced:
+                pairs.append((name, dialog[name]))
+                replaced.add(name)
+            continue
+        pairs.append((name, content))
+    pairs.extend((name, dialog[name]) for name in _DIALOG_META if name in dialog and name not in replaced)
+    pairs.extend(("info", message) for message in diagnostics)
+    unique = []
+    for pair in pairs:
+        if pair not in unique:
+            unique.append(pair)
+    return unique
+
+
 def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     """(name, level) of every component statement the Immersive header needs, sorted by name.
 
@@ -602,14 +712,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     write("  <head>\n")
     for name, level in _components(ir_scene, version):
         write(f'    <component name="{name}" level="{level}" />\n')
-    write(_meta("generator", generator))
-    metadata = ir_scene.metadata
-    for name in ("filename", "title", "creator", "description", "keywords", "reference", "license"):
-        value = getattr(metadata, name, None)
-        if value:
-            write(_meta(name, value))
-    for message in diagnostics:
-        write(_meta("info", message))
+    for name, content in head_meta(ir_scene.metadata, generator, diagnostics):
+        write(_meta(name, content))
     write("  </head>\n")
     write("  <Scene>\n")
 
@@ -621,7 +725,9 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         f'    <NavigationInfo headlight="{"false" if has_lights else "true"}" '
         "type='\"EXAMINE\" \"ANY\"' />\n"
     )
-    if ir_scene.background_color is not None:
+    if ir_scene.background is not None:
+        write(_background_xml(ir_scene.background, "    "))
+    elif ir_scene.background_color is not None:
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     splats = ir_scene.splats_by_name()

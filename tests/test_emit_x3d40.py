@@ -8,6 +8,7 @@ import io
 import re
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -15,10 +16,10 @@ SOURCE_DIR = Path(__file__).resolve().parents[1] / "source"
 if str(SOURCE_DIR) not in sys.path:
     sys.path.insert(0, str(SOURCE_DIR))
 
-from emit_x3d40 import export_ir_scene
+from emit_x3d40 import export_ir_scene, head_meta
 from ir import (
-    IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRPBRMaterial, IRScene, IRShape,
-    IRTextureRef, IRTextureTransform, IRTransform,
+    IRBackground, IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode,
+    IRPBRMaterial, IRScene, IRShape, IRTextureRef, IRTextureTransform, IRTransform,
 )
 from validate import validate_xml_text
 
@@ -296,6 +297,102 @@ class EmitX3D40Tests(unittest.TestCase):
         self.assertNotIn("Material", xml_text)
         self.assertNotIn("<component", xml_text)
 
+    def test_light_shadow_and_ambient_fields(self):
+        scene = IRScene(
+            name="Lights",
+            instances=[
+                IRInstance(source_key="LIGHT:Sun", object_name="Sun", object_type="LIGHT",
+                           light=IRLight(name="Sun", light_type="DIRECTIONAL", intensity=1.067, ambient_intensity=0.12,
+                                         shadows=True, shadow_intensity=0.72)),
+                IRInstance(source_key="LIGHT:SkyFill", object_name="SkyFill", object_type="LIGHT",
+                           light=IRLight(name="SkyFill", light_type="DIRECTIONAL", intensity=0.38)),
+            ],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        xml_text = buffer.getvalue()
+        sun = re.search(r'<DirectionalLight DEF="LA_Sun"[^>]*>', xml_text).group(0)
+        self.assertIn('intensity="1.067000"', sun)
+        self.assertIn('ambientIntensity="0.120000"', sun)
+        self.assertIn('shadows="true"', sun)
+        self.assertIn('shadowIntensity="0.720000"', sun)
+        fill = re.search(r'<DirectionalLight DEF="LA_SkyFill"[^>]*>', xml_text).group(0)
+        self.assertNotIn("shadow", fill)  # shadows defaults to false, shadowIntensity to 1
+        self.assertTrue(validate_xml_text(xml_text).valid)
+
+    def test_shape_cast_shadow_false(self):
+        def instance(name, cast_shadow):
+            return IRInstance(source_key=f"MESH:{name}", object_name=name, object_type="MESH",
+                              geometry_hint="Box", cast_shadow=cast_shadow)
+
+        buffer = io.StringIO()
+        export_ir_scene(buffer, IRScene(name="Shadows", instances=[instance("Ground", False), instance("Tower", True)]))
+        xml_text = buffer.getvalue()
+        self.assertEqual(xml_text.count('<Shape castShadow="false">'), 1)
+        self.assertLess(xml_text.index('<Shape castShadow="false">'), xml_text.index('DEF="OB_Tower"'))
+        self.assertEqual(xml_text.count("<Shape>"), 1)
+        self.assertTrue(validate_xml_text(xml_text).valid)
+
+    def test_shape_metadata_written_in_first_shape(self):
+        lidar = IRMetadataNode("MetadataSet", name="lidar", reference="USGS 3DEP 2017", members=[
+            IRMetadataNode("MetadataDouble", name="footprintArea_m2", value="83.8"),
+            IRMetadataNode("MetadataInteger", name="roofIntensityMedian", value="19152"),
+            IRMetadataNode("MetadataString", name="note", value='"roof & walls" "flat"'),
+            IRMetadataNode("MetadataSet", name="empty"),
+        ])
+        building = IRInstance(source_key="MESH:B0000", object_name="B0000", object_type="MESH", metadata=lidar,
+                              shapes=[IRShape(geometry_hint="Box"), IRShape(geometry_hint="Cone")])
+        buffer = io.StringIO()
+        export_ir_scene(buffer, IRScene(name="Metadata", instances=[building]))
+        xml_text = buffer.getvalue()
+        self.assertTrue(validate_xml_text(xml_text).valid)
+        shapes = ET.fromstring(xml_text).findall(".//Transform[@DEF='OB_B0000']/Shape")
+        self.assertEqual(len(shapes), 2)
+        self.assertIsNone(shapes[1].find("MetadataSet"))
+        written = shapes[0][0]  # the metadata field comes before appearance and geometry
+        self.assertEqual((written.tag, written.attrib), ("MetadataSet", {
+            "containerField": "metadata", "name": "lidar", "reference": "USGS 3DEP 2017"}))
+        self.assertEqual([(member.tag, member.attrib) for member in written], [
+            ("MetadataDouble", {"name": "footprintArea_m2", "value": "83.8"}),
+            ("MetadataInteger", {"name": "roofIntensityMedian", "value": "19152"}),
+            ("MetadataString", {"name": "note", "value": '"roof & walls" "flat"'}),
+            ("MetadataSet", {"name": "empty"}),
+        ])
+
+    def _background(self, scene):
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene)
+        xml_text = buffer.getvalue()
+        self.assertTrue(validate_xml_text(xml_text).valid)
+        backgrounds = ET.fromstring(xml_text).findall("Scene/Background")
+        self.assertEqual(len(backgrounds), 1)
+        return {name: [round(float(value), 6) for value in text.split()] for name, text in backgrounds[0].attrib.items()}
+
+    def test_background_gradient(self):
+        # the earth-twin campus sky: five angles, six colours, one ground angle
+        sky = [(0.16, 0.33, 0.62), (0.25, 0.45, 0.75), (0.42, 0.6, 0.85), (0.62, 0.74, 0.9), (0.78, 0.83, 0.9),
+               (0.8, 0.84, 0.88)]
+        background = IRBackground(sky_color=sky, sky_angle=[0.5, 1.0, 1.35, 1.52, 1.5708],
+                                  ground_color=[(0.22, 0.24, 0.2), (0.3, 0.31, 0.27)], ground_angle=[1.5708])
+        written = self._background(IRScene(name="Sky", background=background, background_color=(1.0, 0.0, 0.0)))
+        self.assertEqual(written, {
+            "skyAngle": [0.5, 1.0, 1.35, 1.52, 1.5708],
+            "skyColor": [channel for color in sky for channel in color],
+            "groundAngle": [1.5708],
+            "groundColor": [0.22, 0.24, 0.2, 0.3, 0.31, 0.27],
+        })
+
+    def test_background_fitted_to_schema_ranges(self):
+        background = IRBackground(sky_color=[(1.5, -0.1, 0.5), (0.2, 0.2, 0.2)], sky_angle=[4.0, 5.0],
+                                  ground_color=[(0.1, 0.1, 0.1)], ground_angle=[0.3], transparency=1.5)
+        written = self._background(IRScene(name="Sky", background=background))
+        self.assertEqual(written, {"skyAngle": [3.1416], "skyColor": [1.0, 0.0, 0.5, 0.2, 0.2, 0.2],
+                                   "groundColor": [0.1, 0.1, 0.1], "transparency": [1.0]})
+
+    def test_world_colour_background_without_imported_one(self):
+        self.assertEqual(self._background(IRScene(name="Sky", background_color=(0.04, 0.02, 0.08))),
+                         {"skyColor": [0.04, 0.02, 0.08]})
+
     def test_geometry2d_component_declared_for_circle2d_fallback(self):
         scene = IRScene(
             name="Disc",
@@ -412,6 +509,68 @@ class EmitSplatsAndInlineTests(unittest.TestCase):
     def test_unknown_version_rejected(self):
         with self.assertRaises(ValueError):
             export_ir_scene(io.StringIO(), IRScene(name="x"), version="3.3")
+
+
+class HeadMetaTests(unittest.TestCase):
+    """Head meta read from an imported file is written back, with the export's own generator and filename."""
+
+    GENERATOR = "X3D Blender I/O v2.6.1"
+    COPERNICUS = ("Ground and valley colour: Contains modified Copernicus Sentinel data 2026 "
+                  "(scene S2B_17SNB_20261007, 7 Oct 2026, 0.05 percent cloud).")
+    # the head of the earth-twin campus scene, cut short
+    CAMPUS = [
+        ("title", "Blacksburg campus, local frame"),
+        ("creator", "x3d.io Earth twin build (open data pipeline)"),
+        ("created", "2026-10-16T01:01Z"),
+        ("reference", "Terrain, buildings and trees: USGS 3DEP lidar (public domain)."),
+        ("reference", COPERNICUS),
+        ("license", "Data: public domain (USGS) and free and open (Copernicus Sentinel-2, attribution required)."),
+        ("generator", "earth-twin/src/build_x3d.py"),
+    ]
+
+    def test_imported_meta_kept_in_order_with_repeated_names(self):
+        metadata = IRMetadata(filename="campus.x3d", entries=list(self.CAMPUS))
+        self.assertEqual(head_meta(metadata, self.GENERATOR),
+                         [("generator", self.GENERATOR), ("filename", "campus.x3d")] + self.CAMPUS)
+
+    def test_dialog_values_replace_single_valued_meta_and_add_references(self):
+        metadata = IRMetadata(filename="campus.x3d", entries=list(self.CAMPUS), title="Campus",
+                              reference="Re-exported from Blender", license="CC_BY_4.0")
+        pairs = head_meta(metadata, self.GENERATOR)
+        self.assertEqual([content for name, content in pairs if name == "title"], ["Campus"])
+        self.assertEqual([content for name, content in pairs if name == "license"], ["CC_BY_4.0"])
+        self.assertEqual([content for name, content in pairs if name == "reference"],
+                         [self.CAMPUS[3][1], self.COPERNICUS, "Re-exported from Blender"])
+        self.assertEqual(pairs[2], ("title", "Campus"))  # in the imported title's place
+
+    def test_no_licence_without_dialog_or_imported_one(self):
+        pairs = head_meta(IRMetadata(filename="cube.x3d", creator="Me"), self.GENERATOR, ["a diagnostic"])
+        self.assertEqual(pairs, [("generator", self.GENERATOR), ("filename", "cube.x3d"), ("creator", "Me"),
+                                 ("info", "a diagnostic")])
+
+    def test_own_export_meta_is_regenerated_not_carried_over(self):
+        imported = [("generator", "X3D Blender I/O v2.5.0"), ("filename", "old.x3d"), ("title", "Campus"),
+                    ("license", "NONE"), ("info", "1 Gaussian splat object(s) written as PointSet"),
+                    ("translator", "X3D Blender I/O v2.5.0"), ("generator", "Blender 4.5.14 LTS")]
+        pairs = head_meta(IRMetadata(filename="new.x3d", entries=imported), self.GENERATOR, ["now"])
+        self.assertEqual(pairs, [("generator", self.GENERATOR), ("filename", "new.x3d"), ("title", "Campus"),
+                                 ("generator", "Blender 4.5.14 LTS"), ("info", "now")])
+
+    def test_third_party_info_and_exact_repeats(self):
+        imported = [("info", "kept"), ("reference", "R"), ("reference", "R")]
+        pairs = head_meta(IRMetadata(entries=imported, reference="R"), self.GENERATOR)
+        self.assertEqual(pairs, [("generator", self.GENERATOR), ("info", "kept"), ("reference", "R")])
+
+    def test_written_head_validates(self):
+        metadata = IRMetadata(filename="campus.x3d", entries=list(self.CAMPUS) + [("description", 'A "quoted" <b> & more')])
+        buffer = io.StringIO()
+        export_ir_scene(buffer, IRScene(name="Campus", metadata=metadata), generator=self.GENERATOR)
+        xml_text = buffer.getvalue()
+        head = re.search(r"<head>.*</head>", xml_text, re.S).group(0)
+        self.assertEqual(head.count('<meta name="reference"'), 2)
+        self.assertIn("Contains modified Copernicus Sentinel data 2026", head)
+        self.assertNotIn('content="NONE"', head)
+        self.assertTrue(validate_xml_text(xml_text).valid)
 
 
 if __name__ == "__main__":

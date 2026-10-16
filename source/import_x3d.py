@@ -18,6 +18,9 @@ import mathutils
 from math import sin, cos, pi
 from itertools import chain
 from . import mfstring
+from .extract import (BACKGROUND_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
+                      LIGHT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY, METADATA_NODE_TYPES,
+                      METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -3895,6 +3898,34 @@ geometry_importers = {
 }
 
 
+def importMetadata(node, ancestors=()):
+    """An X3D (XML) Metadata* node as nested dicts for a custom property: the node type, name and reference, and
+    ``value``, the field's X3D text (for MetadataSet, its members). The X3D 4.0 export writes it back.
+
+    USE nodes are resolved; a set that contains itself through USE, which X3D does not allow, is cut there."""
+    real = node.getRealNode()
+    tree = {"node": real.getSpec()}
+    for field in ("name", "reference"):
+        text = _attribute_raw(real, field, None)
+        if text is not None:
+            tree[field] = text
+    if tree["node"] == "MetadataSet":
+        inside = ancestors + (real,)
+        members = []
+        for child in real.children:
+            # members use containerField value; a child marked containerField metadata describes the set itself.
+            # The attribute is read from the element itself, since a USE can name a different field than its DEF.
+            container = child.x3dNode.getAttribute("containerField") or "value"
+            if child.getSpec() in METADATA_NODE_TYPES and container != "metadata" and child.getRealNode() not in inside:
+                members.append(importMetadata(child, inside))
+        tree["value"] = members
+    else:
+        text = _attribute_raw(real, "value", None)
+        if text is not None:
+            tree["value"] = text
+    return tree
+
+
 def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify_value):
     # Under Shape, we can only have Appearance, MetadataXXX and a geometry node
     def isGeometry(spec):
@@ -3972,6 +4003,15 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             bpycollection, vrmlname, bpydata, geom, geom_spec,
             node, bpymat, tex_has_alpha, texmtx,
             ancestry, global_matrix, solidify, solidify_value)
+        if not node.getFieldAsBool('castShadow', True, ancestry):
+            # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
+            node.blendObject.visible_shadow = False
+        metadata = next((child for child in node.getRealNode().children if child.getSpec() in METADATA_NODE_TYPES), None)
+        if metadata is not None and getattr(metadata.getRealNode(), "x3dNode", None) is not None:
+            try:
+                node.blendObject[METADATA_PROPERTY] = importMetadata(metadata)
+            except (TypeError, ValueError, RecursionError) as exc:  # metadata must never stop the import
+                logger.warning("Metadata of shape %r not kept: %s", vrmlname, exc)
     else:
         logger.warning('ImportX3D warning: unsupported type "%s"' % geom_spec)
 
@@ -3979,8 +4019,10 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 # -----------------------------------------------------------------------------------
 # Lighting
 
-# The exporters write point and spot lights as min(energy / 1.75, 1.0), so import undoes the
-# division. Energies above 1.75 were clamped to intensity 1.0 on export and cannot be recovered.
+# The exporters write point and spot lights as energy / 1.75, so import undoes the division.
+# They also clamp intensity to 1.0: the X3D 3.x writer always (the 3.x schema range), the X3D 4.0
+# writer for lights made in Blender. Lights imported from X3D keep their intensity above 1 on the
+# 4.0 path (see importLamp_SharedFields); energies above 1.75 clamped on the 3.x path are lost.
 LIGHT_ENERGY_PER_INTENSITY = 1.75
 
 
@@ -3989,7 +4031,6 @@ def importLamp_PointLight(node, ancestry):
     if not vrmlname:
         vrmlname = 'PointLight'
 
-    # ambientIntensity = node.getFieldAsFloat('ambientIntensity', 0.0, ancestry) # TODO
     # attenuation = node.getFieldAsFloatTuple('attenuation', (1.0, 0.0, 0.0), ancestry) # TODO
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
     intensity = node.getFieldAsFloat('intensity', 1.0, ancestry)  # max is documented to be 1.0 but some files have higher.
@@ -4012,14 +4053,13 @@ def importLamp_DirectionalLight(node, ancestry):
     if not vrmlname:
         vrmlname = 'DirectLight'
 
-    # ambientIntensity = node.getFieldAsFloat('ambientIntensity', 0.0) # TODO
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
     direction = node.getFieldAsFloatTuple('direction', (0.0, 0.0, -1.0), ancestry)
     intensity = node.getFieldAsFloat('intensity', 1.0, ancestry)  # max is documented to be 1.0 but some files have higher.
     # is_on = node.getFieldAsBool('on', True, ancestry) # TODO
 
     bpylamp = bpy.data.lights.new(vrmlname, 'SUN')
-    bpylamp.energy = intensity  # sun strength is exported 1:1 (clamped to 1.0), see extract.py
+    bpylamp.energy = intensity  # sun strength is exported 1:1, see extract.py
     bpylamp.color = color
 
     # lamps have their direction as -z, yup
@@ -4035,7 +4075,6 @@ def importLamp_SpotLight(node, ancestry):
     if not vrmlname:
         vrmlname = 'SpotLight'
 
-    # ambientIntensity = geom.getFieldAsFloat('ambientIntensity', 0.0, ancestry) # TODO
     # attenuation = geom.getFieldAsFloatTuple('attenuation', (1.0, 0.0, 0.0), ancestry) # TODO
     beamWidth = node.getFieldAsFloat('beamWidth', 1.570796, ancestry)  # max is documented to be 1.0 but some files have higher.
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
@@ -4067,6 +4106,24 @@ def importLamp_SpotLight(node, ancestry):
     return bpylamp, mtx
 
 
+def importLamp_SharedFields(bpylamp, node, ancestry):
+    """X3DLightNode fields common to every light type.
+
+    X3D 4.0 ``shadows`` maps to the light's shadow switch; its X3D default is FALSE, so a light that
+    does not ask for shadows gets none. ambientIntensity and shadowIntensity have no Blender setting:
+    when the file sets them they are kept as custom properties for the X3D 4.0 export to write back.
+    The file's intensity is kept too; it tells the X3D 4.0 export that the light came from X3D, so its
+    intensity is written as is, also above 1, instead of being capped like a light made in Blender.
+    """
+    bpylamp.use_shadow = node.getFieldAsBool('shadows', False, ancestry)
+    bpylamp[LIGHT_INTENSITY_PROPERTY] = node.getFieldAsFloat('intensity', 1.0, ancestry)
+    for field, prop in (('ambientIntensity', LIGHT_AMBIENT_INTENSITY_PROPERTY),
+                        ('shadowIntensity', LIGHT_SHADOW_INTENSITY_PROPERTY)):
+        value = node.getFieldAsFloat(field, None, ancestry)
+        if value is not None:
+            bpylamp[prop] = value
+
+
 def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     if spec == 'PointLight':
         bpylamp, mtx = importLamp_PointLight(node, ancestry)
@@ -4077,6 +4134,7 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     else:
         logger.warning("Error, not a lamp")
         raise ValueError
+    importLamp_SharedFields(bpylamp, node, ancestry)
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(bpylamp.name, bpylamp)
     bpycollection.objects.link(bpyob)
@@ -4109,6 +4167,27 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
     bpycollection.objects.link(bpyob)
     bpyob.select_set(True)
     bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
+    if description:
+        # Blender cameras have no description; keep it for the X3D 4.0 export to write back.
+        bpyob[VIEWPOINT_DESCRIPTION_PROPERTY] = description
+
+
+def importBackground(bpyscene, node, ancestry):
+    """Keep a Background's sky and ground gradients on the scene for the X3D 4.0 export to write back.
+
+    Blender has no gradient backdrop, and its world colour also lights a render, which an X3D Background
+    does not, so the world is left as it is. The export writes this Background in place of one made from
+    the world colour; deleting the scene's x3d_background property brings that back.
+    """
+    background = {"skyColor": [0.0, 0.0, 0.0]}  # the X3D default sky is black
+    for field in ("skyColor", "skyAngle", "groundColor", "groundAngle"):
+        values = node.getFieldAsArray(field, 0, ancestry)
+        if values:
+            background[field] = [float(value) for value in values]
+    transparency = node.getFieldAsFloat('transparency', None, ancestry)
+    if transparency is not None:
+        background["transparency"] = transparency
+    bpyscene[BACKGROUND_PROPERTY] = background
 
 
 def importTransform(bpycollection, node, ancestry, global_matrix):
@@ -5135,6 +5214,31 @@ ROUTE champFly001.bindTime TO vpTs.set_startTime
                 translateTimeSensor(time_node, action, ancestry)
 
 
+def importHeadMeta(bpyscene, root_node):
+    """Keep the <head> meta statements of an X3D (XML) file on the scene, for the X3D 4.0 export to write back.
+
+    Every name/content pair is kept in file order, repeated names (several reference entries, say) included;
+    which of them the export carries over is decided there. Pairs already on the scene from an earlier import
+    stay, and an exact repeat is stored once.
+    """
+    x3d_element = getattr(root_node, "x3dNode", None)
+    if x3d_element is None:  # classic VRML encoding
+        return
+    entries = scene_head_meta(bpyscene)
+    count = len(entries)
+    for head in x3d_element.childNodes:
+        if head.nodeType != head.ELEMENT_NODE or head.tagName != "head":
+            continue
+        for meta in head.childNodes:
+            if meta.nodeType != meta.ELEMENT_NODE or meta.tagName != "meta" or not meta.hasAttribute("content"):
+                continue
+            pair = (meta.getAttribute("name"), meta.getAttribute("content"))
+            if pair[0] and pair not in entries:
+                entries.append(pair)
+    if len(entries) > count:
+        bpyscene[HEAD_META_PROPERTY] = [{"name": name, "content": content} for name, content in entries]
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -5184,12 +5288,16 @@ def load_web3d(
     if not root_node:
         logger.warning(msg)
         return
+    if not _INLINE_STACK:  # the head of an inlined file describes that file, not the scene
+        importHeadMeta(bpyscene, root_node)
 
     if global_matrix is None:
         global_matrix = Matrix()
 
     # fill with tuples - (node, [parents-parent, parent])
     all_nodes = root_node.getSerialized([], [])
+    # the first Background of the file is the one a browser shows; an inlined file's does not count
+    background_seen = bool(_INLINE_STACK)
 
     for node, ancestry in all_nodes:
         # if 'castle.wrl' not in node.getFilename():
@@ -5229,6 +5337,9 @@ def load_web3d(
             # Only use transform nodes when we are not importing a flat object hierarchy
             if not PREF_FLAT:
                 importTransform(bpycollection, node, ancestry, global_matrix)
+        elif spec == 'Background' and not background_seen:
+            importBackground(bpyscene, node, ancestry)
+            background_seen = True
         elif spec == 'Sound':
             importAudio(bpycollection, node, ancestry, global_matrix)
             '''

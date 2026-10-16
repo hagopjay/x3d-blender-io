@@ -53,6 +53,26 @@ viewport. `source/splat_io.py` reads and writes the reference 3DGS PLY layout an
 draft node mirrors. The draft text does not state the order; X_ITE 16.4.3 reads `x y z w`, and the same data written
 `w x y z` renders as streaks. Blender 5.3's native splat objects are not read yet (that API is still in alpha).
 
+### X3D fields kept as custom properties
+
+Some X3D fields have no Blender setting. The importer keeps them as custom properties, and the X3D 4.0 and 4.1 export
+writes them back, so an imported scene keeps them through export (the X3D 3.3 writer does not use them):
+
+| Property | On | Holds | Written back as |
+|---|---|---|---|
+| `x3d_head_meta` | scene | every `<head>` `meta` name/content pair of the imported file, in order, repeated names such as two `reference` entries included | `meta` after the export's own `generator` and `filename`; a title, creator, description, keywords or licence set in the export dialog replaces the imported one, a dialog reference is added to the imported ones |
+| `x3d_background` | scene | the first Background's `skyColor`, `skyAngle`, `groundColor`, `groundAngle` and `transparency` | that Background, in place of one made from the world colour (delete the property to get the world colour back) |
+| `x3d_metadata` | object | the Shape's `Metadata*` node: nested `node`, `name`, `reference` and `value` (the field's X3D text, or the member list of a MetadataSet) | the `metadata` field of the object's first Shape |
+| `x3d_viewpoint_description` | camera object | the Viewpoint `description` | `description` (the camera name when there is none) |
+| `x3d_ambient_intensity`, `x3d_shadow_intensity` | light data | the light's `ambientIntensity` and `shadowIntensity` | the same fields |
+| `x3d_intensity` | light data | the light's `intensity` in the file; it marks the light as imported | nothing by itself: the light's energy is written as `intensity` without the cap at 1 that lights made in Blender get |
+
+Two fields map onto Blender settings instead: a light's `shadows` (X3D default `false`) is its *Cast Shadow* switch, and a
+Shape's `castShadow` is the object's shadow visibility. A light imported from X3D keeps an `intensity` above 1 on the
+X3D 4.0 path, whose schema sets no upper limit. A light made in Blender is still capped at 1 (1.75 W for point and spot
+lights, strength 1 for a sun): watts have no fixed X3D scale and the writer emits no attenuation, so Blender's default
+1000 W point light would otherwise white out the scene. The X3D 3.3 writer caps every light at 1, as the 3.x schemas require.
+
 ### Tests
 
 ```

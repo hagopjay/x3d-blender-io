@@ -25,6 +25,8 @@ class IRMetadata:
     reference: str | None = None
     license: str | None = None
     filename: str | None = None
+    # (name, content) of every head meta read from an imported file, in file order; names may repeat.
+    entries: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -170,6 +172,17 @@ class IRViewpoint:
 
 
 @dataclass
+class IRMetadataNode:
+    """One X3D Metadata* node. MetadataSet holds ``members``; the others hold ``value``, the field's X3D text."""
+
+    node_type: str  # MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString
+    name: str | None = None
+    reference: str | None = None
+    value: str | None = None
+    members: list["IRMetadataNode"] = field(default_factory=list)
+
+
+@dataclass
 class IRLight:
     """A light written inside its owning Transform (location 0, direction -Z)."""
 
@@ -183,6 +196,20 @@ class IRLight:
     cut_off_angle: float | None = None
     location: tuple[float, float, float] = (0.0, 0.0, 0.0)
     direction: tuple[float, float, float] = (0.0, 0.0, -1.0)
+    # X3D 4.0 shadows (default FALSE); shadowIntensity (default 1) is written only when set.
+    shadows: bool = False
+    shadow_intensity: float | None = None
+
+
+@dataclass
+class IRBackground:
+    """An X3D Background gradient: N sky (ground) angles go with N + 1 sky (ground) colours."""
+
+    sky_color: list[tuple[float, float, float]] = field(default_factory=lambda: [(0.0, 0.0, 0.0)])
+    sky_angle: list[float] = field(default_factory=list)
+    ground_color: list[tuple[float, float, float]] = field(default_factory=list)
+    ground_angle: list[float] = field(default_factory=list)
+    transparency: float = 0.0
 
 
 @dataclass
@@ -228,6 +255,10 @@ class IRInstance:
     inline: IRInlineAsset | None = None
     # Name of an IRGaussianSplats in IRScene.splats carried by this instance.
     splats_name: str | None = None
+    # Shape castShadow (X3D 4.0, default TRUE): Blender's object shadow visibility.
+    cast_shadow: bool = True
+    # Metadata node written as the metadata field of the instance's first Shape.
+    metadata: IRMetadataNode | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -297,6 +328,8 @@ class IRScene:
     splats: list[IRGaussianSplats] = field(default_factory=list)
     cycle_interval: float | None = None
     background_color: tuple[float, float, float] | None = None
+    # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
+    background: IRBackground | None = None
 
     def iter_instances(self):
         """Depth-first walk over every instance, nested children included."""

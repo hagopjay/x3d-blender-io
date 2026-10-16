@@ -126,7 +126,8 @@ def _scene_metadata(settings: ExportSettings, export_file: str) -> dict[str, str
         "description": settings.meta_description,
         "keywords": settings.meta_keywords,
         "reference": settings.meta_reference,
-        "license": settings.meta_license,
+        # NONE is the dialog's "no licence" choice, not a licence to write (or to put over an imported one)
+        "license": None if settings.meta_license in (None, "", "NONE") else settings.meta_license,
     }
 
 
