@@ -3332,6 +3332,30 @@ def _place_image_node(node_tree, bpyima, location, label, non_color=False):
     return image_node
 
 
+def _modulate_socket_by_color(node_tree, socket, color):
+    """Multiply what is linked into ``socket`` by a constant ``color``.
+
+    X3D 4.0 materials modulate a texture by its colour field (an UnlitMaterial shows
+    emissiveColor x emissiveTexture, as X_ITE draws it), but a texture linked straight
+    into a Principled socket replaces the socket's colour. A white colour needs no node.
+    The socket keeps the colour as its own default value, where the exporter reads it.
+    """
+    if socket is None or not socket.is_linked or all(abs(c - 1.0) < 1e-6 for c in color[:3]):
+        return None
+    link = socket.links[0]
+    mix = node_tree.nodes.new("ShaderNodeMix")
+    mix.data_type = 'RGBA'
+    mix.blend_type = 'MULTIPLY'
+    mix.label = "X3D colour"
+    mix.location = (link.from_node.location.x + 300, link.from_node.location.y)
+    mix.inputs[0].default_value = 1.0
+    color_a, color_b = (s for s in mix.inputs if s.type == 'RGBA')
+    color_b.default_value = (color[0], color[1], color[2], 1.0)
+    node_tree.links.new(link.from_socket, color_a)
+    node_tree.links.new(next(s for s in mix.outputs if s.type == 'RGBA'), socket)
+    return mix
+
+
 def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
     """Create a Principled (or Emission) Blender material from PhysicalMaterial / UnlitMaterial."""
     spec = mat.getSpec()
@@ -3367,6 +3391,8 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
         if bpyima is not None:
             bpymat_wrap.emission_color_texture.image = bpyima
             bpymat_wrap.emission_color_texture.image.colorspace_settings.name = 'sRGB'
+            if bsdf:
+                _modulate_socket_by_color(node_tree, bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission"), emissive)
     else:
         base_color = mat.getFieldAsFloatTuple('baseColor', [0.8, 0.8, 0.8], ancestry)
         emissive = mat.getFieldAsFloatTuple('emissiveColor', [0.0, 0.0, 0.0], ancestry)
