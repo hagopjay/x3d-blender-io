@@ -969,11 +969,12 @@ class ImportedBackgroundRoundTripTests(unittest.TestCase):
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class LightEnergyRoundTripTests(unittest.TestCase):
     """Light strength survives export then import: point and spot divide by 1.75 out and multiply back in,
-    sun is written unscaled on both export paths. X3D 4.0 sets no upper limit on intensity, so strong lights
-    survive there; the X3D 3.x schemas limit intensity to [0, 1], so that path clamps at 1.75 (1.0 for sun)."""
+    sun is written unscaled on both export paths. A light made in Blender is capped at intensity 1 (1.75 W,
+    sun 1.0) on both paths, since watts have no fixed X3D scale. A light imported from X3D keeps an intensity
+    above 1 through an X3D 4.0 re-export, which the 4.0 schema allows; the X3D 3.x schemas limit intensity to
+    [0, 1], so that path caps it too."""
 
     ENERGIES = {"POINT": 1.05, "SPOT": 0.7, "SUN": 0.6}
-    # 1.067 is the campus Sun of the earth-twin scene that came back as 1.0
     BRIGHT = {"POINT": 3.5, "SPOT": 2.1, "SUN": 1.067}
 
     def _round_trip(self, version: str, energies=None):
@@ -1010,13 +1011,42 @@ class LightEnergyRoundTripTests(unittest.TestCase):
     def test_legacy_path(self):
         self._check("X3D33")
 
-    def test_x3d40_keeps_intensity_above_one(self):
-        written, back = self._round_trip("X3D40", self.BRIGHT)
-        self.assertAlmostEqual(written["PointLight"], 2.0, places=5)
-        self.assertAlmostEqual(written["SpotLight"], 1.2, places=5)
-        self.assertAlmostEqual(written["DirectionalLight"], 1.067, places=5)
-        for kind, energy in self.BRIGHT.items():
-            self.assertAlmostEqual(back[kind], energy, places=4, msg="%s energy via X3D40" % kind)
+    def test_x3d40_caps_blender_lights_at_one(self):
+        # 1000 W is Blender's default point light: unscaled it would be intensity 571 and white out a browser
+        written, back = self._round_trip("X3D40", {"POINT": 1000.0, "SPOT": 500.0, "SUN": 4.0})
+        self.assertEqual(written, {"PointLight": 1.0, "SpotLight": 1.0, "DirectionalLight": 1.0})
+        self.assertEqual(back, {"POINT": 1.75, "SPOT": 1.75, "SUN": 1.0})
+
+    def test_x3d40_keeps_imported_intensity_above_one(self):
+        # 1.067 is the campus Sun of the earth-twin scene that came back as 1.0
+        tmpdir = tempfile.mkdtemp(prefix="x3d_light_")
+        _register_extension(tmpdir)
+        import bpy
+
+        source = os.path.join(tmpdir, "bright.x3d")
+        Path(source).write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n<X3D profile="Immersive" version="4.0"><Scene>'
+            '<DirectionalLight DEF="Sun" global="true" intensity="1.067"/>'
+            '<PointLight DEF="Lamp" global="true" intensity="2"/>'
+            '<SpotLight DEF="Spot" global="true" intensity="1.2"/>'
+            '</Scene></X3D>\n', encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        lights = {obj.name: obj.data for obj in bpy.context.scene.objects}
+        for name, energy, intensity in (("Sun", 1.067, 1.067), ("Lamp", 3.5, 2.0), ("Spot", 2.1, 1.2)):
+            self.assertAlmostEqual(lights[name].energy, energy, places=4, msg=name)
+            self.assertAlmostEqual(lights[name]["x3d_intensity"], intensity, places=5, msg=name)
+
+        def written(version):
+            path = os.path.join(tmpdir, "bright_%s.x3d" % version)
+            self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False),
+                             {"FINISHED"})
+            root = ET.parse(path).getroot()
+            return {tag: round(float(root.find(".//%s" % tag).attrib["intensity"]), 5)
+                    for tag in ("DirectionalLight", "PointLight", "SpotLight")}
+
+        self.assertEqual(written("X3D40"), {"DirectionalLight": 1.067, "PointLight": 2.0, "SpotLight": 1.2})
+        self.assertEqual(written("X3D33"), {"DirectionalLight": 1.0, "PointLight": 1.0, "SpotLight": 1.0})
 
     def test_legacy_path_clamps_intensity_to_one(self):
         written, back = self._round_trip("X3D33", self.BRIGHT)

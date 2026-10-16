@@ -65,10 +65,13 @@ writes them back, so an imported scene keeps them through export (the X3D 3.3 wr
 | `x3d_metadata` | object | the Shape's `Metadata*` node: nested `node`, `name`, `reference` and `value` (the field's X3D text, or the member list of a MetadataSet) | the `metadata` field of the object's first Shape |
 | `x3d_viewpoint_description` | camera object | the Viewpoint `description` | `description` (the camera name when there is none) |
 | `x3d_ambient_intensity`, `x3d_shadow_intensity` | light data | the light's `ambientIntensity` and `shadowIntensity` | the same fields |
+| `x3d_intensity` | light data | the light's `intensity` in the file; it marks the light as imported | nothing by itself: the light's energy is written as `intensity` without the cap at 1 that lights made in Blender get |
 
 Two fields map onto Blender settings instead: a light's `shadows` (X3D default `false`) is its *Cast Shadow* switch, and a
-Shape's `castShadow` is the object's shadow visibility. Light `intensity` above 1 is written unclamped on the X3D 4.0 path,
-whose schema sets no upper limit; the X3D 3.3 writer clamps it to 1 as the 3.x schemas require.
+Shape's `castShadow` is the object's shadow visibility. A light imported from X3D keeps an `intensity` above 1 on the
+X3D 4.0 path, whose schema sets no upper limit. A light made in Blender is still capped at 1 (1.75 W for point and spot
+lights, strength 1 for a sun): watts have no fixed X3D scale and the writer emits no attenuation, so Blender's default
+1000 W point light would otherwise white out the scene. The X3D 3.3 writer caps every light at 1, as the 3.x schemas require.
 
 ### Tests
 

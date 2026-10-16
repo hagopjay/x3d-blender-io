@@ -40,6 +40,8 @@ INLINE_SOURCE_PROPERTY = "x3d_inline_source"
 # X3D light fields with no Blender setting, kept on the light data by the importer.
 LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
+# The intensity a light had in the X3D file it was imported from; it also marks the light as imported.
+LIGHT_INTENSITY_PROPERTY = "x3d_intensity"
 # Viewpoint description read by the importer, kept on the camera object.
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
@@ -566,19 +568,25 @@ def _unit_interval(value, default):
 def _extract_light(obj, local_matrix) -> IRLight:
     """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
 
-    Intensity is not capped at 1: the X3D 4.0 schema gives light intensity no upper limit. The legacy
-    X3D 3.x writer keeps its clamp because the 3.x schemas limit intensity to [0, 1].
+    A light imported from X3D (it carries ``x3d_intensity``) is written without capping intensity at 1: the
+    X3D 4.0 schema gives light intensity no upper limit, and its energy maps back to the value in the file. A
+    light made in Blender keeps the [0, 1] cap: watts have no fixed X3D scale and this writer emits no
+    attenuation, so a 1000 W point light (energy / 1.75 = 571) would white out the scene in a browser. The
+    legacy X3D 3.x writer caps every light because the 3.x schemas limit intensity to [0, 1].
     ``shadows`` follows the light's shadow switch; ambientIntensity and shadowIntensity have no Blender
     setting and come from the custom properties the importer leaves on the light data.
     """
     data = obj.data
     light_type = {"POINT": "POINT", "SPOT": "SPOT", "SUN": "DIRECTIONAL"}.get(data.type, "DIRECTIONAL")
     energy = max(0.0, float(data.energy))
+    intensity = energy / 1.75 if data.type != "SUN" else energy
+    if data.get(LIGHT_INTENSITY_PROPERTY) is None:
+        intensity = min(intensity, 1.0)
     light = IRLight(
         name=obj.name,
         light_type=light_type,
         color=tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3]),
-        intensity=energy / 1.75 if data.type != "SUN" else energy,
+        intensity=intensity,
         ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
         direction=_direction_neg_z(local_matrix),
