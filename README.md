@@ -26,7 +26,8 @@ Export dialog, **Include** panel, new **X3D Version** selector:
 
 Import: `PhysicalMaterial` and `UnlitMaterial` now become Principled BSDF node trees
 (metallic/roughness texture split into G and B channels, normal map with strength, occlusion kept as a labelled node,
-`alphaMode` → *Blended* / *Dithered* with an alpha-cutoff node), `solid` → *Backface Culling*,
+`alphaMode` → *Blended* / *Dithered* with an alpha-cutoff node; an `UnlitMaterial`'s `emissiveTexture` is multiplied by
+its `emissiveColor` in a Mix node, as X_ITE draws it), `solid` → *Backface Culling*,
 and object and mesh names survive the round trip (`OB_` / `ME_` / `MA_` prefixes are stripped).
 
 The X3D 4.0 writer validates its own output: XML well-formedness always, and field types and
