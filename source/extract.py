@@ -42,6 +42,8 @@ LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
 # Viewpoint description read by the importer, kept on the camera object.
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
+# Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
+HEAD_META_PROPERTY = "x3d_head_meta"
 
 
 def is_splat_mesh(obj) -> bool:
@@ -477,6 +479,19 @@ def _direction_neg_z(matrix):
     return (float(vector[0]), float(vector[1]), float(vector[2]))
 
 
+def scene_head_meta(scene) -> list[tuple[str, str]]:
+    """The (name, content) pairs of the head meta the importer kept on ``scene``, in file order."""
+    entries = []
+    for item in scene.get(HEAD_META_PROPERTY) or ():
+        get = getattr(item, "get", None)
+        if get is None:
+            continue
+        name, content = get("name"), get("content")
+        if isinstance(name, str) and name and isinstance(content, str):
+            entries.append((name, content))
+    return entries
+
+
 def _unit_interval(value, default):
     """A custom-property number clamped to [0, 1], or ``default`` when it is unset or not a number."""
     try:
@@ -635,6 +650,7 @@ def extract_scene(
         reference=metadata.get("reference"),
         license=metadata.get("license"),
         filename=metadata.get("filename"),
+        entries=scene_head_meta(scene),
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)

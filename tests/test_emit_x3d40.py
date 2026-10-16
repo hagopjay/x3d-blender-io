@@ -15,7 +15,7 @@ SOURCE_DIR = Path(__file__).resolve().parents[1] / "source"
 if str(SOURCE_DIR) not in sys.path:
     sys.path.insert(0, str(SOURCE_DIR))
 
-from emit_x3d40 import export_ir_scene
+from emit_x3d40 import export_ir_scene, head_meta
 from ir import (
     IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRPBRMaterial, IRScene, IRShape,
     IRTextureRef, IRTextureTransform, IRTransform,
@@ -448,6 +448,68 @@ class EmitSplatsAndInlineTests(unittest.TestCase):
     def test_unknown_version_rejected(self):
         with self.assertRaises(ValueError):
             export_ir_scene(io.StringIO(), IRScene(name="x"), version="3.3")
+
+
+class HeadMetaTests(unittest.TestCase):
+    """Head meta read from an imported file is written back, with the export's own generator and filename."""
+
+    GENERATOR = "X3D Blender I/O v2.6.1"
+    COPERNICUS = ("Ground and valley colour: Contains modified Copernicus Sentinel data 2026 "
+                  "(scene S2B_17SNB_20261007, 7 Oct 2026, 0.05 percent cloud).")
+    # the head of the earth-twin campus scene, cut short
+    CAMPUS = [
+        ("title", "Blacksburg campus, local frame"),
+        ("creator", "x3d.io Earth twin build (open data pipeline)"),
+        ("created", "2026-10-16T01:01Z"),
+        ("reference", "Terrain, buildings and trees: USGS 3DEP lidar (public domain)."),
+        ("reference", COPERNICUS),
+        ("license", "Data: public domain (USGS) and free and open (Copernicus Sentinel-2, attribution required)."),
+        ("generator", "earth-twin/src/build_x3d.py"),
+    ]
+
+    def test_imported_meta_kept_in_order_with_repeated_names(self):
+        metadata = IRMetadata(filename="campus.x3d", entries=list(self.CAMPUS))
+        self.assertEqual(head_meta(metadata, self.GENERATOR),
+                         [("generator", self.GENERATOR), ("filename", "campus.x3d")] + self.CAMPUS)
+
+    def test_dialog_values_replace_single_valued_meta_and_add_references(self):
+        metadata = IRMetadata(filename="campus.x3d", entries=list(self.CAMPUS), title="Campus",
+                              reference="Re-exported from Blender", license="CC_BY_4.0")
+        pairs = head_meta(metadata, self.GENERATOR)
+        self.assertEqual([content for name, content in pairs if name == "title"], ["Campus"])
+        self.assertEqual([content for name, content in pairs if name == "license"], ["CC_BY_4.0"])
+        self.assertEqual([content for name, content in pairs if name == "reference"],
+                         [self.CAMPUS[3][1], self.COPERNICUS, "Re-exported from Blender"])
+        self.assertEqual(pairs[2], ("title", "Campus"))  # in the imported title's place
+
+    def test_no_licence_without_dialog_or_imported_one(self):
+        pairs = head_meta(IRMetadata(filename="cube.x3d", creator="Me"), self.GENERATOR, ["a diagnostic"])
+        self.assertEqual(pairs, [("generator", self.GENERATOR), ("filename", "cube.x3d"), ("creator", "Me"),
+                                 ("info", "a diagnostic")])
+
+    def test_own_export_meta_is_regenerated_not_carried_over(self):
+        imported = [("generator", "X3D Blender I/O v2.5.0"), ("filename", "old.x3d"), ("title", "Campus"),
+                    ("license", "NONE"), ("info", "1 Gaussian splat object(s) written as PointSet"),
+                    ("translator", "X3D Blender I/O v2.5.0"), ("generator", "Blender 4.5.14 LTS")]
+        pairs = head_meta(IRMetadata(filename="new.x3d", entries=imported), self.GENERATOR, ["now"])
+        self.assertEqual(pairs, [("generator", self.GENERATOR), ("filename", "new.x3d"), ("title", "Campus"),
+                                 ("generator", "Blender 4.5.14 LTS"), ("info", "now")])
+
+    def test_third_party_info_and_exact_repeats(self):
+        imported = [("info", "kept"), ("reference", "R"), ("reference", "R")]
+        pairs = head_meta(IRMetadata(entries=imported, reference="R"), self.GENERATOR)
+        self.assertEqual(pairs, [("generator", self.GENERATOR), ("info", "kept"), ("reference", "R")])
+
+    def test_written_head_validates(self):
+        metadata = IRMetadata(filename="campus.x3d", entries=list(self.CAMPUS) + [("description", 'A "quoted" <b> & more')])
+        buffer = io.StringIO()
+        export_ir_scene(buffer, IRScene(name="Campus", metadata=metadata), generator=self.GENERATOR)
+        xml_text = buffer.getvalue()
+        head = re.search(r"<head>.*</head>", xml_text, re.S).group(0)
+        self.assertEqual(head.count('<meta name="reference"'), 2)
+        self.assertIn("Contains modified Copernicus Sentinel data 2026", head)
+        self.assertNotIn('content="NONE"', head)
+        self.assertTrue(validate_xml_text(xml_text).valid)
 
 
 if __name__ == "__main__":

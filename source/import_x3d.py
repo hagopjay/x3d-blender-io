@@ -18,8 +18,8 @@ import mathutils
 from math import sin, cos, pi
 from itertools import chain
 from . import mfstring
-from .extract import (LIGHT_AMBIENT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
-                      VIEWPOINT_DESCRIPTION_PROPERTY)
+from .extract import (HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
+                      VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -5157,6 +5157,31 @@ ROUTE champFly001.bindTime TO vpTs.set_startTime
                 translateTimeSensor(time_node, action, ancestry)
 
 
+def importHeadMeta(bpyscene, root_node):
+    """Keep the <head> meta statements of an X3D (XML) file on the scene, for the X3D 4.0 export to write back.
+
+    Every name/content pair is kept in file order, repeated names (several reference entries, say) included;
+    which of them the export carries over is decided there. Pairs already on the scene from an earlier import
+    stay, and an exact repeat is stored once.
+    """
+    x3d_element = getattr(root_node, "x3dNode", None)
+    if x3d_element is None:  # classic VRML encoding
+        return
+    entries = scene_head_meta(bpyscene)
+    count = len(entries)
+    for head in x3d_element.childNodes:
+        if head.nodeType != head.ELEMENT_NODE or head.tagName != "head":
+            continue
+        for meta in head.childNodes:
+            if meta.nodeType != meta.ELEMENT_NODE or meta.tagName != "meta" or not meta.hasAttribute("content"):
+                continue
+            pair = (meta.getAttribute("name"), meta.getAttribute("content"))
+            if pair[0] and pair not in entries:
+                entries.append(pair)
+    if len(entries) > count:
+        bpyscene[HEAD_META_PROPERTY] = [{"name": name, "content": content} for name, content in entries]
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -5206,6 +5231,8 @@ def load_web3d(
     if not root_node:
         logger.warning(msg)
         return
+    if not _INLINE_STACK:  # the head of an inlined file describes that file, not the scene
+        importHeadMeta(bpyscene, root_node)
 
     if global_matrix is None:
         global_matrix = Matrix()

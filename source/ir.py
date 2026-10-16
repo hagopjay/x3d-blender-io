@@ -25,6 +25,8 @@ class IRMetadata:
     reference: str | None = None
     license: str | None = None
     filename: str | None = None
+    # (name, content) of every head meta read from an imported file, in file order; names may repeat.
+    entries: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass

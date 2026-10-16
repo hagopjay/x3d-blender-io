@@ -1099,6 +1099,79 @@ class ViewpointDescriptionRoundTripTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class HeadMetaRoundTripTests(unittest.TestCase):
+    """Head meta of an imported file, repeated names included, survives an X3D 4.0 re-export, and the dialog's
+    default licence (none) neither replaces an imported licence nor is written as "NONE"."""
+
+    COPERNICUS = ("Ground and valley colour: Contains modified Copernicus Sentinel data 2026 "
+                  "(scene S2B_17SNB_20261007, 7 Oct 2026, 0.05 percent cloud).")
+    LICENSE = "Data: public domain (USGS) and free and open (Copernicus Sentinel-2, attribution required)."
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<X3D profile='Immersive' version='4.0'><head>\n"
+        "<meta name='title' content='Blacksburg campus, local frame'/>\n"
+        "<meta name='reference' content='Terrain: USGS 3DEP lidar (public domain).'/>\n"
+        "<meta name='reference' content='" + COPERNICUS + "'/>\n"
+        "<meta name='license' content='" + LICENSE + "'/>\n"
+        "<meta name='generator' content='earth-twin/src/build_x3d.py'/>\n"
+        "</head><Scene><Transform DEF='Box'><Shape><Box/></Shape></Transform></Scene></X3D>\n"
+    )
+
+    @staticmethod
+    def _head(path):
+        return [(meta.attrib["name"], meta.attrib["content"]) for meta in ET.parse(path).getroot().iter("meta")]
+
+    def _export(self, path):
+        import bpy
+
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        return self._head(path)
+
+    def test_imported_head_meta_survives(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_head_")
+        _register_extension(tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        import bpy
+        from validate import validate_xml_file
+
+        source = os.path.join(tmpdir, "campus.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        kept = [(item["name"], item["content"]) for item in bpy.context.scene["x3d_head_meta"]]
+        self.assertEqual([content for name, content in kept if name == "reference"][1], self.COPERNICUS)
+
+        first = os.path.join(tmpdir, "campus_1.x3d")
+        head = self._export(first)
+        self.assertEqual(head[:2], [("generator", head[0][1]), ("filename", "campus_1.x3d")])
+        self.assertEqual(head[2:], [
+            ("title", "Blacksburg campus, local frame"),
+            ("reference", "Terrain: USGS 3DEP lidar (public domain)."),
+            ("reference", self.COPERNICUS),
+            ("license", self.LICENSE),
+            ("generator", "earth-twin/src/build_x3d.py"),
+        ])
+        self.assertTrue(validate_xml_file(first).valid)
+
+        # a second round trip through this exporter's own file changes nothing but the file name
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=first), {"FINISHED"})
+        second = self._export(os.path.join(tmpdir, "campus_2.x3d"))
+        self.assertEqual(second, [(name, "campus_2.x3d" if name == "filename" else content) for name, content in head])
+
+    def test_blender_scene_gets_no_licence_meta(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_head_")
+        _register_extension(tmpdir)
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.mesh.primitive_cube_add(size=1.0)
+        head = self._export(os.path.join(tmpdir, "cube.x3d"))
+        self.assertEqual([name for name, content in head], ["generator", "filename"])
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class ExportImportExportTests(unittest.TestCase):
     """Export, import and export again for every fixture, comparing the node inventory of the two files.
 

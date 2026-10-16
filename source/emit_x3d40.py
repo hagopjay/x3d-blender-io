@@ -13,15 +13,16 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import struct
 from itertools import chain
 from xml.sax.saxutils import escape, quoteattr
 
 try:
-    from .ir import IRScene
+    from .ir import IRMetadata, IRScene
     from .splat_io import sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRScene
+    from ir import IRMetadata, IRScene
     from splat_io import sh0_to_rgb
 
 
@@ -549,6 +550,57 @@ def _meta(name, content):
     return f"    <meta name={quoteattr(name)} content={quoteattr(str(content))} />\n"
 
 
+# Head meta the export dialog can set, in the order they are written; all but reference take one value.
+_DIALOG_META = ("title", "creator", "description", "keywords", "reference", "license")
+_SINGLE_VALUED_META = frozenset(_DIALOG_META) - {"reference"}
+
+
+def _tool_name(generator: str) -> str:
+    """A generator string without its trailing version number, so two versions of one tool compare equal."""
+    return re.sub(r"\s+v?\d[\w.+-]*$", "", generator.strip())
+
+
+def head_meta(metadata: IRMetadata, generator: str, diagnostics=()) -> list[tuple[str, str]]:
+    """The (name, content) pairs of the head's meta statements, in the order they are written.
+
+    The generator and filename describe this export and come first. Meta read from an imported file follows in
+    file order, repeated names included. A value set in the export dialog replaces the imported meta of that
+    name, except reference, which is added to the imported ones. When the imported file was written by this
+    exporter, its own generator, its ``info`` diagnostics and the licence "NONE" older versions wrote are left
+    out: this export writes its own. A pair that repeats an earlier one exactly is written once.
+    """
+    own_tool = _tool_name(generator)
+
+    def by_this_exporter(name, content):
+        return name in ("generator", "translator") and _tool_name(content) == own_tool
+
+    imported = list(metadata.entries)
+    from_this_exporter = any(by_this_exporter(name, content) for name, content in imported)
+    dialog = {name: getattr(metadata, name) for name in _DIALOG_META if getattr(metadata, name, None)}
+    pairs = [("generator", generator)]
+    if metadata.filename:
+        pairs.append(("filename", metadata.filename))
+    replaced = set()
+    for name, content in imported:
+        if name == "filename" or by_this_exporter(name, content):
+            continue
+        if from_this_exporter and (name == "info" or (name == "license" and content == "NONE")):
+            continue
+        if name in _SINGLE_VALUED_META and name in dialog:
+            if name not in replaced:
+                pairs.append((name, dialog[name]))
+                replaced.add(name)
+            continue
+        pairs.append((name, content))
+    pairs.extend((name, dialog[name]) for name in _DIALOG_META if name in dialog and name not in replaced)
+    pairs.extend(("info", message) for message in diagnostics)
+    unique = []
+    for pair in pairs:
+        if pair not in unique:
+            unique.append(pair)
+    return unique
+
+
 def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     """(name, level) of every component statement the Immersive header needs, sorted by name.
 
@@ -607,14 +659,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     write("  <head>\n")
     for name, level in _components(ir_scene, version):
         write(f'    <component name="{name}" level="{level}" />\n')
-    write(_meta("generator", generator))
-    metadata = ir_scene.metadata
-    for name in ("filename", "title", "creator", "description", "keywords", "reference", "license"):
-        value = getattr(metadata, name, None)
-        if value:
-            write(_meta(name, value))
-    for message in diagnostics:
-        write(_meta("info", message))
+    for name, content in head_meta(ir_scene.metadata, generator, diagnostics):
+        write(_meta(name, content))
     write("  </head>\n")
     write("  <Scene>\n")
 
