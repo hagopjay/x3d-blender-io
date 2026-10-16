@@ -5287,6 +5287,32 @@ def importHeadMeta(bpyscene, root_node):
         bpyscene[HEAD_META_PROPERTY] = [{"name": name, "content": content} for name, content in entries]
 
 
+# Elements that can sit inside a Switch in the XML encoding without being one of its children (whichChoice counts children only)
+_NOT_SWITCH_CHILDREN = {'ROUTE', 'IS', 'field', 'fieldValue', 'connect', 'ProtoDeclare', 'ExternProtoDeclare', 'IMPORT', 'EXPORT'}
+
+
+def _switch_child_counts(node):
+    spec = node.getSpec()
+    return spec is not None and not spec.startswith('Metadata') and spec not in _NOT_SWITCH_CHILDREN
+
+
+def switch_hides(node, ancestry):
+    """True when a Switch above ``node`` does not choose the branch it sits on.
+
+    ``whichChoice`` indexes the Switch's children (``choice`` in VRML97); -1, the default, or an index past the last child
+    chooses none. Nested Switches all have to choose the branch. A USE'd Switch reads its fields from the DEF'd node.
+    """
+    chain = tuple(ancestry) + (node,)
+    for i, anc in enumerate(ancestry):
+        if anc.getSpec() != 'Switch':
+            continue
+        choice = anc.getFieldAsInt('whichChoice', -1, ancestry[:i])
+        kids = [c for c in anc.getRealNode().children if _switch_child_counts(c)]
+        if not (0 <= choice < len(kids)) or kids[choice] is not chain[i + 1]:
+            return True
+    return False
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -5346,10 +5372,14 @@ def load_web3d(
     all_nodes = root_node.getSerialized([], [])
     # the first Background of the file is the one a browser shows; an inlined file's does not count
     background_seen = bool(_INLINE_STACK)
+    # objects a Switch does not choose; collected as each is made, since a node under a USE'd Switch (or a USE'd Shape)
+    # makes one object per instance and keeps only the last in node.blendObject
+    switch_hidden = []
 
     for node, ancestry in all_nodes:
         # if 'castle.wrl' not in node.getFilename():
         #   continue
+        made_before = node.blendObject
 
         spec = node.getSpec()
         '''
@@ -5396,6 +5426,9 @@ def load_web3d(
             action = bpy.data.ipos.new('web3d_ipo', 'Object')
             translatePositionInterpolator(node, action)
             '''
+        if node.blendObject is not None and node.blendObject is not made_before \
+                and any(anc.getSpec() == 'Switch' for anc in ancestry) and switch_hides(node, ancestry):
+            switch_hidden.append(node.blendObject)
 
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
@@ -5404,6 +5437,16 @@ def load_web3d(
         importRoutesXML(all_nodes, global_matrix, bpycontext)
     except Exception as exc:  # animation must never break a geometry import
         logger.error("XML ROUTE animation import failed: %s", exc, exc_info=True)
+
+    # Switch: every child is imported, so nothing is lost on the way back out, but only the chosen one is shown; the others
+    # are hidden in the viewport and the render, as an X3D browser draws them
+    for bpyob in {o for ob in switch_hidden for o in [ob, *ob.children_recursive]}:  # with an Inline's loaded content
+        bpyob.hide_render = True
+        try:
+            bpyob.hide_set(True)
+        except RuntimeError:  # not in the view layer
+            bpyob.hide_viewport = True
+        bpyob["x3d_switch_hidden"] = True
 
     for node, ancestry in all_nodes:
         if node.isRoot():
