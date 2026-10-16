@@ -3979,8 +3979,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 # -----------------------------------------------------------------------------------
 # Lighting
 
-# The exporters write point and spot lights as min(energy / 1.75, 1.0), so import undoes the
-# division. Energies above 1.75 were clamped to intensity 1.0 on export and cannot be recovered.
+# The exporters write point and spot lights as energy / 1.75, so import undoes the division.
+# The X3D 3.x writer also clamps intensity to 1.0 (the 3.x schema range), so on that path energies
+# above 1.75 cannot be recovered; X3D 4.0 has no upper limit and keeps them.
 LIGHT_ENERGY_PER_INTENSITY = 1.75
 
 
@@ -4019,7 +4020,7 @@ def importLamp_DirectionalLight(node, ancestry):
     # is_on = node.getFieldAsBool('on', True, ancestry) # TODO
 
     bpylamp = bpy.data.lights.new(vrmlname, 'SUN')
-    bpylamp.energy = intensity  # sun strength is exported 1:1 (clamped to 1.0), see extract.py
+    bpylamp.energy = intensity  # sun strength is exported 1:1 (clamped to 1.0 on the X3D 3.x path), see extract.py
     bpylamp.color = color
 
     # lamps have their direction as -z, yup

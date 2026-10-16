@@ -473,14 +473,19 @@ def _direction_neg_z(matrix):
 
 
 def _extract_light(obj, local_matrix) -> IRLight:
-    """Mirror the legacy exporter's light mapping; values are local to the object's Transform."""
+    """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
+
+    Intensity is not capped at 1: the X3D 4.0 schema gives light intensity no upper limit. The legacy
+    X3D 3.x writer keeps its clamp because the 3.x schemas limit intensity to [0, 1].
+    """
     data = obj.data
     light_type = {"POINT": "POINT", "SPOT": "SPOT", "SUN": "DIRECTIONAL"}.get(data.type, "DIRECTIONAL")
+    energy = max(0.0, float(data.energy))
     light = IRLight(
         name=obj.name,
         light_type=light_type,
         color=tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3]),
-        intensity=min(float(data.energy) / 1.75, 1.0) if data.type != "SUN" else min(float(data.energy), 1.0),
+        intensity=energy / 1.75 if data.type != "SUN" else energy,
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
         direction=_direction_neg_z(local_matrix),
     )

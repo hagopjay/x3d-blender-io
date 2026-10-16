@@ -472,7 +472,7 @@ def export(file,
             amb_intensity = 0.0
 
         # compute cutoff and beamwidth
-        intensity = min(light.energy / 1.75, 1.0)
+        intensity = min(light.energy / 1.75, 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
         beamWidth = light.spot_size * 0.37
         # beamWidth=((light.spotSize*math.pi)/180.0)*.37
         cutOffAngle = beamWidth * 1.3
@@ -509,7 +509,8 @@ def export(file,
             ambi = 0
             amb_intensity = 0.0
 
-        intensity = min(light.energy, 1.0)  # sun strength is not scaled, matching extract.py
+        # sun strength is not scaled, matching extract.py; the X3D 3.x schemas limit intensity to [0, 1]
+        intensity = min(light.energy, 1.0)
 
         orientation = matrix_direction_neg_z(matrix)
 
@@ -535,7 +536,7 @@ def export(file,
             ambi = 0.0
             amb_intensity = 0.0
 
-        intensity = min(light.energy / 1.75, 1.0)
+        intensity = min(light.energy / 1.75, 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
         location = matrix.to_translation()[:]
 
         ident_step = ident + (' ' * (-len(ident) +

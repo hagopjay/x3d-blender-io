@@ -911,17 +911,20 @@ class WorldBackgroundExportTests(unittest.TestCase):
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class LightEnergyRoundTripTests(unittest.TestCase):
     """Light strength survives export then import: point and spot divide by 1.75 out and multiply back in,
-    sun is written unscaled on both export paths. Strengths above the clamp (1.75, or 1.0 for sun) are lost by design."""
+    sun is written unscaled on both export paths. X3D 4.0 sets no upper limit on intensity, so strong lights
+    survive there; the X3D 3.x schemas limit intensity to [0, 1], so that path clamps at 1.75 (1.0 for sun)."""
 
     ENERGIES = {"POINT": 1.05, "SPOT": 0.7, "SUN": 0.6}
+    # 1.067 is the campus Sun of the earth-twin scene that came back as 1.0
+    BRIGHT = {"POINT": 3.5, "SPOT": 2.1, "SUN": 1.067}
 
-    def _round_trip(self, version: str):
+    def _round_trip(self, version: str, energies=None):
         tmpdir = tempfile.mkdtemp(prefix="x3d_light_")
         _register_extension(tmpdir)
         import bpy
 
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        for kind, energy in self.ENERGIES.items():
+        for kind, energy in (energies or self.ENERGIES).items():
             data = bpy.data.lights.new(kind.title(), kind)
             data.energy = energy
             bpy.context.scene.collection.objects.link(bpy.data.objects.new(kind.title(), data))
@@ -948,6 +951,20 @@ class LightEnergyRoundTripTests(unittest.TestCase):
 
     def test_legacy_path(self):
         self._check("X3D33")
+
+    def test_x3d40_keeps_intensity_above_one(self):
+        written, back = self._round_trip("X3D40", self.BRIGHT)
+        self.assertAlmostEqual(written["PointLight"], 2.0, places=5)
+        self.assertAlmostEqual(written["SpotLight"], 1.2, places=5)
+        self.assertAlmostEqual(written["DirectionalLight"], 1.067, places=5)
+        for kind, energy in self.BRIGHT.items():
+            self.assertAlmostEqual(back[kind], energy, places=4, msg="%s energy via X3D40" % kind)
+
+    def test_legacy_path_clamps_intensity_to_one(self):
+        written, back = self._round_trip("X3D33", self.BRIGHT)
+        self.assertEqual(written, {"PointLight": 1.0, "SpotLight": 1.0, "DirectionalLight": 1.0})
+        self.assertAlmostEqual(back["SUN"], 1.0, places=4)
+        self.assertAlmostEqual(back["POINT"], 1.75, places=4)
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
