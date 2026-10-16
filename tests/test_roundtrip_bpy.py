@@ -68,7 +68,8 @@ def _force_splat_import(test: unittest.TestCase, target: str):
 class SwatchBookRoundTripTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_roundtrip_")
+        # "ao" in the folder name on purpose: a folder name must not make the checker an occlusion map.
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_roundtrip_ao_")
         _register_extension(cls.tmpdir)
         if str(TOOLS_DIR) not in sys.path:
             sys.path.insert(0, str(TOOLS_DIR))
@@ -909,19 +910,81 @@ class WorldBackgroundExportTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class ImportedBackgroundRoundTripTests(unittest.TestCase):
+    """The first Background of an imported file keeps its sky and ground gradients through an X3D 4.0 re-export;
+    the world is left alone, and only a scene without an imported Background takes its colour from the world."""
+
+    # the earth-twin campus sky, then a second Background that is not the bound one
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<X3D profile='Immersive' version='4.0'><Scene>\n"
+        "<Background skyAngle='0.5 1.0 1.35 1.52 1.5708' skyColor='0.16 0.33 0.62 0.25 0.45 0.75 0.42 0.6 0.85"
+        " 0.62 0.74 0.9 0.78 0.83 0.9 0.8 0.84 0.88' groundAngle='1.5708' groundColor='0.22 0.24 0.2 0.3 0.31 0.27'/>\n"
+        "<Background skyColor='1 0 0'/>\n"
+        "<Shape><Box/></Shape>\n"
+        "</Scene></X3D>\n"
+    )
+    EXPECTED = {
+        "skyAngle": [0.5, 1.0, 1.35, 1.52, 1.5708],
+        "skyColor": [0.16, 0.33, 0.62, 0.25, 0.45, 0.75, 0.42, 0.6, 0.85, 0.62, 0.74, 0.9, 0.78, 0.83, 0.9,
+                     0.8, 0.84, 0.88],
+        "groundAngle": [1.5708],
+        "groundColor": [0.22, 0.24, 0.2, 0.3, 0.31, 0.27],
+    }
+
+    def test_background_gradient_survives_x3d40_round_trip(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_background_")
+        _register_extension(tmpdir)
+        import bpy
+
+        source = os.path.join(tmpdir, "sky.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        world = bpy.context.scene.world
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        self.assertIs(bpy.context.scene.world, world)
+        kept = bpy.context.scene["x3d_background"]
+        for field, values in self.EXPECTED.items():
+            self.assertEqual([round(value, 6) for value in kept[field]], values, field)
+
+        path = os.path.join(tmpdir, "sky_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        backgrounds = ET.parse(path).getroot().findall(".//Background")
+        self.assertEqual(len(backgrounds), 1)
+        written = {field: [round(float(value), 6) for value in text.split()]
+                   for field, text in backgrounds[0].attrib.items()}
+        self.assertEqual(written, self.EXPECTED)
+
+        # without the imported Background the export falls back to the world colour, as before
+        del bpy.context.scene["x3d_background"]
+        world = bpy.data.worlds.new("Dusk")
+        bpy.context.scene.world = world
+        world.use_nodes = True
+        world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.1, 0.2, 0.3, 1.0)
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        sky = ET.parse(path).getroot().find(".//Background").attrib
+        self.assertEqual(sorted(sky), ["skyColor"])
+        self.assertEqual([round(float(value), 4) for value in sky["skyColor"].split()], [0.1, 0.2, 0.3])
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class LightEnergyRoundTripTests(unittest.TestCase):
     """Light strength survives export then import: point and spot divide by 1.75 out and multiply back in,
-    sun is written unscaled on both export paths. Strengths above the clamp (1.75, or 1.0 for sun) are lost by design."""
+    sun is written unscaled on both export paths. A light made in Blender is capped at intensity 1 (1.75 W,
+    sun 1.0) on both paths, since watts have no fixed X3D scale. A light imported from X3D keeps an intensity
+    above 1 through an X3D 4.0 re-export, which the 4.0 schema allows; the X3D 3.x schemas limit intensity to
+    [0, 1], so that path caps it too."""
 
     ENERGIES = {"POINT": 1.05, "SPOT": 0.7, "SUN": 0.6}
+    BRIGHT = {"POINT": 3.5, "SPOT": 2.1, "SUN": 1.067}
 
-    def _round_trip(self, version: str):
+    def _round_trip(self, version: str, energies=None):
         tmpdir = tempfile.mkdtemp(prefix="x3d_light_")
         _register_extension(tmpdir)
         import bpy
 
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        for kind, energy in self.ENERGIES.items():
+        for kind, energy in (energies or self.ENERGIES).items():
             data = bpy.data.lights.new(kind.title(), kind)
             data.energy = energy
             bpy.context.scene.collection.objects.link(bpy.data.objects.new(kind.title(), data))
@@ -949,6 +1012,354 @@ class LightEnergyRoundTripTests(unittest.TestCase):
     def test_legacy_path(self):
         self._check("X3D33")
 
+    def test_x3d40_caps_blender_lights_at_one(self):
+        # 1000 W is Blender's default point light: unscaled it would be intensity 571 and white out a browser
+        written, back = self._round_trip("X3D40", {"POINT": 1000.0, "SPOT": 500.0, "SUN": 4.0})
+        self.assertEqual(written, {"PointLight": 1.0, "SpotLight": 1.0, "DirectionalLight": 1.0})
+        self.assertEqual(back, {"POINT": 1.75, "SPOT": 1.75, "SUN": 1.0})
+
+    def test_x3d40_keeps_imported_intensity_above_one(self):
+        # 1.067 is the campus Sun of the earth-twin scene that came back as 1.0
+        tmpdir = tempfile.mkdtemp(prefix="x3d_light_")
+        _register_extension(tmpdir)
+        import bpy
+
+        source = os.path.join(tmpdir, "bright.x3d")
+        Path(source).write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n<X3D profile="Immersive" version="4.0"><Scene>'
+            '<DirectionalLight DEF="Sun" global="true" intensity="1.067"/>'
+            '<PointLight DEF="Lamp" global="true" intensity="2"/>'
+            '<SpotLight DEF="Spot" global="true" intensity="1.2"/>'
+            '</Scene></X3D>\n', encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        lights = {obj.name: obj.data for obj in bpy.context.scene.objects}
+        for name, energy, intensity in (("Sun", 1.067, 1.067), ("Lamp", 3.5, 2.0), ("Spot", 2.1, 1.2)):
+            self.assertAlmostEqual(lights[name].energy, energy, places=4, msg=name)
+            self.assertAlmostEqual(lights[name]["x3d_intensity"], intensity, places=5, msg=name)
+
+        def written(version):
+            path = os.path.join(tmpdir, "bright_%s.x3d" % version)
+            self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False),
+                             {"FINISHED"})
+            root = ET.parse(path).getroot()
+            return {tag: round(float(root.find(".//%s" % tag).attrib["intensity"]), 5)
+                    for tag in ("DirectionalLight", "PointLight", "SpotLight")}
+
+        self.assertEqual(written("X3D40"), {"DirectionalLight": 1.067, "PointLight": 2.0, "SpotLight": 1.2})
+        self.assertEqual(written("X3D33"), {"DirectionalLight": 1.0, "PointLight": 1.0, "SpotLight": 1.0})
+
+    def test_legacy_path_clamps_intensity_to_one(self):
+        written, back = self._round_trip("X3D33", self.BRIGHT)
+        self.assertEqual(written, {"PointLight": 1.0, "SpotLight": 1.0, "DirectionalLight": 1.0})
+        self.assertAlmostEqual(back["SUN"], 1.0, places=4)
+        self.assertAlmostEqual(back["POINT"], 1.75, places=4)
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class LightShadowRoundTripTests(unittest.TestCase):
+    """X3D 4.0 shadows, shadowIntensity, ambientIntensity and Shape castShadow survive import then X3D 4.0 export.
+
+    The fixture is the lighting of the earth-twin campus scene, cut down to two lights and two boxes."""
+
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<X3D version="4.0" profile="Immersive"><Scene>\n'
+        '<DirectionalLight DEF="Sun" global="true" shadows="true" shadowIntensity="0.72" direction="-0.3 -0.8 -0.5"'
+        ' intensity="1.067" ambientIntensity="0.12"/>\n'
+        '<DirectionalLight DEF="SkyFill" global="true" direction="0 -1 0" intensity="0.38"/>\n'
+        '<Transform DEF="Ground"><Shape castShadow="false"><Box size="10 0.1 10"/></Shape></Transform>\n'
+        '<Transform DEF="Tower" translation="0 2 0"><Shape><Box/></Shape></Transform>\n'
+        '</Scene></X3D>\n'
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix="x3d_shadow_")
+        _register_extension(cls.tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        cls.fixture_path = os.path.join(cls.tmpdir, "shadows.x3d")
+        Path(cls.fixture_path).write_text(cls.FIXTURE, encoding="utf-8")
+
+    def _import_fixture(self):
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=self.fixture_path), {"FINISHED"})
+        return bpy.context.scene.objects
+
+    def _export(self, name):
+        import bpy
+
+        path = os.path.join(self.tmpdir, name)
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        return path
+
+    def test_import_maps_shadow_fields(self):
+        objects = self._import_fixture()
+        sun, fill = objects["Sun"].data, objects["SkyFill"].data
+        self.assertTrue(sun.use_shadow)
+        self.assertAlmostEqual(sun["x3d_shadow_intensity"], 0.72, places=5)
+        self.assertAlmostEqual(sun["x3d_ambient_intensity"], 0.12, places=5)
+        self.assertFalse(fill.use_shadow)  # X3D shadows defaults to FALSE
+        self.assertNotIn("x3d_shadow_intensity", fill.keys())
+        self.assertNotIn("x3d_ambient_intensity", fill.keys())
+        self.assertFalse(objects["Ground"].visible_shadow)
+        self.assertTrue(objects["Tower"].visible_shadow)
+
+    def test_x3d40_export_writes_shadow_fields_back(self):
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        self._import_fixture()
+        path = self._export("shadows_again.x3d")
+        root = ET.parse(path).getroot()
+        lights = {light.attrib["DEF"]: light.attrib for light in root.iter("DirectionalLight")}
+        sun, fill = lights["LA_Sun"], lights["LA_SkyFill"]
+        self.assertEqual(sun.get("shadows"), "true")
+        self.assertAlmostEqual(float(sun["shadowIntensity"]), 0.72, places=5)
+        self.assertAlmostEqual(float(sun["ambientIntensity"]), 0.12, places=5)
+        self.assertAlmostEqual(float(sun["intensity"]), 1.067, places=5)
+        self.assertNotIn("shadows", fill)
+        self.assertNotIn("shadowIntensity", fill)
+        self.assertEqual(float(fill["ambientIntensity"]), 0.0)
+        ground = root.find(".//Transform[@DEF='OB_Ground']/Shape")
+        tower = root.find(".//Transform[@DEF='OB_Tower']/Shape")
+        self.assertEqual(ground.get("castShadow"), "false")
+        self.assertIsNone(tower.get("castShadow"))
+        self.assertTrue(validate_xml_file(path).valid)
+        semantic = validate_with_x3d_py(path)
+        if semantic is not None:
+            self.assertTrue(semantic.valid, semantic.errors)
+
+    def test_blender_shadow_switch_exports(self):
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        for name, use_shadow in (("Shadowed", True), ("Unshadowed", False)):
+            data = bpy.data.lights.new(name, "SUN")
+            data.use_shadow = use_shadow
+            bpy.context.scene.collection.objects.link(bpy.data.objects.new(name, data))
+        root = ET.parse(self._export("blender_lights.x3d")).getroot()
+        lights = {light.attrib["DEF"]: light.attrib for light in root.iter("DirectionalLight")}
+        self.assertEqual(lights["LA_Shadowed"].get("shadows"), "true")
+        self.assertNotIn("shadows", lights["LA_Unshadowed"])
+        self.assertNotIn("shadowIntensity", lights["LA_Shadowed"])
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class ViewpointDescriptionRoundTripTests(unittest.TestCase):
+    """An imported Viewpoint description is written back by the X3D 4.0 export; the camera name is only the
+    fallback for a viewpoint that had none (and for cameras made in Blender)."""
+
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<X3D version="4.0" profile="Immersive"><Scene>\n'
+        '<Viewpoint DEF="Arrival" description="Drillfield &amp; Burruss from 300 m" position="330 300 420"'
+        ' orientation="-0.5522 0.8117 0.1904 0.8034" fieldOfView="0.8"/>\n'
+        '<Viewpoint DEF="Overview" position="0 50 0"/>\n'
+        '</Scene></X3D>\n'
+    )
+
+    def test_description_survives_x3d40_round_trip(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_viewpoint_")
+        _register_extension(tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        import bpy
+        from validate import validate_xml_file
+
+        source = os.path.join(tmpdir, "viewpoints.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        objects = bpy.context.scene.objects
+        self.assertEqual(objects["Arrival"].get("x3d_viewpoint_description"), "Drillfield & Burruss from 300 m")
+        self.assertNotIn("x3d_viewpoint_description", objects["Overview"].keys())
+
+        camera = bpy.data.objects.new("BlenderCam", bpy.data.cameras.new("BlenderCam"))
+        bpy.context.scene.collection.objects.link(camera)
+        path = os.path.join(tmpdir, "viewpoints_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        descriptions = {view.attrib["DEF"]: view.get("description") for view in ET.parse(path).getroot().iter("Viewpoint")}
+        self.assertEqual(descriptions, {"CA_Arrival": "Drillfield & Burruss from 300 m", "CA_Overview": "Overview",
+                                        "CA_BlenderCam": "BlenderCam"})
+        self.assertTrue(validate_xml_file(path).valid)
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class HeadMetaRoundTripTests(unittest.TestCase):
+    """Head meta of an imported file, repeated names included, survives an X3D 4.0 re-export, and the dialog's
+    default licence (none) neither replaces an imported licence nor is written as "NONE"."""
+
+    COPERNICUS = ("Ground and valley colour: Contains modified Copernicus Sentinel data 2026 "
+                  "(scene S2B_17SNB_20261007, 7 Oct 2026, 0.05 percent cloud).")
+    LICENSE = "Data: public domain (USGS) and free and open (Copernicus Sentinel-2, attribution required)."
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<X3D profile='Immersive' version='4.0'><head>\n"
+        "<meta name='title' content='Blacksburg campus, local frame'/>\n"
+        "<meta name='reference' content='Terrain: USGS 3DEP lidar (public domain).'/>\n"
+        "<meta name='reference' content='" + COPERNICUS + "'/>\n"
+        "<meta name='license' content='" + LICENSE + "'/>\n"
+        "<meta name='generator' content='earth-twin/src/build_x3d.py'/>\n"
+        "</head><Scene><Transform DEF='Box'><Shape><Box/></Shape></Transform></Scene></X3D>\n"
+    )
+
+    @staticmethod
+    def _head(path):
+        return [(meta.attrib["name"], meta.attrib["content"]) for meta in ET.parse(path).getroot().iter("meta")]
+
+    def _export(self, path):
+        import bpy
+
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        return self._head(path)
+
+    def test_imported_head_meta_survives(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_head_")
+        _register_extension(tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        import bpy
+        from validate import validate_xml_file
+
+        source = os.path.join(tmpdir, "campus.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        kept = [(item["name"], item["content"]) for item in bpy.context.scene["x3d_head_meta"]]
+        self.assertEqual([content for name, content in kept if name == "reference"][1], self.COPERNICUS)
+
+        first = os.path.join(tmpdir, "campus_1.x3d")
+        head = self._export(first)
+        self.assertEqual(head[:2], [("generator", head[0][1]), ("filename", "campus_1.x3d")])
+        self.assertEqual(head[2:], [
+            ("title", "Blacksburg campus, local frame"),
+            ("reference", "Terrain: USGS 3DEP lidar (public domain)."),
+            ("reference", self.COPERNICUS),
+            ("license", self.LICENSE),
+            ("generator", "earth-twin/src/build_x3d.py"),
+        ])
+        self.assertTrue(validate_xml_file(first).valid)
+
+        # a second round trip through this exporter's own file changes nothing but the file name
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=first), {"FINISHED"})
+        second = self._export(os.path.join(tmpdir, "campus_2.x3d"))
+        self.assertEqual(second, [(name, "campus_2.x3d" if name == "filename" else content) for name, content in head])
+
+    def test_blender_scene_gets_no_licence_meta(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_head_")
+        _register_extension(tmpdir)
+        import bpy
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.mesh.primitive_cube_add(size=1.0)
+        head = self._export(os.path.join(tmpdir, "cube.x3d"))
+        self.assertEqual([name for name, content in head], ["generator", "filename"])
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class ShapeMetadataRoundTripTests(unittest.TestCase):
+    """A Shape's Metadata* node (the earth-twin buildings carry lidar figures in a MetadataSet) is kept on the
+    imported object and written back into its Shape by the X3D 4.0 export, values exactly as read."""
+
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<X3D profile='Immersive' version='4.0'><Scene>\n"
+        "<Shape DEF='B0000'><MetadataSet containerField='metadata' name='lidar' reference='USGS 3DEP 2017'>"
+        "<MetadataDouble name='footprintArea_m2' value='83.8'/><MetadataDouble name='roofHeightP95_m' value='5.6'/>"
+        "<MetadataInteger name='roofIntensityMedian' value='19152'/>"
+        "<MetadataString containerField='metadata' name='about' value='\"the set itself\"'/></MetadataSet>"
+        "<Box/></Shape>\n"
+        "<Transform translation='3 0 0'><Shape DEF='B0001'>"
+        "<MetadataString containerField='metadata' name='use' value='\"office &amp; lab\" \"public\"'/>"
+        "<Sphere/></Shape></Transform>\n"
+        "<Shape DEF='Plain'><Box/></Shape>\n"
+        "</Scene></X3D>\n"
+    )
+    LIDAR = [("MetadataDouble", {"name": "footprintArea_m2", "value": "83.8"}),
+             ("MetadataDouble", {"name": "roofHeightP95_m", "value": "5.6"}),
+             ("MetadataInteger", {"name": "roofIntensityMedian", "value": "19152"})]
+
+    def test_shape_metadata_survives_x3d40_round_trip(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_metadata_")
+        _register_extension(tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        import bpy
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        source = os.path.join(tmpdir, "buildings.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        objects = bpy.context.scene.objects
+        kept = objects["B0000"]["x3d_metadata"]
+        self.assertEqual((kept["node"], kept["name"], kept["reference"]), ("MetadataSet", "lidar", "USGS 3DEP 2017"))
+        self.assertEqual([(member["node"], member["name"], member["value"]) for member in kept["value"]],
+                         [(tag, attrib["name"], attrib["value"]) for tag, attrib in self.LIDAR])
+        self.assertNotIn("x3d_metadata", objects["Plain"].keys())
+
+        path = os.path.join(tmpdir, "buildings_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        root = ET.parse(path).getroot()
+        lidar = root.find(".//Transform[@DEF='OB_B0000']/Shape/MetadataSet")
+        self.assertEqual(lidar.attrib, {"containerField": "metadata", "name": "lidar", "reference": "USGS 3DEP 2017"})
+        self.assertEqual([(member.tag, member.attrib) for member in lidar], self.LIDAR)
+        use = root.find(".//Transform[@DEF='OB_B0001']/Shape/MetadataString")
+        self.assertEqual(use.attrib, {"containerField": "metadata", "name": "use", "value": '"office & lab" "public"'})
+        self.assertEqual(len(root.findall(".//MetadataSet")) + len(root.findall(".//MetadataString")), 2)
+        self.assertTrue(validate_xml_file(path).valid)
+        semantic = validate_with_x3d_py(path)
+        if semantic is not None:
+            self.assertTrue(semantic.valid, semantic.errors)
+
+    def _import_objects(self, shapes_xml):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_metadata_")
+        _register_extension(tmpdir)
+        import bpy
+
+        source = os.path.join(tmpdir, "metadata.x3d")
+        Path(source).write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+                                f"<X3D profile='Immersive' version='4.0'><Scene>\n{shapes_xml}</Scene></X3D>\n",
+                                encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        return tmpdir, bpy.context.scene.objects
+
+    @staticmethod
+    def _members(kept):
+        return [(member["node"], member["name"], member["value"]) for member in kept["value"]]
+
+    def test_set_that_uses_itself_is_cut_not_fatal(self):
+        # Not valid X3D: S contains itself through USE. Before the importer read metadata, such a file imported;
+        # it must still import, keep S's string member and drop only the loop.
+        import bpy
+
+        tmpdir, objects = self._import_objects(
+            "<Shape DEF='Loop'><MetadataSet DEF='S' name='loop'>"
+            "<MetadataString name='kept' value='\"yes\"'/><MetadataSet USE='S'/></MetadataSet><Box/></Shape>\n")
+        kept = objects["Loop"]["x3d_metadata"]
+        self.assertEqual((kept["node"], kept["name"]), ("MetadataSet", "loop"))
+        self.assertEqual(self._members(kept), [("MetadataString", "kept", '"yes"')])
+
+        path = os.path.join(tmpdir, "metadata_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        loop = ET.parse(path).getroot().find(".//Transform[@DEF='OB_Loop']/Shape/MetadataSet")
+        self.assertEqual([(member.tag, member.attrib) for member in loop],
+                         [("MetadataString", {"name": "kept", "value": '"yes"'})])
+
+    def test_use_has_its_own_container_field(self):
+        # NOTE is DEF'd as the set's own metadata and USEd as a member: a USE names its own containerField
+        # (default value), so the set has exactly one member.
+        _tmpdir, objects = self._import_objects(
+            "<Shape DEF='Reused'><MetadataSet containerField='metadata' name='building'>"
+            "<MetadataString DEF='NOTE' containerField='metadata' name='note' value='\"surveyed\"'/>"
+            "<MetadataString USE='NOTE'/></MetadataSet><Box/></Shape>\n")
+        self.assertEqual(self._members(objects["Reused"]["x3d_metadata"]), [("MetadataString", "note", '"surveyed"')])
+
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class ExportImportExportTests(unittest.TestCase):
@@ -956,13 +1367,13 @@ class ExportImportExportTests(unittest.TestCase):
 
     Generation two must equal generation three (the pair is a fixed point). Generation one may lose the nodes
     in KNOWN_LOSSES, which the importer maps to something else today (vertex colours and normals, UnlitMaterial as a Principled
-    material, the Background node, one extra Transform per shared-mesh object); any other difference is a regression.
+    material, one extra Transform per shared-mesh object); any other difference is a regression.
     Importing every fixture twice in one session also guards the importer's texture and material caches."""
 
     KNOWN_LOSSES = {
         "swatch": {"ColorRGBA", "Normal", "PhysicalMaterial", "UnlitMaterial", "Coordinate", "TextureCoordinate",
                    "Transform", "meta"},
-        "scene": {"PhysicalMaterial", "Transform", "Background"},
+        "scene": {"PhysicalMaterial", "Transform"},
         "hanim": set(),
         "splat": set(),
     }

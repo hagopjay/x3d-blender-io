@@ -13,13 +13,13 @@ from __future__ import annotations
 import math
 
 try:
-    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .material import analyze_material
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from material import analyze_material
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
@@ -37,6 +37,22 @@ SPLAT_OPACITY_ATTR = "splat_opacity"
 SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
 INLINE_URL_PROPERTY = "x3d_inline_url"
 INLINE_SOURCE_PROPERTY = "x3d_inline_source"
+# X3D light fields with no Blender setting, kept on the light data by the importer.
+LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
+LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
+# The intensity a light had in the X3D file it was imported from; it also marks the light as imported.
+LIGHT_INTENSITY_PROPERTY = "x3d_intensity"
+# Viewpoint description read by the importer, kept on the camera object.
+VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
+# Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
+HEAD_META_PROPERTY = "x3d_head_meta"
+# A Shape's Metadata* node read by the importer, kept on the object as nested {"node", "name", "reference", "value"}.
+METADATA_PROPERTY = "x3d_metadata"
+METADATA_NODE_TYPES = frozenset(
+    ("MetadataBoolean", "MetadataDouble", "MetadataFloat", "MetadataInteger", "MetadataSet", "MetadataString"))
+# The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
+# (flat lists of numbers) and transparency.
+BACKGROUND_PROPERTY = "x3d_background"
 
 
 def is_splat_mesh(obj) -> bool:
@@ -472,17 +488,110 @@ def _direction_neg_z(matrix):
     return (float(vector[0]), float(vector[1]), float(vector[2]))
 
 
+def scene_head_meta(scene) -> list[tuple[str, str]]:
+    """The (name, content) pairs of the head meta the importer kept on ``scene``, in file order."""
+    entries = []
+    for item in scene.get(HEAD_META_PROPERTY) or ():
+        get = getattr(item, "get", None)
+        if get is None:
+            continue
+        name, content = get("name"), get("content")
+        if isinstance(name, str) and name and isinstance(content, str):
+            entries.append((name, content))
+    return entries
+
+
+def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
+    """The Metadata* node stored in an ``x3d_metadata`` custom property, or None when it is missing or malformed.
+
+    ``value`` is the X3D text of the field (for MetadataSet, the list of member nodes); it is written as stored.
+    """
+    get = getattr(item, "get", None)
+    if get is None or depth > 64 or get("node") not in METADATA_NODE_TYPES:
+        return None
+    node = IRMetadataNode(node_type=get("node"))
+    for attribute in ("name", "reference"):
+        text = get(attribute)
+        if isinstance(text, str):
+            setattr(node, attribute, text)
+    value = get("value")
+    if node.node_type == "MetadataSet":
+        if value is not None and not isinstance(value, str):
+            members = (object_metadata(member, depth + 1) for member in value)
+            node.members = [member for member in members if member is not None]
+    elif isinstance(value, str):
+        node.value = value
+    return node
+
+
+def scene_background(scene) -> IRBackground | None:
+    """The Background the importer kept on ``scene``, or None when there is none (or it has no sky colour)."""
+    stored = scene.get(BACKGROUND_PROPERTY)
+    get = getattr(stored, "get", None)
+    if get is None:
+        return None
+
+    def numbers(key):
+        values = get(key)
+        if values is None or isinstance(values, str):
+            return []
+        try:
+            return [float(value) for value in values]
+        except (TypeError, ValueError):
+            return []
+
+    def colors(key):
+        flat = numbers(key)
+        return [tuple(flat[index:index + 3]) for index in range(0, len(flat) - 2, 3)]
+
+    sky_color = colors("skyColor")
+    if not sky_color:
+        return None
+    transparency = get("transparency")
+    return IRBackground(
+        sky_color=sky_color,
+        sky_angle=numbers("skyAngle"),
+        ground_color=colors("groundColor"),
+        ground_angle=numbers("groundAngle"),
+        transparency=float(transparency) if isinstance(transparency, (int, float)) else 0.0,
+    )
+
+
+def _unit_interval(value, default):
+    """A custom-property number clamped to [0, 1], or ``default`` when it is unset or not a number."""
+    try:
+        return max(0.0, min(1.0, float(value)))
+    except (TypeError, ValueError):
+        return default
+
+
 def _extract_light(obj, local_matrix) -> IRLight:
-    """Mirror the legacy exporter's light mapping; values are local to the object's Transform."""
+    """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
+
+    A light imported from X3D (it carries ``x3d_intensity``) is written without capping intensity at 1: the
+    X3D 4.0 schema gives light intensity no upper limit, and its energy maps back to the value in the file. A
+    light made in Blender keeps the [0, 1] cap: watts have no fixed X3D scale and this writer emits no
+    attenuation, so a 1000 W point light (energy / 1.75 = 571) would white out the scene in a browser. The
+    legacy X3D 3.x writer caps every light because the 3.x schemas limit intensity to [0, 1].
+    ``shadows`` follows the light's shadow switch; ambientIntensity and shadowIntensity have no Blender
+    setting and come from the custom properties the importer leaves on the light data.
+    """
     data = obj.data
     light_type = {"POINT": "POINT", "SPOT": "SPOT", "SUN": "DIRECTIONAL"}.get(data.type, "DIRECTIONAL")
+    energy = max(0.0, float(data.energy))
+    intensity = energy / 1.75 if data.type != "SUN" else energy
+    if data.get(LIGHT_INTENSITY_PROPERTY) is None:
+        intensity = min(intensity, 1.0)
     light = IRLight(
         name=obj.name,
         light_type=light_type,
         color=tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3]),
-        intensity=min(float(data.energy) / 1.75, 1.0) if data.type != "SUN" else min(float(data.energy), 1.0),
+        intensity=intensity,
+        ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
         direction=_direction_neg_z(local_matrix),
+        shadows=bool(getattr(data, "use_shadow", False)),
+        shadow_intensity=_unit_interval(data.get(LIGHT_SHADOW_INTENSITY_PROPERTY), None),
     )
     cutoff = float(getattr(data, "cutoff_distance", 0.0) or 0.0)
     if light_type == "POINT":
@@ -511,15 +620,17 @@ def _world_color(world):
 
 
 def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
+    """The description is the one the importer kept, or the camera's name when there is none."""
     field_of_view = None
     if obj.data.type == "PERSP":
         field_of_view = float(obj.data.angle)
         if scene is not None:
             # X3D measures fieldOfView across the smaller side of the view, Blender across the fitted side.
             field_of_view = x3d_field_of_view(field_of_view, obj.data.sensor_fit, *render_size(scene))
+    description = obj.get(VIEWPOINT_DESCRIPTION_PROPERTY)
     return IRViewpoint(
         name=obj.name,
-        description=obj.name,
+        description=description if isinstance(description, str) and description else obj.name,
         transform=_matrix_transform(local_matrix),
         field_of_view=field_of_view,
     )
@@ -610,11 +721,14 @@ def extract_scene(
         reference=metadata.get("reference"),
         license=metadata.get("license"),
         filename=metadata.get("filename"),
+        entries=scene_head_meta(scene),
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
+    ir_scene.background = scene_background(scene)
     world = getattr(scene, "world", None)
-    if world is not None and getattr(world, "color", None) is not None:
+    if ir_scene.background is None and world is not None and getattr(world, "color", None) is not None:
         ir_scene.background_color = tuple(max(0.0, min(1.0, float(channel))) for channel in _world_color(world)[:3])
 
     exported = list(
@@ -767,6 +881,8 @@ def extract_scene(
             source_key, shapes = mesh_shapes(obj)
             instance.source_key = source_key
             instance.shapes = shapes
+            instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
+            instance.metadata = object_metadata(obj.get(METADATA_PROPERTY))
             if shapes:
                 instance.geometry_name = shapes[0].geometry_name
                 instance.material_name = shapes[0].material_name
