@@ -18,8 +18,8 @@ if str(SOURCE_DIR) not in sys.path:
 
 from emit_x3d40 import export_ir_scene, head_meta
 from ir import (
-    IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRPBRMaterial,
-    IRScene, IRShape, IRTextureRef, IRTextureTransform, IRTransform,
+    IRBackground, IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode,
+    IRPBRMaterial, IRScene, IRShape, IRTextureRef, IRTextureTransform, IRTransform,
 )
 from validate import validate_xml_text
 
@@ -358,6 +358,40 @@ class EmitX3D40Tests(unittest.TestCase):
             ("MetadataString", {"name": "note", "value": '"roof & walls" "flat"'}),
             ("MetadataSet", {"name": "empty"}),
         ])
+
+    def _background(self, scene):
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene)
+        xml_text = buffer.getvalue()
+        self.assertTrue(validate_xml_text(xml_text).valid)
+        backgrounds = ET.fromstring(xml_text).findall("Scene/Background")
+        self.assertEqual(len(backgrounds), 1)
+        return {name: [round(float(value), 6) for value in text.split()] for name, text in backgrounds[0].attrib.items()}
+
+    def test_background_gradient(self):
+        # the earth-twin campus sky: five angles, six colours, one ground angle
+        sky = [(0.16, 0.33, 0.62), (0.25, 0.45, 0.75), (0.42, 0.6, 0.85), (0.62, 0.74, 0.9), (0.78, 0.83, 0.9),
+               (0.8, 0.84, 0.88)]
+        background = IRBackground(sky_color=sky, sky_angle=[0.5, 1.0, 1.35, 1.52, 1.5708],
+                                  ground_color=[(0.22, 0.24, 0.2), (0.3, 0.31, 0.27)], ground_angle=[1.5708])
+        written = self._background(IRScene(name="Sky", background=background, background_color=(1.0, 0.0, 0.0)))
+        self.assertEqual(written, {
+            "skyAngle": [0.5, 1.0, 1.35, 1.52, 1.5708],
+            "skyColor": [channel for color in sky for channel in color],
+            "groundAngle": [1.5708],
+            "groundColor": [0.22, 0.24, 0.2, 0.3, 0.31, 0.27],
+        })
+
+    def test_background_fitted_to_schema_ranges(self):
+        background = IRBackground(sky_color=[(1.5, -0.1, 0.5), (0.2, 0.2, 0.2)], sky_angle=[4.0, 5.0],
+                                  ground_color=[(0.1, 0.1, 0.1)], ground_angle=[0.3], transparency=1.5)
+        written = self._background(IRScene(name="Sky", background=background))
+        self.assertEqual(written, {"skyAngle": [3.1416], "skyColor": [1.0, 0.0, 0.5, 0.2, 0.2, 0.2],
+                                   "groundColor": [0.1, 0.1, 0.1], "transparency": [1.0]})
+
+    def test_world_colour_background_without_imported_one(self):
+        self.assertEqual(self._background(IRScene(name="Sky", background_color=(0.04, 0.02, 0.08))),
+                         {"skyColor": [0.04, 0.02, 0.08]})
 
     def test_geometry2d_component_declared_for_circle2d_fallback(self):
         scene = IRScene(

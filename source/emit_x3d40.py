@@ -317,6 +317,39 @@ def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
     return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
 
 
+# Upper limits of Background skyAngle and groundAngle in the X3D 4.0 schema and object model: pi and pi/2, rounded up.
+_SKY_ANGLE_MAX = 3.1416
+_GROUND_ANGLE_MAX = 1.5708
+
+
+def _background_xml(background, indent):
+    """A Background with its sky and ground gradients. Colours are clipped to [0, 1] and angles to the ranges the
+    X3D 4.0 schema gives; each angle list is cut to one less than its colours, and the colours to one more than
+    the angles."""
+
+    def clip(values, top):
+        return [min(max(float(value), 0.0), top) for value in values]
+
+    sky_color = [tuple(clip(color, 1.0)) for color in background.sky_color] or [(0.0, 0.0, 0.0)]
+    sky_angle = clip(background.sky_angle, _SKY_ANGLE_MAX)[:len(sky_color) - 1]
+    sky_color = sky_color[:len(sky_angle) + 1]
+    ground_color = [tuple(clip(color, 1.0)) for color in background.ground_color]
+    ground_angle = clip(background.ground_angle, _GROUND_ANGLE_MAX)[:max(len(ground_color) - 1, 0)]
+    ground_color = ground_color[:len(ground_angle) + 1]
+    attrs = []
+    if sky_angle:
+        attrs.append(f'skyAngle="{" ".join(_fmt(angle) for angle in sky_angle)}"')
+    attrs.append(f'skyColor="{" ".join(_fmt3(color) for color in sky_color)}"')
+    if ground_angle:
+        attrs.append(f'groundAngle="{" ".join(_fmt(angle) for angle in ground_angle)}"')
+    if ground_color:
+        attrs.append(f'groundColor="{" ".join(_fmt3(color) for color in ground_color)}"')
+    transparency = clip([background.transparency], 1.0)[0]
+    if transparency:
+        attrs.append(f'transparency="{_fmt(transparency)}"')
+    return f"{indent}<Background {' '.join(attrs)} />\n"
+
+
 def _metadata_xml(node, indent, container_field=None):
     """A Metadata* node. Inside a MetadataSet the X3D 4.0 default containerField, value, applies; a node's own
     metadata field needs containerField="metadata"."""
@@ -692,7 +725,9 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         f'    <NavigationInfo headlight="{"false" if has_lights else "true"}" '
         "type='\"EXAMINE\" \"ANY\"' />\n"
     )
-    if ir_scene.background_color is not None:
+    if ir_scene.background is not None:
+        write(_background_xml(ir_scene.background, "    "))
+    elif ir_scene.background_color is not None:
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     splats = ir_scene.splats_by_name()

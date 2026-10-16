@@ -18,8 +18,9 @@ import mathutils
 from math import sin, cos, pi
 from itertools import chain
 from . import mfstring
-from .extract import (HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
-                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
+from .extract import (BACKGROUND_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
+                      LIGHT_SHADOW_INTENSITY_PROPERTY, METADATA_NODE_TYPES, METADATA_PROPERTY,
+                      VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -4157,6 +4158,24 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
         bpyob[VIEWPOINT_DESCRIPTION_PROPERTY] = description
 
 
+def importBackground(bpyscene, node, ancestry):
+    """Keep a Background's sky and ground gradients on the scene for the X3D 4.0 export to write back.
+
+    Blender has no gradient backdrop, and its world colour also lights a render, which an X3D Background
+    does not, so the world is left as it is. The export writes this Background in place of one made from
+    the world colour; deleting the scene's x3d_background property brings that back.
+    """
+    background = {"skyColor": [0.0, 0.0, 0.0]}  # the X3D default sky is black
+    for field in ("skyColor", "skyAngle", "groundColor", "groundAngle"):
+        values = node.getFieldAsArray(field, 0, ancestry)
+        if values:
+            background[field] = [float(value) for value in values]
+    transparency = node.getFieldAsFloat('transparency', None, ancestry)
+    if transparency is not None:
+        background["transparency"] = transparency
+    bpyscene[BACKGROUND_PROPERTY] = background
+
+
 def importTransform(bpycollection, node, ancestry, global_matrix):
     name = node.getDefName()
     if not name:
@@ -5263,6 +5282,8 @@ def load_web3d(
 
     # fill with tuples - (node, [parents-parent, parent])
     all_nodes = root_node.getSerialized([], [])
+    # the first Background of the file is the one a browser shows; an inlined file's does not count
+    background_seen = bool(_INLINE_STACK)
 
     for node, ancestry in all_nodes:
         # if 'castle.wrl' not in node.getFilename():
@@ -5302,6 +5323,9 @@ def load_web3d(
             # Only use transform nodes when we are not importing a flat object hierarchy
             if not PREF_FLAT:
                 importTransform(bpycollection, node, ancestry, global_matrix)
+        elif spec == 'Background' and not background_seen:
+            importBackground(bpyscene, node, ancestry)
+            background_seen = True
         elif spec == 'Sound':
             importAudio(bpycollection, node, ancestry, global_matrix)
             '''

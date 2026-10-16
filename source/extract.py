@@ -13,13 +13,13 @@ from __future__ import annotations
 import math
 
 try:
-    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .material import analyze_material
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from material import analyze_material
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
@@ -48,6 +48,9 @@ HEAD_META_PROPERTY = "x3d_head_meta"
 METADATA_PROPERTY = "x3d_metadata"
 METADATA_NODE_TYPES = frozenset(
     ("MetadataBoolean", "MetadataDouble", "MetadataFloat", "MetadataInteger", "MetadataSet", "MetadataString"))
+# The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
+# (flat lists of numbers) and transparency.
+BACKGROUND_PROPERTY = "x3d_background"
 
 
 def is_splat_mesh(obj) -> bool:
@@ -519,6 +522,39 @@ def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
     return node
 
 
+def scene_background(scene) -> IRBackground | None:
+    """The Background the importer kept on ``scene``, or None when there is none (or it has no sky colour)."""
+    stored = scene.get(BACKGROUND_PROPERTY)
+    get = getattr(stored, "get", None)
+    if get is None:
+        return None
+
+    def numbers(key):
+        values = get(key)
+        if values is None or isinstance(values, str):
+            return []
+        try:
+            return [float(value) for value in values]
+        except (TypeError, ValueError):
+            return []
+
+    def colors(key):
+        flat = numbers(key)
+        return [tuple(flat[index:index + 3]) for index in range(0, len(flat) - 2, 3)]
+
+    sky_color = colors("skyColor")
+    if not sky_color:
+        return None
+    transparency = get("transparency")
+    return IRBackground(
+        sky_color=sky_color,
+        sky_angle=numbers("skyAngle"),
+        ground_color=colors("groundColor"),
+        ground_angle=numbers("groundAngle"),
+        transparency=float(transparency) if isinstance(transparency, (int, float)) else 0.0,
+    )
+
+
 def _unit_interval(value, default):
     """A custom-property number clamped to [0, 1], or ``default`` when it is unset or not a number."""
     try:
@@ -681,8 +717,10 @@ def extract_scene(
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
+    ir_scene.background = scene_background(scene)
     world = getattr(scene, "world", None)
-    if world is not None and getattr(world, "color", None) is not None:
+    if ir_scene.background is None and world is not None and getattr(world, "color", None) is not None:
         ir_scene.background_color = tuple(max(0.0, min(1.0, float(channel))) for channel in _world_color(world)[:3])
 
     exported = list(

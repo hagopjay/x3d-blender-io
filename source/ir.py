@@ -202,6 +202,17 @@ class IRLight:
 
 
 @dataclass
+class IRBackground:
+    """An X3D Background gradient: N sky (ground) angles go with N + 1 sky (ground) colours."""
+
+    sky_color: list[tuple[float, float, float]] = field(default_factory=lambda: [(0.0, 0.0, 0.0)])
+    sky_angle: list[float] = field(default_factory=list)
+    ground_color: list[tuple[float, float, float]] = field(default_factory=list)
+    ground_angle: list[float] = field(default_factory=list)
+    transparency: float = 0.0
+
+
+@dataclass
 class IRAnimation:
     """Sampled transform animation for one instance.
 
@@ -317,6 +328,8 @@ class IRScene:
     splats: list[IRGaussianSplats] = field(default_factory=list)
     cycle_interval: float | None = None
     background_color: tuple[float, float, float] | None = None
+    # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
+    background: IRBackground | None = None
 
     def iter_instances(self):
         """Depth-first walk over every instance, nested children included."""

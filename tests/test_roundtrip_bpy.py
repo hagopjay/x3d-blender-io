@@ -909,6 +909,64 @@ class WorldBackgroundExportTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class ImportedBackgroundRoundTripTests(unittest.TestCase):
+    """The first Background of an imported file keeps its sky and ground gradients through an X3D 4.0 re-export;
+    the world is left alone, and only a scene without an imported Background takes its colour from the world."""
+
+    # the earth-twin campus sky, then a second Background that is not the bound one
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<X3D profile='Immersive' version='4.0'><Scene>\n"
+        "<Background skyAngle='0.5 1.0 1.35 1.52 1.5708' skyColor='0.16 0.33 0.62 0.25 0.45 0.75 0.42 0.6 0.85"
+        " 0.62 0.74 0.9 0.78 0.83 0.9 0.8 0.84 0.88' groundAngle='1.5708' groundColor='0.22 0.24 0.2 0.3 0.31 0.27'/>\n"
+        "<Background skyColor='1 0 0'/>\n"
+        "<Shape><Box/></Shape>\n"
+        "</Scene></X3D>\n"
+    )
+    EXPECTED = {
+        "skyAngle": [0.5, 1.0, 1.35, 1.52, 1.5708],
+        "skyColor": [0.16, 0.33, 0.62, 0.25, 0.45, 0.75, 0.42, 0.6, 0.85, 0.62, 0.74, 0.9, 0.78, 0.83, 0.9,
+                     0.8, 0.84, 0.88],
+        "groundAngle": [1.5708],
+        "groundColor": [0.22, 0.24, 0.2, 0.3, 0.31, 0.27],
+    }
+
+    def test_background_gradient_survives_x3d40_round_trip(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_background_")
+        _register_extension(tmpdir)
+        import bpy
+
+        source = os.path.join(tmpdir, "sky.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        world = bpy.context.scene.world
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        self.assertIs(bpy.context.scene.world, world)
+        kept = bpy.context.scene["x3d_background"]
+        for field, values in self.EXPECTED.items():
+            self.assertEqual([round(value, 6) for value in kept[field]], values, field)
+
+        path = os.path.join(tmpdir, "sky_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        backgrounds = ET.parse(path).getroot().findall(".//Background")
+        self.assertEqual(len(backgrounds), 1)
+        written = {field: [round(float(value), 6) for value in text.split()]
+                   for field, text in backgrounds[0].attrib.items()}
+        self.assertEqual(written, self.EXPECTED)
+
+        # without the imported Background the export falls back to the world colour, as before
+        del bpy.context.scene["x3d_background"]
+        world = bpy.data.worlds.new("Dusk")
+        bpy.context.scene.world = world
+        world.use_nodes = True
+        world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.1, 0.2, 0.3, 1.0)
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        sky = ET.parse(path).getroot().find(".//Background").attrib
+        self.assertEqual(sorted(sky), ["skyColor"])
+        self.assertEqual([round(float(value), 4) for value in sky["skyColor"].split()], [0.1, 0.2, 0.3])
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class LightEnergyRoundTripTests(unittest.TestCase):
     """Light strength survives export then import: point and spot divide by 1.75 out and multiply back in,
     sun is written unscaled on both export paths. X3D 4.0 sets no upper limit on intensity, so strong lights
@@ -1234,13 +1292,13 @@ class ExportImportExportTests(unittest.TestCase):
 
     Generation two must equal generation three (the pair is a fixed point). Generation one may lose the nodes
     in KNOWN_LOSSES, which the importer maps to something else today (vertex colours and normals, UnlitMaterial as a Principled
-    material, the Background node, one extra Transform per shared-mesh object); any other difference is a regression.
+    material, one extra Transform per shared-mesh object); any other difference is a regression.
     Importing every fixture twice in one session also guards the importer's texture and material caches."""
 
     KNOWN_LOSSES = {
         "swatch": {"ColorRGBA", "Normal", "PhysicalMaterial", "UnlitMaterial", "Coordinate", "TextureCoordinate",
                    "Transform", "meta"},
-        "scene": {"PhysicalMaterial", "Transform", "Background"},
+        "scene": {"PhysicalMaterial", "Transform"},
         "hanim": set(),
         "splat": set(),
     }
