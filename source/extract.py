@@ -13,13 +13,13 @@ from __future__ import annotations
 import math
 
 try:
-    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .material import analyze_material
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from material import analyze_material
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
@@ -44,6 +44,10 @@ LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
 HEAD_META_PROPERTY = "x3d_head_meta"
+# A Shape's Metadata* node read by the importer, kept on the object as nested {"node", "name", "reference", "value"}.
+METADATA_PROPERTY = "x3d_metadata"
+METADATA_NODE_TYPES = frozenset(
+    ("MetadataBoolean", "MetadataDouble", "MetadataFloat", "MetadataInteger", "MetadataSet", "MetadataString"))
 
 
 def is_splat_mesh(obj) -> bool:
@@ -492,6 +496,29 @@ def scene_head_meta(scene) -> list[tuple[str, str]]:
     return entries
 
 
+def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
+    """The Metadata* node stored in an ``x3d_metadata`` custom property, or None when it is missing or malformed.
+
+    ``value`` is the X3D text of the field (for MetadataSet, the list of member nodes); it is written as stored.
+    """
+    get = getattr(item, "get", None)
+    if get is None or depth > 64 or get("node") not in METADATA_NODE_TYPES:
+        return None
+    node = IRMetadataNode(node_type=get("node"))
+    for attribute in ("name", "reference"):
+        text = get(attribute)
+        if isinstance(text, str):
+            setattr(node, attribute, text)
+    value = get("value")
+    if node.node_type == "MetadataSet":
+        if value is not None and not isinstance(value, str):
+            members = (object_metadata(member, depth + 1) for member in value)
+            node.members = [member for member in members if member is not None]
+    elif isinstance(value, str):
+        node.value = value
+    return node
+
+
 def _unit_interval(value, default):
     """A custom-property number clamped to [0, 1], or ``default`` when it is unset or not a number."""
     try:
@@ -809,6 +836,7 @@ def extract_scene(
             instance.source_key = source_key
             instance.shapes = shapes
             instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
+            instance.metadata = object_metadata(obj.get(METADATA_PROPERTY))
             if shapes:
                 instance.geometry_name = shapes[0].geometry_name
                 instance.material_name = shapes[0].material_name

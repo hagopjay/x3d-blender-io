@@ -19,7 +19,7 @@ from math import sin, cos, pi
 from itertools import chain
 from . import mfstring
 from .extract import (HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
-                      VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
+                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -3897,6 +3897,27 @@ geometry_importers = {
 }
 
 
+def importMetadata(node):
+    """An X3D (XML) Metadata* node as nested dicts for a custom property: the node type, name and reference, and
+    ``value``, the field's X3D text (for MetadataSet, its members). The X3D 4.0 export writes it back."""
+    real = node.getRealNode()
+    tree = {"node": real.getSpec()}
+    for field in ("name", "reference"):
+        text = _attribute_raw(real, field, None)
+        if text is not None:
+            tree[field] = text
+    if tree["node"] == "MetadataSet":
+        # members use containerField value; a child marked containerField metadata describes the set itself
+        tree["value"] = [importMetadata(child) for child in real.children
+                         if child.getSpec() in METADATA_NODE_TYPES
+                         and _attribute_raw(child, "containerField", "value") != "metadata"]
+    else:
+        text = _attribute_raw(real, "value", None)
+        if text is not None:
+            tree["value"] = text
+    return tree
+
+
 def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify_value):
     # Under Shape, we can only have Appearance, MetadataXXX and a geometry node
     def isGeometry(spec):
@@ -3977,6 +3998,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
+        metadata = next((child for child in node.getRealNode().children if child.getSpec() in METADATA_NODE_TYPES), None)
+        if metadata is not None and getattr(metadata.getRealNode(), "x3dNode", None) is not None:
+            node.blendObject[METADATA_PROPERTY] = importMetadata(metadata)
     else:
         logger.warning('ImportX3D warning: unsupported type "%s"' % geom_spec)
 

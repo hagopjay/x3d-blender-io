@@ -317,6 +317,24 @@ def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
     return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
 
 
+def _metadata_xml(node, indent, container_field=None):
+    """A Metadata* node. Inside a MetadataSet the X3D 4.0 default containerField, value, applies; a node's own
+    metadata field needs containerField="metadata"."""
+    attrs = [f'containerField="{container_field}"'] if container_field else []
+    if node.name is not None:
+        attrs.append(f"name={quoteattr(node.name)}")
+    if node.reference is not None:
+        attrs.append(f"reference={quoteattr(node.reference)}")
+    if node.node_type != "MetadataSet":
+        if node.value is not None:
+            attrs.append(f"value={quoteattr(node.value)}")
+        return f"{indent}<{node.node_type} {' '.join(attrs)} />\n"
+    if not node.members:
+        return f"{indent}<MetadataSet {' '.join(attrs)} />\n"
+    members = "".join(_metadata_xml(member, indent + "  ") for member in node.members)
+    return f"{indent}<MetadataSet {' '.join(attrs)}>\n{members}{indent}</MetadataSet>\n"
+
+
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
                   splats=None, version="4.0"):
     humanoids = humanoids or {}
@@ -332,8 +350,10 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         f'scale="{_fmt3((sx, sy, sz))}">\n'
     ]
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
-    for shape in instance.iter_shapes():
+    for index, shape in enumerate(instance.iter_shapes()):
         xml.append(f"{indent}  <Shape{shape_attrs}>\n")
+        if index == 0 and instance.metadata is not None:
+            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata"))
         material = materials.get(shape.material_name) if shape.material_name else None
         if material is not None:
             xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir))

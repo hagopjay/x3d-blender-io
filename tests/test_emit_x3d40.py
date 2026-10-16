@@ -8,6 +8,7 @@ import io
 import re
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -17,8 +18,8 @@ if str(SOURCE_DIR) not in sys.path:
 
 from emit_x3d40 import export_ir_scene, head_meta
 from ir import (
-    IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRPBRMaterial, IRScene, IRShape,
-    IRTextureRef, IRTextureTransform, IRTransform,
+    IRGaussianSplats, IRInlineAsset, IRInstance, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRPBRMaterial,
+    IRScene, IRShape, IRTextureRef, IRTextureTransform, IRTransform,
 )
 from validate import validate_xml_text
 
@@ -331,6 +332,32 @@ class EmitX3D40Tests(unittest.TestCase):
         self.assertLess(xml_text.index('<Shape castShadow="false">'), xml_text.index('DEF="OB_Tower"'))
         self.assertEqual(xml_text.count("<Shape>"), 1)
         self.assertTrue(validate_xml_text(xml_text).valid)
+
+    def test_shape_metadata_written_in_first_shape(self):
+        lidar = IRMetadataNode("MetadataSet", name="lidar", reference="USGS 3DEP 2017", members=[
+            IRMetadataNode("MetadataDouble", name="footprintArea_m2", value="83.8"),
+            IRMetadataNode("MetadataInteger", name="roofIntensityMedian", value="19152"),
+            IRMetadataNode("MetadataString", name="note", value='"roof & walls" "flat"'),
+            IRMetadataNode("MetadataSet", name="empty"),
+        ])
+        building = IRInstance(source_key="MESH:B0000", object_name="B0000", object_type="MESH", metadata=lidar,
+                              shapes=[IRShape(geometry_hint="Box"), IRShape(geometry_hint="Cone")])
+        buffer = io.StringIO()
+        export_ir_scene(buffer, IRScene(name="Metadata", instances=[building]))
+        xml_text = buffer.getvalue()
+        self.assertTrue(validate_xml_text(xml_text).valid)
+        shapes = ET.fromstring(xml_text).findall(".//Transform[@DEF='OB_B0000']/Shape")
+        self.assertEqual(len(shapes), 2)
+        self.assertIsNone(shapes[1].find("MetadataSet"))
+        written = shapes[0][0]  # the metadata field comes before appearance and geometry
+        self.assertEqual((written.tag, written.attrib), ("MetadataSet", {
+            "containerField": "metadata", "name": "lidar", "reference": "USGS 3DEP 2017"}))
+        self.assertEqual([(member.tag, member.attrib) for member in written], [
+            ("MetadataDouble", {"name": "footprintArea_m2", "value": "83.8"}),
+            ("MetadataInteger", {"name": "roofIntensityMedian", "value": "19152"}),
+            ("MetadataString", {"name": "note", "value": '"roof & walls" "flat"'}),
+            ("MetadataSet", {"name": "empty"}),
+        ])
 
     def test_geometry2d_component_declared_for_circle2d_fallback(self):
         scene = IRScene(

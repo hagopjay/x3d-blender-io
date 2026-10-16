@@ -172,6 +172,17 @@ class IRViewpoint:
 
 
 @dataclass
+class IRMetadataNode:
+    """One X3D Metadata* node. MetadataSet holds ``members``; the others hold ``value``, the field's X3D text."""
+
+    node_type: str  # MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString
+    name: str | None = None
+    reference: str | None = None
+    value: str | None = None
+    members: list["IRMetadataNode"] = field(default_factory=list)
+
+
+@dataclass
 class IRLight:
     """A light written inside its owning Transform (location 0, direction -Z)."""
 
@@ -235,6 +246,8 @@ class IRInstance:
     splats_name: str | None = None
     # Shape castShadow (X3D 4.0, default TRUE): Blender's object shadow visibility.
     cast_shadow: bool = True
+    # Metadata node written as the metadata field of the instance's first Shape.
+    metadata: IRMetadataNode | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.

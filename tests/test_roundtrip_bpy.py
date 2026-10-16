@@ -1172,6 +1172,63 @@ class HeadMetaRoundTripTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class ShapeMetadataRoundTripTests(unittest.TestCase):
+    """A Shape's Metadata* node (the earth-twin buildings carry lidar figures in a MetadataSet) is kept on the
+    imported object and written back into its Shape by the X3D 4.0 export, values exactly as read."""
+
+    FIXTURE = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<X3D profile='Immersive' version='4.0'><Scene>\n"
+        "<Shape DEF='B0000'><MetadataSet containerField='metadata' name='lidar' reference='USGS 3DEP 2017'>"
+        "<MetadataDouble name='footprintArea_m2' value='83.8'/><MetadataDouble name='roofHeightP95_m' value='5.6'/>"
+        "<MetadataInteger name='roofIntensityMedian' value='19152'/>"
+        "<MetadataString containerField='metadata' name='about' value='\"the set itself\"'/></MetadataSet>"
+        "<Box/></Shape>\n"
+        "<Transform translation='3 0 0'><Shape DEF='B0001'>"
+        "<MetadataString containerField='metadata' name='use' value='\"office &amp; lab\" \"public\"'/>"
+        "<Sphere/></Shape></Transform>\n"
+        "<Shape DEF='Plain'><Box/></Shape>\n"
+        "</Scene></X3D>\n"
+    )
+    LIDAR = [("MetadataDouble", {"name": "footprintArea_m2", "value": "83.8"}),
+             ("MetadataDouble", {"name": "roofHeightP95_m", "value": "5.6"}),
+             ("MetadataInteger", {"name": "roofIntensityMedian", "value": "19152"})]
+
+    def test_shape_metadata_survives_x3d40_round_trip(self):
+        tmpdir = tempfile.mkdtemp(prefix="x3d_metadata_")
+        _register_extension(tmpdir)
+        if str(SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(SOURCE_DIR))  # validate
+        import bpy
+        from validate import validate_xml_file, validate_with_x3d_py
+
+        source = os.path.join(tmpdir, "buildings.x3d")
+        Path(source).write_text(self.FIXTURE, encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        objects = bpy.context.scene.objects
+        kept = objects["B0000"]["x3d_metadata"]
+        self.assertEqual((kept["node"], kept["name"], kept["reference"]), ("MetadataSet", "lidar", "USGS 3DEP 2017"))
+        self.assertEqual([(member["node"], member["name"], member["value"]) for member in kept["value"]],
+                         [(tag, attrib["name"], attrib["value"]) for tag, attrib in self.LIDAR])
+        self.assertNotIn("x3d_metadata", objects["Plain"].keys())
+
+        path = os.path.join(tmpdir, "buildings_again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        root = ET.parse(path).getroot()
+        lidar = root.find(".//Transform[@DEF='OB_B0000']/Shape/MetadataSet")
+        self.assertEqual(lidar.attrib, {"containerField": "metadata", "name": "lidar", "reference": "USGS 3DEP 2017"})
+        self.assertEqual([(member.tag, member.attrib) for member in lidar], self.LIDAR)
+        use = root.find(".//Transform[@DEF='OB_B0001']/Shape/MetadataString")
+        self.assertEqual(use.attrib, {"containerField": "metadata", "name": "use", "value": '"office & lab" "public"'})
+        self.assertEqual(len(root.findall(".//MetadataSet")) + len(root.findall(".//MetadataString")), 2)
+        self.assertTrue(validate_xml_file(path).valid)
+        semantic = validate_with_x3d_py(path)
+        if semantic is not None:
+            self.assertTrue(semantic.valid, semantic.errors)
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class ExportImportExportTests(unittest.TestCase):
     """Export, import and export again for every fixture, comparing the node inventory of the two files.
 
