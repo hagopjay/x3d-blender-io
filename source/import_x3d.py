@@ -25,6 +25,7 @@ from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
 material_cache = {}
+image_alpha_cache = {}
 font_variants_cache = {}
 download_cache = {}
 current_file_path = None
@@ -3356,6 +3357,58 @@ def _modulate_socket_by_color(node_tree, socket, color):
     return mix
 
 
+def _image_has_transparency(bpyima):
+    """True when some pixel of the image is not opaque.
+
+    X_ITE draws a texture as transparent only when its alpha is below 1 somewhere, so an
+    RGBA image that is opaque everywhere stays opaque. Images without an alpha channel
+    (JPEG, RGB PNG), movies and tiled images are not scanned, and an image is scanned
+    once per import.
+    """
+    if bpyima is None or getattr(bpyima, "alpha_mode", "STRAIGHT") in {'NONE', 'CHANNEL_PACKED'}:
+        return False
+    try:
+        if bpyima.source not in {'FILE', 'GENERATED'} or bpyima.depth in (24, 48, 96):
+            return False
+        key = bpyima.as_pointer()
+        if key not in image_alpha_cache:
+            image_alpha_cache[key] = False
+            count = len(bpyima.pixels)
+            if bpyima.channels == 4 and count >= 4:
+                import numpy as np
+                buffer = np.empty(count, dtype=np.float32)
+                bpyima.pixels.foreach_get(buffer)
+                image_alpha_cache[key] = bool((buffer[3::4] < 0.999).any())
+        return image_alpha_cache[key]
+    except Exception:  # an image that cannot be read stays opaque
+        return False
+
+
+def _link_texture_alpha(node_tree, bsdf, bpyima, alpha):
+    """Feed an image's alpha, times the material's 1 - transparency, into the Principled Alpha.
+
+    X3D 4.0 draws alpha = (1 - transparency) x texture alpha, as X_ITE does. The Alpha socket
+    keeps 1 - transparency as its default value and the Multiply node's first input stays 1,
+    so the exporter still reads the material's transparency.
+    """
+    socket = bsdf.inputs.get("Alpha")
+    image_node = next((n for n in node_tree.nodes if n.type == 'TEX_IMAGE' and n.image == bpyima), None)
+    if socket is None or socket.is_linked or image_node is None:
+        return False
+    source = image_node.outputs["Alpha"]
+    if alpha < 1.0:
+        multiply = node_tree.nodes.new("ShaderNodeMath")
+        multiply.operation = 'MULTIPLY'
+        multiply.label = "X3D alpha"
+        multiply.location = (image_node.location.x + 300, image_node.location.y - 260)
+        multiply.inputs[0].default_value = 1.0
+        multiply.inputs[1].default_value = alpha
+        node_tree.links.new(source, multiply.inputs[0])
+        source = multiply.outputs[0]
+    node_tree.links.new(source, socket)
+    return True
+
+
 def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
     """Create a Principled (or Emission) Blender material from PhysicalMaterial / UnlitMaterial."""
     spec = mat.getSpec()
@@ -3446,19 +3499,20 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
 
     bpymat_wrap.alpha = alpha
     alpha_mode = (_attribute_raw(appr, 'alphaMode', 'AUTO') or 'AUTO').strip().strip('"').upper()
-    base_image = images.get('baseTexture')
-    if (not unlit and base_image is not None and bsdf is not None and alpha_mode in {'BLEND', 'MASK'}
-            and base_image.alpha_mode not in {'NONE', 'CHANNEL_PACKED'}):
-        # Reuse the base colour image node: its Alpha output feeds Principled Alpha
-        base_node = next((n for n in node_tree.nodes if n.type == 'TEX_IMAGE' and n.image == base_image), None)
-        if base_node is not None:
-            node_tree.links.new(base_node.outputs["Alpha"], bsdf.inputs["Alpha"])
-    if alpha_mode == 'BLEND' or (alpha_mode == 'AUTO' and alpha < 1.0):
+    # The colour texture's alpha (the base texture's; an UnlitMaterial's emissive, else base, texture's)
+    # multiplies 1 - transparency. With alphaMode BLEND or MASK any alpha channel is used; with AUTO,
+    # the default, only an image with a pixel that is not opaque, as X_ITE decides.
+    colour_image = (images.get('emissiveTexture') or images.get('baseTexture')) if unlit else images.get('baseTexture')
+    texture_alpha = False
+    if (bsdf is not None and colour_image is not None and colour_image.alpha_mode not in {'NONE', 'CHANNEL_PACKED'}
+            and (alpha_mode in {'BLEND', 'MASK'} or (alpha_mode == 'AUTO' and _image_has_transparency(colour_image)))):
+        texture_alpha = _link_texture_alpha(node_tree, bsdf, colour_image, alpha)
+    if alpha_mode == 'BLEND' or (alpha_mode == 'AUTO' and (alpha < 1.0 or texture_alpha)):
         bpymat.surface_render_method = 'BLENDED'
     elif alpha_mode == 'MASK':
         bpymat.surface_render_method = 'DITHERED'
         cutoff = _attribute_raw(appr, 'alphaCutoff', None)
-        if cutoff is not None and bsdf and bpymat_wrap.alpha_texture.image is not None:
+        if cutoff is not None and bsdf and bsdf.inputs["Alpha"].is_linked:
             try:
                 threshold = float(cutoff)
             except ValueError:
@@ -5364,11 +5418,12 @@ def load_web3d(
 
     # NOTE - reset material cache
     # (otherwise we might get "StructRNA of type Material has been removed" errors)
-    global material_cache, texture_cache
+    global material_cache, texture_cache, image_alpha_cache
     material_cache = {}
     # Same reason for textures: a cached Image outlives File > New and the next import fails with
     # "StructRNA of type Image has been removed".
     texture_cache = {}
+    image_alpha_cache = {}
 
     bpyscene = bpycontext.scene
 
