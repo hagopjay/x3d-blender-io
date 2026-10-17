@@ -88,6 +88,11 @@ class IRMeshGeometry:
     # True for a line-only mesh (a Blender curve, or loose edges): ``coord_index``
     # then holds polylines ended by -1 and the emitter writes an IndexedLineSet.
     is_lines: bool = False
+    # Shape-key animation, written as a CoordinateInterpolator routed into the Coordinate:
+    # ``morph_keys`` are fractions of the cycle in [0, 1], ``morph_states`` holds one point list
+    # per key, each parallel to ``coord``.
+    morph_keys: list[float] = field(default_factory=list)
+    morph_states: list[list[tuple[float, float, float]]] = field(default_factory=list)
 
 
 @dataclass

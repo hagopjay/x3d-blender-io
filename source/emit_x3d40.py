@@ -72,6 +72,12 @@ def _fmt(value: float) -> str:
     return "%.6f" % value
 
 
+def _fmt_short(value: float) -> str:
+    """Six decimals with the trailing zeros dropped: the interpolator arrays dominate an animated file's size."""
+    text = ("%.6f" % value).rstrip("0").rstrip(".")
+    return "0" if text in ("", "-0") else text
+
+
 def _fmt2(values):
     return "%.6f %.6f" % tuple(values[:2])
 
@@ -248,6 +254,12 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     xml = [f"{indent}<IndexedFaceSet {' '.join(attrs)}>\n"]
     if geometry.skin_coord_def:
         xml.append(f'{indent}  <Coordinate USE="{geometry.skin_coord_def}" />\n')
+    elif geometry.morph_keys:
+        coord_def = defs.get("coord", geometry.name, "CO_")
+        xml.append(
+            f'{indent}  <Coordinate DEF="{coord_def}" '
+            f'point="{" ".join(_fmt3(point) for point in geometry.morph_states[0])}" />\n'
+        )
     else:
         xml.append(f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n')
     if geometry.normal:
@@ -484,12 +496,29 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
 
 
 def _animation_xml(ir_scene, defs: _DefNames, indent):
-    if not ir_scene.animations:
+    morphs = [g for g in ir_scene.geometries if g.morph_keys and ("geometry", g.name) in defs.emitted]
+    if not ir_scene.animations and not morphs:
         return ""
     cycle = ir_scene.cycle_interval or 1.0
     timer_def = defs.get("timer", "SceneTimer", "")
     xml = [f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(cycle)}" loop="true" />\n']
     routes = []
+    shared: dict[tuple, list] = {}  # geometries with the same keys and states share one CoordinateInterpolator
+    for geometry in morphs:
+        signature = (tuple(geometry.morph_keys), hash(tuple(tuple(state) for state in geometry.morph_states)))
+        for owner in shared.get(signature, []):
+            if owner.morph_keys == geometry.morph_keys and owner.morph_states == geometry.morph_states:
+                routes.append((defs.get("coord_interpolator", owner.name, "CI_"), "value_changed",
+                               defs.get("coord", geometry.name, "CO_"), "set_point"))
+                break
+        else:
+            shared.setdefault(signature, []).append(geometry)
+            node_def = defs.get("coord_interpolator", geometry.name, "CI_")
+            keys = " ".join(_fmt_short(key) for key in geometry.morph_keys)
+            values = " ".join(_fmt_short(value) for state in geometry.morph_states for point in state for value in point)
+            xml.append(f'{indent}<CoordinateInterpolator DEF="{node_def}" key="{keys}" keyValue="{values}" />\n')
+            routes.append((timer_def, "fraction_changed", node_def, "set_fraction"))
+            routes.append((node_def, "value_changed", defs.get("coord", geometry.name, "CO_"), "set_point"))
     for animation in ir_scene.animations:
         if animation.target_kind == "joint":
             humanoid_name, _, joint_name = animation.target.partition(":")
