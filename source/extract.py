@@ -225,6 +225,46 @@ def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None) -> list[IRMeshGe
                            orig_vertex_index=used, is_lines=True)]
 
 
+
+def _crease_from_sharp_edges(mesh) -> float:
+    """``creaseAngle`` for a smooth-shaded mesh: just under the smallest dihedral angle among sharp edges.
+
+    The importer turns ``creaseAngle`` into sharp edges, so this brings the angle back (a mesh with no sharp
+    edge stays fully smooth, pi). Any failure falls back to pi.
+    """
+
+    try:
+        import numpy as np
+
+        edges, polys, loops = mesh.edges, mesh.polygons, mesh.loops
+        sharp = np.zeros(len(edges), dtype=bool)
+        edges.foreach_get("use_edge_sharp", sharp)
+        if not sharp.any():
+            return math.pi
+        normals = np.zeros(len(polys) * 3, dtype=np.float32)
+        polys.foreach_get("normal", normals)
+        normals = normals.reshape(-1, 3)
+        loop_edge = np.zeros(len(loops), dtype=np.int64)
+        loops.foreach_get("edge_index", loop_edge)
+        loop_poly = np.zeros(len(loops), dtype=np.int64)
+        for polygon in polys:
+            loop_poly[polygon.loop_start:polygon.loop_start + polygon.loop_total] = polygon.index
+        first = np.full(len(edges), -1, dtype=np.int64)
+        second = np.full(len(edges), -1, dtype=np.int64)
+        for edge_index, poly_index in zip(loop_edge, loop_poly):
+            if first[edge_index] < 0:
+                first[edge_index] = poly_index
+            elif second[edge_index] < 0:
+                second[edge_index] = poly_index
+        both = sharp & (first >= 0) & (second >= 0)
+        if not both.any():
+            return math.pi
+        dots = np.einsum("ij,ij->i", normals[first[both]], normals[second[both]])
+        angles = np.arccos(np.clip(dots, -1.0, 1.0))
+        return float(angles.min()) * 0.999
+    except Exception:
+        return math.pi
+
 def extract_mesh_geometries(
     mesh,
     *,
@@ -336,7 +376,7 @@ def extract_mesh_geometries(
         solid = bool(getattr(material, "use_backface_culling", False)) if material else False
         crease_angle = None
         if normal_at is None:
-            crease_angle = math.pi if any_smooth else 0.0
+            crease_angle = _crease_from_sharp_edges(mesh) if any_smooth else 0.0
 
         geometries.append(
             IRMeshGeometry(
