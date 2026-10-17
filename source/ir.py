@@ -85,6 +85,9 @@ class IRMeshGeometry:
     # When set, ``coord`` is empty and ``coord_index`` points into the named
     # humanoid's shared skinCoord Coordinate node.
     skin_coord_def: str | None = None
+    # True for a line-only mesh (a Blender curve, or loose edges): ``coord_index``
+    # then holds polylines ended by -1 and the emitter writes an IndexedLineSet.
+    is_lines: bool = False
 
 
 @dataclass
