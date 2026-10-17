@@ -2327,12 +2327,12 @@ def importMesh_ElevationGrid(geom, ancestry):
     # coloring should be supported
     colors = geom.getChildBySpec(['ColorRGBA', 'Color'])
     if colors:
+        # A FLOAT_COLOR corner attribute holds four floats per corner, so keep the
+        # alpha of ColorRGBA and give Color an opaque one (as importMesh_ApplyColors does).
         if colors.getSpec() == 'ColorRGBA':
-            rgb = [c[:3] for c
-                   in colors.getFieldAsArray('color', 4, ancestry)]
-            # Array of arrays; no need to flatten
+            rgb = colors.getFieldAsArray('color', 4, ancestry)
         else:
-            rgb = colors.getFieldAsArray('color', 3, ancestry)
+            rgb = [c + [1.0] for c in colors.getFieldAsArray('color', 3, ancestry)]
 
         # TODO: this can probably be simplified
         if geom.getFieldAsBool('colorPerVertex', True, ancestry):
