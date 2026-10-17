@@ -2302,7 +2302,9 @@ def importMesh_ElevationGrid(geom, ancestry):
     # The spec assumes a certain ordering of quads; outer loop by z, inner by x
     bpymesh = bpy.data.meshes.new(name="ElevationGrid")
     bpymesh.vertices.add(x_dim * z_dim)
-    co = [w for x in range(x_dim) for z in range(z_dim)
+    # Vertex k = z * x_dim + x, the order the faces, the colours and a TextureCoordinate all index by
+    # (the loops used to run x outer and z inner, which is only the same order on a square grid).
+    co = [w for z in range(z_dim) for x in range(x_dim)
           for w in (x * x_spacing, height[x_dim * z + x], z * z_spacing)]
     bpymesh.vertices.foreach_set("co", co)
 
@@ -2327,12 +2329,12 @@ def importMesh_ElevationGrid(geom, ancestry):
     # coloring should be supported
     colors = geom.getChildBySpec(['ColorRGBA', 'Color'])
     if colors:
+        # A FLOAT_COLOR corner attribute holds four floats per corner, so keep the
+        # alpha of ColorRGBA and give Color an opaque one (as importMesh_ApplyColors does).
         if colors.getSpec() == 'ColorRGBA':
-            rgb = [c[:3] for c
-                   in colors.getFieldAsArray('color', 4, ancestry)]
-            # Array of arrays; no need to flatten
+            rgb = colors.getFieldAsArray('color', 4, ancestry)
         else:
-            rgb = colors.getFieldAsArray('color', 3, ancestry)
+            rgb = [c + [1.0] for c in colors.getFieldAsArray('color', 3, ancestry)]
 
         # TODO: this can probably be simplified
         if geom.getFieldAsBool('colorPerVertex', True, ancestry):
@@ -2360,8 +2362,8 @@ def importMesh_ElevationGrid(geom, ancestry):
         uvs = tex_coord.getFieldAsArray('point', 2, ancestry)
     else:
         uvs = [(i / (x_dim - 1), j / (z_dim - 1))
-               for i in range(x_dim)
-               for j in range(z_dim)]
+               for j in range(z_dim)
+               for i in range(x_dim)]
 
     d = bpymesh.uv_layers.new().data
     # Rather than repeat the face/vertex algorithm from above, we read

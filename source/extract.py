@@ -181,6 +181,50 @@ def _color_values(mesh):
     return accessor, domain
 
 
+def _edge_polylines(edges) -> list[list[int]]:
+    """Chain mesh edges (pairs of vertex indices) into polylines, endpoints first."""
+    adjacent: dict[int, list[int]] = {}
+    for a, b in edges:
+        adjacent.setdefault(a, []).append(b)
+        adjacent.setdefault(b, []).append(a)
+    unused = {tuple(sorted(e)) for e in edges}
+    lines: list[list[int]] = []
+    starts = [v for v, n in adjacent.items() if len(n) != 2] + sorted(adjacent)
+    for start in starts:
+        while any(tuple(sorted((start, n))) in unused for n in adjacent[start]):
+            line, current = [start], start
+            while True:
+                step = next((n for n in adjacent[current] if tuple(sorted((current, n))) in unused), None)
+                if step is None:
+                    break
+                unused.discard(tuple(sorted((current, step))))
+                line.append(step)
+                current = step
+            lines.append(line)
+    return lines
+
+
+def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None) -> list[IRMeshGeometry]:
+    """A mesh without faces (an evaluated curve, loose edges) becomes one line geometry."""
+    lines = _edge_polylines([tuple(edge.vertices) for edge in mesh.edges])
+    if not lines:
+        return []
+    used = sorted({v for line in lines for v in line})
+    remap = {old: new for new, old in enumerate(used)}
+    coord = []
+    for old in used:
+        point = mesh.vertices[old].co
+        if vertex_matrix is not None:
+            point = vertex_matrix @ point
+        coord.append((float(point[0]), float(point[1]), float(point[2])))
+    coord_index: list[int] = []
+    for line in lines:
+        coord_index.extend(remap[v] for v in line)
+        coord_index.append(-1)
+    return [IRMeshGeometry(name=name, coord=coord, coord_index=coord_index, source_mesh=name,
+                           orig_vertex_index=used, is_lines=True)]
+
+
 def extract_mesh_geometries(
     mesh,
     *,
@@ -203,6 +247,8 @@ def extract_mesh_geometries(
     polygons = getattr(mesh, "polygons", None)
     vertices = getattr(mesh, "vertices", None)
     loops = getattr(mesh, "loops", None)
+    if not polygons and vertices is not None and getattr(mesh, "edges", None):
+        return _extract_edge_lines(mesh, name=name, vertex_matrix=vertex_matrix)
     if not polygons or vertices is None or loops is None:
         return []
 

@@ -231,8 +231,15 @@ def _default_appearance_xml(indent):
 
 def _geometry_xml(geometry, defs: _DefNames, indent):
     geometry_def = defs.get("geometry", geometry.name, "ME_")
+    node = "IndexedLineSet" if geometry.is_lines else "IndexedFaceSet"
     if not defs.first_use("geometry", geometry.name):
-        return f'{indent}<IndexedFaceSet USE="{geometry_def}" />\n'
+        return f'{indent}<{node} USE="{geometry_def}" />\n'
+    if geometry.is_lines:
+        return (
+            f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n'
+            f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n'
+            f"{indent}</IndexedLineSet>\n"
+        )
     attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
     if not geometry.solid:
         attrs.append('solid="false"')
