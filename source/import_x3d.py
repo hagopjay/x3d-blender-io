@@ -2287,6 +2287,14 @@ def importMesh_IndexedFaceSet(geom, ancestry):
         set_new_float_color_attribute(bpymesh, cco2)
         bpymesh.attributes.remove(bpymesh.attributes["temp_custom_colors"])
 
+    # Remember which Coordinate DEF this mesh was built from, and which point each vertex came from when the
+    # vertices were culled, so a ROUTE from a CoordinateInterpolator can find them again (see _import_coordinate_morphs).
+    coord_def = coord.getRealNode().getDefName()
+    if coord_def:
+        bpymesh["x3d_coord_def"] = coord_def
+        if uncull:
+            bpymesh["x3d_point_map"] = uncull
+
     bpymesh.update()
     return bpymesh
 
@@ -5056,6 +5064,76 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
     return empty
 
 
+def _import_coordinate_morphs(morphs, timers_for_interp, defDict, scene, fps, frame_start):
+    """CoordinateInterpolator -> Coordinate.set_point becomes relative shape keys with keyframed values.
+
+    Every distinct state of the interpolator (a state equal to the mesh's own points is the Basis) becomes one shape key.
+    Its value is 1 at the keys where the interpolator is in that state and 0 at the neighbouring keys, linear in between,
+    so the blend of the keys is the interpolator's linear interpolation of the absolute positions. The glTF exporter turns
+    shape keys and their animation into morph targets and weights.
+    Returns the last frame used.
+    """
+    import numpy as np
+    last_frame = frame_start
+    for coord_def, interp_def in morphs.items():
+        interp = defDict.get(interp_def)
+        if interp is None or interp.getSpec() != 'CoordinateInterpolator':
+            continue
+        keys = [float(k) for k in interp.getFieldAsArray('key', 0, ())]
+        flat = interp.getFieldAsArray('keyValue', 3, (), conversion_scale)
+        if not keys or not flat or len(flat) % len(keys):
+            logger.warning("CoordinateInterpolator %r: keyValue does not hold a whole number of points per key; skipped", interp_def)
+            continue
+        n_points = len(flat) // len(keys)
+        states = np.array(flat, dtype=np.float64).reshape(len(keys), n_points, 3)
+        timer = defDict.get(timers_for_interp.get(interp_def, ''))
+        cycle_interval = timer.getFieldAsFloat('cycleInterval', 1.0, ()) if timer is not None else 1.0
+        meshes = [m for m in bpy.data.meshes if m.get("x3d_coord_def") == coord_def and m.users]
+        if not meshes:
+            logger.warning("Coordinate %r is animated but no imported IndexedFaceSet uses it; skipped", coord_def)
+        for mesh in meshes:
+            obj = next((o for o in bpy.data.objects if o.data is mesh), None)
+            point_map = list(mesh["x3d_point_map"]) if "x3d_point_map" in mesh else list(range(len(mesh.vertices)))
+            if obj is None or mesh.shape_keys is not None or len(point_map) != len(mesh.vertices) or (point_map and max(point_map) >= n_points):
+                logger.warning("Mesh %r cannot take the morph of %r; skipped", mesh.name, coord_def)
+                continue
+            sub = states[:, point_map, :]
+            rest = np.array([tuple(v.co) for v in mesh.vertices], dtype=np.float64)
+            # Classes of identical states (to float32 round-off), in order of first appearance.
+            reps, cls = [], []
+            for state in sub:
+                for index, rep in enumerate(reps):
+                    if np.abs(state - sub[rep]).max() <= 1e-5:
+                        cls.append(index)
+                        break
+                else:
+                    reps.append(len(cls))
+                    cls.append(len(reps) - 1)
+            basis_class = next((i for i, rep in enumerate(reps) if np.abs(sub[rep] - rest).max() <= 1e-5), None)
+            obj.shape_key_add(name="Basis", from_mix=False)
+            for index, rep in enumerate(reps):
+                if index == basis_class:
+                    continue
+                block = obj.shape_key_add(name=f"{coord_def}_{index:02d}", from_mix=False)
+                block.data.foreach_set("co", sub[rep].astype(np.float32).ravel())
+                block.slider_min, block.slider_max = 0.0, 1.0
+                wanted = sorted({j for i, c in enumerate(cls) if c == index for j in (i - 1, i, i + 1) if 0 <= j < len(keys)})
+                for j in wanted:
+                    block.value = 1.0 if cls[j] == index else 0.0
+                    frame = frame_start + keys[j] * cycle_interval * fps
+                    last_frame = max(last_frame, frame)
+                    block.keyframe_insert("value", frame=frame)
+                block.value = 0.0
+            action = mesh.shape_keys.animation_data.action if mesh.shape_keys.animation_data else None
+            for fcu in (_action_fcurves(action) if action else []):
+                for kf in fcu.keyframe_points:
+                    kf.interpolation = 'LINEAR'
+            obj["x3d_morph_coord"] = coord_def
+            obj["x3d_morph_interpolator"] = interp_def
+            obj["x3d_morph_states"] = len(reps)
+    return last_frame
+
+
 def importRoutesXML(all_nodes, global_matrix, bpycontext):
     """Turn XML <ROUTE> chains into keyframes on the objects under animated Transforms.
 
@@ -5076,6 +5154,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
     defDict = root.getDefDict()
 
     timers_for_interp = {}
+    morphs = {}  # Coordinate DEF -> CoordinateInterpolator DEF
     channels = {}  # target DEF -> {'translation': node, 'rotation': node, 'scale': node}
     for route in routes:
         from_field = route['fromField'].replace('_changed', '')
@@ -5084,11 +5163,16 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
             timers_for_interp[route['toNode']] = route['fromNode']
         elif from_field == 'value' and to_field in {'translation', 'rotation', 'scale'}:
             channels.setdefault(route['toNode'], {})[to_field] = route['fromNode']
+        elif from_field == 'value' and to_field == 'point':
+            morphs[route['toNode']] = route['fromNode']
 
     scene = bpycontext.scene
     fps = scene.render.fps / scene.render.fps_base
     frame_start = scene.frame_start
     last_frame = frame_start
+
+    if morphs:
+        last_frame = max(last_frame, _import_coordinate_morphs(morphs, timers_for_interp, defDict, scene, fps, frame_start))
 
     for target_def, channel_defs in channels.items():
         target = defDict.get(target_def)
