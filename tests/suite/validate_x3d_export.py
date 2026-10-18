@@ -532,8 +532,11 @@ def c_shapes(ck, doc, env):
     tr, err = _need_tr(doc, ck)
     if err:
         return err
-    n = len(doc.shapes(tr))
-    return (ok if n == ck["n"] else bad)(f"{n} <Shape> child(ren) (want {ck['n']})")
+    ignore = set(ck.get("ignore_geometry", ()))
+    shapes = [sh for sh in doc.shapes(tr) if not ignore or getattr(doc.geometry(sh), "tag", None) not in ignore]
+    n = len(shapes)
+    note = f" (ignoring {', '.join(sorted(ignore))})" if ignore else ""
+    return (ok if n == ck["n"] else bad)(f"{n} <Shape> child(ren){note} (want {ck['n']})")
 
 
 @check("parent")

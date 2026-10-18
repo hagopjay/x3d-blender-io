@@ -801,9 +801,10 @@ def zone_prims(ctx):
     m.update()
     o = add_mesh_obj(ctx, "Z01_wire", m, loc=pos[3], material=None, scale=(0.7,) * 3)
     case("wire.robust", "CORE", "Edge-only mesh is handled gracefully",
-         "No crash.  The object keeps its Transform but has no Shape; a head <meta name='info'> explains "
-         "\"Object 'Z01_wire' has no exportable faces.\"  Browser: nothing visible (X3D has no wireframe geometry without IndexedLineSet).",
-         chk("shapes", obj="Z01_wire", n=0), chk("diag", contains="Z01_wire' has no exportable faces"),
+         "No crash.  The object keeps its Transform and has no face Shape and NO placeholder primitive: either no Shape "
+         "at all (older exporters; a head <meta name='info'> then explains \"has no exportable faces\") or its edges as an "
+         "<IndexedLineSet> (exporters that write line-only meshes, see Z01.wire.lines).  Browser: a wire square, or nothing.",
+         chk("shapes", obj="Z01_wire", n=0, ignore_geometry=["IndexedLineSet"]),
          chk("xf", obj="Z01_wire"),
          known="extract.py logs 'has no exportable faces' but ir.IRInstance.iter_shapes() falls back to `object_type == \"MESH\"` and "
                "emit_x3d40._primitive_geometry_xml() writes a default grey <Sphere radius='0.75'> (scaled by the object's scale): "
@@ -2257,8 +2258,10 @@ def zone_types(ctx):
          "A poly curve with bevel depth becomes a mesh tube (faces > 0).", chk("mesh", facts={"obj": "Z15_curve_bevel", "faces_min": 20}),
          chk("xf", obj="Z15_curve_bevel"))
     case("curve.wire", "CORE", "Un-beveled curve has no faces: handled gracefully",
-         "A curve without thickness exports no Shape; the diagnostics say \"Object 'Z15_curve_wire' has no exportable faces.\"",
-         chk("shapes", obj="Z15_curve_wire", n=0), chk("diag", contains="Z15_curve_wire' has no exportable faces"))
+         "A curve without thickness has no face Shape and no placeholder primitive: either no Shape at all (older exporters; the "
+         "diagnostics then say \"Object 'Z15_curve_wire' has no exportable faces.\") or its polyline as an <IndexedLineSet> "
+         "(exporters that write curves as lines, see Z15.curve.lines).",
+         chk("shapes", obj="Z15_curve_wire", n=0, ignore_geometry=["IndexedLineSet"]))
     case("curve.lines", "ROADMAP", "Curves -> IndexedLineSet / Polyline2D / NurbsCurve",
          "Scientific content (streamlines, trajectories, graphs) is naturally curves.  X3D has NurbsCurve and IndexedLineSet; neither is written.",
          chk("roadmap", feature="curve export", any_tags=["IndexedLineSet", "NurbsCurve", "LineSet"]))
