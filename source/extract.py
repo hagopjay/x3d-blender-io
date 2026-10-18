@@ -225,6 +225,46 @@ def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None) -> list[IRMeshGe
                            orig_vertex_index=used, is_lines=True)]
 
 
+
+def _crease_from_sharp_edges(mesh) -> float:
+    """``creaseAngle`` for a smooth-shaded mesh: just under the smallest dihedral angle among sharp edges.
+
+    The importer turns ``creaseAngle`` into sharp edges, so this brings the angle back (a mesh with no sharp
+    edge stays fully smooth, pi). Any failure falls back to pi.
+    """
+
+    try:
+        import numpy as np
+
+        edges, polys, loops = mesh.edges, mesh.polygons, mesh.loops
+        sharp = np.zeros(len(edges), dtype=bool)
+        edges.foreach_get("use_edge_sharp", sharp)
+        if not sharp.any():
+            return math.pi
+        normals = np.zeros(len(polys) * 3, dtype=np.float32)
+        polys.foreach_get("normal", normals)
+        normals = normals.reshape(-1, 3)
+        loop_edge = np.zeros(len(loops), dtype=np.int64)
+        loops.foreach_get("edge_index", loop_edge)
+        loop_poly = np.zeros(len(loops), dtype=np.int64)
+        for polygon in polys:
+            loop_poly[polygon.loop_start:polygon.loop_start + polygon.loop_total] = polygon.index
+        first = np.full(len(edges), -1, dtype=np.int64)
+        second = np.full(len(edges), -1, dtype=np.int64)
+        for edge_index, poly_index in zip(loop_edge, loop_poly):
+            if first[edge_index] < 0:
+                first[edge_index] = poly_index
+            elif second[edge_index] < 0:
+                second[edge_index] = poly_index
+        both = sharp & (first >= 0) & (second >= 0)
+        if not both.any():
+            return math.pi
+        dots = np.einsum("ij,ij->i", normals[first[both]], normals[second[both]])
+        angles = np.arccos(np.clip(dots, -1.0, 1.0))
+        return float(angles.min()) * 0.999
+    except Exception:
+        return math.pi
+
 def extract_mesh_geometries(
     mesh,
     *,
@@ -336,7 +376,7 @@ def extract_mesh_geometries(
         solid = bool(getattr(material, "use_backface_culling", False)) if material else False
         crease_angle = None
         if normal_at is None:
-            crease_angle = math.pi if any_smooth else 0.0
+            crease_angle = _crease_from_sharp_edges(mesh) if any_smooth else 0.0
 
         geometries.append(
             IRMeshGeometry(
@@ -733,6 +773,82 @@ def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, f
     return animations, span / fps
 
 
+def _action_fcurves(action):
+    """The F-curves of an action: ``fcurves`` before Blender 5, the first layered-action channel bag after."""
+    fcurves = getattr(action, "fcurves", None)
+    if fcurves is not None and len(fcurves):
+        return fcurves
+    try:
+        return action.layers[0].strips[0].channelbag(action.slots[0]).fcurves
+    except Exception:
+        return fcurves if fcurves is not None else []
+
+
+def _sample_shape_key_morphs(scene, depsgraph, sources, geometries_by_key, *, frame_step=1):
+    """Sample the shape-key animation of each mesh into ``morph_keys`` / ``morph_states`` on its geometries.
+
+    ``sources`` maps a geometry key to the mesh object that owns it. Samples sit at the shape-key keyframes
+    (the interpolator is linear between them, so those are exact for LINEAR keyframes); when any keyframe
+    uses another interpolation every ``frame_step`` frame is sampled too. A mesh whose evaluated vertex count
+    differs from its data (a modifier changed the topology) is skipped. Returns the cycle interval in seconds
+    when a morph was written, else None.
+    """
+    import bpy
+
+    frame_start, frame_end = scene.frame_start, scene.frame_end
+    if frame_end <= frame_start or not sources:
+        return None
+    fps = scene.render.fps / scene.render.fps_base
+    span = float(frame_end - frame_start)
+    current_frame, current_sub = scene.frame_current, scene.frame_subframe
+    written = False
+    try:
+        for geometry_key, obj in sources.items():
+            key = obj.data.shape_keys
+            action = key.animation_data.action if key is not None and key.animation_data else None
+            if action is None:
+                continue
+            frames = {float(frame_start), float(frame_end)}
+            linear = True
+            for fcurve in _action_fcurves(action):
+                if not fcurve.data_path.endswith(".value"):
+                    continue
+                for point in fcurve.keyframe_points:
+                    frame = float(point.co[0])
+                    if frame_start <= frame <= frame_end:
+                        frames.add(frame)
+                    linear = linear and point.interpolation == "LINEAR"
+            if not linear:
+                frames.update(float(f) for f in range(frame_start, frame_end + 1, max(1, int(frame_step))))
+            frames = sorted(frames)
+            vertex_count = len(obj.data.vertices)
+            samples = []
+            for frame in frames:
+                whole = math.floor(frame)
+                scene.frame_set(whole, subframe=frame - whole)
+                evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+                mesh = evaluated.to_mesh()
+                try:
+                    if len(mesh.vertices) != vertex_count:
+                        samples = None
+                        break
+                    samples.append([tuple(float(c) for c in v.co[:3]) for v in mesh.vertices])
+                finally:
+                    evaluated.to_mesh_clear()
+            if not samples or all(state == samples[0] for state in samples):
+                continue
+            keys = [(frame - frame_start) / span for frame in frames]
+            for geometry in geometries_by_key.get(geometry_key, []):
+                if geometry.is_lines or geometry.skin_coord_def or not geometry.orig_vertex_index:
+                    continue
+                geometry.morph_keys = keys
+                geometry.morph_states = [[state[i] for i in geometry.orig_vertex_index] for state in samples]
+                written = True
+    finally:
+        scene.frame_set(current_frame, subframe=current_sub)
+    return span / fps if written else None
+
+
 def extract_scene(
     scene,
     *,
@@ -805,6 +921,7 @@ def extract_scene(
     source_keys: dict[str, str] = {}
     material_names: set[str] = set()
     geometries_by_key: dict[str, list[IRMeshGeometry]] = {}
+    morph_sources: dict[str, object] = {}
     skipped_types: dict[str, int] = {}
     objects_by_name: dict[str, tuple] = {}
     armatures = [obj for obj in exported if obj.type == "ARMATURE"]
@@ -823,14 +940,20 @@ def extract_scene(
 
     def mesh_shapes(obj):
         """Return the IRShape list for a mesh-like object, extracting geometry on first sight."""
+        # A mesh whose only "modifier" is an animated shape key is written as its Basis plus a CoordinateInterpolator
+        # (see _sample_shape_key_morphs) instead of the pose at the current frame.
+        key_animation = getattr(getattr(obj.data, "shape_keys", None), "animation_data", None) if obj.type == "MESH" else None
+        shape_key_morph = bool(use_animation and key_animation is not None and key_animation.action is not None and not obj.modifiers)
         needs_eval = obj.type != "MESH" or bool(
-            use_mesh_modifiers and depsgraph is not None and obj.is_modified(scene, "PREVIEW")
+            use_mesh_modifiers and depsgraph is not None and not shape_key_morph and obj.is_modified(scene, "PREVIEW")
         )
         geometry_key = obj.name if needs_eval else obj.data.name
         source_key = f"{obj.type}:{geometry_key}"
         source_keys.setdefault(source_key, obj.name)
 
         geometries = geometries_by_key.get(geometry_key)
+        if shape_key_morph and not needs_eval:
+            morph_sources.setdefault(geometry_key, obj)
         if geometries is None:
             mesh = None
             owner = obj
@@ -981,6 +1104,11 @@ def extract_scene(
             frame_step=animation_step,
             armatures=armatures,
         )
+
+    if use_animation and morph_sources:
+        morph_cycle = _sample_shape_key_morphs(scene, depsgraph, morph_sources, geometries_by_key, frame_step=animation_step)
+        if morph_cycle is not None and ir_scene.cycle_interval is None:
+            ir_scene.cycle_interval = morph_cycle
 
     for object_type, count in sorted(skipped_types.items()):
         ir_scene.diagnostics.append(
