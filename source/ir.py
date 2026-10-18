@@ -267,6 +267,9 @@ class IRInstance:
     cast_shadow: bool = True
     # Metadata node written as the metadata field of the instance's first Shape.
     metadata: IRMetadataNode | None = None
+    # Set by the extractor when a mesh-like object evaluated to no faces (edge-only mesh, zero vertices, Geometry
+    # Nodes output that is only instances). Such an object keeps its Transform but must not get a placeholder Shape.
+    no_faces: bool = False
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -276,7 +279,7 @@ class IRInstance:
         """
         if self.shapes:
             yield from self.shapes
-        elif self.inline is not None or self.splats_name:
+        elif self.inline is not None or self.splats_name or self.no_faces:
             return
         elif self.geometry_name or self.material_name or self.object_type == "MESH":
             yield IRShape(

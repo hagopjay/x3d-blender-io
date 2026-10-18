@@ -408,6 +408,33 @@ class EmitX3D40Tests(unittest.TestCase):
         )
 
 
+    def test_mesh_without_faces_writes_transform_but_no_placeholder_shape(self):
+        # An edge-only mesh, an empty mesh or a Geometry Nodes object that evaluates to instances only has no faces.
+        # It must keep its Transform and must not turn into the legacy grey <Sphere> fallback.
+        scene = IRScene(
+            name="NoFaces",
+            instances=[IRInstance(source_key="MESH:Wire", object_name="Wire", object_type="MESH", no_faces=True)],
+            diagnostics=["Object 'Wire' has no exportable faces."],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        xml_text = buffer.getvalue()
+        self.assertIn('<Transform DEF="OB_Wire"', xml_text)
+        self.assertNotIn("<Shape", xml_text)
+        self.assertNotIn("<Sphere", xml_text)
+        self.assertIn("no exportable faces", xml_text)
+
+    def test_legacy_mesh_instance_without_faces_flag_still_gets_primitive_hint(self):
+        # Hand-built IR (no extractor) keeps the documented primitive fallback.
+        scene = IRScene(
+            name="Legacy",
+            instances=[IRInstance(source_key="MESH:Cube", object_name="Cube", object_type="MESH", geometry_hint="Box")],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        self.assertIn("<Box", buffer.getvalue())
+
+
 class EmitSplatsAndInlineTests(unittest.TestCase):
     def _splat_scene(self):
         splats = IRGaussianSplats(
