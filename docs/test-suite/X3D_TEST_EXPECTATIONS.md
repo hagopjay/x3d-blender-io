@@ -8,6 +8,9 @@ One Blender scene, 194 test cases, 18 zones laid out in a grid 12 m apart. You e
 | `x3d_browser_check.py` | a **real X3D browser** (X_ITE 16.5.1) loads it without errors, animates it, and shows each zone |
 | this document | the plain-English answer key |
 
+> Counts and findings in this document are the original calibration. For the current state of `main` (31 commits later: line
+> meshes, shape keys, shadows implemented; AO bug fixed; phantom sphere fixed here) see `SUITE_COMMENTARY.md`.
+
 Calibrated against exporter **X3D Blender I/O v2.6.1** (`hagopjay/x3d-blender-io` @ `a4238a6`), Blender **5.2.2**, X_ITE **16.5.1**.
 
 ---
