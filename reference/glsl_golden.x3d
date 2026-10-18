@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D version="4.0" profile="Immersive" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="Shaders" level="1" />
+    <meta name="title" content="GLSL golden reference for the Z17 shader_lab zone" />
+    <meta name="description" content="Hand-written target output: three Blender procedural materials as ComposedShader (GLSL ES 3.00)." />
+  </head>
+  <Scene>
+    <NavigationInfo type='"EXAMINE" "ANY"' headlight="false" />
+    <Background skyColor="0.05 0.1 0.2" />
+    <Viewpoint DEF="CA_CAM_Z17" description="CAM_Z17" position="0 1.2 5.2" orientation="1 0 0 -0.12" fieldOfView="0.75" />
+    <TimeSensor DEF="Clock" cycleInterval="4" loop="true" />
+    <ScalarInterpolator DEF="PhaseRamp" key="0 1" keyValue="0 6.2831853" />
+    <ScalarInterpolator DEF="BlendBreath" key="0 0.5 1" keyValue="0.1 0.7 0.1" />
+    <Transform DEF="OB_Z17_scalar_height" translation="-1.6 0.7 0">
+      <Shape>
+        <Appearance>
+          <ComposedShader DEF="SH_scalar_height" language="GLSL">
+            <field name="phase" type="SFFloat" accessType="inputOutput" value="0" />
+            <field name="vmin" type="SFFloat" accessType="inputOutput" value="-0.6" />
+            <field name="vmax" type="SFFloat" accessType="inputOutput" value="0.6" />
+            <ShaderPart type="VERTEX"><![CDATA[data:x-shader/x-vertex,#version 300 es
+precision highp float;
+uniform mat4 x3d_ProjectionMatrix;
+uniform mat4 x3d_ModelViewMatrix;
+uniform mat3 x3d_NormalMatrix;
+in vec4 x3d_Vertex;
+in vec3 x3d_Normal;
+out vec3 vObj;     // object-space position: the 'Object' output of Blender's Texture Coordinate node
+out vec3 vN;
+out vec3 vView;
+void main() {
+  vObj = x3d_Vertex.xyz;
+  vN = normalize(x3d_NormalMatrix * x3d_Normal);
+  vec4 p = x3d_ModelViewMatrix * x3d_Vertex;
+  vView = -p.xyz;
+  gl_Position = x3d_ProjectionMatrix * p;
+}]]></ShaderPart>
+            <ShaderPart type="FRAGMENT"><![CDATA[data:x-shader/x-fragment,#version 300 es
+precision highp float;
+uniform float phase;
+uniform float vmin;
+uniform float vmax;
+in vec3 vObj;
+in vec3 vN;
+in vec3 vView;
+out vec4 fragColor;
+// Blender ColorRamp (5 stops, linear) -> piecewise mix(); the stops are exactly the ones typed into the Z17 ramp.
+vec3 viridis(float t) {
+  t = clamp(t, 0.0, 1.0);
+  const vec3 c0 = vec3(0.267, 0.005, 0.329), c1 = vec3(0.231, 0.322, 0.546), c2 = vec3(0.128, 0.567, 0.551),
+             c3 = vec3(0.369, 0.789, 0.383), c4 = vec3(0.993, 0.906, 0.144);
+  if (t < 0.25) return mix(c0, c1, t / 0.25);
+  if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+  if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+  return mix(c3, c4, (t - 0.75) / 0.25);
+}
+float lambert(vec3 n) { return 0.35 + 0.65 * max(dot(normalize(n), normalize(vec3(0.4, 0.6, 0.7))), 0.0); }
+void main() {
+  // scalar field = height (Map Range From Min/Max -> 0..1) + a travelling wave whose phase is driven by a ROUTE
+  float s = (vObj.z - vmin) / (vmax - vmin) + 0.12 * sin(9.0 * vObj.x + phase);
+  fragColor = vec4(viridis(s) * lambert(vN), 1.0);
+}]]></ShaderPart>
+          </ComposedShader>
+        </Appearance>
+        <Sphere radius="0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_Z17_fresnel_rim" translation="0 0.7 0">
+      <Shape>
+        <Appearance>
+          <ComposedShader DEF="SH_fresnel_rim" language="GLSL">
+            <field name="blend" type="SFFloat" accessType="inputOutput" value="0.4" />
+            <field name="baseColor" type="SFColor" accessType="inputOutput" value="0.1 0.1 0.1" />
+            <field name="rimColor" type="SFColor" accessType="inputOutput" value="0.2 0.8 1" />
+            <ShaderPart type="VERTEX"><![CDATA[data:x-shader/x-vertex,#version 300 es
+precision highp float;
+uniform mat4 x3d_ProjectionMatrix;
+uniform mat4 x3d_ModelViewMatrix;
+uniform mat3 x3d_NormalMatrix;
+in vec4 x3d_Vertex;
+in vec3 x3d_Normal;
+out vec3 vObj;     // object-space position: the 'Object' output of Blender's Texture Coordinate node
+out vec3 vN;
+out vec3 vView;
+void main() {
+  vObj = x3d_Vertex.xyz;
+  vN = normalize(x3d_NormalMatrix * x3d_Normal);
+  vec4 p = x3d_ModelViewMatrix * x3d_Vertex;
+  vView = -p.xyz;
+  gl_Position = x3d_ProjectionMatrix * p;
+}]]></ShaderPart>
+            <ShaderPart type="FRAGMENT"><![CDATA[data:x-shader/x-fragment,#version 300 es
+precision highp float;
+uniform float phase;
+uniform float vmin;
+uniform float vmax;
+in vec3 vObj;
+in vec3 vN;
+in vec3 vView;
+out vec4 fragColor;
+// Blender ColorRamp (5 stops, linear) -> piecewise mix(); the stops are exactly the ones typed into the Z17 ramp.
+vec3 viridis(float t) {
+  t = clamp(t, 0.0, 1.0);
+  const vec3 c0 = vec3(0.267, 0.005, 0.329), c1 = vec3(0.231, 0.322, 0.546), c2 = vec3(0.128, 0.567, 0.551),
+             c3 = vec3(0.369, 0.789, 0.383), c4 = vec3(0.993, 0.906, 0.144);
+  if (t < 0.25) return mix(c0, c1, t / 0.25);
+  if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+  if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+  return mix(c3, c4, (t - 0.75) / 0.25);
+}
+float lambert(vec3 n) { return 0.35 + 0.65 * max(dot(normalize(n), normalize(vec3(0.4, 0.6, 0.7))), 0.0); }
+uniform float blend;      // Layer Weight 'Blend': 0 = thin grazing rim, towards 1 = wide rim
+uniform vec3 baseColor;
+uniform vec3 rimColor;
+// Exact unpolarised dielectric Fresnel - the formula behind Blender's Fresnel and Layer Weight nodes (fresnel_dielectric_cos).
+float fresnelDielectric(float cosi, float eta) {
+  float c = abs(cosi);
+  float g = eta * eta - 1.0 + c * c;
+  if (g <= 0.0) return 1.0;                 // total internal reflection
+  g = sqrt(g);
+  float A = (g - c) / (g + c);
+  float B = (c * (g + c) - 1.0) / (c * (g - c) + 1.0);
+  return 0.5 * A * A * (1.0 + B * B);
+}
+void main() {
+  vec3 N = normalize(vN), V = normalize(vView);
+  // 1st enhancement: Layer Weight semantics - eta = max(1 - blend, 1e-5), front faces use 1/eta
+  float F = fresnelDielectric(dot(N, V), 1.0 / max(1.0 - blend, 1e-5));
+  // 2nd enhancement: the same F weights a studio-gradient reflection and a Blinn-Phong highlight,
+  // so the ball reads as glossy and grazing angles brighten like a real dielectric (view-space up = +y).
+  vec3 R = reflect(-V, N);
+  vec3 env = mix(vec3(0.05, 0.06, 0.08), vec3(0.55, 0.75, 0.95), smoothstep(-0.3, 0.8, R.y));
+  float spec = pow(max(dot(N, normalize(normalize(vec3(0.4, 0.6, 0.7)) + V)), 0.0), 96.0);
+  vec3 col = mix(baseColor * lambert(N), rimColor, F) + 0.6 * F * env + spec * (0.25 + 0.75 * F);
+  fragColor = vec4(col, 1.0);
+}]]></ShaderPart>
+          </ComposedShader>
+        </Appearance>
+        <Sphere radius="0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_Z17_checker3d" translation="1.6 0.7 0">
+      <Shape>
+        <Appearance>
+          <ComposedShader DEF="SH_checker3d" language="GLSL">
+            <field name="phase" type="SFFloat" accessType="inputOutput" value="0" />
+            <field name="vmin" type="SFFloat" accessType="inputOutput" value="-0.6" />
+            <field name="vmax" type="SFFloat" accessType="inputOutput" value="0.6" />
+            <ShaderPart type="VERTEX"><![CDATA[data:x-shader/x-vertex,#version 300 es
+precision highp float;
+uniform mat4 x3d_ProjectionMatrix;
+uniform mat4 x3d_ModelViewMatrix;
+uniform mat3 x3d_NormalMatrix;
+in vec4 x3d_Vertex;
+in vec3 x3d_Normal;
+out vec3 vObj;     // object-space position: the 'Object' output of Blender's Texture Coordinate node
+out vec3 vN;
+out vec3 vView;
+void main() {
+  vObj = x3d_Vertex.xyz;
+  vN = normalize(x3d_NormalMatrix * x3d_Normal);
+  vec4 p = x3d_ModelViewMatrix * x3d_Vertex;
+  vView = -p.xyz;
+  gl_Position = x3d_ProjectionMatrix * p;
+}]]></ShaderPart>
+            <ShaderPart type="FRAGMENT"><![CDATA[data:x-shader/x-fragment,#version 300 es
+precision highp float;
+uniform float phase;
+uniform float vmin;
+uniform float vmax;
+in vec3 vObj;
+in vec3 vN;
+in vec3 vView;
+out vec4 fragColor;
+// Blender ColorRamp (5 stops, linear) -> piecewise mix(); the stops are exactly the ones typed into the Z17 ramp.
+vec3 viridis(float t) {
+  t = clamp(t, 0.0, 1.0);
+  const vec3 c0 = vec3(0.267, 0.005, 0.329), c1 = vec3(0.231, 0.322, 0.546), c2 = vec3(0.128, 0.567, 0.551),
+             c3 = vec3(0.369, 0.789, 0.383), c4 = vec3(0.993, 0.906, 0.144);
+  if (t < 0.25) return mix(c0, c1, t / 0.25);
+  if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+  if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+  return mix(c3, c4, (t - 0.75) / 0.25);
+}
+float lambert(vec3 n) { return 0.35 + 0.65 * max(dot(normalize(n), normalize(vec3(0.4, 0.6, 0.7))), 0.0); }
+void main() {
+  // Checker Texture 3D, scale 6 on object coordinates
+  vec3 q = floor(vObj * 6.0 + 1000.0);
+  float c = mod(q.x + q.y + q.z, 2.0);
+  fragColor = vec4(mix(vec3(0.9), vec3(0.1, 0.1, 0.3), c) * lambert(vN), 1.0);
+}]]></ShaderPart>
+          </ComposedShader>
+        </Appearance>
+        <Sphere radius="0.6" />
+      </Shape>
+    </Transform>
+    <!-- ROUTEs come AFTER the nodes they name (X3D XML parsers resolve DEF names in document order) -->
+    <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="PhaseRamp" toField="set_fraction" />
+    <ROUTE fromNode="PhaseRamp" fromField="value_changed" toNode="SH_scalar_height" toField="phase" />
+    <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="BlendBreath" toField="set_fraction" />
+    <ROUTE fromNode="BlendBreath" fromField="value_changed" toNode="SH_fresnel_rim" toField="blend" />
+  </Scene>
+</X3D>

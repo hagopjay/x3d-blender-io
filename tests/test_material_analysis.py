@@ -195,5 +195,60 @@ class OcclusionImageLookupTests(unittest.TestCase):
         self.assertTrue(self._is_occlusion("//textures/brick_2.png", label="Occlusion"))
 
 
+class OcclusionMapDetectionTests(unittest.TestCase):
+    """_find_labeled_image_node must recognise real occlusion maps and ignore look-alike words and folder names."""
+
+    KEYWORDS = ("occlusion", "ambient_occlusion", "ao")
+
+    @staticmethod
+    def _material(node_name="Image Texture", label="", image_name="", filepath=""):
+        class Image:
+            pass
+
+        class Node:
+            bl_idname = ShaderNodeTypes.IMAGE_TEXTURE
+
+        class Tree:
+            pass
+
+        image = Image()
+        image.name, image.filepath = image_name, filepath
+        node = Node()
+        node.name, node.label, node.image = node_name, label, image
+        tree = Tree()
+        tree.nodes = [node]
+        material = Tree()
+        material.node_tree = tree
+        return material, node
+
+    def _found(self, **kwargs):
+        material, node = self._material(**kwargs)
+        return _find_labeled_image_node(material, self.KEYWORDS) is node
+
+    def test_kaolin_texture_in_kaolin_folder_is_not_an_occlusion_map(self):
+        self.assertFalse(self._found(image_name="T_decoy_albedo.png",
+                                     filepath="/home/Naomi/kaolin/T_decoy_albedo.png"))
+
+    def test_look_alike_words_do_not_match_short_keyword(self):
+        for name in ("kaolin.png", "Naomi_diffuse.png", "cacao.jpg", "Paolo.png", "gao_color.png", "Image Texture.001"):
+            with self.subTest(name=name):
+                self.assertFalse(self._found(image_name=name))
+
+    def test_filepath_is_never_searched(self):
+        self.assertFalse(self._found(image_name="wall.png", filepath="/textures/ao/wall.png"))
+        self.assertFalse(self._found(image_name="wall.png", filepath="/textures/occlusion/wall.png"))
+
+    def test_real_occlusion_maps_are_found(self):
+        cases = [
+            dict(image_name="wall_AO.png"), dict(image_name="AO.001"), dict(image_name="T_occlusion.png"),
+            dict(image_name="wall-ao-2k.jpg"), dict(image_name="WallAO.png"), dict(image_name="AOMap.png"),
+            dict(image_name="rock_AmbientOcclusion.png"), dict(image_name="x.png", label="Ambient Occlusion"),
+            dict(image_name="x.png", node_name="occlusion map"), dict(image_name="metal_OcclusionRoughness.png"),
+        ]
+        for kwargs in cases:
+            with self.subTest(**kwargs):
+                self.assertTrue(self._found(**kwargs))
+
+
 if __name__ == "__main__":
     unittest.main()
