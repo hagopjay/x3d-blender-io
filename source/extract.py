@@ -1056,6 +1056,7 @@ def extract_scene(
                 instance.geometry_name = shapes[0].geometry_name
                 instance.material_name = shapes[0].material_name
             else:
+                instance.no_faces = True
                 ir_scene.diagnostics.append(f"Object {obj.name!r} has no exportable faces.")
             ir_scene.object_names.append(obj.name)
         elif obj.type == "LIGHT":
