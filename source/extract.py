@@ -138,6 +138,34 @@ def extract_splats(mesh, *, name: str) -> IRGaussianSplats:
 _ROUND = 6
 
 
+def _read_all(collection, prop, width):
+    """Every ``prop`` of a Blender collection as a list of tuples, from one ``foreach_get``.
+
+    Returns ``None`` when Blender refuses the bulk read. Reading a corner attribute one element at a time
+    (``collection[i].prop``) costs time proportional to the collection's size in Blender 5.x, which made the
+    export quadratic: a 66k-vertex grid took five minutes. One bulk read is linear.
+    """
+    count = len(collection)
+    flat = [0.0] * (count * width)
+    try:
+        collection.foreach_get(prop, flat)
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        return None
+    return [tuple(flat[i : i + width]) for i in range(0, count * width, width)]
+
+
+def _tuple_accessor(collection, prop, keep):
+    """Return ``index -> tuple(collection[index].prop[:keep])``.
+
+    The whole collection is read once when Blender allows it, element by element otherwise.
+    """
+    if len(collection):
+        values = _read_all(collection, prop, len(getattr(collection[0], prop)))
+        if values is not None:
+            return lambda index: values[index][:keep]
+    return lambda index: tuple(getattr(collection[index], prop)[:keep])
+
+
 def _uv_values(mesh):
     """Return a per-loop UV accessor for the active UV layer, or None."""
     uv_layers = getattr(mesh, "uv_layers", None)
@@ -146,10 +174,10 @@ def _uv_values(mesh):
         return None
     uv_attr = getattr(layer, "uv", None)
     if uv_attr is not None and len(uv_attr) == len(mesh.loops):
-        return lambda loop_index: tuple(uv_attr[loop_index].vector[:2])
+        return _tuple_accessor(uv_attr, "vector", 2)
     data = getattr(layer, "data", None)
     if data is not None:
-        return lambda loop_index: tuple(data[loop_index].uv[:2])
+        return _tuple_accessor(data, "uv", 2)
     return None
 
 
@@ -157,9 +185,8 @@ def _corner_normals(mesh):
     """Return a per-loop normal accessor (Blender 4.1+ ``corner_normals``)."""
     corner_normals = getattr(mesh, "corner_normals", None)
     if corner_normals is not None and len(corner_normals) == len(mesh.loops):
-        return lambda loop_index: tuple(corner_normals[loop_index].vector[:3])
-    loops = mesh.loops
-    return lambda loop_index: tuple(loops[loop_index].normal[:3])
+        return _tuple_accessor(corner_normals, "vector", 3)
+    return _tuple_accessor(mesh.loops, "normal", 3)
 
 
 def _color_values(mesh):
@@ -172,9 +199,10 @@ def _color_values(mesh):
         return None, None
     data = attr.data
     domain = attr.domain  # 'POINT' or 'CORNER'
+    colors = _read_all(data, "color", len(data[0].color)) if len(data) else None
 
     def accessor(index):
-        color = data[index].color
+        color = colors[index] if colors is not None else data[index].color
         alpha = float(color[3]) if len(color) > 3 else 1.0
         return (float(color[0]), float(color[1]), float(color[2]), alpha)
 
