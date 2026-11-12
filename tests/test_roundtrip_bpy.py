@@ -108,7 +108,8 @@ class SwatchBookRoundTripTests(unittest.TestCase):
         physical = self.root.findall(".//PhysicalMaterial")
         unlit = self.root.findall(".//UnlitMaterial")
         self.assertEqual(len(unlit), 1)
-        self.assertEqual(unlit[0].attrib["emissiveColor"].split()[:3], ["1.000000", "0.500000", "0.000000"])
+        # Blender's linear 0.5 written sRGB-encoded (the default colour space), as X_ITE reads UnlitMaterial
+        self.assertEqual(unlit[0].attrib["emissiveColor"].split()[:3], ["1.000000", "0.735357", "0.000000"])
         by_def = {node.attrib["DEF"]: node for node in physical}
         gold = by_def["MA_Gold"]
         self.assertEqual(gold.attrib["metallic"], "1.000000")
@@ -994,7 +995,8 @@ class LightEnergyRoundTripTests(unittest.TestCase):
         written = {tag: float(root.find(".//%s" % tag).attrib["intensity"])
                    for tag in ("PointLight", "SpotLight", "DirectionalLight")}
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
+        # Blender light units: the 1.75 W round trip (the default, X_ITE units, gives what X_ITE draws instead)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path, light_units='BLENDER'), {"FINISHED"})
         back = {obj.data.type: obj.data.energy for obj in bpy.context.scene.objects if obj.type == "LIGHT"}
         return written, back
 
@@ -1032,7 +1034,7 @@ class LightEnergyRoundTripTests(unittest.TestCase):
             '<SpotLight DEF="Spot" global="true" intensity="1.2"/>'
             '</Scene></X3D>\n', encoding="utf-8")
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source), {"FINISHED"})
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=source, light_units='BLENDER'), {"FINISHED"})
         lights = {obj.name: obj.data for obj in bpy.context.scene.objects}
         for name, energy, intensity in (("Sun", 1.067, 1.067), ("Lamp", 3.5, 2.0), ("Spot", 2.1, 1.2)):
             self.assertAlmostEqual(lights[name].energy, energy, places=4, msg=name)

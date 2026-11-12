@@ -24,7 +24,8 @@ from .material_node_search import (imageTexture_in_material, get_diffuse_color, 
                                    get_vector_mapping_properties, get_movie_texture_properties)
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
-from .extract import display_colour, light_attenuation, light_energy_per_intensity, resolve_export_colour_space
+from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, light_attenuation, light_colour,
+                      light_energy_per_intensity, light_radius, resolve_export_colour_space)
 
 # h3d defines
 H3D_TOP_LEVEL = 'TOP_LEVEL_TI'
@@ -475,30 +476,35 @@ def export(file,
 
         # compute cutoff and beamwidth
         intensity = min(light.energy / light_energy_per_intensity(light), 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
-        beamWidth = light.spot_size * 0.37
-        # beamWidth=((light.spotSize*math.pi)/180.0)*.37
-        cutOffAngle = beamWidth * 1.3
+        if light.get(LIGHT_INTENSITY_PROPERTY) is not None:   # imported from X3D: the file's cone
+            beamWidth, cutOffAngle = imported_spot_cone(light)
+        else:
+            beamWidth = light.spot_size * 0.37
+            # beamWidth=((light.spotSize*math.pi)/180.0)*.37
+            cutOffAngle = beamWidth * 1.3
 
         orientation = matrix_direction_neg_z(matrix)
 
         location = matrix.to_translation()[:]
 
-        radius = light.cutoff_distance * math.cos(beamWidth)
+        radius = light_radius(light)
+        if radius is None:
+            radius = light.cutoff_distance * math.cos(beamWidth)
         # radius = light.dist*math.cos(beamWidth)
         ident_step = ident + (' ' * (-len(ident) +
                                      fw('%s<SpotLight ' % ident)))
         fw('DEF=%s\n' % light_id)
         fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
-        fw(ident_step + 'radius="%.4f"\n' % radius)
+        fw(ident_step + 'radius="%g"\n' % radius)
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
-        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light.color))
+        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light)))
         fw(ident_step + 'beamWidth="%.4f"\n' % beamWidth)
         fw(ident_step + 'cutOffAngle="%.4f"\n' % cutOffAngle)
         fw(ident_step + 'direction="%.4f %.4f %.4f"\n' % orientation)
         fw(ident_step + 'location="%.4f %.4f %.4f"\n' % location)
         if light_attenuation(light) is not None:
-            fw(ident_step + 'attenuation="%.4f %.4f %.4f"\n' % light_attenuation(light))
+            fw(ident_step + 'attenuation="%s"\n' % ' '.join('%.9g' % a for a in light_attenuation(light)))
         fw(ident_step + '/>\n')
 
     def writeDirectionalLight(ident, obj, matrix, light, world):
@@ -524,7 +530,7 @@ def export(file,
         fw('DEF=%s\n' % light_id)
         fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
-        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light.color))
+        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light)))
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
         fw(ident_step + 'direction="%.4f %.4f %.4f"\n' % orientation)
         fw(ident_step + '/>\n')
@@ -549,13 +555,14 @@ def export(file,
         fw('DEF=%s\n' % light_id)
         fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
-        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light.color))
+        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light)))
 
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
-        fw(ident_step + 'radius="%.4f" \n' % light.cutoff_distance)
+        radius = light_radius(light)
+        fw(ident_step + 'radius="%g" \n' % (radius if radius is not None else light.cutoff_distance))
         fw(ident_step + 'location="%.4f %.4f %.4f"\n' % location)
         if light_attenuation(light) is not None:
-            fw(ident_step + 'attenuation="%.4f %.4f %.4f"\n' % light_attenuation(light))
+            fw(ident_step + 'attenuation="%s"\n' % ' '.join('%.9g' % a for a in light_attenuation(light)))
         fw(ident_step + '/>\n')
 
     def writeSpeaker(ident, obj, matrix, data, world):

@@ -19,9 +19,10 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      LIGHT_ATTENUATION_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY, LIGHT_INTENSITY_PROPERTY,
-                      LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY, METADATA_NODE_TYPES,
-                      METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
+                      LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      LIGHT_INTENSITY_PROPERTY,
+                      LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
+                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -2834,12 +2835,13 @@ CIRCLE_DIV_RANGE = (3, 512)
 COLOUR_SPACES = ('AS_IS', 'SRGB')
 COLOUR_SPACE_ALIASES = {"X_ITE": "SRGB", "XITE": "SRGB", "LINEAR_WHEN_PHYSICAL_MATERIAL": "SRGB", "LINEAR": "AS_IS",
                         "NONE": "AS_IS", "AUTO": ""}
-colour_space = 'AS_IS'
+colour_space = 'SRGB'
 
 
-def resolve_colour_space(value=None, default='AS_IS'):
+def resolve_colour_space(value=None, default='SRGB'):
     """The import option when given (not AUTO), else the BLENDER_X3D_COLOR_SPACE environment variable (for headless
-    pipelines), else `default`. 'X_ITE' is accepted for 'SRGB'."""
+    pipelines), else `default`: 'SRGB', the way X_ITE and Castle read classic colours (measured in both, Nov 2026).
+    'X_ITE' is accepted for 'SRGB'."""
     raw = COLOUR_SPACE_ALIASES.get(str(value or "").strip().upper(), str(value or "").strip().upper())
     if not raw:
         env = os.environ.get("BLENDER_X3D_COLOR_SPACE", "").strip().upper()
@@ -2875,8 +2877,14 @@ LIGHT_UNITS_ALIASES = {"LEGACY": "BLENDER", "AS_IS": "BLENDER", "XITE": "X_ITE",
                        "AUTO": ""}
 lighting_units = 'BLENDER'   # the resolved light_units of the import in progress
 # Filled while a file (and its Inlines) is read, used by finalize_light_units once the whole import is in.
-imported_lights = []   # (light object, X3D node type, intensity, attenuation, radius)
-lit_surfaces = []      # (mesh object, 'classic' or 'physical', a classic Material's diffuseColor)
+# radius is the file's (X3D units, -1 for unlimited); frame is the Blender length of one unit of the light's own X3D
+# frame (the file unit times its Transforms' scale), the frame X_ITE measures the light's distances in.
+imported_lights = []   # (light object, X3D node type, intensity, attenuation, radius, frame)
+lit_surfaces = []      # (mesh object, 'classic' or 'physical', a classic Material's diffuseColor, its emissiveColor)
+lit_by_node = {}       # Shape node -> ('classic' or 'physical', diffuseColor, emissiveColor), so each USE counts too
+navigation_headlight = None   # the first NavigationInfo's headlight (X3D's default, and a browser's, is on)
+bound_view = None   # the first Viewpoint's camera, the one a browser binds first (None when the file has none)
+default_view = None   # X3D's default view (0 0 10, looking down -z) in Blender, for a file without a Viewpoint
 
 
 def resolve_light_units(value=None, colour=None, default='BLENDER'):
@@ -2898,51 +2906,311 @@ def x3d_attenuation_factor(attenuation, distance):
     return 1.0 / max(a0 + a1 * distance + a2 * distance * distance, 1.0)
 
 
+MIN_REFERENCE_DISTANCE = 1e-3   # Blender units; a light touching a surface is matched there
+
+
+def _box_distance(point, lo, hi):
+    """Distance from a point to an axis-aligned box (0 inside it), and the distance to its nearest face from inside."""
+    outside = Vector(tuple(max(lo[i] - point[i], 0.0, point[i] - hi[i]) for i in range(3)))
+    inside = min(min(point[i] - lo[i], hi[i] - point[i]) for i in range(3))
+    return outside.length, inside
+
+
 def reference_distance(origin, radius, surfaces, axis=None, cut_off=None):
-    """The distance at which a point or spot light is matched: the median distance from the light to the surfaces it
-    reaches (bounding-box centres within its radius, and inside a spot light's cone), never less than a surface's
-    half diagonal, so a light inside a large floor or room is not matched at zero. 1 m when it reaches nothing."""
-    distances = []
-    for centre, half in surfaces:
+    """The distance at which a point or spot light is matched (Blender units), or None when it reaches nothing:
+    the median distance from the light to the surfaces it reaches. A surface counts at its bounding-box centre, or,
+    when the light is within its bounding sphere (above a large floor), at the nearest point of its box, so the shape
+    is not matched at its far corner. A surface whose box holds the light (a bulb around it, the room it is in)
+    counts, at its nearest face, only when nothing else is in reach. Surfaces beyond the radius (None: unlimited)
+    or outside a spot light's cone are skipped. `surfaces` holds (centre, half diagonal, box min, box max)."""
+    distances, enclosing = [], []
+    for centre, half, lo, hi in surfaces:
         offset = centre - origin
         distance = offset.length
-        if distance - half > radius:
+        near, face = _box_distance(origin, lo, hi)
+        if radius is not None and near > radius:
             continue
         if axis is not None and cut_off is not None and distance > half and \
                 offset.normalized().dot(axis) < math.cos(min(cut_off, math.pi / 2.0)):
             continue
-        distances.append(max(distance, half))
+        if near <= 0.0:
+            enclosing.append(max(face, MIN_REFERENCE_DISTANCE))
+        elif distance < half:
+            distances.append(max(near, MIN_REFERENCE_DISTANCE))
+        else:
+            distances.append(distance)
+    distances = distances or enclosing
     if not distances:
-        return 1.0
+        return None
     distances.sort()
     middle = len(distances) // 2
     return distances[middle] if len(distances) % 2 else 0.5 * (distances[middle - 1] + distances[middle])
 
 
+
+def range_window(distance, reach):
+    """The range window KHR_lights_punctual recommends, which X_ITE's PhysicalMaterial also applies:
+    clamp(1 - (d / r)^4, 0, 1); 1 when the light has no range."""
+    if reach is None or reach <= 0.0:
+        return 1.0
+    return max(0.0, min(1.0, 1.0 - (distance / reach) ** 4))
+
+
+VIEW_SAMPLES = 64   # rays per side of the square grid the classic light fit casts from the first Viewpoint
+
+
+def _view_samples(surfaces, camera, view):
+    """What the first Viewpoint sees of the lit classic surfaces, as numpy arrays (world points, unit normals turned
+    towards the view, weights, sRGB diffuse and emissive colours side by side), or None: a ray through each cell of a square grid over the view
+    (the square X3D's fieldOfView spans) stops at the first surface it meets, so hidden faces, and pixels of lines,
+    text, emissive-only and physical shapes, do not count. `camera` is the bound Viewpoint's camera, else `view` the
+    world matrix of X3D's default view (fieldOfView pi / 4)."""
+    import numpy as np
+    try:
+        scene = bpy.context.scene
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+    except (AttributeError, RuntimeError):
+        return None
+    diffuse_of = {}
+    for bpyob, model, diffuse, glow in surfaces:
+        try:
+            if model == 'classic' and diffuse is not None and not bpyob.hide_render:
+                albedo = 0.2126 * diffuse[0] + 0.7152 * diffuse[1] + 0.0722 * diffuse[2]
+                if albedo > 0.02:   # black, emissive-only: not lit
+                    diffuse_of[bpyob.name] = tuple(min(max(float(channel), 0.0), 1.0)
+                                                   for channel in tuple(diffuse[:3]) + tuple((glow or (0.0,) * 3)[:3]))
+        except ReferenceError:
+            continue
+    if not diffuse_of:
+        return None
+    try:
+        if camera is not None:
+            matrix = camera.matrix_world.copy()
+            corner = camera.data.view_frame(scene=scene)[0]
+            half, depth = min(abs(corner.x), abs(corner.y)), abs(corner.z)
+        elif view is not None:
+            matrix, half, depth = view, math.tan(0.785398 / 2.0), 1.0
+        else:
+            return None
+    except ReferenceError:
+        return None
+    origin = matrix.translation.copy()
+    turn = matrix.to_3x3()
+    points, normals, colours = [], [], []
+    steps = [(index + 0.5) / VIEW_SAMPLES * 2.0 - 1.0 for index in range(VIEW_SAMPLES)]
+    for v in steps:
+        for u in steps:
+            direction = (turn @ Vector((u * half, v * half, -depth))).normalized()
+            start = origin
+            for _ in range(8):   # pass through objects a render leaves out
+                hit, location, normal, _face, hit_object, _matrix = scene.ray_cast(depsgraph, start, direction)
+                if not hit:
+                    break
+                original = getattr(hit_object, 'original', hit_object)
+                if original.hide_render:
+                    start = location + direction * 1e-4
+                    continue
+                colour = diffuse_of.get(original.name)
+                if colour is not None:
+                    normal = normal.normalized()
+                    if normal.dot(direction) > 0.0:   # seen from behind: lit on that side, as X3D lights solid FALSE
+                        normal = -normal
+                    points.append(tuple(location))
+                    normals.append(tuple(normal))
+                    colours.append(colour)
+                break
+    if not points:
+        return None
+    count = len(points)
+    return (np.array(points, dtype=float), np.array(normals, dtype=float), np.ones(count) / count,
+            np.array(colours, dtype=float))
+
+
+def _spot_falloff(cosine, cut_off, beam):
+    """How much of a spot light reaches a direction at `cosine` from its axis: 1 inside the beam, 0 outside the cut-off,
+    and between them (t^2, t from the cut-off's cosine to the beam's) as X_ITE and glTF viewers fall off."""
+    import numpy as np
+    outer, inner = math.cos(cut_off), math.cos(min(beam, cut_off))
+    if inner - outer <= 1e-9:
+        return (cosine >= outer).astype(float)
+    t = np.clip((cosine - outer) / (inner - outer), 0.0, 1.0)
+    return t * t
+
+
+def fit_classic_lights(faces, lights, headlight, view, srgb):
+    """Fit a classic scene's lights to what X_ITE draws on the faces seen from the first Viewpoint, or None when no
+    face is lit. Per colour channel, X = min(e + b L, 1) is X_ITE's display-space value on a face (e and b its sRGB
+    emissive and diffuse colours, L the sum of i x color x attenuation(d / s) x cos x spot of the lights that reach it,
+    plus the headlight's cos when it is on) and G = srgb(min(E' + B E / pi, 1)) a glTF viewer's (E' and B the emissive
+    and diffuse colours Blender renders with, E the sum of
+    the glTF lights' lux there in their Blender colours: each point or spot light falls off as 1/d^2 from its reference
+    distance, within its range window).
+    Returns (f, factors, headlight): f is the one factor for every light that makes the weighted mean of |X - G| least
+    (a sun f x i lux, a point or spot light f x i x attenuation(d / s) x d^2 / window(d) cd at its reference distance
+    d); factors holds each light's own factor (index in `lights` -> factor), fitted by least squares near the display
+    and pulled towards f, kept only when they draw closer than f; headlight is the headlight's lux. A light that
+    starts dark, or that no face in view sees, keeps f. `lights` holds (spec, intensity, attenuation, frame, reach,
+    origin, axis, cut-off, beam, reference distance, X3D color, Blender color)."""
+    import numpy as np
+    centre, normal, weight, colours = faces
+    albedo, glow = colours[:, :3], colours[:, 3:6]
+    white = np.ones(3)
+    xite_columns, gltf_columns, keys = [], [], []   # per light: (faces, 3) display level, (faces, 3) lux per factor
+    if headlight and view is not None:
+        towards = -np.array(view.to_3x3() @ Vector((0.0, 0.0, -1.0)), dtype=float)
+        cosine = np.maximum(normal @ towards, 0.0)
+        xite_columns.append(np.outer(cosine, white))
+        gltf_columns.append(np.outer(cosine, white))
+        keys.append(None)
+    for index, light in enumerate(lights):
+        spec, intensity, attenuation, frame, reach, origin, axis, cut_off, beam, distance, shown, held = light
+        given = max(0.0, intensity)
+        if given <= 0.0:
+            continue
+        shown, held = np.array(shown, dtype=float), np.array(held, dtype=float)
+        if spec == 'DirectionalLight':
+            cosine = np.maximum(normal @ -np.array(axis, dtype=float), 0.0)
+            xite_columns.append(np.outer(given * cosine, shown))
+            gltf_columns.append(np.outer(given * cosine, held))
+            keys.append(index)
+            continue
+        offset = np.array(origin, dtype=float) - centre
+        far = np.maximum(np.linalg.norm(offset, axis=1), 1e-9)
+        cosine = np.maximum(np.einsum('ij,ij->i', normal, offset) / far, 0.0)
+        if spec == 'SpotLight':
+            cosine = cosine * _spot_falloff(-(offset @ np.array(axis, dtype=float)) / far, cut_off, beam)
+        a0, a1, a2 = (list(attenuation) + [0.0, 0.0, 0.0])[:3] if attenuation else (1.0, 0.0, 0.0)
+        local = far / frame
+        fade = 1.0 / np.maximum(a0 + a1 * local + a2 * local * local, 1.0)
+        reached = np.ones(len(far)) if reach is None else (far <= reach).astype(float)
+        xite_columns.append(np.outer(given * fade * cosine * reached, shown))
+        window = 1.0 if reach is None else np.clip(1.0 - (far / reach) ** 4, 0.0, 1.0)
+        anchor = given * x3d_attenuation_factor(attenuation, distance / frame) * distance * distance \
+            / max(range_window(distance, reach), 0.1)
+        gltf_columns.append(np.outer(anchor * window * cosine / (far * far), held))
+        keys.append(index)
+    if not keys:
+        return None
+    xite = np.stack(xite_columns, axis=-1)   # (faces, 3, lights)
+    gltf = np.stack(gltf_columns, axis=-1)
+    lit = (xite.sum(axis=(1, 2)) > 0.0) | (gltf.sum(axis=(1, 2)) > 0.0)
+    if not lit.any():
+        return None
+    weight, albedo, glow, xite, gltf = weight[lit], albedo[lit], glow[lit], xite[lit], gltf[lit]
+    rows = len(weight) * 3
+    weight = np.repeat(weight / weight.sum() / 3.0, 3)   # one row per face and channel
+    albedo, glow = albedo.reshape(rows), glow.reshape(rows)
+    xite = xite.reshape(rows, -1)
+    gltf = gltf.reshape(rows, -1)
+    shown = np.minimum(glow + albedo * xite.sum(axis=1), 1.0)   # X_ITE adds the emissive colour in display space
+
+    def linear(value):
+        return np.where(value <= 0.04045, value / 12.92, ((value + 0.055) / 1.055) ** 2.4)
+
+    held = linear(albedo) if srgb else albedo
+    shine = linear(glow) if srgb else glow   # a glTF viewer adds it in linear space
+
+    def miss(factors):
+        value = np.minimum(shine + held * (gltf @ factors) / math.pi, 1.0)
+        value = np.where(value <= 0.0031308, 12.92 * value, 1.055 * np.maximum(value, 0.0) ** (1.0 / 2.4) - 0.055)
+        return float(weight @ np.abs(shown - value))
+
+    def search(make, low, high):
+        """The least-miss scale on a log grid from low to high, refined by golden section; the dimmest of equals."""
+        grid = [low * (high / low) ** (step / 320.0) for step in range(321)]
+        errors = [miss(make(scale)) for scale in grid]
+        least = min(errors)
+        best = next(index for index, error in enumerate(errors) if error <= least + 1e-12)
+        left, right = grid[max(best - 1, 0)], grid[min(best + 1, len(grid) - 1)]
+        golden = (math.sqrt(5.0) - 1.0) / 2.0
+        for _ in range(60):
+            one, two = right - golden * (right - left), left + golden * (right - left)
+            if miss(make(one)) <= miss(make(two)):
+                right = two
+            else:
+                left = one
+        return 0.5 * (left + right)
+
+    count = len(keys)
+    ones = np.ones(count)
+    f = search(lambda scale: scale * ones, math.pi * 1e-4, math.pi * 1e4)
+
+    # Each light's own factor: weighted least squares on the linear lux each face and channel needs to show X, weighted
+    # by how much a lux there changes the display, with values X_ITE clips met once they are as bright; pulled
+    # towards f. A black channel (nothing to show) does not count.
+    usable = held > 1e-6
+    target = np.where(usable, math.pi * np.maximum(linear(shown) - shine, 0.0) / np.maximum(held, 1e-6), 0.0)
+    clipped = shown >= 1.0
+    level = linear(shown)
+    slope = np.where(level <= 0.0031308, 12.92, 1.055 / 2.4 * np.maximum(level, 1e-9) ** (1.0 / 2.4 - 1.0))
+    importance = np.where(usable, weight * (slope * held / math.pi) ** 2, 0.0)
+    factors = f * ones
+    for _ in range(4):
+        use = usable & (~clipped | (gltf @ factors < target))
+        matrix = (gltf[use].T * importance[use]) @ gltf[use]
+        vector = (gltf[use].T * importance[use]) @ target[use]
+        pull = 1e-3 * np.trace(matrix) / count + 1e-30
+        free = np.ones(count, dtype=bool)
+        solution = np.zeros(count)
+        for _ in range(count):   # active set: a light never goes negative
+            index = np.flatnonzero(free)
+            solution[:] = 0.0
+            solution[index] = np.linalg.solve(matrix[np.ix_(index, index)] + pull * np.eye(len(index)),
+                                              vector[index] + pull * f)
+            if (solution[index] >= 0.0).all():
+                break
+            free[index[solution[index] < 0.0]] = False
+        factors = solution.copy()
+    scale = search(lambda scale: scale * factors, 0.25, 4.0) if factors.any() else 1.0
+    factors = scale * factors
+    if not factors.any() or miss(factors) >= miss(f * ones):
+        factors = f * ones
+    own = {key: float(value) for key, value in zip(keys, factors)}
+    return f, {key: value for key, value in own.items() if key is not None}, own.get(None, f)
+
+
 def finalize_light_units(scene, units=None):
     """Set the energy of every light this import made (see LIGHT_UNITS). In 'X_ITE' units, with K = 4 pi (Blender
-    watts per COMPAT candela) and d the light's reference distance:
+    watts per COMPAT candela), d a point or spot light's reference distance (Blender units) and s its frame (the
+    Blender length of one unit of its X3D frame: the file unit times its Transforms' scale; X_ITE measures the
+    light's distances, attenuation and radius in that frame):
       - the scene is lit the classic way when its lit shapes have a Material or TwoSidedMaterial and none has a
-        PhysicalMaterial, else physically;
-      - level(x) = x for a physical scene; for a classic one pi lin(min(a x, 1)) / lin(a), with lin the sRGB curve
-        and a the median albedo of the scene's classic Materials, so that albedo lit at x shows a x in a glTF
-        viewer, as in X_ITE (pi lin(x) for a pure power curve);
-      - DirectionalLight: sun strength = level(i) (lux);
-      - point and spot lights, physical: i x attenuation(d) cd, which is exact at every distance for the default
-        attenuation 1 0 0; classic: level(i x attenuation(d)) x d^2 cd, exact at d;
-      - the light's radius becomes its glTF range (Blender's custom distance).
-    The scene gets x3d_lighting_model and x3d_headlight_lux (what an X3D headlight, a DirectionalLight of 1, should
-    be in a glTF viewer), since this importer does not make the headlight."""
-    global imported_lights, lit_surfaces
+        PhysicalMaterial (an Inlined glTF counts as PhysicalMaterial), else physically;
+      - physical: a DirectionalLight's sun strength is its intensity (lux); a point or spot light gets
+        i x attenuation(d / s) x s^2 cd, exact at every distance for the default attenuation 1 0 0;
+      - classic: X_ITE shades in display space (colours, light colours and the sum of the lights all as sRGB values,
+        with no falloff but attenuation), which no factor matches everywhere in a linear glTF viewer. So the lights
+        are fitted to what X_ITE draws on the surfaces the first Viewpoint sees (rays cast through a grid over its
+        view, see fit_classic_lights): a sun gets f_k x i lux and a point or spot light f_k x i x attenuation(d / s)
+        x d^2 cd, divided by the range window at d, which X_ITE's classic shader does not apply. f_k is one factor
+        for every light, or each light's own when that draws closer; with nothing lit in view, f = pi lin(a S) /
+        (A S), S the sum of what each light gives at its reference distance (and 1 for the headlight when it is on),
+        a the median sRGB albedo of the lit classic Materials and A = lin(a) when the colours were read as sRGB
+        (a when as is). Read as sRGB, a light's color becomes linear too (its file value kept in x3d_color);
+      - the light's radius times s becomes its glTF range (Blender's custom distance); a radius of -1 (unlimited)
+        or 0 leaves the light without a range.
+    The scene gets x3d_lighting_model and x3d_headlight_lux (what an X3D headlight, a DirectionalLight of 1 along the
+    view, should be in a glTF viewer), since this importer does not make the headlight."""
+    global imported_lights, lit_surfaces, navigation_headlight, bound_view, default_view
     units = units or lighting_units
-    lights, surfaces = imported_lights, lit_surfaces
-    imported_lights, lit_surfaces = [], []
+    lights, surfaces, headlight = imported_lights, lit_surfaces, navigation_headlight is not False
+    camera = bound_view
+    try:
+        view = camera.matrix_world.copy() if camera is not None else default_view
+    except ReferenceError:
+        camera, view = None, default_view
+    imported_lights, lit_surfaces, navigation_headlight, bound_view, default_view = [], [], None, None, None
+    lit_by_node.clear()
     if units != 'X_ITE' or scene is None:
         return
+    try:
+        bpy.context.view_layer.update()   # world matrices of objects parented since they were made
+    except (AttributeError, RuntimeError):
+        pass
     counts = {'classic': 0, 'physical': 0}
     boxes = []
     albedos = []
-    for bpyob, model, diffuse in surfaces:
+    for bpyob, model, diffuse, _glow in surfaces:
         try:
             if bpyob.hide_render:
                 continue
@@ -2951,52 +3219,99 @@ def finalize_light_units(scene, units=None):
             continue
         counts[model] += 1
         if diffuse is not None:
-            # the sRGB value X_ITE multiplies by the light level; black (emissive-only) surfaces are not lit
+            # the sRGB value X_ITE multiplies by the light level; a black (emissive-only) surface is not lit, so it
+            # counts neither for the albedo nor for a light's reference distance
             albedo = 0.2126 * diffuse[0] + 0.7152 * diffuse[1] + 0.0722 * diffuse[2]
-            if albedo > 0.02:
-                albedos.append(min(albedo, 1.0))
-        centre = sum(corners, Vector()) / len(corners)
-        boxes.append((centre, max((corner - centre).length for corner in corners)))
+            if albedo <= 0.02:
+                continue
+            albedos.append(min(albedo, 1.0))
+        lo = Vector(tuple(min(corner[i] for corner in corners) for i in range(3)))
+        hi = Vector(tuple(max(corner[i] for corner in corners) for i in range(3)))
+        centre = 0.5 * (lo + hi)
+        boxes.append((centre, (hi - centre).length, lo, hi))
     # One PhysicalMaterial in view decides: classic units would light it pi lin(i) / i times too bright (a key
     # light of 2.4 gives 23.9 lux where X_ITE lights it with 2.4), and an overexposed surface loses its detail,
     # while a classic surface lit physically is only darker.
     classic = counts['classic'] > 0 and counts['physical'] == 0
     albedos.sort()
     typical = albedos[len(albedos) // 2] if albedos else 0.8
+    held = srgb_to_linear(typical) if colour_space == 'SRGB' else typical   # the albedo Blender renders with
 
-    def level(x):
-        """Lux that draws an sRGB albedo a lit at x as X_ITE does (a x, clipped at 1): pi lin(min(a x, 1)) / lin(a),
-        for the scene's median classic albedo a. It is pi lin(x) for a pure power curve; the sRGB curve's linear toe
-        makes dark colours need less (an albedo of 0.055 lit at 2.4: 11 lux, not 23.9)."""
-        x = max(0.0, x)
-        if not classic:
-            return x
-        return math.pi * srgb_to_linear(min(typical * x, 1.0)) / srgb_to_linear(typical)
+    # X_ITE multiplies a classic scene's light colours in display space, as it does its Material colours: read as sRGB,
+    # a light's color becomes linear in Blender (the file's value is kept for the export), like the Materials' colours.
+    linear_lights = classic and colour_space == 'SRGB'
 
-    for bpyob, spec, intensity, attenuation, radius in lights:
+    def tones(data):
+        """(the light's X3D color, the colour Blender renders it with)."""
+        given = tuple(float(channel) for channel in data.color[:3])
+        return given, tuple(srgb_to_linear(channel) for channel in given) if linear_lights else given
+
+    plans = []
+    shining = []   # what the classic factor fit needs of each light
+    total = 1.0 if headlight else 0.0
+    for bpyob, spec, intensity, attenuation, radius, frame in lights:
         try:
             data = bpyob.data
             matrix = bpyob.matrix_world
         except ReferenceError:
             continue
-        unit = 1.0 if intensity <= 0.0 else intensity       # the scale of a light that starts dark (animated later)
+        given = max(0.0, intensity)
+        axis = (matrix.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized()
         if spec == 'DirectionalLight':
-            energy = level(unit)
+            plans.append((data, spec, intensity, None))
+            shining.append((spec, intensity, None, 1.0, None, None, axis, None, None, None) + tones(data))
+            total += given
+            continue
+        frame = frame if frame > 0.0 else 1.0
+        origin = matrix.to_translation()
+        cut_off = data.spot_size / 2.0 if spec == 'SpotLight' else None
+        beam = cut_off * (1.0 - data.spot_blend) if spec == 'SpotLight' else None
+        reach = radius * frame if radius > 0.0 else None
+        distance = reference_distance(origin, reach, boxes, axis if spec == 'SpotLight' else None, cut_off)
+        if distance is None:   # lights nothing: matched at 1 m, adds nothing to the scene's level
+            distance = 1.0
         else:
-            origin = matrix.to_translation()
-            axis = (matrix.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized() if spec == 'SpotLight' else None
-            cut_off = data.spot_size / 2.0 if spec == 'SpotLight' else None
-            distance = reference_distance(origin, radius, boxes, axis, cut_off)
-            fade = x3d_attenuation_factor(attenuation, distance)
-            candela = level(unit * fade) * distance * distance if classic else unit * fade
+            total += given * x3d_attenuation_factor(attenuation, distance / frame)
+        if radius == 0.0:
+            logger.warning("ImportX3D: %s %r has radius 0, so X_ITE lights nothing with it; it keeps no glTF range",
+                           spec, bpyob.name)
+        plans.append((data, spec, intensity, (distance, frame, reach, attenuation)))
+        shining.append((spec, intensity, attenuation, frame, reach, origin, axis, cut_off, beam, distance) + tones(data))
+
+    f, own, headlight_lux = 1.0, {}, 1.0
+    if classic:
+        faces = _view_samples(surfaces, camera, view)
+        fitted = fit_classic_lights(faces, shining, headlight, view, colour_space == 'SRGB') if faces else None
+        if fitted is not None:
+            f, own, headlight_lux = fitted
+        else:   # nothing lit in view: the median albedo lit by every light at once shows as in X_ITE
+            level = total if total > 0.0 else 1.0
+            f = headlight_lux = math.pi * srgb_to_linear(min(typical * level, 1.0)) / (held * level)
+    for index, (data, spec, intensity, place) in enumerate(plans):
+        unit = 1.0 if intensity <= 0.0 else intensity       # the scale of a light that starts dark (animated later)
+        mine = own.get(index, f)
+        if place is None:
+            energy = mine * unit
+        else:
+            distance, frame, reach, attenuation = place
+            fade = x3d_attenuation_factor(attenuation, distance / frame)
+            if classic:
+                candela = mine * unit * fade * distance * distance / max(range_window(distance, reach), 0.1)
+            else:
+                candela = unit * fade * frame * frame
             energy = 4.0 * math.pi * candela
             data[LIGHT_REFERENCE_DISTANCE_PROPERTY] = distance
-            data.use_custom_distance = True
-            data.cutoff_distance = radius
+            data.use_custom_distance = reach is not None
+            if reach is not None:
+                data.cutoff_distance = reach
         data[LIGHT_ENERGY_PER_INTENSITY_PROPERTY] = energy / unit
         data.energy = energy if intensity > 0.0 else 0.0
+        if linear_lights:
+            given, held_colour = tones(data)
+            data[LIGHT_COLOR_PROPERTY] = given
+            data.color = held_colour
     scene["x3d_lighting_model"] = 'classic' if classic else 'physical'
-    scene["x3d_headlight_lux"] = level(1.0)
+    scene["x3d_headlight_lux"] = headlight_lux if classic else 1.0
 
 
 def resolve_circle_divisions(value=None, default=16):
@@ -4785,6 +5100,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         bpyob.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
         bpycollection.objects.link(bpyob)
         bpyob.select_set(True)
+        lit = lit_by_node.get(node.getRealNode())
+        if lit is not None:   # each USE is a surface the lights reach, as the DEF is
+            lit_surfaces.append((bpyob,) + lit)
         return
 
     vrmlname = node.getDefName()
@@ -4863,12 +5181,16 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             node, bpymat, tex_has_alpha, texmtx,
             ancestry, global_matrix, solidify, solidify_value)
         if appr is not None and geom_spec not in LINE_POINT_SPECS and node.blendObject is not None:
+            lit = None
             if appr.getChildBySpec('PhysicalMaterial') is not None:
-                lit_surfaces.append((node.blendObject, 'physical', None))
+                lit = ('physical', None, None)
             elif appr.getChildBySpec(('Material', 'TwoSidedMaterial')) is not None:
                 material = appr.getChildBySpec(('Material', 'TwoSidedMaterial'))
-                diffuse = material.getFieldAsFloatTuple('diffuseColor', (0.8, 0.8, 0.8), ancestry)
-                lit_surfaces.append((node.blendObject, 'classic', diffuse))
+                lit = ('classic', material.getFieldAsFloatTuple('diffuseColor', (0.8, 0.8, 0.8), ancestry),
+                       material.getFieldAsFloatTuple('emissiveColor', (0.0, 0.0, 0.0), ancestry))
+            if lit is not None:
+                lit_by_node[node.getRealNode()] = lit
+                lit_surfaces.append((node.blendObject,) + lit)
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
@@ -4956,13 +5278,11 @@ def importLamp_SpotLight(node, ancestry):
     bpylamp.cutoff_distance = radius
     bpylamp.color = color
     bpylamp.spot_size = cutOffAngle
-    if beamWidth > cutOffAngle:
-        bpylamp.spot_blend = 0.0
-    else:
-        if cutOffAngle == 0.0:  # this should never happen!
-            bpylamp.spot_blend = 0.5
-        else:
-            bpylamp.spot_blend = beamWidth / cutOffAngle
+    # X3D's beamWidth and cutOffAngle are half angles; X_ITE (like glTF) lights the full intensity inside beamWidth
+    # and falls off to zero at cutOffAngle, with a hard edge when beamWidth >= cutOffAngle. Blender's (and its glTF
+    # exporter's) inner cone is spot_size / 2 x (1 - spot_blend), so the inner cone becomes beamWidth.
+    half = cutOffAngle / 2.0
+    bpylamp.spot_blend = 0.0 if half <= 0.0 or beamWidth >= half else 1.0 - beamWidth / half
 
     # Convert
 
@@ -5009,14 +5329,22 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
     attenuation = None
     radius = 100.0
+    frame = conversion_scale
     if spec != 'DirectionalLight':
         attenuation = node.getFieldAsFloatTuple('attenuation', None, ancestry)
         if attenuation is not None and len(attenuation) == 3:
             bpylamp[LIGHT_ATTENUATION_PROPERTY] = [float(a) for a in attenuation]
         else:
             attenuation = None
-        radius = bpylamp.cutoff_distance
-    imported_lights.append((bpyob, spec, node.getFieldAsFloat('intensity', 1.0, ancestry), attenuation, radius))
+        # the file's radius (X3D's default 100; -1 is unlimited in X_ITE), kept in Blender units of the light's own
+        # frame for the X3D exports to write back; the cutoff distance becomes the world-space range below
+        radius = node.getFieldAsFloat('radius', 100.0, ancestry)
+        bpylamp[LIGHT_RADIUS_PROPERTY] = radius * conversion_scale
+        scale = bpyob.matrix_world.to_scale()
+        frame = conversion_scale * (abs(scale[0]) + abs(scale[1]) + abs(scale[2])) / 3.0
+        if radius > 0.0:
+            bpylamp.cutoff_distance = radius * frame
+    imported_lights.append((bpyob, spec, node.getFieldAsFloat('intensity', 1.0, ancestry), attenuation, radius, frame))
 
 
 # -----------------------------------------------------------------------------------
@@ -5043,6 +5371,9 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
     bpycollection.objects.link(bpyob)
     bpyob.select_set(True)
     bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
+    global bound_view
+    if bound_view is None and not _INLINE_STACK:   # the Viewpoint a browser binds first
+        bound_view = bpyob
     if description:
         # Blender cameras have no description; keep it for the X3D 4.0 export to write back.
         bpyob[VIEWPOINT_DESCRIPTION_PROPERTY] = description
@@ -5775,6 +6106,9 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
             from .bridge_gltf import import_gltf
             import_gltf(resolved)
             parent_inverse = Matrix()  # already Z-up, exactly the placeholder's frame
+            # X_ITE draws an Inlined glTF with PhysicalMaterial, so its meshes count for the light units
+            lit_surfaces.extend((obj, 'physical', None, None) for obj in bpy.data.objects
+                                if obj not in before and obj.type == 'MESH')
         elif lower.endswith(('.ply', '.splat')):
             from .splat_io import read_splats
             splats = read_splats(resolved, name=name)
@@ -6239,7 +6573,7 @@ def load_web3d(
     # Used when adding blender primitives
     GLOBALS['CIRCLE_DETAIL'] = PREF_CIRCLE_DIV
 
-    global conversion_scale
+    global conversion_scale, navigation_headlight
     conversion_scale = global_scale
 
     # NOTE - reset material cache
@@ -6276,6 +6610,9 @@ def load_web3d(
 
     if global_matrix is None:
         global_matrix = Matrix()
+    global default_view
+    if not _INLINE_STACK and default_view is None:
+        default_view = global_matrix @ Matrix.Translation((0.0, 0.0, 10.0 * conversion_scale))
 
     # fill with tuples - (node, [parents-parent, parent])
     all_nodes = root_node.getSerialized([], [])
@@ -6324,6 +6661,8 @@ def load_web3d(
             # Only use transform nodes when we are not importing a flat object hierarchy
             if not PREF_FLAT:
                 importTransform(bpycollection, node, ancestry, global_matrix)
+        elif spec == 'NavigationInfo' and not _INLINE_STACK and navigation_headlight is None:
+            navigation_headlight = node.getFieldAsBool('headlight', True, ancestry)
         elif spec == 'Background' and not background_seen:
             importBackground(bpyscene, node, ancestry)
             background_seen = True
@@ -6446,16 +6785,19 @@ def load(context,
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
-    color_space: 'AS_IS' or 'SRGB' (see COLOUR_SPACES; None or 'AUTO': BLENDER_X3D_COLOR_SPACE, else 'AS_IS').
+    color_space: 'AS_IS' or 'SRGB' (see COLOUR_SPACES; None or 'AUTO': BLENDER_X3D_COLOR_SPACE, else 'SRGB').
     light_units: 'BLENDER' or 'X_ITE' (see LIGHT_UNITS; None or 'AUTO': BLENDER_X3D_LIGHT_UNITS, else X_ITE with
     the SRGB colour space and BLENDER with AS_IS)."""
-    global colour_space, lighting_units
+    global colour_space, lighting_units, navigation_headlight, bound_view, default_view
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
     colour_space = resolve_colour_space(color_space)
     lighting_units = resolve_light_units(light_units, colour_space)
     imported_lights.clear()
     lit_surfaces.clear()
+    lit_by_node.clear()
+    navigation_headlight = None
+    bound_view = default_view = None
 
     if import_target in {"MODERN", "X3D40", "MODERN_INLINE"}:
         from .parse_x3d40 import parse_file
