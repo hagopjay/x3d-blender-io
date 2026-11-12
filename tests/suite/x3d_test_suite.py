@@ -131,9 +131,10 @@ PROFILES = {
     },
     "crease": {
         "file": "x3d_suite_crease.x3d",
-        "title": "X3D 4.0, no explicit normals (creaseAngle path), raw base meshes, triangulated, flat hierarchy",
+        "title": "X3D 4.0, no explicit normals (creaseAngle path), raw base meshes, triangulated, flat hierarchy, "
+                 "colours written as Blender holds them (linear)",
         "export": dict(x3d_version="X3D40", use_selection=False, use_hierarchy=False, use_animation=False,
-                       use_normals=False, use_mesh_modifiers=False, use_triangulate=True),
+                       use_normals=False, use_mesh_modifiers=False, use_triangulate=True, color_space="AS_IS"),
     },
     "x41": {
         "file": "x3d_suite_x41.x3d",
@@ -304,6 +305,12 @@ def force_interpolation():
 # --------------------------------------------------------------------------------------
 # Check vocabulary + mesh helpers
 # --------------------------------------------------------------------------------------
+def _linear_to_srgb(value: float) -> float:
+    """One linear channel sRGB-encoded (the exporter's extract.linear_to_srgb), for expectations under colour space SRGB."""
+    value = max(0.0, float(value))
+    return value * 12.92 if value <= 0.0031308 else 1.055 * value ** (1.0 / 2.4) - 0.055
+
+
 def chk(kind: str, **kw) -> dict:
     """One machine-checkable assertion.  `kind` selects the function in validate_x3d_export.CHECKS."""
     return {"k": kind, **kw}
@@ -1089,10 +1096,16 @@ def zone_mat_pbr(ctx):
     em.inputs["Strength"].default_value = 0.5
     nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
     _sphere(ctx, "Z04_unlit", m, (-4.6, -3.9, 0.5), r=0.4)
+    linear = [0.1, 0.45, 0.2]                       # colour x 0.5, as Blender holds it
+    display = [_linear_to_srgb(c) for c in linear]   # 0.349190 0.701411 0.484529
     case("unlit", "CORE", "Pure Emission shader -> UnlitMaterial",
-         "An Emission-only material becomes <UnlitMaterial emissiveColor='0.1 0.45 0.2'> (colour x 0.5): shape glows flat, "
-         "independent of lights (X3D 4.0 UnlitMaterial).",
-         chk("mat", obj="Z04_unlit", tag="UnlitMaterial", attrs={"emissiveColor": [0.1, 0.45, 0.2]}, tol=1e-4))
+         "An Emission-only material becomes <UnlitMaterial emissiveColor='0.349 0.701 0.485'>: the colour x 0.5 (linear "
+         "0.1 0.45 0.2) sRGB-encoded, because the default colour space is SRGB and X_ITE draws an UnlitMaterial "
+         "emissiveColor in display space.  Shape glows flat, independent of lights (X3D 4.0 UnlitMaterial).",
+         chk("mat", obj="Z04_unlit", tag="UnlitMaterial", attrs={"emissiveColor": display}, tol=1e-4))
+    case("unlit.as_is", "CORE", "Colour space AS_IS writes the UnlitMaterial colour unchanged",
+         "Export option Colour Space 'As is': <UnlitMaterial emissiveColor='0.1 0.45 0.2'>, Blender's linear value verbatim.",
+         chk("mat", obj="Z04_unlit", tag="UnlitMaterial", attrs={"emissiveColor": linear}, tol=1e-4), profile="crease")
 
 
 # --------------------------------------------------------------------------------------

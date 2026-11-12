@@ -1,4 +1,4 @@
-# X3D test-suite catalogue (suite 2.0.0, 194 cases)
+# X3D test-suite catalogue (suite 2.0.0, 195 cases)
 
 Tier: **CORE** = the exporter claims it, failure is a bug; **FIDELITY** = a faithful exporter should do it, failure is a known approximation; **ROADMAP** = not implemented yet, `MISSING` is the expected state.
 
@@ -86,7 +86,8 @@ Tier: **CORE** = the exporter claims it, failure is a bug; **FIDELITY** = a fait
 | `Z04.emission.scaling` | CORE | **Emission colour x strength -> emissiveColor (clamped into [0,1])**. strength 1 -> '1 0.5 0.1'; strength 0.25 -> '0.25 0.125 0.025'; strength 4 -> channels above 1 are rescaled by the peak so it lands on the same '1 0.5 0.1' (hue kept).  Browser: orange glow, first and third sphere look identical. |
 | `Z04.emission.strength` | ROADMAP | **Emission strength above 1 -> EmissiveStrengthMaterialExtension**. The strength-4 sphere should keep its 4x via <EmissiveStrengthMaterialExtension emissiveStrength='4'> (X_ITE implements it, glTF KHR_materials_emissive_strength has the same meaning).  Exporter currently normalises it away. |
 | `Z04.emission.default` | CORE | **A default Principled BSDF emits nothing**. Blender >= 4.0 defaults Emission Strength to 0, so no emissiveColor attribute is written. |
-| `Z04.unlit` | CORE | **Pure Emission shader -> UnlitMaterial**. An Emission-only material becomes <UnlitMaterial emissiveColor='0.1 0.45 0.2'> (colour x 0.5): shape glows flat, independent of lights (X3D 4.0 UnlitMaterial). |
+| `Z04.unlit` | CORE | **Pure Emission shader -> UnlitMaterial**. An Emission-only material becomes <UnlitMaterial emissiveColor='0.349 0.701 0.485'>: the colour x 0.5 (linear 0.1 0.45 0.2) sRGB-encoded, because the default colour space is SRGB and X_ITE draws an UnlitMaterial emissiveColor in display space.  Shape glows flat, independent of lights (X3D 4.0 UnlitMaterial). |
+| `Z04.unlit.as_is` | CORE | **Colour space AS_IS writes the UnlitMaterial colour unchanged** *(profile crease)*. Export option Colour Space 'As is': <UnlitMaterial emissiveColor='0.1 0.45 0.2'>, Blender's linear value verbatim. |
 
 ## Z05 mat_alpha - Transparency, blend modes and culling
 
