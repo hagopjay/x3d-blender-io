@@ -71,13 +71,37 @@ writes them back, so an imported scene keeps them through export (the X3D 3.3 wr
 | `x3d_attenuation` | light data | a point or spot light's `attenuation`, when the file sets it | `attenuation` (also by the X3D 3.3 writer) |
 | `x3d_energy_per_intensity` | light data | Blender energy per unit of intensity, set by an import in **X_ITE** light units (below) | the divisor that turns the energy back into `intensity` (also in the X3D 3.3 writer); without it, 1.75 for point and spot lights and 1 for a sun |
 | `x3d_reference_distance` | light data | the distance (m) at which an **X_ITE**-units import matched a point or spot light | nothing |
-| `x3d_lighting_model`, `x3d_headlight_lux` | scene | from an **X_ITE**-units import: `classic` or `physical` (the majority of lit shapes), and the lux an X3D headlight should get in a glTF viewer (pi or 1) | nothing |
+| `x3d_lighting_model`, `x3d_headlight_lux` | scene | from an **X_ITE**-units import: `physical` when any lit shape has a PhysicalMaterial, else `classic`, and the lux an X3D headlight should get in a glTF viewer (pi or 1) | nothing |
+| `x3d_color_space` | scene | the import's Colour Space, `AS_IS` or `SRGB` | nothing by itself: an export with Colour Space **Auto** writes colours back the same way (below) |
 
 Two fields map onto Blender settings instead: a light's `shadows` (X3D default `false`) is its *Cast Shadow* switch, and a
 Shape's `castShadow` is the object's shadow visibility. A light imported from X3D keeps an `intensity` above 1 on the
 X3D 4.0 path, whose schema sets no upper limit. A light made in Blender is still capped at 1 (1.75 W for point and spot
 lights, strength 1 for a sun): watts have no fixed X3D scale and the writer emits no attenuation, so Blender's default
 1000 W point light would otherwise white out the scene. The X3D 3.3 writer caps every light at 1, as the 3.x schemas require.
+
+### Colour space
+
+X_ITE 16.7.1 reads a colour in one of two ways (measured in headless Chrome 153, SwiftShader):
+
+| Colour | X_ITE reads it | 0.5 draws |
+|---|---|---|
+| `Material`, `TwoSidedMaterial`, `UnlitMaterial` colours | display space (sRGB values) | 128 |
+| a `Color` node under those materials | display space, in place of the material colour | 128 |
+| `PhysicalMaterial` colours | linear (glTF) | `baseColor` 0.5 under a light of 1: 110; `emissiveColor` 0.5: 187 |
+| a `Color` node under `PhysicalMaterial` | a linear factor on `baseColor` | a Color of 0.5 on a `baseColor` of 1: 110, as a `baseColor` of 0.5 |
+
+Blender holds linear colours. The import's **Colour Space** decides how the classic colours come in: **As Is** keeps the
+numbers, **sRGB, as X_ITE draws** converts them to linear, so Blender and glTF viewers show what X_ITE shows. A `Color`
+node is converted to linear under the classic materials and kept as it is under `PhysicalMaterial`, in either mode, and it
+becomes the mesh's active colour attribute, so the exports write it again.
+
+The export's **Colour Space** writes them back. **Auto** (the default) uses the colour space the scene was imported with
+(`x3d_color_space`), else the `BLENDER_X3D_COLOR_SPACE` environment variable, else As Is. Under **sRGB** the X3D 3.3
+writer sRGB-encodes a Material's `diffuseColor`, `specularColor` and `emissiveColor`, and the X3D 4.0 writer an
+`UnlitMaterial`'s `emissiveColor`; `PhysicalMaterial` colours are always written linear. So an import and export with
+the same colour space give the file's numbers back, and a material made in Blender exported under sRGB shows in X_ITE
+as Blender renders it.
 
 ### Light units
 

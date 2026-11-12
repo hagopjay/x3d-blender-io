@@ -18,7 +18,7 @@ import mathutils
 from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import mfstring
-from .extract import (BACKGROUND_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
+from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
                       LIGHT_ATTENUATION_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY, LIGHT_INTENSITY_PROPERTY,
                       LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY, METADATA_NODE_TYPES,
                       METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
@@ -1742,15 +1742,39 @@ def srgb_to_linear(srgb_value):
 # -----------------------------------------------------------------------------------
 # Mesh import utilities
 
+# X_ITE reads a Color or ColorRGBA node in two ways (measured 12 Nov 2026, X_ITE 16.7.1, headless Chrome 153,
+# SwiftShader): under Material, TwoSidedMaterial or UnlitMaterial in display space, as their own colours (a Color of
+# 0.5 on a white Material draws 128, the same as a diffuseColor of 0.5); under PhysicalMaterial as a linear factor on
+# baseColor (a Color of 0.5 on a baseColor of 1 draws 110, the same as a baseColor of 0.5). importShape sets this
+# while it builds a PhysicalMaterial shape's geometry, so those colours are kept as they are.
+vertex_colours_linear = False
+
+
+def make_colour_attribute_active(bpymesh, attribute):
+    """Blender leaves a new colour attribute inactive, and the X3D, glTF and USD exporters write only the active
+    (or render) one, so an imported Color node was dropped on the way out."""
+    colours = bpymesh.color_attributes
+    for prop in ("active_color_name", "default_color_name"):
+        try:
+            setattr(colours, prop, attribute.name)
+        except (AttributeError, TypeError):  # older Blender: only active_color
+            try:
+                colours.active_color = attribute
+            except (AttributeError, TypeError):
+                pass
+
+
 def set_new_float_color_attribute(bpymesh, color_data, name: str = "ColorPerCorner", convert_to_linear: bool = True):
     """Uses the new blender api to apply colors to a mesh as vertex colors (domain face corner)"""
-    if (convert_to_linear):
+    if convert_to_linear and not vertex_colours_linear:
         # convert color spaces to account for api changes from legacy to newer api; every fourth value is alpha,
         # which is not a colour (a ColorRGBA alpha of 0.5 used to become 0.21)
         color_data = [col_val if i % 4 == 3 else srgb_to_linear(col_val) for i, col_val in enumerate(color_data)]
     # add new color attribute
-    bpymesh.color_attributes.new(name, 'FLOAT_COLOR', 'CORNER')
-    bpymesh.color_attributes[name].data.foreach_set("color", color_data)
+    attribute = bpymesh.color_attributes.new(name, 'FLOAT_COLOR', 'CORNER')
+    attribute.data.foreach_set("color", color_data)
+    if not name.startswith("temp_"):
+        make_colour_attribute_active(bpymesh, attribute)
 
 
 # Assumes that the mesh has polygons.
@@ -4748,6 +4772,7 @@ def importMetadata(node, ancestors=()):
 
 
 def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify_value):
+    global vertex_colours_linear
     # Under Shape, we can only have Appearance, MetadataXXX and a geometry node
     def isGeometry(spec):
         return spec != "Appearance" and not spec.startswith("Metadata")
@@ -4816,7 +4841,11 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
     # geometries are easier to flip than others
     geom_fn = geometry_importers.get(geom_spec)
     if geom_fn is not None:
-        bpydata = geom_fn(geom, ancestry)
+        vertex_colours_linear = appr is not None and appr.getChildBySpec('PhysicalMaterial') is not None
+        try:
+            bpydata = geom_fn(geom, ancestry)
+        finally:
+            vertex_colours_linear = False
 
         if bpydata is None:
             logger.warning('ImportX3D warning: empty shape, skipping node "%s"' % vrmlname)
@@ -6452,5 +6481,7 @@ def load(context,
                 solidify_value=solidify_value
                 )
     finalize_light_units(context.scene if context is not None else None, lighting_units)
+    if context is not None and getattr(context, "scene", None) is not None:
+        context.scene[COLOUR_SPACE_PROPERTY] = colour_space
 
     return {'FINISHED'}

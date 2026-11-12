@@ -15,13 +15,16 @@ import math
 import os
 import re
 import struct
+from dataclasses import replace
 from itertools import chain
 from xml.sax.saxutils import escape, quoteattr
 
 try:
+    from .extract import display_colour
     from .ir import IRMetadata, IRScene
     from .splat_io import sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
+    from extract import display_colour
     from ir import IRMetadata, IRScene
     from splat_io import sh0_to_rgb
 
@@ -726,15 +729,36 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     return sorted(components.items())
 
 
-def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d", version: str = "4.0") -> None:
+def with_display_colours(ir_scene: IRScene, colour_space: str) -> IRScene:
+    """``ir_scene`` with its UnlitMaterial colours in X3D's display encoding under ``colour_space`` 'SRGB'.
+
+    X_ITE draws an UnlitMaterial emissiveColor of 0.5 as 128, in display space (measured 12 Nov 2026, X_ITE 16.7.1),
+    while Blender holds linear colours, so they are sRGB-encoded. PhysicalMaterial colours stay linear: X_ITE lights
+    them the glTF way. Under 'AS_IS' the scene is returned unchanged.
+    """
+    if colour_space != "SRGB" or not any(material.unlit for material in ir_scene.materials):
+        return ir_scene
+    materials = []
+    for material in ir_scene.materials:
+        if material.unlit:
+            colour = tuple(material.emissive_color)
+            material = replace(material, emissive_color=display_colour(colour[:3], colour_space) + tuple(colour[3:]))
+        materials.append(material)
+    return replace(ir_scene, materials=materials)
+
+
+def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d", version: str = "4.0",
+                    colour_space: str = "AS_IS") -> None:
     """Write ``ir_scene`` as an X3D 4.0 (or 4.1 draft) XML document to ``file``.
 
     With ``version`` "4.1" Gaussian splats are written as the GaussianSplats
     node (component GaussianSplats level 1); with "4.0" they degrade to a
-    coloured PointSet and a diagnostic says so.
+    coloured PointSet and a diagnostic says so. ``colour_space`` 'SRGB' writes
+    UnlitMaterial colours sRGB-encoded (see ``with_display_colours``).
     """
     if version not in {"4.0", "4.1"}:
         raise ValueError(f"Unsupported X3D version for the modern writer: {version!r}")
+    ir_scene = with_display_colours(ir_scene, colour_space)
     diagnostics = list(ir_scene.diagnostics)
     if version == "4.0" and ir_scene.splats:
         diagnostics.append(

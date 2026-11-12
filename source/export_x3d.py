@@ -24,7 +24,7 @@ from .material_node_search import (imageTexture_in_material, get_diffuse_color, 
                                    get_vector_mapping_properties, get_movie_texture_properties)
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
-from .extract import light_attenuation, light_energy_per_intensity
+from .extract import display_colour, light_attenuation, light_energy_per_intensity, resolve_export_colour_space
 
 # h3d defines
 H3D_TOP_LEVEL = 'TOP_LEVEL_TI'
@@ -224,6 +224,7 @@ def export(file,
            meta_keywords=None,
            meta_reference=None,
            meta_license=None,
+           color_space='AS_IS',
            ):
 
     if path_mode not in ("COPY", "RELATIVE", "STRIP"):
@@ -1086,10 +1087,16 @@ def export(file,
             else:
                 ambiColor = 0.0, 0.0, 0.0
 
-            emitColor = tuple(((c * ambient) + ambiColor[i]) / 2.0 for i, c in enumerate(emissive_color[:3]))
+            # The emission itself (an Emission Strength times its colour), not the old ambient blend, which was
+            # always 0 because ambient is 0 and so dropped every emissive colour.
+            emitColor = tuple(emissive_color[:3])
             shininess = material.specular_intensity
             specColor = tuple(
                 (c + 0.001) / (1.25 / (material.specular_intensity + 0.001)) for c in material.specular_color)
+            # Blender holds linear colours; X_ITE and Castle read a Material's colours as sRGB values
+            diffuse_color = display_colour(diffuse_color[:3], color_space) + tuple(diffuse_color[3:])
+            specColor = display_colour(specColor, color_space)
+            emitColor = display_colour(emitColor, color_space)
             transp = 1.0 - diffuse_color[3] # alpha only works from principled bsdf, so checking diffuse return is enough
 
             # ~ if material.use_shadeless:
@@ -1845,6 +1852,7 @@ def save(context,
          x3d_version='X3D33',
          use_animation=False,
          animation_step=1,
+         color_space='AUTO',
          ):
     from .export_pipeline import ExportSettings, save as pipeline_save
 
@@ -1880,7 +1888,9 @@ def save(context,
         x3d_version=x3d_version,
         use_animation=use_animation,
         animation_step=animation_step,
+        color_space=resolve_export_colour_space(color_space, getattr(context, "scene", None)),
     )
+    logger.info("save: colour space %s", settings.color_space)
 
     def _legacy_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
         del ir_scene
@@ -1908,6 +1918,7 @@ def save(context,
                 meta_keywords=settings.meta_keywords,
                 meta_reference=settings.meta_reference,
                 meta_license=settings.meta_license,
+                color_space=settings.color_space,
             )
 
     def _modern_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
@@ -1918,7 +1929,7 @@ def save(context,
         logger.info("Writing X3D %s to %r", settings.document_version, export_file)
         with (gzip_open_utf8(export_file, 'w') if settings.use_compress else open(export_file, 'w', encoding='utf-8')) as file:
             export_ir_scene(file, ir_scene, generator=f"{bl_info_copy['name']} v{'.'.join(map(str, bl_info_copy['version']))}",
-                            version=settings.document_version)
+                            version=settings.document_version, colour_space=settings.color_space)
         for message in ir_scene.diagnostics:
             logger.info("X3D 4.0 export note: %s", message)
         if settings.use_compress:

@@ -102,6 +102,8 @@ class ExportSettings:
     x3d_version: str = "X3D33"
     use_animation: bool = False
     animation_step: int = 1
+    # 'AS_IS' or 'SRGB' after resolve_export_colour_space (see extract.display_colour)
+    color_space: str = "AS_IS"
 
     @property
     def use_modern_path(self) -> bool:
