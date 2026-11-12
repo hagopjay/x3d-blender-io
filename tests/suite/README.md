@@ -1,6 +1,6 @@
 # X3D export test suite
 
-A 194-case Blender scene (147 CORE, 21 FIDELITY, 26 ROADMAP across 18 zones plus an optional stress zone) that is
+A 195-case Blender scene (148 CORE, 21 FIDELITY, 26 ROADMAP across 18 zones plus an optional stress zone) that is
 exported with this add-on, validated at file level, and loaded in a real X3D browser (X_ITE).
 
 | script | what it proves |

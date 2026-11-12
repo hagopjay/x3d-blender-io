@@ -74,7 +74,8 @@ class ImportUnlitEmissiveTests(unittest.TestCase):
         path = os.path.join(cls.tmpdir, "unlit.x3d")
         with open(path, "w", encoding="utf-8") as f:
             f.write(HEADER + body + FOOTER)
-        assert bpy.ops.import_scene.x3d(filepath=path) == {"FINISHED"}
+        # As Is, so the colours on the nodes are the file's (the sRGB default is covered in test_import_fidelity_bpy)
+        assert bpy.ops.import_scene.x3d(filepath=path, color_space='AS_IS') == {"FINISHED"}
         cls.mats = {m.name: m for m in bpy.data.materials}
 
     def _emission(self, name):

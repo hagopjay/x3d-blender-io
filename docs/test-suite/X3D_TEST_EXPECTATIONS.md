@@ -1,6 +1,6 @@
 # X3D export test suite: what you should see
 
-One Blender scene, 194 test cases, 18 zones laid out in a grid 12 m apart. You export it, and three tools check the result:
+One Blender scene, 195 test cases, 18 zones laid out in a grid 12 m apart. You export it, and three tools check the result:
 
 | tool | proves |
 |---|---|
@@ -28,7 +28,7 @@ python3 x3d_browser_check.py  out --report out/browser_report.html   # needs: pi
 ```
 
 Three exports are made, because some behaviours only show with different options:
-`main` (X3D 4.0, hierarchy, animation, normals, modifiers applied), `crease` (no normals, flat, triangulated), `x41` (X3D 4.1).
+`main` (X3D 4.0, hierarchy, animation, normals, modifiers applied), `crease` (no normals, flat, triangulated, Colour Space "As is"), `x41` (X3D 4.1).
 Other flags: `--zones Z04,Z11`, `--stress` (2000 instances + an 80k-face mesh), `--list`.
 
 ## 2. How to read a verdict

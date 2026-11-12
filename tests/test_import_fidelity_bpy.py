@@ -227,7 +227,8 @@ class ImportFidelityTests(unittest.TestCase):
         b = self.bsdf(self.only_mesh().materials[0])
         self.assertAlmostEqual(b.inputs["Roughness"].default_value, (2 / (128 * 0.9 + 2)) ** 0.25, places=5)
         self.assertGreater(b.inputs["Specular IOR Level"].default_value, 0.5)
-        self.assertEqual([round(c, 3) for c in b.inputs["Specular Tint"].default_value[:3]], [1.0, 0.5, 0.0])
+        # sRGB 0.5 read as X_ITE reads it (the default colour space): linear 0.214
+        self.assertEqual([round(c, 3) for c in b.inputs["Specular Tint"].default_value[:3]], [1.0, 0.214, 0.0])
 
     # ------------------------------------------------------------ lines and points: unlit, as glTF can say it
     def line_material_source(self, material):
@@ -264,7 +265,8 @@ class ImportFidelityTests(unittest.TestCase):
         meshes = {len(o.data.polygons) > 0: o for o in by_type['MESH']}
         self.assertIs(meshes[False].data.materials[0], line_mat)         # the point set shares the unlit material
         surface = self.bsdf(meshes[True].data.materials[0])                # the box keeps the lit material
-        self.assertEqual([round(c, 3) for c in surface.inputs["Base Color"].default_value[:3]], [0.1, 0.9, 0.1])
+        # sRGB 0.1 0.9 0.1, linear in Blender (the default colour space)
+        self.assertEqual([round(c, 3) for c in surface.inputs["Base Color"].default_value[:3]], [0.01, 0.787, 0.01])
         gltf = self.export_glb(use_mesh_edges=True, use_mesh_vertices=True)
         modes = sorted(p.get("mode", 4) for m in gltf["meshes"] for p in m["primitives"])
         self.assertEqual(modes, [0, 1, 4])
@@ -383,8 +385,14 @@ class ImportFidelityTests(unittest.TestCase):
                 "physical emissive": b("Physical").inputs["Emission Color"].default_value[0],
                 "line": src.outputs[0].default_value[0]}
 
-    def test_colours_pass_as_they_are_by_default(self):
+    def test_colours_are_read_as_x_ite_reads_them_by_default(self):
+        # X_ITE 16.7.1 and Castle both draw classic and unlit 0.5 as 128 and keep PhysicalMaterial linear
         self.assertEqual({k: round(v, 3) for k, v in self.colour_scene().items()},
+                         {"diffuse": 0.214, "emissive": 0.214, "unlit": 0.214, "physical base": 0.5,
+                          "physical emissive": 0.5, "line": 0.214})
+
+    def test_as_is_colour_space_passes_the_colours_unchanged(self):
+        self.assertEqual({k: round(v, 3) for k, v in self.colour_scene(color_space='AS_IS').items()},
                          {"diffuse": 0.5, "emissive": 0.5, "unlit": 0.5, "physical base": 0.5, "physical emissive": 0.5, "line": 0.5})
 
     def test_srgb_colour_space_converts_the_classic_materials_and_keeps_physical_ones(self):
@@ -401,7 +409,7 @@ class ImportFidelityTests(unittest.TestCase):
             os.environ.pop("BLENDER_X3D_COLOR_SPACE", None)
         self.assertEqual(self.ix.resolve_colour_space("srgb"), "SRGB")
         with self.assertLogs(level="WARNING"):
-            self.assertEqual(self.ix.resolve_colour_space("bogus"), "AS_IS")
+            self.assertEqual(self.ix.resolve_colour_space("bogus"), "SRGB")
 
     # ------------------------------------------------------------ surfaces without a material: unlit
     def test_surfaces_without_a_material_are_unlit_in_their_colour_texture_or_white(self):

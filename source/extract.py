@@ -50,6 +50,13 @@ LIGHT_ENERGY_PER_INTENSITY_PROPERTY = "x3d_energy_per_intensity"
 LIGHT_ATTENUATION_PROPERTY = "x3d_attenuation"
 # The distance an X_ITE-units import matched a point or spot light at (metres, see import_x3d.reference_distance).
 LIGHT_REFERENCE_DISTANCE_PROPERTY = "x3d_reference_distance"
+# A point or spot light's X3D radius as the file set it (in Blender units of the light's own frame; -1 is unlimited),
+# so the exports write it back: Blender's cutoff distance holds the world-space range, which also scales with the
+# light's Transforms and is unset for a radius of -1 or 0.
+LIGHT_RADIUS_PROPERTY = "x3d_radius"
+# A light's X3D color as the file gave it, kept when the import made the Blender colour linear (a classic scene read
+# as sRGB, the way X_ITE lights classic Materials), so the export can write the file's value back.
+LIGHT_COLOR_PROPERTY = "x3d_color"
 # The import's colour space (AS_IS or SRGB) on the scene, so the export can write colours back the same way.
 COLOUR_SPACE_PROPERTY = "x3d_color_space"
 COLOUR_SPACES = ('AS_IS', 'SRGB')
@@ -70,9 +77,10 @@ def display_colour(rgb, colour_space):
     return tuple(linear_to_srgb(c) for c in rgb)
 
 
-def resolve_export_colour_space(value=None, scene=None, default='AS_IS'):
+def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
     """The export option when given (not AUTO); else the colour space the scene was imported with
-    (COLOUR_SPACE_PROPERTY); else the BLENDER_X3D_COLOR_SPACE environment variable; else `default`."""
+    (COLOUR_SPACE_PROPERTY); else the BLENDER_X3D_COLOR_SPACE environment variable; else `default`, 'SRGB': a scene
+    made in Blender holds linear colours, and X_ITE and Castle read classic and unlit colours as sRGB values."""
     aliases = {"X_ITE": "SRGB", "XITE": "SRGB", "LINEAR": "AS_IS", "NONE": "AS_IS", "AUTO": ""}
     raw = str(value or "").strip().upper()
     raw = aliases.get(raw, raw)
@@ -747,6 +755,44 @@ def light_attenuation(data):
     return value if len(value) == 3 else None
 
 
+def light_radius(data):
+    """The X3D radius to write for a point or spot light: the file's (kept by the import), else Blender's cutoff
+    distance when it is set, else X3D's default 100. None for a light made in Blender, whose spot radius the legacy
+    mapping derives from the cone."""
+    value = data.get(LIGHT_RADIUS_PROPERTY)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def imported_spot_cone(data):
+    """(beamWidth, cutOffAngle) of a spot light imported from X3D: the inverse of the import's mapping
+    (spot_size = 2 cutOffAngle, inner cone = beamWidth), so the file's cone comes back. A hard-edged cone
+    (beamWidth >= cutOffAngle in the file) comes back with beamWidth = cutOffAngle, which X3D draws the same."""
+    cut_off = float(data.spot_size) / 2.0
+    return cut_off * (1.0 - float(data.spot_blend)), cut_off
+
+
+def light_colour(data):
+    """A light's X3D color: the file's value while the Blender colour is still what the import made of it, sRGB-encoded
+    when the import made it linear (LIGHT_COLOR_PROPERTY) and it was changed since, else the Blender colour."""
+    colour = tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3])
+    stored = data.get(LIGHT_COLOR_PROPERTY)
+    if stored is None:
+        return colour
+    stored = tuple(float(channel) for channel in stored)[:3]
+    if all(abs(srgb_to_linear(a) - b) < 1e-5 for a, b in zip(stored, colour)):
+        return stored
+    return tuple(linear_to_srgb(channel) for channel in colour)
+
+
+def srgb_to_linear(value):
+    """One sRGB-encoded channel as linear (the inverse of linear_to_srgb)."""
+    value = float(value)
+    return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+
+
 def _extract_light(obj, local_matrix) -> IRLight:
     """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
 
@@ -767,7 +813,7 @@ def _extract_light(obj, local_matrix) -> IRLight:
     light = IRLight(
         name=obj.name,
         light_type=light_type,
-        color=tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3]),
+        color=light_colour(data),
         intensity=intensity,
         ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
@@ -778,12 +824,17 @@ def _extract_light(obj, local_matrix) -> IRLight:
     if light_type != "DIRECTIONAL":
         light.attenuation = light_attenuation(data)
     cutoff = float(getattr(data, "cutoff_distance", 0.0) or 0.0)
+    radius = light_radius(data)
     if light_type == "POINT":
-        light.radius = cutoff if cutoff > 0.0 else 100.0
+        light.radius = radius if radius is not None else (cutoff if cutoff > 0.0 else 100.0)
     elif light_type == "SPOT":
-        light.beam_width = float(data.spot_size) * 0.37
-        light.cut_off_angle = min(light.beam_width * 1.3, math.pi / 2.0)
-        light.radius = (cutoff * math.cos(light.beam_width)) if cutoff > 0.0 else 100.0
+        if data.get(LIGHT_INTENSITY_PROPERTY) is not None:   # imported: the file's cone and radius
+            light.beam_width, light.cut_off_angle = imported_spot_cone(data)
+        else:
+            light.beam_width = float(data.spot_size) * 0.37
+            light.cut_off_angle = min(light.beam_width * 1.3, math.pi / 2.0)
+        light.radius = radius if radius is not None else \
+            ((cutoff * math.cos(light.beam_width)) if cutoff > 0.0 else 100.0)
     return light
 
 

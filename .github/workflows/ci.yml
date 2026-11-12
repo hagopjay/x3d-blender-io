@@ -154,7 +154,7 @@ jobs:
         if: steps.cache-blender.outputs.cache-hit != 'true'
         run: bash .github/scripts/install_blender.sh "5.1.2" "$BLENDER_DIR"
 
-      - name: Build the 194-case scene and export it with this checkout
+      - name: Build the 195-case scene and export it with this checkout
         # --repo registers <checkout>/source as the exporter, so the suite tests the code under review.
         run: |
           "$BLENDER_DIR/blender" -b --factory-startup -noaudio --python-exit-code 1 \

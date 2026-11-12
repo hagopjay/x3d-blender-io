@@ -1,9 +1,9 @@
 // Render jobs: X_ITE on the X3D, Babylon.js on the glb, same 512x512 headless Chromium (SwiftShader).
 // Usage: node render.mjs jobs.json   (jobs: [{name, x3d, glb, clear:[r,g,b], headlight: lux|null, outdir}])
-import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url); const { chromium } = require('playwright');
-const RIG = path.dirname(new URL(import.meta.url).pathname);
+const RIG = path.dirname(fileURLToPath(import.meta.url));   // a path with spaces, or on Windows, stays a path
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.x3d': 'model/x3d+xml', '.glb': 'model/gltf-binary',
   '.html': 'text/html', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.wasm': 'application/wasm' };
 const server = http.createServer((req, res) => {
@@ -25,6 +25,7 @@ for (const job of jobs) {
   await a.goto(`${base}/xite.html`, { waitUntil: 'load' });
   try {
     await a.evaluate(async (url) => { const b = X3D.getBrowser('x3d-canvas');
+      b.setBrowserOption('StraightenHorizon', false);   // X_ITE levels a rolled Viewpoint on bind by default; Babylon.js does not
       await b.loadURL(new X3D.MFString(url)); window.__ver = b.version; }, `${base}/fs${job.x3d}`);
     await a.waitForTimeout(job.wait ?? 1500);
     await a.locator('x3d-canvas').screenshot({ path: `${out}/xite.png` });
@@ -47,6 +48,10 @@ for (const job of jobs) {
       cam.upVector = new BABYLON.Vector3(...v.up);
       cam.setTarget(new BABYLON.Vector3(v.position[0] + v.forward[0], v.position[1] + v.forward[1], v.position[2] + v.forward[2]));
       cam.fov = v.fov; cam.maxZ = 10000;
+      if (v.ortho) {   // OrthoViewpoint: fieldOfView is minX minY maxX maxY
+        cam.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+        [cam.orthoLeft, cam.orthoBottom, cam.orthoRight, cam.orthoTop] = v.ortho;
+      }
       cam.minZ = 0.01; scene.activeCamera = cam;
       if (job.headlight) { const h = new BABYLON.DirectionalLight('headlight', new BABYLON.Vector3(0, 0, -1), scene);
         h.intensity = job.headlight; scene.registerBeforeRender(() => { h.direction = cam.getDirection(new BABYLON.Vector3(0, 0, -1)); }); }
@@ -55,8 +60,12 @@ for (const job of jobs) {
       return { version: BABYLON.Engine.Version, lights: scene.lights.map(l => [l.name, l.getClassName(), +l.intensity.toFixed(4), l.range]) };
     }, { ...job, glbUrl: `${base}/fs${job.glb}` });
     await b.locator('#c').screenshot({ path: `${out}/babylon.png` });
+    // geometry mask: two renders cleared to magenta and to green; a pixel is background only when it shows the clear
+    // colour in both, so geometry that is itself magenta (or green) still counts
     await b.evaluate(() => { const sc = BABYLON.Engine.LastCreatedScene; sc.clearColor = new BABYLON.Color4(1, 0, 1, 1); sc.render(); });
     await b.locator('#c').screenshot({ path: `${out}/babylon_mask.png` });
+    await b.evaluate(() => { const sc = BABYLON.Engine.LastCreatedScene; sc.clearColor = new BABYLON.Color4(0, 1, 0, 1); sc.render(); });
+    await b.locator('#c').screenshot({ path: `${out}/babylon_mask_green.png` });
     console.log('BABYLON', job.name, JSON.stringify(info));
   } catch (e) { console.log('babylon fail', job.name, String(e).slice(0, 300)); }
   await b.close();

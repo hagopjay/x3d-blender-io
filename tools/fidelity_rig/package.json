@@ -5,6 +5,7 @@
  "dependencies": {
   "x_ite": "16.7.1",
   "babylonjs": "9.32.0",
-  "babylonjs-loaders": "9.32.0"
+  "babylonjs-loaders": "9.32.0",
+  "playwright": "1.63.0"
  }
 }
