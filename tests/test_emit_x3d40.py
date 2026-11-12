@@ -241,6 +241,30 @@ class EmitX3D40Tests(unittest.TestCase):
         for value in re.findall(r'(?:emissiveColor|baseColor)="([^"]+)"', xml_text):
             self.assertTrue(all(0.0 <= float(c) <= 1.0 for c in value.split()), value)
 
+    def test_vertex_colours_fit_the_sfcolorrgba_range(self):
+        # molecularnodes' pLDDT palette writes a red of 1.000169 into a FLOAT_COLOR attribute; one channel past 1 made
+        # the validator refuse the whole ColorRGBA (9,756 channels on AF-P04637-F1)
+        geometry = IRMeshGeometry(
+            name="Ribbon",
+            coord=[(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (1.0, 1.0, 0.0), (0.0, 1.0, 0.0)],
+            coord_index=[0, 1, 2, 3, -1],
+            color=[(1.000169, 0.494, 0.0, 1.0), (-0.002, 0.5, 0.25, 1.2), (0.5, 0.5, 0.5, 0.5), (2.0, 1.0, 0.0, -0.1)],
+        )
+        scene = IRScene(
+            name="Plddt",
+            geometries=[geometry],
+            materials=[IRPBRMaterial(name="M", base_color=(1.0, 1.0, 1.0, 1.0), metallic=0.0, roughness=0.5)],
+            instances=[IRInstance(source_key="MESH:Ribbon", object_name="Ribbon", object_type="MESH",
+                                  shapes=[IRShape(geometry_name="Ribbon", material_name="M")])],
+        )
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test")
+        xml_text = buffer.getvalue()
+        values = [float(v) for v in re.search(r'<ColorRGBA color="([^"]+)"', xml_text).group(1).split()]
+        self.assertEqual(values, [1.0, 0.494, 0.0, 1.0, 0.0, 0.5, 0.25, 1.0, 0.5, 0.5, 0.5, 0.5, 1.0, 1.0, 0.0, 0.0])
+        validation = validate_xml_text(xml_text)
+        self.assertTrue(validation.valid, msg=f"Validation errors: {validation.errors}")
+
     def test_falls_back_to_primitive_geometry_when_mesh_payload_missing(self):
         scene = IRScene(
             name="PrimitiveFallback",

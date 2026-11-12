@@ -105,6 +105,13 @@ def _fmt4(values):
     return "%.6f %.6f %.6f %.6f" % tuple(values[:4])
 
 
+def _unit_rgba(values):
+    """An RGBA colour clamped per channel to [0, 1], the SFColorRGBA range the X3D 4.0 XSD enforces. Float colour
+    attributes can carry channels just past 1 (molecularnodes' pLDDT palette has a red of 1.000169) or below 0, and the
+    validator refuses the whole ColorRGBA for one of them."""
+    return tuple(min(1.0, max(0.0, float(channel))) for channel in values[:4])
+
+
 def _fmt_ints(values):
     return " ".join(str(value) for value in values)
 
@@ -269,7 +276,7 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
             f'{indent}  <TextureCoordinate point="{" ".join(_fmt2(point) for point in geometry.tex_coord)}" />\n'
         )
     if geometry.color:
-        xml.append(f'{indent}  <ColorRGBA color="{" ".join(_fmt4(color) for color in geometry.color)}" />\n')
+        xml.append(f'{indent}  <ColorRGBA color="{" ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)}" />\n')
     xml.append(f"{indent}</IndexedFaceSet>\n")
     return "".join(xml)
 
