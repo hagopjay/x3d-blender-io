@@ -24,6 +24,7 @@ from .material_node_search import (imageTexture_in_material, get_diffuse_color, 
                                    get_vector_mapping_properties, get_movie_texture_properties)
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
+from .extract import light_attenuation, light_energy_per_intensity
 
 # h3d defines
 H3D_TOP_LEVEL = 'TOP_LEVEL_TI'
@@ -472,7 +473,7 @@ def export(file,
             amb_intensity = 0.0
 
         # compute cutoff and beamwidth
-        intensity = min(light.energy / 1.75, 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
+        intensity = min(light.energy / light_energy_per_intensity(light), 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
         beamWidth = light.spot_size * 0.37
         # beamWidth=((light.spotSize*math.pi)/180.0)*.37
         cutOffAngle = beamWidth * 1.3
@@ -495,6 +496,8 @@ def export(file,
         fw(ident_step + 'cutOffAngle="%.4f"\n' % cutOffAngle)
         fw(ident_step + 'direction="%.4f %.4f %.4f"\n' % orientation)
         fw(ident_step + 'location="%.4f %.4f %.4f"\n' % location)
+        if light_attenuation(light) is not None:
+            fw(ident_step + 'attenuation="%.4f %.4f %.4f"\n' % light_attenuation(light))
         fw(ident_step + '/>\n')
 
     def writeDirectionalLight(ident, obj, matrix, light, world):
@@ -509,8 +512,9 @@ def export(file,
             ambi = 0
             amb_intensity = 0.0
 
-        # sun strength is not scaled, matching extract.py; the X3D 3.x schemas limit intensity to [0, 1]
-        intensity = min(light.energy, 1.0)
+        # sun strength is not scaled (unless an import recorded its scale), matching extract.py; the X3D 3.x
+        # schemas limit intensity to [0, 1]
+        intensity = min(light.energy / light_energy_per_intensity(light), 1.0)
 
         orientation = matrix_direction_neg_z(matrix)
 
@@ -536,7 +540,7 @@ def export(file,
             ambi = 0.0
             amb_intensity = 0.0
 
-        intensity = min(light.energy / 1.75, 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
+        intensity = min(light.energy / light_energy_per_intensity(light), 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
         location = matrix.to_translation()[:]
 
         ident_step = ident + (' ' * (-len(ident) +
@@ -549,6 +553,8 @@ def export(file,
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
         fw(ident_step + 'radius="%.4f" \n' % light.cutoff_distance)
         fw(ident_step + 'location="%.4f %.4f %.4f"\n' % location)
+        if light_attenuation(light) is not None:
+            fw(ident_step + 'attenuation="%.4f %.4f %.4f"\n' % light_attenuation(light))
         fw(ident_step + '/>\n')
 
     def writeSpeaker(ident, obj, matrix, data, world):

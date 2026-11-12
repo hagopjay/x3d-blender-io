@@ -42,6 +42,13 @@ LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
 # The intensity a light had in the X3D file it was imported from; it also marks the light as imported.
 LIGHT_INTENSITY_PROPERTY = "x3d_intensity"
+# Blender energy per unit of X3D intensity, set by an import in X_ITE light units (see import_x3d.LIGHT_UNITS);
+# without it, point and spot lights use 1.75 W per unit and sun lights 1.
+LIGHT_ENERGY_PER_INTENSITY_PROPERTY = "x3d_energy_per_intensity"
+# A point or spot light's X3D attenuation (a0 a1 a2), kept when the file sets it so the export writes it back.
+LIGHT_ATTENUATION_PROPERTY = "x3d_attenuation"
+# The distance an X_ITE-units import matched a point or spot light at (metres, see import_x3d.reference_distance).
+LIGHT_REFERENCE_DISTANCE_PROPERTY = "x3d_reference_distance"
 # Viewpoint description read by the importer, kept on the camera object.
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
@@ -679,6 +686,30 @@ def _unit_interval(value, default):
         return default
 
 
+def light_energy_per_intensity(data) -> float:
+    """Blender energy per unit of X3D intensity: what an X_ITE-units import recorded on the light, else the
+    legacy scale (point and spot 1.75 W, sun 1). Both exporters divide by it, so an imported light's intensity
+    comes back as it was in the file whichever light units the import used."""
+    factor = data.get(LIGHT_ENERGY_PER_INTENSITY_PROPERTY)
+    try:
+        factor = float(factor)
+    except (TypeError, ValueError):
+        factor = 0.0
+    if factor > 0.0:
+        return factor
+    return 1.0 if data.type == "SUN" else 1.75
+
+
+def light_attenuation(data):
+    """The X3D attenuation an import kept on a point or spot light, as three floats, else None."""
+    value = data.get(LIGHT_ATTENUATION_PROPERTY)
+    try:
+        value = tuple(float(v) for v in value)
+    except (TypeError, ValueError):
+        return None
+    return value if len(value) == 3 else None
+
+
 def _extract_light(obj, local_matrix) -> IRLight:
     """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
 
@@ -693,7 +724,7 @@ def _extract_light(obj, local_matrix) -> IRLight:
     data = obj.data
     light_type = {"POINT": "POINT", "SPOT": "SPOT", "SUN": "DIRECTIONAL"}.get(data.type, "DIRECTIONAL")
     energy = max(0.0, float(data.energy))
-    intensity = energy / 1.75 if data.type != "SUN" else energy
+    intensity = energy / light_energy_per_intensity(data)
     if data.get(LIGHT_INTENSITY_PROPERTY) is None:
         intensity = min(intensity, 1.0)
     light = IRLight(
@@ -707,6 +738,8 @@ def _extract_light(obj, local_matrix) -> IRLight:
         shadows=bool(getattr(data, "use_shadow", False)),
         shadow_intensity=_unit_interval(data.get(LIGHT_SHADOW_INTENSITY_PROPERTY), None),
     )
+    if light_type != "DIRECTIONAL":
+        light.attenuation = light_attenuation(data)
     cutoff = float(getattr(data, "cutoff_distance", 0.0) or 0.0)
     if light_type == "POINT":
         light.radius = cutoff if cutoff > 0.0 else 100.0

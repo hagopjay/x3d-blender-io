@@ -143,6 +143,15 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         description=translate(lang, "color_space_description"),
     )
 
+    light_units: EnumProperty(
+        name=translate(lang, "light_units"),
+        items=(('AUTO', translate(lang, "light_units_auto"), translate(lang, "light_units_auto_description")),
+               ('BLENDER', translate(lang, "light_units_blender"), translate(lang, "light_units_blender_description")),
+               ('X_ITE', translate(lang, "light_units_x_ite"), translate(lang, "light_units_x_ite_description"))),
+        default='AUTO',
+        description=translate(lang, "light_units_description"),
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
@@ -208,6 +217,9 @@ def import_ui_mesh(layout, operator):
 
         line = body.row(align=True)
         line.prop(operator, "color_space")
+
+        line = body.row(align=True)
+        line.prop(operator, "light_units")
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')

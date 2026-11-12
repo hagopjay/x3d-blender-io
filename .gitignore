@@ -27,3 +27,8 @@ __pycache__/
 /output/
 /.blender/
 /.blender-profile/
+
+# Fidelity rig outputs and npm packages
+tools/fidelity_rig/node_modules/
+tools/fidelity_rig/out/
+tools/fidelity_rig/package-lock.json

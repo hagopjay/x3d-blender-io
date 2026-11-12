@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<X3D profile='Immersive' version='4.0'><Scene>
+<NavigationInfo headlight='false'/>
+<Viewpoint position='0 0 10' fieldOfView='0.7854'/>
+<DirectionalLight direction='0 0 -1' intensity='0.3' global='true'/>
+<Transform translation='-1.5 0 4'><Shape><Appearance><PhysicalMaterial baseColor='0.8 0.8 0.8' metallic='0' roughness='1'/></Appearance><Box size='1 1 0.1'/></Shape></Transform>
+<Transform translation='0 0 3'><Shape><Appearance><PhysicalMaterial baseColor='0.8 0.8 0.8' metallic='0' roughness='1'/></Appearance><Box size='1 1 0.1'/></Shape></Transform>
+<Transform translation='1.5 0 1'><Shape><Appearance><PhysicalMaterial baseColor='0.8 0.8 0.8' metallic='0' roughness='1'/></Appearance><Box size='1 1 0.1'/></Shape></Transform>
+</Scene></X3D>
