@@ -11,6 +11,7 @@ emitter (``emit_x3d40``) never sees Blender objects.
 from __future__ import annotations
 
 import math
+import os
 
 try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
@@ -49,6 +50,42 @@ LIGHT_ENERGY_PER_INTENSITY_PROPERTY = "x3d_energy_per_intensity"
 LIGHT_ATTENUATION_PROPERTY = "x3d_attenuation"
 # The distance an X_ITE-units import matched a point or spot light at (metres, see import_x3d.reference_distance).
 LIGHT_REFERENCE_DISTANCE_PROPERTY = "x3d_reference_distance"
+# The import's colour space (AS_IS or SRGB) on the scene, so the export can write colours back the same way.
+COLOUR_SPACE_PROPERTY = "x3d_color_space"
+COLOUR_SPACES = ('AS_IS', 'SRGB')
+
+
+def linear_to_srgb(value):
+    """One linear channel in sRGB encoding (the inverse of the import's srgb_to_linear)."""
+    value = max(0.0, float(value))
+    return value * 12.92 if value <= 0.0031308 else 1.055 * value ** (1.0 / 2.4) - 0.055
+
+
+def display_colour(rgb, colour_space):
+    """A Blender (linear) colour as a classic X3D colour field holds it: sRGB-encoded under 'SRGB', the way X_ITE and
+    Castle read Material, TwoSidedMaterial, UnlitMaterial and Color, or unchanged under 'AS_IS'."""
+    rgb = tuple(float(c) for c in rgb)
+    if colour_space != 'SRGB':
+        return rgb
+    return tuple(linear_to_srgb(c) for c in rgb)
+
+
+def resolve_export_colour_space(value=None, scene=None, default='AS_IS'):
+    """The export option when given (not AUTO); else the colour space the scene was imported with
+    (COLOUR_SPACE_PROPERTY); else the BLENDER_X3D_COLOR_SPACE environment variable; else `default`."""
+    aliases = {"X_ITE": "SRGB", "XITE": "SRGB", "LINEAR": "AS_IS", "NONE": "AS_IS", "AUTO": ""}
+    raw = str(value or "").strip().upper()
+    raw = aliases.get(raw, raw)
+    if not raw and scene is not None:
+        try:
+            recorded = scene.get(COLOUR_SPACE_PROPERTY)
+        except (AttributeError, TypeError):
+            recorded = None
+        raw = aliases.get(str(recorded or "").strip().upper(), str(recorded or "").strip().upper())
+    if not raw:
+        env = os.environ.get("BLENDER_X3D_COLOR_SPACE", "").strip().upper()
+        raw = aliases.get(env, env)
+    return raw if raw in COLOUR_SPACES else default
 # Viewpoint description read by the importer, kept on the camera object.
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.

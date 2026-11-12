@@ -250,6 +250,14 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         ),
         default='X3D33',
     )
+    color_space: EnumProperty(
+        name=translate(lang, "export_color_space"),
+        items=(('AUTO', translate(lang, "color_space_auto"), translate(lang, "export_color_space_auto_description")),
+               ('AS_IS', translate(lang, "color_space_as_is"), translate(lang, "export_color_space_as_is_description")),
+               ('SRGB', translate(lang, "color_space_srgb"), translate(lang, "export_color_space_srgb_description"))),
+        default='AUTO',
+        description=translate(lang, "export_color_space_description"),
+    )
     use_animation: BoolProperty(
         name="Animation",
         description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes",
@@ -554,6 +562,7 @@ def export_ui_include(layout, operator):
     header.label(text=translate(lang, "label_include"))
     if body:
         body.prop(operator, "x3d_version")
+        body.prop(operator, "color_space")
         row = body.row(align=True)
         row.prop(operator, "batch_mode")
         sub = row.row(align=True)

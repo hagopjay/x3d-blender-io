@@ -192,6 +192,38 @@ class EmitX3D40Tests(unittest.TestCase):
         self.assertIn("<PhysicalMaterial", xml_text)
         self.assertIn("<UnlitMaterial", xml_text)
 
+    def test_srgb_encodes_unlit_colours_only(self):
+        """X_ITE draws UnlitMaterial colours in display space and PhysicalMaterial colours linearly, so under sRGB
+        only the UnlitMaterial colour is encoded (0.214041 linear is 0.5 in sRGB)."""
+        def emitted(colour_space):
+            scene = IRScene(
+                name="Encode",
+                geometries=[
+                    IRMeshGeometry(name="Mesh_m0", coord=[(0, 0, 0), (1, 0, 0), (0, 1, 0)], coord_index=[0, 1, 2, -1], material_slot=0),
+                    IRMeshGeometry(name="Mesh_m1", coord=[(0, 0, 1), (1, 0, 1), (0, 1, 1)], coord_index=[0, 1, 2, -1], material_slot=1),
+                ],
+                materials=[IRPBRMaterial(name="Lit", base_color=(0.214041, 0.214041, 0.214041, 1.0),
+                                         emissive_color=(0.214041, 0.0, 0.0, 1.0)),
+                           IRPBRMaterial(name="Glow", unlit=True, emissive_color=(0.214041, 0.0, 1.0, 1.0))],
+                instances=[IRInstance(source_key="MESH:Mesh", object_name="Mesh", object_type="MESH",
+                                      shapes=[IRShape("Mesh_m0", "Lit"), IRShape("Mesh_m1", "Glow")])],
+            )
+            buffer = io.StringIO()
+            export_ir_scene(buffer, scene, generator="unit-test", colour_space=colour_space)
+            root = ET.fromstring(buffer.getvalue())
+            physical = root.find(".//PhysicalMaterial")
+            unlit = root.find(".//UnlitMaterial")
+            return ([float(v) for v in physical.attrib["baseColor"].split()],
+                    [float(v) for v in physical.attrib["emissiveColor"].split()],
+                    [float(v) for v in unlit.attrib["emissiveColor"].split()])
+
+        base, emissive, unlit = emitted("SRGB")
+        self.assertEqual(base, [0.214041] * 3)
+        self.assertEqual(emissive, [0.214041, 0.0, 0.0])
+        for got, want in zip(unlit, (0.5, 0.0, 1.0)):
+            self.assertAlmostEqual(got, want, places=4)
+        self.assertEqual(emitted("AS_IS")[2], [0.214041, 0.0, 1.0])
+
     def test_emits_valid_x3d40_with_unlit_material(self):
         scene = IRScene(
             name="UnlitFixture",
