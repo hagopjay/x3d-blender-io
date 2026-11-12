@@ -127,6 +127,13 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         description=translate(lang, "solidify_value_description"),
     )
 
+    circle_divisions: IntProperty(
+        name=translate(lang, "circle_divisions"),
+        min=0, max=512,
+        default=0,
+        description=translate(lang, "circle_divisions_description"),
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
@@ -186,6 +193,9 @@ def import_ui_mesh(layout, operator):
         sub = body.row(align=True)
         sub.enabled = operator.solidify == True
         sub.prop(operator, "solidify_value")
+
+        line = body.row(align=True)
+        line.prop(operator, "circle_divisions")
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
