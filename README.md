@@ -91,12 +91,17 @@ display space). Blender, glTF, Babylon.js and Unreal light every surface the fir
 |---|---|---|
 | **Blender** (`BLENDER`) | `i` | `1.75 i / 4 pi` = 0.139 `i` (the exporters' round trip) |
 | **As X_ITE draws** (`X_ITE`), physical scene | `i` | `i · att(d)`: exact at every distance for `attenuation 1 0 0` |
-| **As X_ITE draws** (`X_ITE`), classic scene | `pi · lin(i)` | `pi · lin(i · att(d)) · d²`: exact at `d` |
+| **As X_ITE draws** (`X_ITE`), classic scene | `L(i)` | `L(i · att(d)) · d²`: exact at `d` |
 
-`lin` is the sRGB curve, `att(d) = 1 / max(a0 + a1 d + a2 d², 1)`, and `d` is the light's reference distance: the median
-distance from the light to the bounding-box centres of the shapes it reaches (within its `radius`, inside a spot light's
-cone), never less than a shape's half diagonal, 1 m when it reaches none. A scene is classic when most of its lit shapes
-have a `Material` or `TwoSidedMaterial`. In **X_ITE** units the light's `radius` becomes its glTF `range`. **Auto**, the
+`L(x) = pi · lin(min(a · x, 1)) / lin(a)`, with `lin` the sRGB curve and `a` the median albedo (luminance of
+`diffuseColor`) of the scene's classic Materials: the lux that shows that albedo lit at `x` as X_ITE does, `a · x`
+(`pi · lin(x)` for a pure power curve; the sRGB curve's linear toe makes dark scenes need less). `att(d) = 1 / max(a0 +
+a1 d + a2 d², 1)`, and `d` is the light's reference distance: the median distance from the light to the bounding-box
+centres of the shapes it reaches (within its `radius`, inside a spot light's cone), never less than a shape's half
+diagonal, 1 m when it reaches none. A scene is classic when its lit shapes have a `Material` or `TwoSidedMaterial` and
+none has a `PhysicalMaterial`: classic units would light a PhysicalMaterial `L(i) / i` times too bright (a key light of
+2.4 gave a gold sphere 23.9 lux and blew it out), while a classic surface lit physically is only darker. In **X_ITE**
+units the light's `radius` becomes its glTF `range`. **Auto**, the
 default, reads the `BLENDER_X3D_LIGHT_UNITS` environment variable, else follows the Colour Space: **X_ITE** with **sRGB,
 as X_ITE draws**, **Blender** with **As Is**. The X3D export writes the file's `intensity`, `attenuation` and `radius`
 back with either units.
@@ -111,6 +116,25 @@ headless Chrome 153 with SwiftShader, centre of a 0.8 grey patch, 0-255:
 | PhysicalMaterial, PointLight 1 at 2 m | 74 | 30 | 74 |
 | PhysicalMaterial, PointLight 1, attenuation `1 0 0.2` | 57 | 30 | 56 |
 | classic Material, PointLight 1 at 2 m (the reference distance) | 204 | 27 | 207 |
+
+Nine x3d.demo scenes with lights, mean |delta| over the glb's geometry (same rig, `tools/fidelity_rig`, colour space
+sRGB; Blender units are the importer's old scale):
+
+| Scene | lights | Blender units | X_ITE units |
+|---|---|---|---|
+| gobbler-worlds-within materials shelf | 3 SpotLight + sun, 11 PhysicalMaterial | 38.8 | **13.7** |
+| ontology constellation | PointLight 1.2 + headlight, 151 Material | 40.5 | **28.5** |
+| blender-x3d-io lights-after | PointLight + sun, PhysicalMaterial | 1.2 | **0.12** |
+| blender-x3d-io annotation | 2 suns, 2 PointLights, Material | 22.6 | **21.9** |
+| blender-x3d-io profile tables | same rig, one PhysicalMaterial | 14.4 | 14.3 |
+| blender-x3d-io still life | 3 suns, PhysicalMaterial | 0.41 | 0.41 |
+| blender-x3d-io repair-2 | PointLight, PhysicalMaterial | 17.0 | 17.2 |
+| blender-x3d-io NURBS weights | 2 suns, 2 PointLights, Material | 18.4 | 24.1 |
+| blender-x3d-io quaternion | 2 suns, 2 PointLights, Material | 19.0 | 24.2 |
+
+The last two are worse: their dark floors (`diffuseColor` 0.055) sit under a key light of 2.4 in scenes whose median
+albedo is 0.36, and one light level cannot match both through the sRGB toe; X_ITE also shadows the floor (`shadows`),
+which the glb does not carry.
 
 What a glTF light cannot copy: a classic scene's point lights fall off as 1/d² away from the reference distance, and
 X_ITE's display-space Lambert makes grazing light brighter than a linear one (a 0.8 grey at 58° from the light: 109 in

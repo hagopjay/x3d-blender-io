@@ -2852,7 +2852,7 @@ LIGHT_UNITS_ALIASES = {"LEGACY": "BLENDER", "AS_IS": "BLENDER", "XITE": "X_ITE",
 lighting_units = 'BLENDER'   # the resolved light_units of the import in progress
 # Filled while a file (and its Inlines) is read, used by finalize_light_units once the whole import is in.
 imported_lights = []   # (light object, X3D node type, intensity, attenuation, radius)
-lit_surfaces = []      # (mesh object, 'classic' or 'physical')
+lit_surfaces = []      # (mesh object, 'classic' or 'physical', a classic Material's diffuseColor)
 
 
 def resolve_light_units(value=None, colour=None, default='BLENDER'):
@@ -2898,9 +2898,11 @@ def reference_distance(origin, radius, surfaces, axis=None, cut_off=None):
 def finalize_light_units(scene, units=None):
     """Set the energy of every light this import made (see LIGHT_UNITS). In 'X_ITE' units, with K = 4 pi (Blender
     watts per COMPAT candela) and d the light's reference distance:
-      - the scene is lit the classic way when most lit shapes have a Material or TwoSidedMaterial, else physically;
-      - level(x) = x for a physical scene, pi x lin(x) for a classic one (lin: the sRGB curve), so an sRGB colour c
-        lit at x shows c x in a glTF viewer, as in X_ITE;
+      - the scene is lit the classic way when its lit shapes have a Material or TwoSidedMaterial and none has a
+        PhysicalMaterial, else physically;
+      - level(x) = x for a physical scene; for a classic one pi lin(min(a x, 1)) / lin(a), with lin the sRGB curve
+        and a the median albedo of the scene's classic Materials, so that albedo lit at x shows a x in a glTF
+        viewer, as in X_ITE (pi lin(x) for a pure power curve);
       - DirectionalLight: sun strength = level(i) (lux);
       - point and spot lights, physical: i x attenuation(d) cd, which is exact at every distance for the default
         attenuation 1 0 0; classic: level(i x attenuation(d)) x d^2 cd, exact at d;
@@ -2915,7 +2917,8 @@ def finalize_light_units(scene, units=None):
         return
     counts = {'classic': 0, 'physical': 0}
     boxes = []
-    for bpyob, model in surfaces:
+    albedos = []
+    for bpyob, model, diffuse in surfaces:
         try:
             if bpyob.hide_render:
                 continue
@@ -2923,12 +2926,28 @@ def finalize_light_units(scene, units=None):
         except ReferenceError:  # removed after it was made
             continue
         counts[model] += 1
+        if diffuse is not None:
+            # the sRGB value X_ITE multiplies by the light level; black (emissive-only) surfaces are not lit
+            albedo = 0.2126 * diffuse[0] + 0.7152 * diffuse[1] + 0.0722 * diffuse[2]
+            if albedo > 0.02:
+                albedos.append(min(albedo, 1.0))
         centre = sum(corners, Vector()) / len(corners)
         boxes.append((centre, max((corner - centre).length for corner in corners)))
-    classic = counts['classic'] > counts['physical']
+    # One PhysicalMaterial in view decides: classic units would light it pi lin(i) / i times too bright (a key
+    # light of 2.4 gives 23.9 lux where X_ITE lights it with 2.4), and an overexposed surface loses its detail,
+    # while a classic surface lit physically is only darker.
+    classic = counts['classic'] > 0 and counts['physical'] == 0
+    albedos.sort()
+    typical = albedos[len(albedos) // 2] if albedos else 0.8
 
     def level(x):
-        return math.pi * srgb_to_linear(max(0.0, x)) if classic else max(0.0, x)
+        """Lux that draws an sRGB albedo a lit at x as X_ITE does (a x, clipped at 1): pi lin(min(a x, 1)) / lin(a),
+        for the scene's median classic albedo a. It is pi lin(x) for a pure power curve; the sRGB curve's linear toe
+        makes dark colours need less (an albedo of 0.055 lit at 2.4: 11 lux, not 23.9)."""
+        x = max(0.0, x)
+        if not classic:
+            return x
+        return math.pi * srgb_to_linear(min(typical * x, 1.0)) / srgb_to_linear(typical)
 
     for bpyob, spec, intensity, attenuation, radius in lights:
         try:
@@ -4816,9 +4835,11 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             ancestry, global_matrix, solidify, solidify_value)
         if appr is not None and geom_spec not in LINE_POINT_SPECS and node.blendObject is not None:
             if appr.getChildBySpec('PhysicalMaterial') is not None:
-                lit_surfaces.append((node.blendObject, 'physical'))
+                lit_surfaces.append((node.blendObject, 'physical', None))
             elif appr.getChildBySpec(('Material', 'TwoSidedMaterial')) is not None:
-                lit_surfaces.append((node.blendObject, 'classic'))
+                material = appr.getChildBySpec(('Material', 'TwoSidedMaterial'))
+                diffuse = material.getFieldAsFloatTuple('diffuseColor', (0.8, 0.8, 0.8), ancestry)
+                lit_surfaces.append((node.blendObject, 'classic', diffuse))
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False

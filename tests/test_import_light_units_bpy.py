@@ -42,6 +42,7 @@ FOOTER = "</Scene></X3D>\n"
 PHYSICAL = "<PhysicalMaterial baseColor='0.8 0.8 0.8' metallic='0' roughness='1'/>"
 CLASSIC = "<Material diffuseColor='0.8 0.8 0.8'/>"
 K = 4.0 * math.pi                     # Blender watts per COMPAT candela (io_scene_gltf2, point and spot)
+# A classic scene is matched at its median albedo a: lux = pi lin(min(a x, 1)) / lin(a); a = 0.8 here.
 
 
 def lin(value):
@@ -117,7 +118,8 @@ class ImportLightUnitsTests(unittest.TestCase):
                               "<DirectionalLight DEF='Dim' intensity='0.5' global='true'/>\n" + _box(CLASSIC),
                               light_units='X_ITE')
         self.assertAlmostEqual(lights["Sun"].energy, math.pi, places=5)
-        self.assertAlmostEqual(lights["Dim"].energy, math.pi * lin(0.5), places=5)
+        # an sRGB 0.8 lit at 0.5 shows 0.4 in X_ITE
+        self.assertAlmostEqual(lights["Dim"].energy, math.pi * lin(0.4) / lin(0.8), places=5)
         import bpy
         self.assertEqual(bpy.context.scene["x3d_lighting_model"], "classic")
         self.assertAlmostEqual(bpy.context.scene["x3d_headlight_lux"], math.pi, places=5)
@@ -128,7 +130,7 @@ class ImportLightUnitsTests(unittest.TestCase):
                 + _box(CLASSIC, z=-1, name="A") + _box(CLASSIC, z=-3, name="B") + _box(CLASSIC, z=-6, name="C"))
         lamp = self._import(body, light_units='X_ITE')["Lamp"]
         self.assertAlmostEqual(lamp["x3d_reference_distance"], 3.0, places=4)
-        self.assertAlmostEqual(lamp.energy, K * math.pi * lin(0.8) * 9.0, places=3)
+        self.assertAlmostEqual(lamp.energy, K * math.pi * lin(0.64) / lin(0.8) * 9.0, places=3)
 
     def test_reference_distance_skips_surfaces_beyond_the_radius(self):
         body = ("<PointLight DEF='Lamp' location='0 0 0' intensity='1' radius='5' global='true'/>\n"
@@ -136,10 +138,23 @@ class ImportLightUnitsTests(unittest.TestCase):
         lamp = self._import(body, light_units='X_ITE')["Lamp"]
         self.assertAlmostEqual(lamp["x3d_reference_distance"], 2.0, places=4)
 
-    def test_majority_decides_the_lighting_model(self):
+    def test_one_physical_material_lights_the_scene_physically(self):
+        # classic units would light the PhysicalMaterial pi times too bright; the classic boxes are only darker
         body = ("<DirectionalLight DEF='Sun' intensity='1' global='true'/>\n" + _box(PHYSICAL, name="P1")
-                + _box(PHYSICAL, x=2, name="P2") + _box(CLASSIC, x=4, name="C1"))
+                + _box(CLASSIC, x=2, name="C1") + _box(CLASSIC, x=4, name="C2") + _box(CLASSIC, x=6, name="C3"))
         self.assertAlmostEqual(self._import(body, light_units='X_ITE')["Sun"].energy, 1.0, places=6)
+        import bpy
+        self.assertEqual(bpy.context.scene["x3d_lighting_model"], "physical")
+
+    def test_classic_level_follows_the_median_albedo(self):
+        # the sRGB curve's linear toe: a dark 0.055 lit at 2.4 shows 0.132 at 11 lux, where pi lin(2.4) is 23.9
+        dark = "<Material diffuseColor='0.055 0.055 0.055'/>"
+        body = ("<DirectionalLight DEF='Key' intensity='2.4' global='true'/>\n" + _box(dark, name="A")
+                + _box(dark, x=2, name="B") + _box(CLASSIC, x=4, name="C")
+                + _box("<Material diffuseColor='0 0 0' emissiveColor='1 1 1'/>", x=6, name="Glow"))
+        key = self._import(body, light_units='X_ITE')["Key"]
+        self.assertAlmostEqual(key.energy, math.pi * lin(0.055 * 2.4) / lin(0.055), places=4)
+        self.assertLess(key.energy, 12.0)
 
     def test_dark_light_keeps_its_scale(self):
         # the material odyssey starts its lights at 0 and a script raises them
