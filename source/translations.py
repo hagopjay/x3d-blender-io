@@ -84,6 +84,8 @@ def get_translation():
             "solidify_description": "Solidify objects by adding a solify modifier to each of the objects",
             "solidify_value": "Solidify Value",
             "solidify_value_description": "Value used as width for the solidify modifier",
+            "circle_divisions": "Circle Divisions",
+            "circle_divisions_description": "Segments for Sphere, Cylinder, Cone and the 2D circles (0: 16, or the BLENDER_X3D_CIRCLE_DIV environment variable). X3D leaves this to the browser; renders at 4K and above want 64 or more",
             "path_mode_name" : "Path Mode",
             "path_mode_description" : "Method used to reference paths",
             "relative_mode" : "Relative",

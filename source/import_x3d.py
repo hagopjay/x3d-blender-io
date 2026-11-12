@@ -15,7 +15,7 @@ import shlex
 import math
 import re
 import mathutils
-from math import sin, cos, pi
+from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import mfstring
 from .extract import (BACKGROUND_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
@@ -2705,6 +2705,110 @@ def importMesh_PointSet(geom, ancestry):
 
 GLOBALS['CIRCLE_DETAIL'] = 12
 
+# X3D draws these as smooth curved surfaces (the segment count is the browser's choice, not part of the scene), so the
+# importer shades them smooth: Sphere everywhere, Cylinder and Cone on the side while their flat caps keep their own
+# normal. Before this they came in faceted (no creaseAngle field, so every face was flat), and Cycles, Eevee and the
+# glTF that Unreal and Babylon.js read all showed the facets.
+SMOOTH_PRIMITIVES = frozenset({'Sphere', 'Cylinder', 'Cone'})
+CIRCLE_DIV_RANGE = (3, 512)
+
+
+def resolve_circle_divisions(value=None, default=16):
+    """Segments for Sphere, Cylinder, Cone and the Geometry2D circles: the import option when given, else the
+    BLENDER_X3D_CIRCLE_DIV environment variable (for headless pipelines), else `default`; clamped to 3..512."""
+    raw = value
+    if raw is None:
+        raw = os.environ.get("BLENDER_X3D_CIRCLE_DIV", "").strip() or default
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        logger.warning("ImportX3D: BLENDER_X3D_CIRCLE_DIV=%r is not a whole number; using %d", raw, default)
+        n = default
+    return max(CIRCLE_DIV_RANGE[0], min(CIRCLE_DIV_RANGE[1], n))
+
+
+def smooth_primitive(bpymesh, spec):
+    """Shade an imported Sphere, Cylinder or Cone as X3D draws it.
+
+    Sphere: every face smooth. Cylinder and Cone: side faces smooth; the caps (faces whose normal runs along +y or -y in
+    the primitive's own frame) flat, and the rim edges between them marked sharp, so the caps keep their normal in
+    every exporter."""
+    count = len(bpymesh.polygons)
+    if not count:
+        return
+    if spec == 'Sphere':
+        bpymesh.polygons.foreach_set("use_smooth", [True] * count)
+        return
+    normals = [0.0] * (3 * count)
+    bpymesh.polygons.foreach_get("normal", normals)
+    side = [abs(normals[3 * i + 1]) < 0.9999 for i in range(count)]
+    bpymesh.polygons.foreach_set("use_smooth", side)
+    edge_index = {edge.key: edge.index for edge in bpymesh.edges}
+    kinds = {}
+    for poly, is_side in zip(bpymesh.polygons, side):
+        for key in poly.edge_keys:
+            kinds.setdefault(key, set()).add(is_side)
+    for key, seen in kinds.items():
+        if len(seen) == 2 and key in edge_index:
+            bpymesh.edges[edge_index[key]].use_edge_sharp = True
+
+
+# X3D draws line and point geometry unlit (X3D 4.0, 17.2.2.3): in the material's emissiveColor, or in the colours of
+# a Color node. The surface material a Shape shares with other Shapes stays as it is; lines and points get an
+# unlit copy (black base, no specular, the emission carrying the colour), cached per import.
+LINE_POINT_SPECS = frozenset({'IndexedLineSet', 'LineSet', 'PointSet', 'Polyline2D', 'Polypoint2D', 'Arc2D', 'Circle2D'})
+line_material_cache = {}
+
+
+def line_point_material(bpymat):
+    """The unlit copy of `bpymat` for line and point geometry (made once per import)."""
+    hit = line_material_cache.get(bpymat.name)
+    if hit is not None:
+        return hit
+    tree = bpymat.node_tree
+    if tree is None or not any(n.type == 'BSDF_PRINCIPLED' for n in tree.nodes):
+        return bpymat
+    mat = bpymat.copy()
+    mat.name = bpymat.name + "_lines"
+    tree = mat.node_tree
+    bsdf = next(n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    base = bsdf.inputs["Base Color"]
+    emission = bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission")
+    for link in list(base.links):            # vertex colours: they colour the emission, not a diffuse response
+        source = link.from_socket
+        tree.links.remove(link)
+        if emission is not None and not emission.links:
+            tree.links.new(source, emission)
+    base.default_value = (0.0, 0.0, 0.0, 1.0)
+    for name, value in (("Specular IOR Level", 0.0), ("Roughness", 1.0), ("Emission Strength", 1.0)):
+        if name in bsdf.inputs:
+            bsdf.inputs[name].default_value = value
+    line_material_cache[bpymat.name] = mat
+    line_material_cache[mat.name] = mat
+    return mat
+
+
+def phong_to_principled(shininess, specular_color):
+    """X3D's Material specular term as Principled BSDF inputs: (roughness, specular IOR level, specular tint).
+
+    X3D lights a Material with Blinn-Phong: specularColor x (N.H)^(128 x shininess), no Fresnel and no energy
+    normalisation (X3D 4.0, 17.2.2.4). The lobe width gives the roughness (a Blinn-Phong exponent n matches a GGX alpha
+    of sqrt(2 / (n + 2)); Blender's roughness is sqrt(alpha)), and the peak height gives the reflectance at normal
+    incidence, F0 = 8 s / (n + 2) per channel, which a dielectric at IOR 1.5 reaches with an IOR level of F0 / 0.08
+    (capped at 1). X3D's default specularColor is black, which draws no highlight at all: the level is then 0, where
+    the previous mapping gave every Material Blender's default dielectric specular and every shiny one a mirror
+    (roughness = 1 - shininess)."""
+    s = max(0.0, min(1.0, float(shininess)))
+    n = 128.0 * s
+    alpha = sqrt(2.0 / (n + 2.0))
+    roughness = sqrt(alpha)
+    spec = [max(0.0, min(1.0, float(c))) for c in (list(specular_color or ()) + [0.0, 0.0, 0.0])[:3]]
+    peak = max(spec)
+    if peak <= 0.0:
+        return roughness, 0.0, (1.0, 1.0, 1.0)
+    level = min(1.0, 8.0 * peak / (n + 2.0) / 0.08)
+    return roughness, level, tuple(c / peak for c in spec)
+
 
 def importMesh_Sphere(geom, ancestry):
     # solid is ignored.
@@ -2989,6 +3093,151 @@ def importMesh_Disk2D(geom, ancestry):
     bpymesh.update()
     return bpymesh
 
+def _quad_mesh(name, geom, ancestry, index=None):
+    """CADGeometry quads: every four indices (IndexedQuadSet) or coordinates (QuadSet) make one quad; a remainder,
+    and a quad naming a missing coordinate, are skipped. Colours, normals and texture coordinates are per vertex, as
+    for the triangle sets."""
+    if geom.getChildBySpec('Coordinate') is None:
+        return None
+    bpymesh = bpy.data.meshes.new(name=name)
+    importMesh_ReadVertices(bpymesh, geom, ancestry)
+    nverts = len(bpymesh.vertices)
+    index = list(range(nverts)) if index is None else [int(i) for i in index]
+    quads = [index[4 * i:4 * i + 4] for i in range(len(index) // 4)]
+    quads = [q for q in quads if all(0 <= v < nverts for v in q)]
+    if not geom.getFieldAsBool('ccw', True, ancestry):
+        quads = [[q[0], q[3], q[2], q[1]] for q in quads]
+    count = len(quads)
+    bpymesh.loops.add(4 * count)
+    bpymesh.polygons.add(count)
+    bpymesh.polygons.foreach_set("loop_start", range(0, 4 * count, 4))
+    bpymesh.polygons.foreach_set("vertices", [v for q in quads for v in q])
+    return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
+
+
+def importMesh_IndexedQuadSet(geom, ancestry):
+    # CADGeometry component (X3D 4.0, 32.4.2)
+    return _quad_mesh("IndexedQuadSet", geom, ancestry, geom.getFieldAsArray('index', 0, ancestry))
+
+
+def importMesh_QuadSet(geom, ancestry):
+    # CADGeometry component (X3D 4.0, 32.4.4)
+    return _quad_mesh("QuadSet", geom, ancestry)
+
+
+def _arc_angles(geom, ancestry):
+    """Arc2D / ArcClose2D: counterclockwise from startAngle to endAngle in the local XY plane. Equal angles, or a span
+    of 2 pi or more, make the full circle (X3D 4.0, 14.4.1)."""
+    start = geom.getFieldAsFloat('startAngle', 0.0, ancestry)
+    end = geom.getFieldAsFloat('endAngle', pi / 2, ancestry)
+    span = end - start
+    if span == 0.0 or abs(span) >= 2 * pi:
+        return start, 2 * pi, True
+    if span < 0:
+        span += 2 * pi
+    return start, span, False
+
+
+def _arc_points(radius, start, span, closed):
+    n = max(2, int(ceil(max(8, 2 * GLOBALS['CIRCLE_DETAIL']) * span / (2 * pi))))
+    count = n if closed else n + 1
+    return [(radius * cos(start + span * i / n), radius * sin(start + span * i / n)) for i in range(count)]
+
+
+def _polyline_curve(name, points2d, cyclic=False):
+    bpycurve = bpy.data.curves.new(name, 'CURVE')
+    bpycurve.dimensions = '3D'
+    if len(points2d) < 2:
+        return bpycurve
+    spline = bpycurve.splines.new('POLY')
+    spline.points.add(len(points2d) - 1)
+    spline.points.foreach_set('co', [c for x, y in points2d for c in (x, y, 0.0, 1.0)])
+    spline.use_cyclic_u = bool(cyclic)
+    return bpycurve
+
+
+def importMesh_Arc2D(geom, ancestry):
+    # Geometry2D: an open arc (a circle when the angles say so), drawn as a line
+    r = geom.getFieldAsFloat('radius', 1.0 * conversion_scale, ancestry, conversion_scale)
+    start, span, full = _arc_angles(geom, ancestry)
+    return _polyline_curve("Arc2D", _arc_points(r, start, span, full), cyclic=full)
+
+
+def importMesh_Circle2D(geom, ancestry):
+    # Geometry2D: a circle, drawn as a closed line
+    r = geom.getFieldAsFloat('radius', 1.0 * conversion_scale, ancestry, conversion_scale)
+    return _polyline_curve("Circle2D", _arc_points(r, 0.0, 2 * pi, True), cyclic=True)
+
+
+def importMesh_Polyline2D(geom, ancestry):
+    # Geometry2D: connected line segments through lineSegments
+    pts = geom.getFieldAsArray('lineSegments', 2, ancestry, conversion_scale)
+    return _polyline_curve("Polyline2D", [tuple(p[:2]) for p in pts]) if pts else None
+
+
+def importMesh_Polypoint2D(geom, ancestry):
+    # Geometry2D: a set of points in the local XY plane
+    pts = geom.getFieldAsArray('point', 2, ancestry, conversion_scale)
+    if not pts:
+        return None
+    bpymesh = bpy.data.meshes.new(name="Polypoint2D")
+    bpymesh.vertices.add(len(pts))
+    bpymesh.vertices.foreach_set('co', [c for p in pts for c in (p[0], p[1], 0.0)])
+    bpymesh.update()
+    return bpymesh
+
+
+def importMesh_ArcClose2D(geom, ancestry):
+    # Geometry2D: a filled arc, closed through the centre (closureType PIE, the default) or by its chord (CHORD).
+    # Texture coordinates map the full circle's square onto the unit square, as for Disk2D.
+    r = geom.getFieldAsFloat('radius', 1.0 * conversion_scale, ancestry, conversion_scale)
+    start, span, full = _arc_angles(geom, ancestry)
+    closure = (geom.getFieldAsString('closureType', 'PIE', ancestry) or 'PIE').strip().strip('"').upper()
+    rim = _arc_points(r, start, span, full)
+    verts = [(x, y, 0.0) for x, y in rim]
+    if full:
+        faces = [tuple(range(len(verts)))]
+    elif closure == 'CHORD':
+        faces = [tuple(range(len(verts)))]
+    else:
+        verts.append((0.0, 0.0, 0.0))
+        faces = [tuple(range(len(verts)))]
+    bpymesh = bpy.data.meshes.new(name="ArcClose2D")
+    bpymesh.from_pydata(verts, [], faces)
+    bpymesh.validate()
+    if bpymesh.polygons and r:
+        uv = []
+        for poly in bpymesh.polygons:
+            for vi in poly.vertices:
+                x, y, _z = bpymesh.vertices[vi].co
+                uv += [0.5 + 0.5 * x / r, 0.5 + 0.5 * y / r]
+        bpymesh.uv_layers.new().data.foreach_set('uv', uv)
+    bpymesh.update()
+    return bpymesh
+
+
+def importMesh_TriangleSet2D(geom, ancestry):
+    # Geometry2D: every three vertices make a triangle; texture coordinates map the bounding box onto the unit square
+    pts = geom.getFieldAsArray('vertices', 2, ancestry, conversion_scale)
+    count = len(pts) // 3
+    if not count:
+        return None
+    pts = pts[:3 * count]
+    bpymesh = bpy.data.meshes.new(name="TriangleSet2D")
+    bpymesh.from_pydata([(p[0], p[1], 0.0) for p in pts], [], [(3 * i, 3 * i + 1, 3 * i + 2) for i in range(count)])
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    w, h = (max(xs) - min(xs)) or 1.0, (max(ys) - min(ys)) or 1.0
+    uv = []
+    for poly in bpymesh.polygons:
+        for vi in poly.vertices:
+            x, y, _z = bpymesh.vertices[vi].co
+            uv += [(x - min(xs)) / w, (y - min(ys)) / h]
+    bpymesh.uv_layers.new().data.foreach_set('uv', uv)
+    bpymesh.validate()
+    bpymesh.update()
+    return bpymesh
+
+
 # -----------------------------------------------------------------------------------
 # Utilities for importShape
 
@@ -3004,16 +3253,15 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
         emit_color = mat.getFieldAsFloatTuple('emissiveColor', [0.0, 0.0, 0.0], ancestry)
         shininess = mat.getFieldAsFloat('shininess', 0.2, ancestry)
         alpha = 1.0 - mat.getFieldAsFloat('transparency', 0.0, ancestry)
-        # TODO: handle 'ambientIntensity'.
-        # ambient = mat.getFieldAsFloat('ambientIntensity', 0.2, ancestry)
-        # TODO: handle 'specularColor'.
-        # specular_color = mat.getFieldAsFloatTuple('specularColor', [0.0, 0.0, 0.0], ancestry)
+        # ambientIntensity scales the lights' own ambientIntensity (0 by default in X3D): not mapped.
+        specular_color = mat.getFieldAsFloatTuple('specularColor', [0.0, 0.0, 0.0], ancestry)
     else: # object with no appearance node (e.g. only vertex colors), thus use default diffuse material
         mat_name = None
         diff_color = [0.8, 0.8, 0.8]
         emit_color = [0.0, 0.0, 0.0]
         shininess = 0.2
         alpha = 1.0
+        specular_color = [0.0, 0.0, 0.0]
 
     bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
@@ -3027,11 +3275,16 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
         if bsdf_node:
             bsdf_node.inputs["Emission Strength"].default_value = 1.0
 
-    # NOTE - 'shininess' is being handled as 1 - roughness for now.
-    bpymat_wrap.roughness = 1.0 - shininess
-
-    # bpymat.specular_hardness = int(1 + (510 * shininess))
-    # 0-1 -> 1-511
+    # X3D's Blinn-Phong specular (specularColor, shininess) as roughness and dielectric specular level and tint
+    roughness, spec_level, spec_tint = phong_to_principled(shininess, specular_color)
+    bpymat_wrap.roughness = roughness
+    bsdf = bpymat_wrap.node_principled_bsdf
+    if bsdf is not None:
+        if "Specular IOR Level" in bsdf.inputs:
+            bsdf.inputs["Specular IOR Level"].default_value = spec_level
+        if "Specular Tint" in bsdf.inputs:
+            tint = bsdf.inputs["Specular Tint"]
+            tint.default_value = tuple(spec_tint) + ((1.0,) if len(tint.default_value) == 4 else ())
 
     bpymat_wrap.alpha = alpha
     if alpha < 1.0:
@@ -3610,7 +3863,13 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
 
     tex_node = appr.getChildBySpec(('ImageTexture', 'PixelTexture', 'MovieTexture'))
     # Other texture nodes are: MultiTexture
-    material = appr.getChildBySpec('Material')
+    # TwoSidedMaterial's front fields are Material's (ambientIntensity, diffuseColor, emissiveColor, shininess,
+    # specularColor, transparency); its back* fields have no Blender counterpart on one mesh and are not carried.
+    material = appr.getChildBySpec(('Material', 'TwoSidedMaterial'))
+    if material is not None and material.getSpec() == 'TwoSidedMaterial' \
+            and material.getFieldAsBool('separateBackColor', False, ancestry):
+        logger.warning('ImportX3D: TwoSidedMaterial "%s": the back colours are not imported; both sides use the front',
+                       material.getDefName() or vrmlname)
     # We're ignoring FillProperties, LineProperties, and shaders
 
     # Check the USE-based material cache for textureless materials
@@ -3719,6 +3978,8 @@ def importShape_ProcessObject(
         creaseAngle = geom.getFieldAsFloat('creaseAngle', None, ancestry)
         if creaseAngle is not None and not bpydata.has_custom_normals:
             bpydata.set_sharp_from_angle(angle=creaseAngle)
+        elif geom_spec in SMOOTH_PRIMITIVES and not bpydata.has_custom_normals:
+            smooth_primitive(bpydata, geom_spec)
         else:
             bpydata.polygons.foreach_set("use_smooth", [False] * len(bpydata.polygons))
 
@@ -4030,6 +4291,14 @@ geometry_importers = {
     'Cone': importMesh_Cone,
     'Rectangle2D': importMesh_Rectangle2D,
     'Disk2D': importMesh_Disk2D,
+    'ArcClose2D': importMesh_ArcClose2D,
+    'TriangleSet2D': importMesh_TriangleSet2D,
+    'Arc2D': importMesh_Arc2D,
+    'Circle2D': importMesh_Circle2D,
+    'Polyline2D': importMesh_Polyline2D,
+    'Polypoint2D': importMesh_Polypoint2D,
+    'IndexedQuadSet': importMesh_IndexedQuadSet,
+    'QuadSet': importMesh_QuadSet,
     'Text': importText,
 }
 
@@ -4122,6 +4391,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 
     bpydata = None
     geom_spec = geom.getSpec()
+    if bpymat is not None and geom_spec in LINE_POINT_SPECS:
+        bpymat = line_point_material(bpymat)
 
     # ccw is handled by every geometry importer separately; some
     # geometries are easier to flip than others
@@ -5504,8 +5775,9 @@ def load_web3d(
 
     # NOTE - reset material cache
     # (otherwise we might get "StructRNA of type Material has been removed" errors)
-    global material_cache, texture_cache, image_alpha_cache
+    global material_cache, texture_cache, image_alpha_cache, line_material_cache
     material_cache = {}
+    line_material_cache = {}
     # Same reason for textures: a cached Image outlives File > New and the next import fails with
     # "StructRNA of type Image has been removed".
     texture_cache = {}
@@ -5697,9 +5969,13 @@ def load(context,
          global_matrix=None,
          as_collection=False,
          solidify=False,
-         solidify_value=0.1
+         solidify_value=0.1,
+         circle_divisions=None
          ):
+    """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
+    16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more."""
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
+    divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
 
     if import_target in {"MODERN", "X3D40", "MODERN_INLINE"}:
         from .parse_x3d40 import parse_file
@@ -5717,7 +5993,7 @@ def load(context,
         # loadWithProfiler(operator, context, filepath, global_matrix)
         load_web3d(context, file,
                 PREF_FLAT=True,
-                PREF_CIRCLE_DIV=16,
+                PREF_CIRCLE_DIV=divisions,
                 global_scale=global_scale,
                 global_matrix=global_matrix,
                 as_collection=as_collection,
