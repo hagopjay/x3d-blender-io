@@ -134,6 +134,15 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         description=translate(lang, "circle_divisions_description"),
     )
 
+    color_space: EnumProperty(
+        name=translate(lang, "color_space"),
+        items=(('AUTO', translate(lang, "color_space_auto"), translate(lang, "color_space_auto_description")),
+               ('AS_IS', translate(lang, "color_space_as_is"), translate(lang, "color_space_as_is_description")),
+               ('SRGB', translate(lang, "color_space_srgb"), translate(lang, "color_space_srgb_description"))),
+        default='AUTO',
+        description=translate(lang, "color_space_description"),
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
@@ -196,6 +205,9 @@ def import_ui_mesh(layout, operator):
 
         line = body.row(align=True)
         line.prop(operator, "circle_divisions")
+
+        line = body.row(align=True)
+        line.prop(operator, "color_space")
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
