@@ -19,7 +19,8 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import mfstring
 from .extract import (BACKGROUND_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      LIGHT_INTENSITY_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY, METADATA_NODE_TYPES,
+                      LIGHT_ATTENUATION_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY, LIGHT_INTENSITY_PROPERTY,
+                      LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY, METADATA_NODE_TYPES,
                       METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
 from .viewpoint_fov import blender_camera_angle, render_size
 
@@ -2833,6 +2834,128 @@ def classic_colour(rgb):
     return rgb
 
 
+# Light units. X3D gives a light an intensity, not watts or candela, and X_ITE 16.7.1 draws it in two ways (measured
+# 12 Nov 2026 in headless Chrome 153, SwiftShader, against Babylon.js 9.32 on the glb):
+#  - a PhysicalMaterial is lit the glTF way: i x attenuation(d) / d^2, the colour / pi, in linear space;
+#  - a Material or TwoSidedMaterial is lit the classic way: i x attenuation(d), with no 1/d^2 (the default
+#    attenuation 1 0 0 does not fall off at all), in display space (an sRGB 0.8 lit at i = 1 shows as 204).
+# glTF (KHR_lights_punctual), Blender, Babylon.js and Unreal light every surface the first way.
+# 'BLENDER' is this importer's scale so far: point and spot lights get 1.75 W per unit of intensity (the exporters'
+# round trip), suns 1 W/m2. Through a COMPAT glTF that is 0.139 cd per unit, so a PointLight of 1 is 7.2 times too
+# dark on a PhysicalMaterial, and a classic scene lit at 1 shows 120 where X_ITE shows 204.
+# 'X_ITE' gives each light the glTF intensity that draws what X_ITE draws (see finalize_light_units): exact for a
+# PhysicalMaterial lit by a point or spot light without attenuation, and at one reference distance otherwise.
+# The scale is kept on each light (x3d_energy_per_intensity), so both X3D exports still write the file's intensity.
+LIGHT_UNITS = ('BLENDER', 'X_ITE')
+LIGHT_UNITS_ALIASES = {"LEGACY": "BLENDER", "AS_IS": "BLENDER", "XITE": "X_ITE", "X3D": "X_ITE", "BROWSER": "X_ITE",
+                       "AUTO": ""}
+lighting_units = 'BLENDER'   # the resolved light_units of the import in progress
+# Filled while a file (and its Inlines) is read, used by finalize_light_units once the whole import is in.
+imported_lights = []   # (light object, X3D node type, intensity, attenuation, radius)
+lit_surfaces = []      # (mesh object, 'classic' or 'physical')
+
+
+def resolve_light_units(value=None, colour=None, default='BLENDER'):
+    """The import option when given (not AUTO), else the BLENDER_X3D_LIGHT_UNITS environment variable, else the
+    colour space's partner: 'X_ITE' when the colours are read as X_ITE reads them (SRGB), else `default`."""
+    raw = LIGHT_UNITS_ALIASES.get(str(value or "").strip().upper(), str(value or "").strip().upper())
+    if not raw:
+        env = os.environ.get("BLENDER_X3D_LIGHT_UNITS", "").strip().upper()
+        raw = LIGHT_UNITS_ALIASES.get(env, env) or ('X_ITE' if colour == 'SRGB' else default)
+    if raw not in LIGHT_UNITS:
+        logger.warning("ImportX3D: light units %r are not one of %s; using %s", raw, ", ".join(LIGHT_UNITS), default)
+        return default
+    return raw
+
+
+def x3d_attenuation_factor(attenuation, distance):
+    """X3D's attenuation at a distance: 1 / max(a0 + a1 d + a2 d^2, 1) (X3D 4.0, 17.2.2.4)."""
+    a0, a1, a2 = (list(attenuation) + [0.0, 0.0, 0.0])[:3] if attenuation else (1.0, 0.0, 0.0)
+    return 1.0 / max(a0 + a1 * distance + a2 * distance * distance, 1.0)
+
+
+def reference_distance(origin, radius, surfaces, axis=None, cut_off=None):
+    """The distance at which a point or spot light is matched: the median distance from the light to the surfaces it
+    reaches (bounding-box centres within its radius, and inside a spot light's cone), never less than a surface's
+    half diagonal, so a light inside a large floor or room is not matched at zero. 1 m when it reaches nothing."""
+    distances = []
+    for centre, half in surfaces:
+        offset = centre - origin
+        distance = offset.length
+        if distance - half > radius:
+            continue
+        if axis is not None and cut_off is not None and distance > half and \
+                offset.normalized().dot(axis) < math.cos(min(cut_off, math.pi / 2.0)):
+            continue
+        distances.append(max(distance, half))
+    if not distances:
+        return 1.0
+    distances.sort()
+    middle = len(distances) // 2
+    return distances[middle] if len(distances) % 2 else 0.5 * (distances[middle - 1] + distances[middle])
+
+
+def finalize_light_units(scene, units=None):
+    """Set the energy of every light this import made (see LIGHT_UNITS). In 'X_ITE' units, with K = 4 pi (Blender
+    watts per COMPAT candela) and d the light's reference distance:
+      - the scene is lit the classic way when most lit shapes have a Material or TwoSidedMaterial, else physically;
+      - level(x) = x for a physical scene, pi x lin(x) for a classic one (lin: the sRGB curve), so an sRGB colour c
+        lit at x shows c x in a glTF viewer, as in X_ITE;
+      - DirectionalLight: sun strength = level(i) (lux);
+      - point and spot lights, physical: i x attenuation(d) cd, which is exact at every distance for the default
+        attenuation 1 0 0; classic: level(i x attenuation(d)) x d^2 cd, exact at d;
+      - the light's radius becomes its glTF range (Blender's custom distance).
+    The scene gets x3d_lighting_model and x3d_headlight_lux (what an X3D headlight, a DirectionalLight of 1, should
+    be in a glTF viewer), since this importer does not make the headlight."""
+    global imported_lights, lit_surfaces
+    units = units or lighting_units
+    lights, surfaces = imported_lights, lit_surfaces
+    imported_lights, lit_surfaces = [], []
+    if units != 'X_ITE' or scene is None:
+        return
+    counts = {'classic': 0, 'physical': 0}
+    boxes = []
+    for bpyob, model in surfaces:
+        try:
+            if bpyob.hide_render:
+                continue
+            corners = [bpyob.matrix_world @ Vector(corner) for corner in bpyob.bound_box]
+        except ReferenceError:  # removed after it was made
+            continue
+        counts[model] += 1
+        centre = sum(corners, Vector()) / len(corners)
+        boxes.append((centre, max((corner - centre).length for corner in corners)))
+    classic = counts['classic'] > counts['physical']
+
+    def level(x):
+        return math.pi * srgb_to_linear(max(0.0, x)) if classic else max(0.0, x)
+
+    for bpyob, spec, intensity, attenuation, radius in lights:
+        try:
+            data = bpyob.data
+            matrix = bpyob.matrix_world
+        except ReferenceError:
+            continue
+        unit = 1.0 if intensity <= 0.0 else intensity       # the scale of a light that starts dark (animated later)
+        if spec == 'DirectionalLight':
+            energy = level(unit)
+        else:
+            origin = matrix.to_translation()
+            axis = (matrix.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized() if spec == 'SpotLight' else None
+            cut_off = data.spot_size / 2.0 if spec == 'SpotLight' else None
+            distance = reference_distance(origin, radius, boxes, axis, cut_off)
+            fade = x3d_attenuation_factor(attenuation, distance)
+            candela = level(unit * fade) * distance * distance if classic else unit * fade
+            energy = 4.0 * math.pi * candela
+            data[LIGHT_REFERENCE_DISTANCE_PROPERTY] = distance
+            data.use_custom_distance = True
+            data.cutoff_distance = radius
+        data[LIGHT_ENERGY_PER_INTENSITY_PROPERTY] = energy / unit
+        data.energy = energy if intensity > 0.0 else 0.0
+    scene["x3d_lighting_model"] = 'classic' if classic else 'physical'
+    scene["x3d_headlight_lux"] = level(1.0)
+
+
 def resolve_circle_divisions(value=None, default=16):
     """Segments for Sphere, Cylinder, Cone and the Geometry2D circles: the import option when given, else the
     BLENDER_X3D_CIRCLE_DIV environment variable (for headless pipelines), else `default`; clamped to 3..512."""
@@ -4691,6 +4814,11 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             bpycollection, vrmlname, bpydata, geom, geom_spec,
             node, bpymat, tex_has_alpha, texmtx,
             ancestry, global_matrix, solidify, solidify_value)
+        if appr is not None and geom_spec not in LINE_POINT_SPECS and node.blendObject is not None:
+            if appr.getChildBySpec('PhysicalMaterial') is not None:
+                lit_surfaces.append((node.blendObject, 'physical'))
+            elif appr.getChildBySpec(('Material', 'TwoSidedMaterial')) is not None:
+                lit_surfaces.append((node.blendObject, 'classic'))
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
@@ -4829,6 +4957,16 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     bpyob.select_set(True)
 
     bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
+    attenuation = None
+    radius = 100.0
+    if spec != 'DirectionalLight':
+        attenuation = node.getFieldAsFloatTuple('attenuation', None, ancestry)
+        if attenuation is not None and len(attenuation) == 3:
+            bpylamp[LIGHT_ATTENUATION_PROPERTY] = [float(a) for a in attenuation]
+        else:
+            attenuation = None
+        radius = bpylamp.cutoff_distance
+    imported_lights.append((bpyob, spec, node.getFieldAsFloat('intensity', 1.0, ancestry), attenuation, radius))
 
 
 # -----------------------------------------------------------------------------------
@@ -6253,15 +6391,21 @@ def load(context,
          solidify=False,
          solidify_value=0.1,
          circle_divisions=None,
-         color_space=None
+         color_space=None,
+         light_units=None
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
-    color_space: 'AS_IS' or 'SRGB' (see COLOUR_SPACES; None or 'AUTO': BLENDER_X3D_COLOR_SPACE, else 'AS_IS')."""
-    global colour_space
+    color_space: 'AS_IS' or 'SRGB' (see COLOUR_SPACES; None or 'AUTO': BLENDER_X3D_COLOR_SPACE, else 'AS_IS').
+    light_units: 'BLENDER' or 'X_ITE' (see LIGHT_UNITS; None or 'AUTO': BLENDER_X3D_LIGHT_UNITS, else X_ITE with
+    the SRGB colour space and BLENDER with AS_IS)."""
+    global colour_space, lighting_units
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
     colour_space = resolve_colour_space(color_space)
+    lighting_units = resolve_light_units(light_units, colour_space)
+    imported_lights.clear()
+    lit_surfaces.clear()
 
     if import_target in {"MODERN", "X3D40", "MODERN_INLINE"}:
         from .parse_x3d40 import parse_file
@@ -6286,5 +6430,6 @@ def load(context,
                 solidify=solidify,
                 solidify_value=solidify_value
                 )
+    finalize_light_units(context.scene if context is not None else None, lighting_units)
 
     return {'FINISHED'}

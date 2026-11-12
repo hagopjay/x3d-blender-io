@@ -202,6 +202,8 @@ class IRLight:
     radius: float | None = None
     beam_width: float | None = None
     cut_off_angle: float | None = None
+    # X3D attenuation (a0 a1 a2) of a point or spot light, written only when an import kept it.
+    attenuation: tuple[float, float, float] | None = None
     location: tuple[float, float, float] = (0.0, 0.0, 0.0)
     direction: tuple[float, float, float] = (0.0, 0.0, -1.0)
     # X3D 4.0 shadows (default FALSE); shadowIntensity (default 1) is written only when set.

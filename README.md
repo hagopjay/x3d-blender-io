@@ -68,12 +68,54 @@ writes them back, so an imported scene keeps them through export (the X3D 3.3 wr
 | `x3d_viewpoint_description` | camera object | the Viewpoint `description` | `description` (the camera name when there is none) |
 | `x3d_ambient_intensity`, `x3d_shadow_intensity` | light data | the light's `ambientIntensity` and `shadowIntensity` | the same fields |
 | `x3d_intensity` | light data | the light's `intensity` in the file; it marks the light as imported | nothing by itself: the light's energy is written as `intensity` without the cap at 1 that lights made in Blender get |
+| `x3d_attenuation` | light data | a point or spot light's `attenuation`, when the file sets it | `attenuation` (also by the X3D 3.3 writer) |
+| `x3d_energy_per_intensity` | light data | Blender energy per unit of intensity, set by an import in **X_ITE** light units (below) | the divisor that turns the energy back into `intensity` (also in the X3D 3.3 writer); without it, 1.75 for point and spot lights and 1 for a sun |
+| `x3d_reference_distance` | light data | the distance (m) at which an **X_ITE**-units import matched a point or spot light | nothing |
+| `x3d_lighting_model`, `x3d_headlight_lux` | scene | from an **X_ITE**-units import: `classic` or `physical` (the majority of lit shapes), and the lux an X3D headlight should get in a glTF viewer (pi or 1) | nothing |
 
 Two fields map onto Blender settings instead: a light's `shadows` (X3D default `false`) is its *Cast Shadow* switch, and a
 Shape's `castShadow` is the object's shadow visibility. A light imported from X3D keeps an `intensity` above 1 on the
 X3D 4.0 path, whose schema sets no upper limit. A light made in Blender is still capped at 1 (1.75 W for point and spot
 lights, strength 1 for a sun): watts have no fixed X3D scale and the writer emits no attenuation, so Blender's default
 1000 W point light would otherwise white out the scene. The X3D 3.3 writer caps every light at 1, as the 3.x schemas require.
+
+### Light units
+
+X3D gives a light an `intensity`, not watts or candela, and X_ITE 16.7.1 draws it two ways: a `PhysicalMaterial` is lit
+the glTF way (falloff 1/d² times the X3D `attenuation`, the colour over pi, in linear space), a `Material` or
+`TwoSidedMaterial` the classic way (only the X3D `attenuation`, so the default `1 0 0` does not fall off at all, in
+display space). Blender, glTF, Babylon.js and Unreal light every surface the first way. The import option
+**Light Units** (`light_units`) picks the mapping:
+
+| Light Units | DirectionalLight (sun, lux) | PointLight, SpotLight (COMPAT glTF candela; Blender watts = 4 pi cd) |
+|---|---|---|
+| **Blender** (`BLENDER`) | `i` | `1.75 i / 4 pi` = 0.139 `i` (the exporters' round trip) |
+| **As X_ITE draws** (`X_ITE`), physical scene | `i` | `i · att(d)`: exact at every distance for `attenuation 1 0 0` |
+| **As X_ITE draws** (`X_ITE`), classic scene | `pi · lin(i)` | `pi · lin(i · att(d)) · d²`: exact at `d` |
+
+`lin` is the sRGB curve, `att(d) = 1 / max(a0 + a1 d + a2 d², 1)`, and `d` is the light's reference distance: the median
+distance from the light to the bounding-box centres of the shapes it reaches (within its `radius`, inside a spot light's
+cone), never less than a shape's half diagonal, 1 m when it reaches none. A scene is classic when most of its lit shapes
+have a `Material` or `TwoSidedMaterial`. In **X_ITE** units the light's `radius` becomes its glTF `range`. **Auto**, the
+default, reads the `BLENDER_X3D_LIGHT_UNITS` environment variable, else follows the Colour Space: **X_ITE** with **sRGB,
+as X_ITE draws**, **Blender** with **As Is**. The X3D export writes the file's `intensity`, `attenuation` and `radius`
+back with either units.
+
+Measured on 12 Nov 2026, X_ITE 16.7.1 on the X3D against Babylon.js 9.32.0 on the glb (Blender 5.3, COMPAT light units),
+headless Chrome 153 with SwiftShader, centre of a 0.8 grey patch, 0-255:
+
+| Probe | X_ITE | Blender units | X_ITE units |
+|---|---|---|---|
+| classic Material, DirectionalLight 1 | 204 | 120 | 203 |
+| PhysicalMaterial, DirectionalLight 0.3 | 78 | 78 | 78 |
+| PhysicalMaterial, PointLight 1 at 2 m | 74 | 30 | 74 |
+| PhysicalMaterial, PointLight 1, attenuation `1 0 0.2` | 57 | 30 | 56 |
+| classic Material, PointLight 1 at 2 m (the reference distance) | 204 | 27 | 207 |
+
+What a glTF light cannot copy: a classic scene's point lights fall off as 1/d² away from the reference distance, and
+X_ITE's display-space Lambert makes grazing light brighter than a linear one (a 0.8 grey at 58° from the light: 109 in
+X_ITE, 170 in Babylon.js at the reference distance). The X3D headlight is not imported; `x3d_headlight_lux` says what a
+viewer should give it.
 
 An X3D `Switch` imports every child, so nothing is lost, but shows only the one its `whichChoice` names, as an X3D
 browser does: the others are hidden in the viewport and the render and tagged `x3d_switch_hidden` (-1, the default,

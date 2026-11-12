@@ -312,6 +312,8 @@ def _light_xml(light, defs: _DefNames, indent):
         attrs.append(f'direction="{_fmt3(light.direction)}"')
         return f"{indent}<DirectionalLight {' '.join(attrs)} />\n"
     attrs.append(f'location="{_fmt3(light.location)}"')
+    if light.attenuation is not None:
+        attrs.append(f'attenuation="{_fmt3(light.attenuation)}"')
     if light.radius is not None:
         attrs.append(f'radius="{_fmt(light.radius)}"')
     if light.light_type == "SPOT":
