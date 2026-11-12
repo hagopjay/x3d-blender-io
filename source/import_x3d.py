@@ -1744,8 +1744,9 @@ def srgb_to_linear(srgb_value):
 def set_new_float_color_attribute(bpymesh, color_data, name: str = "ColorPerCorner", convert_to_linear: bool = True):
     """Uses the new blender api to apply colors to a mesh as vertex colors (domain face corner)"""
     if (convert_to_linear):
-        # convert color spaces to account for api changes from legacy to newer api
-        color_data = [srgb_to_linear(col_val) for col_val in color_data]
+        # convert color spaces to account for api changes from legacy to newer api; every fourth value is alpha,
+        # which is not a colour (a ColorRGBA alpha of 0.5 used to become 0.21)
+        color_data = [col_val if i % 4 == 3 else srgb_to_linear(col_val) for i, col_val in enumerate(color_data)]
     # add new color attribute
     bpymesh.color_attributes.new(name, 'FLOAT_COLOR', 'CORNER')
     bpymesh.color_attributes[name].data.foreach_set("color", color_data)
@@ -2218,8 +2219,10 @@ def importMesh_IndexedFaceSet(geom, ancestry):
 
         if color_per_vertex:
             # Mesh must be validated before assigning colors, but validation might
-            # reorder corners. We must store colors in a temporary attribute
-            set_new_float_color_attribute(bpymesh, cco, name="temp_custom_colors")
+            # reorder corners. We must store colors in a temporary attribute, as they
+            # are: they go from sRGB to linear once, when the final attribute is set
+            # (converting here too made a Color of 0.5 come out as 0.04, not 0.21)
+            set_new_float_color_attribute(bpymesh, cco, name="temp_custom_colors", convert_to_linear=False)
         else:
             set_new_float_color_attribute(bpymesh, cco)
 
@@ -2306,6 +2309,11 @@ def importMesh_ElevationGrid(geom, ancestry):
     z_dim = geom.getFieldAsInt('zDimension', 0, ancestry)
     z_spacing = geom.getFieldAsFloat('zSpacing', 1, ancestry)
     ccw = geom.getFieldAsBool('ccw', True, ancestry)
+    if len(height) < x_dim * z_dim:
+        # A grid whose heights come later (a Script or ROUTE into set_height) has none in the file. The missing
+        # heights are 0, as X_ITE draws them, instead of the whole import stopping with an IndexError.
+        logger.warning("ElevationGrid %d x %d has %d heights; the missing ones are 0", x_dim, z_dim, len(height))
+        height = list(height) + [0.0] * (x_dim * z_dim - len(height))
 
     # The spec assumes a certain ordering of quads; outer loop by z, inner by x
     bpymesh = bpy.data.meshes.new(name="ElevationGrid")
@@ -2600,11 +2608,44 @@ def importMesh_Extrusion(geom, ancestry):
 # Line and point sets
 
 
+def _coloured_line_mesh(name, polylines):
+    """A mesh of loose edges for polylines [(points, rgba per point)], each polyline with its own vertices, and the
+    colours as the LINE_COLOUR_ATTRIBUTE. Blender curves have no per-vertex colour, and only a mesh's colour attribute
+    reaches the glTF (COLOR_0)."""
+    verts, edges, colours = [], [], []
+    for points, rgba in polylines:
+        if len(points) < 2:
+            continue
+        base = len(verts)
+        verts.extend(tuple(p[:3]) for p in points)
+        colours.extend(rgba)
+        edges.extend((base + i, base + i + 1) for i in range(len(points) - 1))
+    if not edges:
+        return None
+    bpymesh = bpy.data.meshes.new(name)
+    bpymesh.from_pydata(verts, edges, [])
+    return bpymesh, colours
+
+
 def importMesh_LineSet(geom, ancestry):
     # TODO: line display properties are ignored
-    # Per-vertex color is ignored
     coord = geom.getChildBySpec('Coordinate')
     src_points = coord.getFieldAsArray('point', 3, ancestry, conversion_scale)
+    colours, kind = x3d_point_colours(geom, ancestry)
+    counts = [int(n) for n in geom.getFieldAsArray('vertexCount', 0, ancestry)]
+    if kind and len(colours) >= sum(counts):
+        # X3D LineSet colours are per vertex, in coordinate order
+        polylines, b = [], 0
+        for n in counts:
+            polylines.append((src_points[b:b + n], colours[b:b + n]))
+            b += n
+        made = _coloured_line_mesh("LineSet", polylines)
+        if made is not None:
+            set_point_colours(made[0], made[1], kind)
+            made[0].update()
+            return made[0]
+    elif kind:
+        logger.warning("LineSet: %d colours for %d vertices; colours not imported", len(colours), sum(counts))
     # Array of 3; Blender needs arrays of 4
     bpycurve = bpy.data.curves.new("LineSet", 'CURVE')
     bpycurve.dimensions = '3D'
@@ -2623,6 +2664,41 @@ def importMesh_LineSet(geom, ancestry):
         sp.points.foreach_set('co', [x for x in points()])
         b += n
     return bpycurve
+
+
+def _indexed_line_colours(geom, ancestry, points, lines, colours):
+    """The coloured mesh of an IndexedLineSet, or None (with a warning) when its colour indices don't fit.
+
+    colorPerVertex TRUE (the default): colorIndex, laid out like coordIndex, else coordIndex, picks each vertex's
+    colour. FALSE: colorIndex[i], else i, picks polyline i's colour (X3D 4.0, 11.4.5)."""
+    per_vertex = geom.getFieldAsBool('colorPerVertex', True, ancestry)
+    color_index = [int(i) for i in geom.getFieldAsArray('colorIndex', 0, ancestry)]
+    polylines = []
+    try:
+        if per_vertex:
+            if color_index:
+                runs, run = [], []
+                for i in color_index:
+                    if i < 0:
+                        runs.append(run)
+                        run = []
+                    else:
+                        run.append(i)
+                runs.append(run)
+            else:
+                runs = lines
+            for line, run in zip(lines, runs):
+                if len(run) < len(line):
+                    raise IndexError("colorIndex is shorter than coordIndex")
+                polylines.append(([points[i] for i in line], [colours[c] for c in run[:len(line)]]))
+        else:
+            for n, line in enumerate(l for l in lines if l):
+                c = colours[color_index[n] if color_index else n]
+                polylines.append(([points[i] for i in line], [c] * len(line)))
+    except IndexError as exc:
+        logger.warning("IndexedLineSet: colours not imported (%s)", exc)
+        return None
+    return _coloured_line_mesh('IndexedLineSet', polylines)
 
 
 def importMesh_IndexedLineSet(geom, ancestry):
@@ -2651,8 +2727,14 @@ def importMesh_IndexedLineSet(geom, ancestry):
             line.append(int(il))
     lines.append(line)
 
-    # vcolor = geom.getChildByName('color')
-    # blender doesn't have per vertex color
+    colours, kind = x3d_point_colours(geom, ancestry)
+    if kind:
+        made = _indexed_line_colours(geom, ancestry, points, lines, colours)
+        if made is not None:
+            bpymesh, rgba = made
+            set_point_colours(bpymesh, rgba, kind)
+            bpymesh.update()
+            return bpymesh
 
     bpycurve = bpy.data.curves.new('IndexedCurve', 'CURVE')
     bpycurve.dimensions = '3D'
@@ -2684,12 +2766,15 @@ def importMesh_PointSet(geom, ancestry):
     else:
         points = []
 
-    # vcolor = geom.getChildByName('color')
-    # blender doesn't have per vertex color
-
     bpymesh = bpy.data.meshes.new("PointSet")
     bpymesh.vertices.add(len(points))
     bpymesh.vertices.foreach_set("co", [a for v in points for a in v])
+
+    colours, kind = x3d_point_colours(geom, ancestry)      # one colour per point
+    if kind and len(colours) >= len(points):
+        set_point_colours(bpymesh, colours[:len(points)], kind)
+    elif kind:
+        logger.warning("PointSet: %d colours for %d points; colours not imported", len(colours), len(points))
 
     # No need to validate
     bpymesh.update()
@@ -2711,6 +2796,41 @@ GLOBALS['CIRCLE_DETAIL'] = 12
 # glTF that Unreal and Babylon.js read all showed the facets.
 SMOOTH_PRIMITIVES = frozenset({'Sphere', 'Cylinder', 'Cone'})
 CIRCLE_DIV_RANGE = (3, 512)
+
+
+# X_ITE and Castle Game Engine, by default (their LINEAR_WHEN_PHYSICAL_MATERIAL colour space), draw the colours of a
+# Material, TwoSidedMaterial and UnlitMaterial as sRGB values and those of a PhysicalMaterial as linear ones. Blender,
+# glTF and Unreal read every material colour as linear. 'AS_IS' passes X3D colours through unchanged (this importer's
+# behaviour so far); 'SRGB' converts the classic materials' colours from sRGB to linear, so Blender and every glTF
+# viewer show what X_ITE shows. Measured on 12 Nov 2026 (X_ITE 16.7, Babylon.js 9.32, headless Chrome): an
+# emissiveColor of 0.5 is 128 in X_ITE, 186 in Babylon.js from the glb made as is, 128 from the glb made with SRGB.
+# Color and ColorRGBA values have always been converted (set_new_float_color_attribute). The X3D export does not
+# convert back yet, so SRGB is for imports that are rendered, not round-tripped.
+COLOUR_SPACES = ('AS_IS', 'SRGB')
+COLOUR_SPACE_ALIASES = {"X_ITE": "SRGB", "XITE": "SRGB", "LINEAR_WHEN_PHYSICAL_MATERIAL": "SRGB", "LINEAR": "AS_IS",
+                        "NONE": "AS_IS", "AUTO": ""}
+colour_space = 'AS_IS'
+
+
+def resolve_colour_space(value=None, default='AS_IS'):
+    """The import option when given (not AUTO), else the BLENDER_X3D_COLOR_SPACE environment variable (for headless
+    pipelines), else `default`. 'X_ITE' is accepted for 'SRGB'."""
+    raw = COLOUR_SPACE_ALIASES.get(str(value or "").strip().upper(), str(value or "").strip().upper())
+    if not raw:
+        env = os.environ.get("BLENDER_X3D_COLOR_SPACE", "").strip().upper()
+        raw = COLOUR_SPACE_ALIASES.get(env, env) or default
+    if raw not in COLOUR_SPACES:
+        logger.warning("ImportX3D: colour space %r is not one of %s; using %s", raw, ", ".join(COLOUR_SPACES), default)
+        return default
+    return raw
+
+
+def classic_colour(rgb):
+    """A Material, TwoSidedMaterial or UnlitMaterial colour as Blender should hold it (see COLOUR_SPACES)."""
+    rgb = [float(c) for c in list(rgb)[:3]]
+    if colour_space == 'SRGB':
+        return [srgb_to_linear(max(0.0, c)) for c in rgb]
+    return rgb
 
 
 def resolve_circle_divisions(value=None, default=16):
@@ -2753,38 +2873,192 @@ def smooth_primitive(bpymesh, spec):
             bpymesh.edges[edge_index[key]].use_edge_sharp = True
 
 
-# X3D draws line and point geometry unlit (X3D 4.0, 17.2.2.3): in the material's emissiveColor, or in the colours of
-# a Color node. The surface material a Shape shares with other Shapes stays as it is; lines and points get an
-# unlit copy (black base, no specular, the emission carrying the colour), cached per import.
+# X3D draws line and point geometry unlit (X3D 4.0, 17.2.2.3): in the colours of a Color or ColorRGBA node when the
+# geometry has one, else in the Material's emissiveColor (black when the Material does not set it), else white when
+# the Appearance has no material. The surface material a Shape shares with other Shapes stays as it is; lines and
+# points get their own unlit material, cached per import.
 LINE_POINT_SPECS = frozenset({'IndexedLineSet', 'LineSet', 'PointSet', 'Polyline2D', 'Polypoint2D', 'Arc2D', 'Circle2D'})
+LINE_COLOUR_ATTRIBUTE = "Color"     # a point or line set's X3D colours, one per vertex (POINT domain)
 line_material_cache = {}
 
 
-def line_point_material(bpymat):
-    """The unlit copy of `bpymat` for line and point geometry (made once per import)."""
-    hit = line_material_cache.get(bpymat.name)
+def x3d_unlit_colour(appr, ancestry):
+    """(rgb, alpha) X3D draws a line or point set in when it has no Color node.
+
+    The emissiveColor of the Appearance's Material, TwoSidedMaterial (front), PhysicalMaterial or UnlitMaterial
+    (whose default is white), and 1 - transparency. With no Appearance or no material node, lighting is off and the
+    colour is white (X3D 4.0, 17.2.2.3)."""
+    mat = appr.getChildBySpec(('Material', 'TwoSidedMaterial', 'PhysicalMaterial', 'UnlitMaterial')) if appr else None
+    if mat is None:
+        return (1.0, 1.0, 1.0), 1.0
+    default = [1.0, 1.0, 1.0] if mat.getSpec() == 'UnlitMaterial' else [0.0, 0.0, 0.0]
+    rgb = tuple(float(c) for c in mat.getFieldAsFloatTuple('emissiveColor', default, ancestry)[:3])
+    if mat.getSpec() != 'PhysicalMaterial':
+        rgb = tuple(classic_colour(rgb))
+    alpha = 1.0 - mat.getFieldAsFloat('transparency', 0.0, ancestry)
+    return rgb, max(0.0, min(1.0, alpha))
+
+
+def x3d_point_colours(geom, ancestry):
+    """The geometry's Color / ColorRGBA values as RGBA tuples, and 'RGB' or 'RGBA' (([], None) without one)."""
+    node = geom.getChildBySpec(['ColorRGBA', 'Color'])
+    if node is None:
+        return [], None
+    if node.getSpec() == 'ColorRGBA':
+        return [tuple(float(x) for x in c[:4]) for c in node.getFieldAsArray('color', 4, ancestry)], 'RGBA'
+    return [tuple(float(x) for x in c[:3]) + (1.0,) for c in node.getFieldAsArray('color', 3, ancestry)], 'RGB'
+
+
+def set_point_colours(bpymesh, rgba, kind):
+    """One X3D colour per vertex as the POINT-domain attribute LINE_COLOUR_ATTRIBUTE. RGB goes from sRGB to linear as
+    for faces (set_new_float_color_attribute); alpha is not a colour and is kept as it is."""
+    flat = [v for (r, g, b, a) in rgba for v in (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), a)]
+    attr = bpymesh.color_attributes.new(LINE_COLOUR_ATTRIBUTE, 'FLOAT_COLOR', 'POINT')
+    attr.data.foreach_set("color", flat)
+    bpymesh["x3d_colour_kind"] = kind
+
+
+def line_colour_kind(bpydata):
+    """'RGB' / 'RGBA' when the imported line or point data carries its X3D colours, else None."""
+    if isinstance(bpydata, bpy.types.Mesh) and LINE_COLOUR_ATTRIBUTE in bpydata.color_attributes:
+        return bpydata.get("x3d_colour_kind", 'RGB')
+    return None
+
+
+def wire_unlit(mat, colour, alpha_source=None, alpha_value=1.0, out=None):
+    """Draw `colour` (an output socket) unlit on `mat`: Emission (strength 1) for camera rays and Transparent BSDF for
+    every other ray (the light-path mix Blender's glTF importer uses for KHR_materials_unlit, so an unlit surface lights
+    nothing and casts no shadow, as in X3D), then a Mix Shader with Transparent BSDF when there is alpha.
+
+    Both exporters read this shape: Blender's glTF exporter writes KHR_materials_unlit with the colour as
+    baseColorFactor, baseColorTexture or COLOR_0, and alpha as alphaMode BLEND; this add-on's X3D export finds the
+    Emission node and writes an unlit material in its colour."""
+    tree = mat.node_tree
+    if out is None:
+        out = next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output), None) \
+            or next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL'), None) or tree.nodes.new('ShaderNodeOutputMaterial')
+    x, y = out.location
+    emission = tree.nodes.new('ShaderNodeEmission')
+    emission.inputs['Strength'].default_value = 1.0
+    emission.location = (x - 400, y - 60)
+    tree.links.new(colour, emission.inputs['Color'])
+    path = tree.nodes.new('ShaderNodeLightPath')
+    path.location = (x - 600, y + 250)
+    indirect = tree.nodes.new('ShaderNodeBsdfTransparent')
+    indirect.location = (x - 400, y + 60)
+    unlit = tree.nodes.new('ShaderNodeMixShader')
+    unlit.location = (x - 200, y)
+    tree.links.new(path.outputs['Is Camera Ray'], unlit.inputs[0])
+    tree.links.new(indirect.outputs[0], unlit.inputs[1])
+    tree.links.new(emission.outputs[0], unlit.inputs[2])
+    surface = unlit.outputs[0]
+    for link in list(out.inputs['Surface'].links):
+        tree.links.remove(link)
+    if alpha_source is not None or alpha_value < 1.0:
+        mix = tree.nodes.new('ShaderNodeMixShader')
+        clear = tree.nodes.new('ShaderNodeBsdfTransparent')
+        mix.location, clear.location = (x - 100, y - 200), (x - 300, y - 300)
+        if alpha_source is not None:
+            tree.links.new(alpha_source, mix.inputs[0])
+        else:
+            mix.inputs[0].default_value = alpha_value
+        tree.links.new(clear.outputs[0], mix.inputs[1])
+        tree.links.new(surface, mix.inputs[2])
+        surface = mix.outputs[0]
+        mat.surface_render_method = "BLENDED"
+    tree.links.new(surface, out.inputs['Surface'])
+    return mat
+
+
+MATERIAL_SPECS = ('Material', 'TwoSidedMaterial', 'PhysicalMaterial', 'UnlitMaterial')
+SHADER_SPECS = ('ComposedShader', 'PackagedShader', 'ProgramShader')
+unlit_surface_cache = {}
+
+
+def draws_unlit(appr):
+    """True when X3D draws a surface unlit because its Appearance has no material node (or it has no Appearance):
+    lighting is off and the colour is the texture's, else the Color node's, else white (X3D 4.0, 17.2.2.3). An
+    Appearance with a shader is left to the shader, which only a browser that runs it can draw."""
+    if appr is None:
+        return True
+    return appr.getChildBySpec(MATERIAL_SPECS) is None and appr.getChildBySpec(SHADER_SPECS) is None
+
+
+def unlit_surface_material(bpymat, vertex_colours=False):
+    """The unlit copy of the default material the importer made for a surface without a material node: whatever feeds
+    its Base Color (the texture, else the Color node's attribute), else white, drawn unlit (wire_unlit), with the
+    Alpha when it is linked or below 1. Before, such a surface was lit grey (0.8), and a Color node's surface came out
+    black in a scene without lights."""
+    hit = unlit_surface_cache.get((bpymat.name, vertex_colours))
     if hit is not None:
         return hit
     tree = bpymat.node_tree
-    if tree is None or not any(n.type == 'BSDF_PRINCIPLED' for n in tree.nodes):
+    bsdf = next((n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED'), None) if tree else None
+    if bsdf is None:
         return bpymat
     mat = bpymat.copy()
-    mat.name = bpymat.name + "_lines"
+    mat.name = bpymat.name + "_unlit"
     tree = mat.node_tree
     bsdf = next(n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED')
-    base = bsdf.inputs["Base Color"]
-    emission = bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission")
-    for link in list(base.links):            # vertex colours: they colour the emission, not a diffuse response
-        source = link.from_socket
-        tree.links.remove(link)
-        if emission is not None and not emission.links:
-            tree.links.new(source, emission)
-    base.default_value = (0.0, 0.0, 0.0, 1.0)
-    for name, value in (("Specular IOR Level", 0.0), ("Roughness", 1.0), ("Emission Strength", 1.0)):
-        if name in bsdf.inputs:
-            bsdf.inputs[name].default_value = value
-    line_material_cache[bpymat.name] = mat
-    line_material_cache[mat.name] = mat
+    out = next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output), None) \
+        or next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL'), None)
+    if out is None:
+        out = tree.nodes.new('ShaderNodeOutputMaterial')
+    base, alpha = bsdf.inputs['Base Color'], bsdf.inputs['Alpha']
+    if base.links:
+        colour = base.links[0].from_socket
+    elif vertex_colours:                       # the Color node's values, as the face importers store them
+        vcol = tree.nodes.new('ShaderNodeVertexColor')
+        vcol.layer_name = "ColorPerCorner"
+        vcol.location = (bsdf.location[0], bsdf.location[1] + 200)
+        colour = vcol.outputs['Color']
+    else:
+        rgb = tree.nodes.new('ShaderNodeRGB')
+        rgb.outputs[0].default_value = (1.0, 1.0, 1.0, 1.0)
+        rgb.location = (bsdf.location[0], bsdf.location[1] + 200)
+        colour = rgb.outputs[0]
+    alpha_source = alpha.links[0].from_socket if alpha.links else None
+    wire_unlit(mat, colour, alpha_source, float(alpha.default_value), out)
+    tree.nodes.remove(bsdf)
+    unlit_surface_cache[(bpymat.name, vertex_colours)] = mat
+    return mat
+
+
+def line_point_material(name, rgb, alpha=1.0, colours=None):
+    """The unlit material lines and points are drawn with (made once per import for each colour, alpha and kind).
+
+    colours None: the one colour `rgb`. 'RGB' / 'RGBA': the vertex colours in LINE_COLOUR_ATTRIBUTE, which replace
+    the emissiveColor; a ColorRGBA's alpha replaces 1 - transparency.
+
+    The node tree is wire_unlit's, which Blender's glTF exporter writes as KHR_materials_unlit and the X3D export as an
+    unlit material: the glb holds that baseColorFactor, and COLOR_0 for a Color node, what X_ITE, Babylon.js and
+    three.js draw as X3D does. (Before, an unlit copy of the Principled material carried the colour as emission and the
+    Color node as a link into Emission Color, which no glTF can express: coloured points came out white.)"""
+    rgb = tuple(max(0.0, float(c)) for c in rgb[:3])
+    alpha = max(0.0, min(1.0, float(alpha)))
+    key = (name, tuple(round(c, 6) for c in rgb), round(alpha, 6), colours)
+    hit = line_material_cache.get(key)
+    if hit is not None:
+        return hit
+    mat = bpy.data.materials.new(name + "_lines")
+    if mat.node_tree is None:                     # Blender before 5.0 makes the node tree on request
+        mat.use_nodes = True
+    tree = mat.node_tree
+    tree.nodes.clear()
+    out = tree.nodes.new('ShaderNodeOutputMaterial')
+    out.location = (300, 0)
+    if colours:
+        src = tree.nodes.new('ShaderNodeVertexColor')
+        src.layer_name = LINE_COLOUR_ATTRIBUTE
+        colour = src.outputs['Color']
+    else:
+        src = tree.nodes.new('ShaderNodeRGB')
+        src.outputs[0].default_value = rgb + (1.0,)
+        colour = src.outputs[0]
+    src.location = (-500, 0)
+    wire_unlit(mat, colour, src.outputs['Alpha'] if colours == 'RGBA' else None, alpha, out)
+    mat.diffuse_color = rgb + (alpha,)            # the viewport's solid-mode colour
+    line_material_cache[key] = mat
     return mat
 
 
@@ -3249,12 +3523,12 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     # All values between 0.0 and 1.0, defaults from VRML docs.
     if mat:
         mat_name = mat.getDefName()
-        diff_color = mat.getFieldAsFloatTuple('diffuseColor', [0.8, 0.8, 0.8], ancestry)
-        emit_color = mat.getFieldAsFloatTuple('emissiveColor', [0.0, 0.0, 0.0], ancestry)
+        diff_color = classic_colour(mat.getFieldAsFloatTuple('diffuseColor', [0.8, 0.8, 0.8], ancestry))
+        emit_color = classic_colour(mat.getFieldAsFloatTuple('emissiveColor', [0.0, 0.0, 0.0], ancestry))
         shininess = mat.getFieldAsFloat('shininess', 0.2, ancestry)
         alpha = 1.0 - mat.getFieldAsFloat('transparency', 0.0, ancestry)
         # ambientIntensity scales the lights' own ambientIntensity (0 by default in X3D): not mapped.
-        specular_color = mat.getFieldAsFloatTuple('specularColor', [0.0, 0.0, 0.0], ancestry)
+        specular_color = classic_colour(mat.getFieldAsFloatTuple('specularColor', [0.0, 0.0, 0.0], ancestry))
     else: # object with no appearance node (e.g. only vertex colors), thus use default diffuse material
         mat_name = None
         diff_color = [0.8, 0.8, 0.8]
@@ -3694,7 +3968,7 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
     alpha = max(0.0, min(1.0, 1.0 - transparency))
 
     if unlit:
-        emissive = mat.getFieldAsFloatTuple('emissiveColor', [1.0, 1.0, 1.0], ancestry)
+        emissive = classic_colour(mat.getFieldAsFloatTuple('emissiveColor', [1.0, 1.0, 1.0], ancestry))
         bpymat_wrap.base_color = emissive
         bpymat_wrap.emission_color = emissive
         if bsdf:
@@ -4391,8 +4665,10 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 
     bpydata = None
     geom_spec = geom.getSpec()
-    if bpymat is not None and geom_spec in LINE_POINT_SPECS:
-        bpymat = line_point_material(bpymat)
+    if geom_spec not in LINE_POINT_SPECS and draws_unlit(appr):
+        if bpymat is None:                     # no Appearance at all: X3D draws it white, unlit
+            bpymat = appearance_CreateDefaultMaterial().material
+        bpymat = unlit_surface_material(bpymat, is_vcol)
 
     # ccw is handled by every geometry importer separately; some
     # geometries are easier to flip than others
@@ -4403,6 +4679,11 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if bpydata is None:
             logger.warning('ImportX3D warning: empty shape, skipping node "%s"' % vrmlname)
             return
+
+        if geom_spec in LINE_POINT_SPECS:
+            rgb, alpha = x3d_unlit_colour(appr, ancestry)
+            name = bpymat.name if bpymat is not None else (vrmlname or geom_spec)
+            bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata))
 
         # There are no geometry importers that can legally return
         # no object.  It's either a bpy object, or an exception
@@ -5775,9 +6056,10 @@ def load_web3d(
 
     # NOTE - reset material cache
     # (otherwise we might get "StructRNA of type Material has been removed" errors)
-    global material_cache, texture_cache, image_alpha_cache, line_material_cache
+    global material_cache, texture_cache, image_alpha_cache, line_material_cache, unlit_surface_cache
     material_cache = {}
     line_material_cache = {}
+    unlit_surface_cache = {}
     # Same reason for textures: a cached Image outlives File > New and the next import fails with
     # "StructRNA of type Image has been removed".
     texture_cache = {}
@@ -5970,12 +6252,16 @@ def load(context,
          as_collection=False,
          solidify=False,
          solidify_value=0.1,
-         circle_divisions=None
+         circle_divisions=None,
+         color_space=None
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
-    16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more."""
+    16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
+    color_space: 'AS_IS' or 'SRGB' (see COLOUR_SPACES; None or 'AUTO': BLENDER_X3D_COLOR_SPACE, else 'AS_IS')."""
+    global colour_space
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
+    colour_space = resolve_colour_space(color_space)
 
     if import_target in {"MODERN", "X3D40", "MODERN_INLINE"}:
         from .parse_x3d40 import parse_file
