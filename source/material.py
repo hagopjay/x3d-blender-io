@@ -349,6 +349,46 @@ def _resolve_float_socket(socket, fallback, visited=None):
     return _socket_numeric_value(socket, fallback)
 
 
+
+_EVALUABLE_MATH = {"MULTIPLY", "ADD", "SUBTRACT", "DIVIDE", "POWER", "MINIMUM", "MAXIMUM", "MULTIPLY_ADD"}
+
+
+def _float_socket_evaluable(socket, visited=None):
+    """True when _resolve_float_socket really computes this socket from constants.
+
+    The resolver cannot evaluate geometry-dependent nodes (Geometry, Separate XYZ, textures) and treats a Math
+    operation it does not know (greater than, modulo, ...) as "the first input". A strength driven through such a
+    chain, for example a contour mask built from world height, therefore comes out as an arbitrary constant (26 for
+    an 'altitude x 26' node) instead of a 0 to 1 mask.
+    """
+    if socket is None:
+        return True
+    if visited is None:
+        visited = set()
+    links = getattr(socket, "links", None)
+    if not links:
+        return True
+    node = links[0].from_node
+    if id(node) in visited:
+        return False
+    visited = visited | {id(node)}
+    kind = node.bl_idname
+    if kind == ShaderNodeTypes.VALUE:
+        return True
+    if kind == ShaderNodeTypes.REROUTE:
+        return _float_socket_evaluable(node.inputs[0], visited) if node.inputs else True
+    if kind == ShaderNodeTypes.MATH:
+        if getattr(node, "operation", "") not in _EVALUABLE_MATH:
+            return False
+        count = 3 if node.operation == "MULTIPLY_ADD" else 2
+        return all(_float_socket_evaluable(node.inputs[i], visited) for i in range(min(count, len(node.inputs))))
+    if kind == ShaderNodeTypes.CLAMP:
+        return all(_float_socket_evaluable(node.inputs.get(n), visited) for n in ("Value", "Min", "Max"))
+    if kind == ShaderNodeTypes.MAP_RANGE:
+        return all(_float_socket_evaluable(node.inputs.get(n), visited) for n in ("Value", "From Min", "From Max", "To Min", "To Max"))
+    return False
+
+
 def _find_image_node_from_socket(socket, *, usage, visited=None):
     if socket is None:
         return None
@@ -484,7 +524,13 @@ def analyze_material(material):
         base_color = base_color[:3] + (alpha,)
         emission_socket_name = "Emission Color" if "Emission Color" in principled_node.inputs else "Emission"
         emissive_color = _resolve_rgba_socket(principled_node.inputs.get(emission_socket_name), _node_default_rgba(principled_node, emission_socket_name, emissive_color))
-        emissive_strength = _resolve_float_socket(principled_node.inputs.get("Emission Strength"), _node_default_float(principled_node, "Emission Strength", 1.0))
+        strength_socket = principled_node.inputs.get("Emission Strength")
+        if not _float_socket_evaluable(strength_socket):
+            # A procedural mask (contour lines from world height, a texture) cannot be read here, and guessing
+            # would light the whole surface at an arbitrary strength; leave the emission out.
+            emissive_strength = 0.0
+        else:
+            emissive_strength = _resolve_float_socket(strength_socket, _node_default_float(principled_node, "Emission Strength", 1.0))
         emissive_color = tuple(channel * emissive_strength for channel in emissive_color[:3]) + (base_color[3],)
         metallic = _resolve_float_socket(principled_node.inputs.get("Metallic"), _node_default_float(principled_node, "Metallic", 0.0))
         roughness = _resolve_float_socket(principled_node.inputs.get("Roughness"), _node_default_float(principled_node, "Roughness", 0.5))

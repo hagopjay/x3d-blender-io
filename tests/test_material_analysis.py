@@ -19,6 +19,7 @@ from material import (
     ShaderNodeTypes,
     _find_image_node_from_socket,
     _find_labeled_image_node,
+    _float_socket_evaluable,
     _resolve_float_socket,
     _resolve_rgba_socket,
 )
@@ -97,6 +98,34 @@ class MaterialAnalysisHelperTests(unittest.TestCase):
         _link(target, add)
 
         self.assertAlmostEqual(_resolve_float_socket(target, 0.0), 0.7)
+
+    def test_constant_chain_is_evaluable(self):
+        target = FakeSocket("Emission Strength", 0.0)
+        value = FakeNode(ShaderNodeTypes.VALUE, outputs=[FakeSocket(default_value=2.0)])
+        multiply = FakeNode(ShaderNodeTypes.MATH, inputs=[FakeSocket(default_value=0.0), FakeSocket(default_value=3.0)], operation="MULTIPLY")
+        _link(multiply.inputs[0], value)
+        _link(target, multiply)
+        self.assertTrue(_float_socket_evaluable(target))
+        self.assertTrue(_float_socket_evaluable(FakeSocket("Emission Strength", 1.0)))
+
+    def test_geometry_driven_mask_is_not_evaluable(self):
+        # Separate XYZ (reading world height) -> x 26 -> greater-than: the contour mask of the LUMEN atelier.
+        target = FakeSocket("Emission Strength", 0.0)
+        height = FakeNode("ShaderNodeSeparateXYZ", outputs=[FakeSocket(default_value=0.0)])
+        scale = FakeNode(ShaderNodeTypes.MATH, inputs=[FakeSocket(default_value=0.0), FakeSocket(default_value=26.0)], operation="MULTIPLY")
+        _link(scale.inputs[0], height)
+        mask = FakeNode(ShaderNodeTypes.MATH, inputs=[FakeSocket(default_value=0.0), FakeSocket(default_value=0.9)], operation="GREATER_THAN")
+        _link(mask.inputs[0], scale)
+        _link(target, mask)
+        self.assertFalse(_float_socket_evaluable(target))
+        self.assertFalse(_float_socket_evaluable(_link(FakeSocket("x", 0.0), height)))
+
+    def test_unknown_math_operation_is_not_evaluable(self):
+        target = FakeSocket("Emission Strength", 0.0)
+        mod = FakeNode(ShaderNodeTypes.MATH, inputs=[FakeSocket(default_value=0.5), FakeSocket(default_value=0.5)], operation="MODULO")
+        _link(target, mod)
+        self.assertFalse(_float_socket_evaluable(target))
+
 
     def test_resolves_mixrgb_color_chain(self):
         target = FakeSocket("Base Color", (0.0, 0.0, 0.0, 1.0))
