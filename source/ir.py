@@ -245,6 +245,9 @@ class IRShape:
     geometry_name: str | None = None
     material_name: str | None = None
     geometry_hint: str = "Sphere"
+    # An imported Box, Sphere, Cylinder or Cone written back as that node: {"node": ..., "fields": {...}}
+    # (extract.primitive_for_mesh); used instead of geometry_name.
+    primitive: dict | None = None
 
 
 @dataclass

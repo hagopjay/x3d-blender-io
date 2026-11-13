@@ -5,6 +5,7 @@
 __all__ = ['encode', 'decode']
 
 import logging
+import os
 logger = logging.getLogger("mfstring")
 logger.addHandler( logging.NullHandler() )
 logger.setLevel( logging.WARN )
@@ -172,3 +173,22 @@ def decode(mfstring_enc):
             raise ListEncodingError(msg)
 
     return ret_val
+
+
+def portable_path(path, base_dir=None):
+    """``path`` as a file-relative path for storing on Blender data.
+
+    Custom properties travel: Blender's glTF exporter writes them into node extras, and .blend files are shared.
+    An absolute path there names the importing machine's directories (user name, session folders), so only the part
+    relative to ``base_dir`` (the importing file's folder) is kept, with forward slashes, the way an X3D url is
+    written. A path on another drive, or with no base, keeps its file name only.
+    """
+    if not path:
+        return path
+    path = str(path)
+    if base_dir:
+        try:
+            return os.path.relpath(path, base_dir).replace(os.sep, "/")
+        except ValueError:  # another drive on Windows
+            pass
+    return os.path.basename(path)

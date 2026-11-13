@@ -30,7 +30,8 @@
   "cycles": "brag/showpieces/lumen/lumen-cycles.webp",
   "poster": "brag/showpieces/lumen/lumen-xite.webp",
   "x3d": "brag/showpieces/lumen/lumen.x3d",
-  "note": "4 MB of X3D; the glb leg is held back while a vertex-colour export bug is fixed"
+  "note": "4 MB of X3D, three shadow-casting lights, so it takes a moment to load",
+  "glb": "brag/showpieces/lumen/lumen.glb"
  },
  {
   "id": "stilllife",

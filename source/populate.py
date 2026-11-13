@@ -9,6 +9,7 @@ import os
 import bpy
 
 from .bridge_gltf import import_gltf, imported_material_names
+from .mfstring import portable_path
 from .viewpoint_fov import blender_camera_angle, render_size
 
 
@@ -74,7 +75,7 @@ def _apply_scene_metadata(id_block, ir_scene):
     if metadata.description:
         id_block["x3d_scene_description"] = metadata.description
     if ir_scene.source_path:
-        id_block["x3d_scene_source_path"] = ir_scene.source_path
+        id_block["x3d_scene_source_path"] = portable_path(ir_scene.source_path)
 
 
 def _move_object_to_collection(obj, target_collection):
@@ -155,7 +156,9 @@ def populate_scene(context, ir_scene):
             f"X3DInline_{asset_index:03d}_{_safe_name(os.path.basename(resolved_path))}",
         )
         _apply_scene_metadata(asset_collection, ir_scene)
-        root = _create_inline_root(asset_collection, asset_index, inline_asset, resolved_path)
+        # stored on Blender data (and so in glTF extras) relative to the importing file, never absolute
+        stored_path = portable_path(resolved_path, os.path.dirname(ir_scene.source_path) if ir_scene.source_path else None)
+        root = _create_inline_root(asset_collection, asset_index, inline_asset, stored_path)
         _apply_scene_metadata(root, ir_scene)
         _apply_transform(root, inline_asset.transform)
 
@@ -164,10 +167,10 @@ def populate_scene(context, ir_scene):
             if obj.parent is None:
                 obj.parent = root
             obj["x3d_inline_source"] = inline_asset.url
-            obj["x3d_inline_resolved_path"] = resolved_path
+            obj["x3d_inline_resolved_path"] = stored_path
             obj["x3d_inline_asset_index"] = asset_index
 
-        _tag_imported_materials(material_names, inline_asset, resolved_path, asset_index)
+        _tag_imported_materials(material_names, inline_asset, stored_path, asset_index)
 
         imported_assets.append(
             {
