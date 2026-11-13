@@ -40,6 +40,11 @@ SPLAT_OPACITY_ATTR = "splat_opacity"
 SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
 INLINE_URL_PROPERTY = "x3d_inline_url"
 INLINE_SOURCE_PROPERTY = "x3d_inline_source"
+# Where each Inline asset was found at import: the placeholder empty's ``session_uid`` -> absolute path. Kept in this
+# session only (an absolute path in a custom property would travel into a glb's extras and .blend files and name the
+# importing machine's folders; the portable x3d_inline_resolved_path is relative to the importing file), so the
+# export can write the Inline's url relative to its own folder (export_pipeline.resolve_inline_urls).
+INLINE_SOURCE_PATHS: dict[int, str] = {}
 # X3D light fields with no Blender setting, kept on the light data by the importer.
 LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
@@ -112,6 +117,13 @@ METADATA_NODE_TYPES = frozenset(
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+
+
+def _session_uid(obj):
+    try:
+        return int(obj.session_uid)
+    except (AttributeError, TypeError, ValueError, ReferenceError):
+        return None
 
 
 def resolve_material_model(value=None, scene=None, default='physical'):
@@ -966,7 +978,32 @@ def _world_color(world):
     return tuple(world.color[:3])
 
 
-def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
+# Blender's default camera clip range, which the export leaves out (a Viewpoint without nearDistance and farDistance).
+DEFAULT_CLIP_START = 0.1
+DEFAULT_CLIP_END = 1000.0
+
+
+def _clip_distances(data, distance_scale=1.0):
+    """(nearDistance, farDistance) of a camera for the X3D 4.0 Viewpoint, each None while it is Blender's default.
+
+    X_ITE 16.7.1 without a farDistance draws out to 1e5 (1e10 with a logarithmic depth buffer) at most from a
+    navigation near distance of 0.125: a GeoViewpoint 2.5e7 m above a 6.4e6 m globe imported with its clip range
+    (import_x3d.importGeoViewpoint_Matrix) came back from the export with none, and X_ITE drew a black frame."""
+    near = far = None
+    try:
+        start, end = float(data.clip_start) * distance_scale, float(data.clip_end) * distance_scale
+    except (AttributeError, TypeError, ValueError):
+        return None, None
+    if not math.isclose(start, DEFAULT_CLIP_START * distance_scale, rel_tol=1e-4) and start > 0.0:
+        near = start
+    if not math.isclose(end, DEFAULT_CLIP_END * distance_scale, rel_tol=1e-4) and end > 0.0:
+        far = end
+    if near is not None and far is not None and far <= near:
+        return None, None
+    return near, far
+
+
+def _extract_viewpoint(obj, local_matrix, scene=None, distance_scale=1.0) -> IRViewpoint:
     """The description is the one the importer kept, or the camera's name when there is none."""
     field_of_view = None
     if obj.data.type == "PERSP":
@@ -975,11 +1012,14 @@ def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
             # X3D measures fieldOfView across the smaller side of the view, Blender across the fitted side.
             field_of_view = x3d_field_of_view(field_of_view, obj.data.sensor_fit, *render_size(scene))
     description = obj.get(VIEWPOINT_DESCRIPTION_PROPERTY)
+    near, far = _clip_distances(obj.data, distance_scale)
     return IRViewpoint(
         name=obj.name,
         description=description if isinstance(description, str) and description else obj.name,
         transform=_matrix_transform(local_matrix),
         field_of_view=field_of_view,
+        near_distance=near,
+        far_distance=far,
     )
 
 
@@ -1279,6 +1319,10 @@ def extract_scene(
         return source_key, shapes
 
     content_frame = asset_frame(global_matrix)
+    try:
+        distance_scale = float(global_matrix.median_scale) if global_matrix is not None else 1.0
+    except (AttributeError, TypeError, ValueError):
+        distance_scale = 1.0
 
     def build_instance(obj, parent):
         if use_hierarchy and parent is not None:
@@ -1345,12 +1389,12 @@ def extract_scene(
             instance.light = _extract_light(obj, local_matrix.__class__(), ir_scene.material_model, colour_space)
             ir_scene.object_names.append(obj.name)
         elif obj.type == "CAMERA":
-            instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene)
+            instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene, distance_scale)
             ir_scene.object_names.append(obj.name)
         elif obj.type == "EMPTY":
             inline_url = obj.get(INLINE_URL_PROPERTY)
             if inline_url:
-                instance.inline = IRInlineAsset(url=str(inline_url))
+                instance.inline = IRInlineAsset(url=str(inline_url), source_path=INLINE_SOURCE_PATHS.get(_session_uid(obj)))
             ir_scene.object_names.append(obj.name)
         else:
             skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1

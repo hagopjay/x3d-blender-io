@@ -19,7 +19,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
                       METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
@@ -3349,6 +3349,7 @@ def finalize_light_units(scene, units=None):
     lit_by_node.clear()
     if scene is None:
         return
+    scene[HEADLIGHT_PROPERTY] = bool(headlight)   # the X3D 4.0 export writes the NavigationInfo headlight back as it was
     try:
         bpy.context.view_layer.update()   # world matrices of objects parented since they were made
     except (AttributeError, RuntimeError):
@@ -6551,6 +6552,7 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
         logger.warning("Can't Inline a file that is already being loaded: %s", resolved)
         return empty
     empty["x3d_inline_resolved_path"] = mfstring.portable_path(resolved, os.path.dirname(current_file_path or ""))
+    INLINE_SOURCE_PATHS[empty.session_uid] = resolved   # session only; the export rebases the url from it (D3)
 
     before = set(bpy.data.objects)
     lower = resolved.lower()

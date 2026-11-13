@@ -134,6 +134,9 @@ class IRPBRMaterial:
 @dataclass
 class IRInlineAsset:
     url: str
+    # Where the asset was found when it was imported (absolute); the export writes ``url`` relative to its own folder
+    # from it, since the url as the file gave it is relative to the folder the file lived in.
+    source_path: str | None = None
     asset_type: str = "x3d"
     transform: IRTransform = field(default_factory=IRTransform)
     import_policy: str = "native"
@@ -181,6 +184,10 @@ class IRViewpoint:
     transform: IRTransform = field(default_factory=IRTransform)
     field_of_view: float | None = None
     name: str | None = None
+    # X3D 4.0 Viewpoint nearDistance and farDistance (the camera's clip range), written only when the camera's range is
+    # not Blender's default 0.1 to 1000: a planet-scale view clips everything without them.
+    near_distance: float | None = None
+    far_distance: float | None = None
 
 
 @dataclass

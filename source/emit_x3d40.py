@@ -474,6 +474,10 @@ def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
     attrs.append(f'orientation="{_fmt4(viewpoint.transform.rotation_axis_angle)}"')
     if viewpoint.field_of_view is not None:
         attrs.append(f'fieldOfView="{_fmt(viewpoint.field_of_view)}"')
+    if viewpoint.near_distance is not None:
+        attrs.append(f'nearDistance="{_fmt_length(viewpoint.near_distance)}"')
+    if viewpoint.far_distance is not None:
+        attrs.append(f'farDistance="{_fmt_length(viewpoint.far_distance)}"')
     return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
 
 
@@ -959,9 +963,11 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     defs = _DefNames()
     geometries = ir_scene.geometry_by_name()
     materials = ir_scene.material_by_name()
-    has_lights = ir_scene.has_lights()
+    # An imported scene gets the headlight its file had (a browser's headlight lights the same faces whether or not the
+    # file has lights; X3D's default is on); a scene made in Blender has none when it has lights of its own.
+    headlight = ir_scene.headlight if ir_scene.headlight is not None else not ir_scene.has_lights()
     write(
-        f'    <NavigationInfo headlight="{"false" if has_lights else "true"}" '
+        f'    <NavigationInfo headlight="{"true" if headlight else "false"}" '
         "type='\"EXAMINE\" \"ANY\"' />\n"
     )
     if ir_scene.background is not None:
