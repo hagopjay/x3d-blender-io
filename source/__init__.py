@@ -249,9 +249,10 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
              "X3D 3.3 (Material, classic)",
              "Legacy exporter: Phong Material, lights, cameras, hierarchy. Widest viewer support"),
             ('X3D40',
-             "X3D 4.0 (PhysicalMaterial, PBR)",
-             "Physically based materials with glTF-style textures, UVs, normals, vertex colours, DEF/USE sharing, "
-             "hierarchy, lights, cameras, animation and HAnim. Gaussian splats degrade to PointSet"),
+             "X3D 4.0 (Material or PhysicalMaterial)",
+             "PhysicalMaterial (PBR) or, for a scene imported from Material-lit X3D, Material (see Materials), with "
+             "glTF-style textures, UVs, normals, vertex colours, DEF/USE sharing, hierarchy, lights, cameras, "
+             "animation and HAnim. Gaussian splats degrade to PointSet (X3D 4.1 writes GaussianSplats)"),
             ('X3D41',
              "X3D 4.1 draft (GaussianSplats)",
              "Everything in 4.0 plus the draft GaussianSplats node for splat point clouds. "
