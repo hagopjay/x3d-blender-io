@@ -86,7 +86,7 @@ class GlbValidatorGateTests(unittest.TestCase):
         assert bpy.ops.import_scene.x3d(filepath=str(PROBE)) == {"FINISHED"}
         assert bpy.ops.export_scene.gltf(
             filepath=path, export_format=export_format, export_lights=True, export_cameras=True,
-            export_import_convert_lighting_mode="COMPAT", use_renderable=True, export_yup=True,
+            export_import_convert_lighting_mode="COMPAT", use_renderable=True, export_yup=True, export_extras=True,
             export_apply=True, use_mesh_edges=True, use_mesh_vertices=True) == {"FINISHED"}
 
     def _corrupt(self, name, mutate):

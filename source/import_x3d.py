@@ -4192,6 +4192,8 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
         specular_color = [0.0, 0.0, 0.0]
 
     bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
+    if mat_name:
+        bpymat[X3D_DEF_PROPERTY] = mat_name
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
 
     bpymat_wrap.base_color = diff_color
@@ -4606,6 +4608,8 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
     unlit = spec == 'UnlitMaterial'
     mat_name = mat.getDefName()
     bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
+    if mat_name:
+        bpymat[X3D_DEF_PROPERTY] = mat_name
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
     node_tree = bpymat.node_tree
     bsdf = bpymat_wrap.node_principled_bsdf
@@ -4895,6 +4899,7 @@ def importShape_ProcessObject(
     geom_name = geom.getDefName() if hasattr(geom, "getDefName") else None
     if geom_name:
         bpydata.name = geom_name[3:] if geom_name.startswith("ME_") and len(geom_name) > 3 else geom_name
+        bpydata[X3D_DEF_PROPERTY] = geom_name
     else:
         bpydata.name = vrmlname + "_" + geom_spec
 
@@ -5235,6 +5240,29 @@ geometry_importers = {
 }
 
 
+# The file's own identity, kept on each Blender object (and so in the glTF node extras with export_extras): Blender
+# suffixes duplicate names (.001), flat import drops Transforms, so the object name alone is not the DEF.
+X3D_DEF_PROPERTY = "x3d_def"            # the node's DEF, else the nearest DEF'd Transform above it (what names the object)
+X3D_DEF_PATH_PROPERTY = "x3d_def_path"  # DEF'd ancestors, outermost first, "/"-joined (flat import makes no empties for them)
+X3D_USE_PROPERTY = "x3d_use"            # the DEF this instance's USE points at
+
+
+def tag_x3d_identity(bpyob, node, ancestry):
+    """Record on ``bpyob`` the DEF names it came from. Always rewritten: a USE copy inherits its DEF's tags."""
+    if bpyob is None:
+        return
+    chain = [name for name in (a.getRealNode().getDefName() for a in ancestry) if name]  # real name: a USE's own reads "USE_x"
+    is_use = node.getRealNode() is not node
+    own = None if is_use else node.getDefName()
+    name = own or (chain[-1] if chain else None)
+    for key, value in ((X3D_DEF_PROPERTY, name), (X3D_DEF_PATH_PROPERTY, "/".join(chain)),
+                       (X3D_USE_PROPERTY, node.getRealNode().getDefName() if is_use else None)):
+        if value:
+            bpyob[key] = value
+        elif key in bpyob:
+            del bpyob[key]
+
+
 def importMetadata(node, ancestors=()):
     """An X3D (XML) Metadata* node as nested dicts for a custom property: the node type, name and reference, and
     ``value``, the field's X3D text (for MetadataSet, its members). The X3D 4.0 export writes it back.
@@ -5277,6 +5305,7 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         bpyob.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
         bpycollection.objects.link(bpyob)
         bpyob.select_set(True)
+        tag_x3d_identity(bpyob, node, ancestry)
         lit = lit_by_node.get(node.getRealNode())
         if lit is not None:   # each USE is a surface the lights reach, as the DEF is
             lit_surfaces.append((bpyob,) + lit)
@@ -5378,6 +5407,7 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             if lit is not None:
                 lit_by_node[node.getRealNode()] = lit
                 lit_surfaces.append((node.blendObject,) + lit)
+        tag_x3d_identity(node.blendObject, node, ancestry)
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
@@ -5511,6 +5541,7 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(bpylamp.name, bpylamp)
     bpycollection.objects.link(bpyob)
+    tag_x3d_identity(bpyob, node, ancestry)
     bpyob.select_set(True)
 
     bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
@@ -5556,6 +5587,7 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(name, bpycam)
     bpycollection.objects.link(bpyob)
+    tag_x3d_identity(bpyob, node, ancestry)
     bpyob.select_set(True)
     bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
     global bound_view
@@ -5591,6 +5623,7 @@ def importTransform(bpycollection, node, ancestry, global_matrix):
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(name, None)
     bpycollection.objects.link(bpyob)
+    tag_x3d_identity(bpyob, node, ancestry)
     bpyob.select_set(True)
 
     bpyob.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
