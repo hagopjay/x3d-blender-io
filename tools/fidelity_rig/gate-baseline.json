@@ -24,11 +24,11 @@
    },
    "geometry_delta": 14.78,
    "reexport": {
-    "nodes_lost": 5
+    "nodes_lost": 4
    },
    "roundtrip": {
-    "mean_abs_delta": 8.46,
-    "flip": 0.13508
+    "mean_abs_delta": 3.3,
+    "flip": 0.05348
    },
    "known": [
     {
@@ -65,11 +65,11 @@
    },
    "geometry_delta": 14.63,
    "reexport": {
-    "nodes_lost": 4
+    "nodes_lost": 3
    },
    "roundtrip": {
-    "mean_abs_delta": 7.92,
-    "flip": 0.13088
+    "mean_abs_delta": 2.64,
+    "flip": 0.04559
    },
    "known": [
     {
@@ -121,12 +121,12 @@
     "class": "triangles",
     "triangles": 1452
    },
-   "geometry_delta": 17.83,
+   "geometry_delta": 17.77,
    "reexport": {
-    "nodes_lost": 4
+    "nodes_lost": 1
    },
    "roundtrip": {
-    "mean_abs_delta": 0.13,
+    "mean_abs_delta": 0.21,
     "flip": 0.00167
    },
    "known": [
@@ -201,12 +201,12 @@
     "class": "triangles",
     "triangles": 4320
    },
-   "geometry_delta": 39.31,
+   "geometry_delta": 40.83,
    "reexport": {
-    "nodes_lost": 5
+    "nodes_lost": 2
    },
    "roundtrip": {
-    "mean_abs_delta": 0.47,
+    "mean_abs_delta": 0.7,
     "flip": 0.0065
    },
    "known": [
@@ -243,11 +243,11 @@
    },
    "geometry_delta": 27.41,
    "reexport": {
-    "nodes_lost": 19
+    "nodes_lost": 17
    },
    "roundtrip": {
-    "mean_abs_delta": 7.77,
-    "flip": 0.13648
+    "mean_abs_delta": 5.27,
+    "flip": 0.09277
    },
    "known": [
     {
@@ -313,11 +313,11 @@
    },
    "geometry_delta": null,
    "reexport": {
-    "nodes_lost": 10
+    "nodes_lost": 6
    },
    "roundtrip": {
-    "mean_abs_delta": 29.05,
-    "flip": 0.3346
+    "mean_abs_delta": 25.52,
+    "flip": 0.31265
    },
    "known": [
     {
@@ -355,13 +355,13 @@
     "class": "triangles",
     "triangles": 13562
    },
-   "geometry_delta": 15.74,
+   "geometry_delta": 15.64,
    "reexport": {
-    "nodes_lost": 9
+    "nodes_lost": 5
    },
    "roundtrip": {
-    "mean_abs_delta": 10.52,
-    "flip": 0.15911
+    "mean_abs_delta": 4.59,
+    "flip": 0.07303
    },
    "known": [
     {
@@ -416,12 +416,12 @@
     "class": "triangles",
     "triangles": 3360
    },
-   "geometry_delta": 33.95,
+   "geometry_delta": 33.82,
    "reexport": {
-    "nodes_lost": 4
+    "nodes_lost": 1
    },
    "roundtrip": {
-    "mean_abs_delta": 0.03,
+    "mean_abs_delta": 0.06,
     "flip": 0.00065
    },
    "known": [
@@ -458,11 +458,11 @@
    },
    "geometry_delta": 25.29,
    "reexport": {
-    "nodes_lost": 5
+    "nodes_lost": 4
    },
    "roundtrip": {
-    "mean_abs_delta": 5.95,
-    "flip": 0.08657
+    "mean_abs_delta": 2.17,
+    "flip": 0.03913
    },
    "known": [
     {
@@ -505,7 +505,7 @@
     "triangles": 22348
    },
    "reexport": {
-    "nodes_lost": 20
+    "nodes_lost": 16
    },
    "known": [
     {
@@ -546,11 +546,11 @@
    },
    "geometry_delta": 14.64,
    "reexport": {
-    "nodes_lost": 3
+    "nodes_lost": 2
    },
    "roundtrip": {
-    "mean_abs_delta": 50.8,
-    "flip": 0.32432
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
    },
    "known": [
     {
@@ -587,11 +587,11 @@
    },
    "geometry_delta": 17.32,
    "reexport": {
-    "nodes_lost": 3
+    "nodes_lost": 2
    },
    "roundtrip": {
-    "mean_abs_delta": 3.33,
-    "flip": 0.02296
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
    },
    "known": [
     {
@@ -628,11 +628,11 @@
    },
    "geometry_delta": 16.72,
    "reexport": {
-    "nodes_lost": 5
+    "nodes_lost": 4
    },
    "roundtrip": {
-    "mean_abs_delta": 9.86,
-    "flip": 0.15026
+    "mean_abs_delta": 3.61,
+    "flip": 0.05227
    },
    "known": [
     {
@@ -677,11 +677,11 @@
    },
    "geometry_delta": 16.51,
    "reexport": {
-    "nodes_lost": 6
+    "nodes_lost": 5
    },
    "roundtrip": {
-    "mean_abs_delta": 9.62,
-    "flip": 0.14703
+    "mean_abs_delta": 3.37,
+    "flip": 0.04899
    },
    "known": [
     {
@@ -746,8 +746,8 @@
     "nodes_lost": 0
    },
    "roundtrip": {
-    "mean_abs_delta": 61.89,
-    "flip": 0.68606
+    "mean_abs_delta": 0.0,
+    "flip": 4e-05
    },
    "known": [
     {
@@ -765,15 +765,15 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 24
+    "triangles": 12
    },
    "geometry_delta": 0.86,
    "reexport": {
-    "nodes_lost": 2
+    "nodes_lost": 1
    },
    "roundtrip": {
-    "mean_abs_delta": 4.98,
-    "flip": 0.06099
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
    },
    "known": [
     {
@@ -806,15 +806,15 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 24
+    "triangles": 12
    },
-   "geometry_delta": 143.84,
+   "geometry_delta": 0.81,
    "reexport": {
-    "nodes_lost": 2
+    "nodes_lost": 1
    },
    "roundtrip": {
-    "mean_abs_delta": 8.34,
-    "flip": 0.07585
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
    },
    "known": [
     {
@@ -850,7 +850,7 @@
     "class": "triangles",
     "triangles": 89568
    },
-   "geometry_delta": 16.61,
+   "geometry_delta": 6.05,
    "reexport": {
     "nodes_lost": 0
    },
@@ -878,11 +878,11 @@
    },
    "geometry_delta": 15.67,
    "reexport": {
-    "nodes_lost": 8
+    "nodes_lost": 6
    },
    "roundtrip": {
-    "mean_abs_delta": 5.19,
-    "flip": 0.09436
+    "mean_abs_delta": 3.65,
+    "flip": 0.06412
    },
    "known": [
     {
@@ -927,11 +927,11 @@
    },
    "geometry_delta": 17.44,
    "reexport": {
-    "nodes_lost": 8
+    "nodes_lost": 6
    },
    "roundtrip": {
-    "mean_abs_delta": 5.76,
-    "flip": 0.10427
+    "mean_abs_delta": 4.39,
+    "flip": 0.07583
    },
    "known": [
     {
@@ -993,11 +993,11 @@
    },
    "geometry_delta": 47.07,
    "reexport": {
-    "nodes_lost": 1
+    "nodes_lost": 0
    },
    "roundtrip": {
-    "mean_abs_delta": 9.23,
-    "flip": 0.0753
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
    },
    "known": [
     {
@@ -1027,11 +1027,11 @@
    },
    "geometry_delta": 1.5,
    "reexport": {
-    "nodes_lost": 1
+    "nodes_lost": 0
    },
    "roundtrip": {
-    "mean_abs_delta": 6.84,
-    "flip": 0.0633
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
    },
    "known": [
     {
@@ -1112,11 +1112,11 @@
    },
    "geometry_delta": 14.25,
    "reexport": {
-    "nodes_lost": 3
+    "nodes_lost": 2
    },
    "roundtrip": {
-    "mean_abs_delta": 5.05,
-    "flip": 0.09021
+    "mean_abs_delta": 1.82,
+    "flip": 0.02924
    },
    "known": [
     {
@@ -1153,11 +1153,11 @@
    },
    "geometry_delta": 14.25,
    "reexport": {
-    "nodes_lost": 3
+    "nodes_lost": 2
    },
    "roundtrip": {
-    "mean_abs_delta": 5.05,
-    "flip": 0.09021
+    "mean_abs_delta": 1.82,
+    "flip": 0.02924
    },
    "known": [
     {
@@ -1192,13 +1192,13 @@
     "class": "triangles",
     "triangles": 1499
    },
-   "geometry_delta": 17.09,
+   "geometry_delta": 16.59,
    "reexport": {
-    "nodes_lost": 4
+    "nodes_lost": 3
    },
    "roundtrip": {
-    "mean_abs_delta": 11.92,
-    "flip": 0.19609
+    "mean_abs_delta": 10.28,
+    "flip": 0.16191
    },
    "known": [
     {
@@ -1240,13 +1240,13 @@
     "class": "triangles",
     "triangles": 1499
    },
-   "geometry_delta": 16.7,
+   "geometry_delta": 16.2,
    "reexport": {
-    "nodes_lost": 4
+    "nodes_lost": 3
    },
    "roundtrip": {
-    "mean_abs_delta": 10.83,
-    "flip": 0.17115
+    "mean_abs_delta": 9.15,
+    "flip": 0.13622
    },
    "known": [
     {
@@ -1290,11 +1290,11 @@
    },
    "geometry_delta": 42.58,
    "reexport": {
-    "nodes_lost": 5
+    "nodes_lost": 1
    },
    "roundtrip": {
-    "mean_abs_delta": 1.36,
-    "flip": 0.01764
+    "mean_abs_delta": 0.66,
+    "flip": 0.00747
    },
    "known": [
     {
@@ -1346,10 +1346,10 @@
    },
    "geometry_delta": 42.57,
    "reexport": {
-    "nodes_lost": 5
+    "nodes_lost": 1
    },
    "roundtrip": {
-    "mean_abs_delta": 0.89,
+    "mean_abs_delta": 0.99,
     "flip": 0.0124
    },
    "known": [
@@ -1402,10 +1402,10 @@
    },
    "geometry_delta": 17.15,
    "reexport": {
-    "nodes_lost": 5
+    "nodes_lost": 1
    },
    "roundtrip": {
-    "mean_abs_delta": 0.2,
+    "mean_abs_delta": 0.27,
     "flip": 0.00346
    },
    "known": [
@@ -1473,13 +1473,13 @@
     "class": "points",
     "triangles": 0
    },
-   "geometry_delta": 148.88,
+   "geometry_delta": 15.47,
    "reexport": {
     "nodes_lost": 0
    },
    "roundtrip": {
-    "mean_abs_delta": 0.58,
-    "flip": 0.01331
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
    },
    "known": [
     {
@@ -1506,13 +1506,13 @@
     "class": "points",
     "triangles": 0
    },
-   "geometry_delta": 146.86,
+   "geometry_delta": 17.28,
    "reexport": {
     "nodes_lost": 0
    },
    "roundtrip": {
-    "mean_abs_delta": 1.02,
-    "flip": 0.02667
+    "mean_abs_delta": 0.0,
+    "flip": 3e-05
    },
    "known": [
     {
@@ -1532,7 +1532,7 @@
     "class": "points",
     "triangles": 0
    },
-   "geometry_delta": 193.15,
+   "geometry_delta": 25.9,
    "reexport": {
     "nodes_lost": 1
    },
@@ -1564,8 +1564,8 @@
     "nodes_lost": 0
    },
    "roundtrip": {
-    "mean_abs_delta": 21.14,
-    "flip": 0.27605
+    "mean_abs_delta": 0.0,
+    "flip": 0.00017
    },
    "known": [
     {
@@ -1603,7 +1603,7 @@
   "blender": "5.3.0",
   "validator": "2.0.0-dev.3.10",
   "flip_evaluator": "1.7",
-  "addon_git_revision": "54e85e46ca8a776c731c88df91053dd43312047c",
+  "addon_git_revision": "518c3cd6218c2734eb7bdbdda1c3144d9de33e93",
   "addon_source_dirty": false
  }
 }
