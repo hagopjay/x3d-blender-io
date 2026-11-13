@@ -19,7 +19,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      LOD_HIDDEN_PROPERTY,
+                      IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY,
                       LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
@@ -3743,7 +3743,8 @@ def physical_colour_material(bpymat):
     vcol = tree.nodes.new('ShaderNodeVertexColor')
     vcol.layer_name = "ColorPerCorner"
     vcol.location = (bsdf.location[0] - 500, bsdf.location[1] + 260)
-    if base.links:
+    textured = bool(base.links)
+    if textured:
         texture = base.links[0].from_socket
         mix = tree.nodes.new('ShaderNodeMix')
         mix.data_type = 'RGBA'
@@ -3755,6 +3756,10 @@ def physical_colour_material(bpymat):
         tree.links.new(mix.outputs['Result'], base)
     else:
         tree.links.new(vcol.outputs['Color'], base)
+    # baseColor multiplies the colours (X_ITE 16.7.1 draws baseColor 0.06 0.5 0.48 under a white Color as 0.06 0.5 0.48,
+    # not white); with a texture it is already in the texture's Multiply node, and white needs none
+    if not textured:
+        _modulate_socket_by_color(tree, base, tuple(base.default_value))
     physical_colour_cache[key] = mat
     return mat
 
@@ -4536,7 +4541,10 @@ def appearance_LoadTexture(tex_node, ancestry, node):
 
     # USE-based caching
     if tex_node.reference:
-        return tex_node.getRealNode().parsed
+        real = tex_node.getRealNode()
+        if real.parsed is not None:
+            return real.parsed
+        tex_node = real   # the DEF'd node was not loaded yet (a material met first through its USE)
 
     # Desc-based caching. It might misfire on multifile models, where the
     # same desc means different things in different files.
@@ -4676,6 +4684,15 @@ def appearance_Create(vrmlname, material, tex_node, ancestry, node, is_vcol):
         if tex_node.getSpec() == 'MovieTexture':
             bpymat_wrap = apply_video_texture_settings(bpymat_wrap, bpyima, tex_node, ancestry)
 
+        bsdf = bpymat_wrap.node_principled_bsdf
+        if material and bsdf is not None and not is_vcol:
+            # X_ITE draws diffuseColor x texture (getDiffuseColor: diffuseColor *= getDiffuseTexture()); linked straight
+            # into Base Color the texture would replace the diffuse colour. A Color node replaces it there instead, and
+            # a white diffuseColor needs no node; the socket keeps the colour as its value, where the export reads it.
+            # Last, since the wrapper looks for its image node behind the Base Color link.
+            _modulate_socket_by_color(bpymat_wrap.material.node_tree, bsdf.inputs["Base Color"],
+                                      tuple(bsdf.inputs["Base Color"].default_value))
+
     return (bpymat_wrap.material, bpyima, tex_has_alpha)
 
 
@@ -4694,7 +4711,10 @@ def _pbr_texture_children(mat_node):
     """Return {containerField: ImageTexture node} for a PhysicalMaterial/UnlitMaterial."""
     found = {}
     for child in mat_node.getRealNode().getChildrenBySpec(('ImageTexture', 'PixelTexture', 'MovieTexture')):
-        container = _attribute_raw(child, 'containerField', None)
+        # read from the child itself: a USE names its own field (a DEF'd baseTexture USE'd as emissiveTexture), and the
+        # DEF'd node it points at says baseTexture
+        element = getattr(child, "x3dNode", None)
+        container = element.getAttribute('containerField') if element is not None else None
         if not container:
             # X3D 4.0 default containerField for a texture inside a material is baseTexture
             container = 'baseTexture'
@@ -4843,12 +4863,18 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
         bpyima = images.get('baseTexture')
         if bpyima is not None:
             bpymat_wrap.base_color_texture.image = bpyima
+            if bsdf:
+                # X_ITE and glTF multiply the texture by baseColor; linked straight into Base Color the texture would
+                # replace it (a white factor needs no node, and the socket keeps baseColor as its value for the export)
+                _modulate_socket_by_color(node_tree, bsdf.inputs["Base Color"], base_color)
 
         bpyima = images.get('emissiveTexture')
         if bpyima is not None:
             bpymat_wrap.emission_color_texture.image = bpyima
             if bsdf:
                 bsdf.inputs["Emission Strength"].default_value = 1.0
+                # X_ITE and glTF multiply emissiveTexture by emissiveColor (see baseTexture above)
+                _modulate_socket_by_color(node_tree, bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission"), emissive)
 
         bpyima = images.get('metallicRoughnessTexture')
         if bpyima is not None and bsdf:
@@ -6453,7 +6479,13 @@ def _splat_import_target():
 def _build_splat_object(bpycollection, name, splats):
     if _splat_import_target() == "pointcloud":
         from .splat_native import build_native_splat_pointcloud
-        obj = bpy.data.objects.new(name, build_native_splat_pointcloud(name, splats))
+        pointcloud = build_native_splat_pointcloud(name, splats)
+        if "Color" in pointcloud.attributes:
+            # Blender's glTF exporter writes a PointCloud's COLOR_0 only when its material reads a named colour
+            # attribute: an unlit material on ``Color`` (the splats' base colours) puts the colours in the glb, as the
+            # mesh target's loose vertices carry them. Before, the glb held POSITION only.
+            pointcloud.materials.append(line_point_material(name, (1.0, 1.0, 1.0), 1.0, 'RGB'))
+        obj = bpy.data.objects.new(name, pointcloud)
         bpycollection.objects.link(obj)
         obj.select_set(True)
         return obj
@@ -7456,6 +7488,7 @@ def load(context,
     paths = [os.path.join(directory, name.name) for name in files] if files else [filepath]
 
     objects_before = {ob.name for ob in bpy.data.objects}
+    actions_before = {action.name for action in bpy.data.actions}
     for file in paths:
         # loadWithProfiler(operator, context, filepath, global_matrix)
         load_web3d(context, file,
@@ -7477,5 +7510,9 @@ def load(context,
     finalize_light_units(context.scene if context is not None else None, lighting_units)
     if context is not None and getattr(context, "scene", None) is not None:
         context.scene[COLOUR_SPACE_PROPERTY] = colour_space
+        if any(action.name not in actions_before for action in bpy.data.actions):
+            # interpolators and TimeSensors came in as keyframes: the X3D 4.0/4.1 export keeps them unless Animation is
+            # set off by hand (ExportX3D.execute)
+            context.scene[IMPORTED_ANIMATION_PROPERTY] = True
 
     return {'FINISHED'}

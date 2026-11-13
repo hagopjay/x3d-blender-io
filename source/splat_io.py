@@ -40,6 +40,11 @@ def sh0_to_rgb(coefficient) -> tuple[float, float, float]:
     return tuple(max(0.0, min(1.0, 0.5 + SH_C0 * float(channel))) for channel in coefficient[:3])
 
 
+def display_to_linear(rgb) -> tuple[float, float, float]:
+    """sRGB display values (0..1) to linear light, the colour glTF's COLOR_0 holds."""
+    return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb[:3])
+
+
 def rgb_to_sh0(rgb) -> tuple[float, float, float]:
     return tuple((float(channel) - 0.5) / SH_C0 for channel in rgb[:3])
 

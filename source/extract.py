@@ -99,6 +99,7 @@ def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
 # Viewpoint description read by the importer, kept on the camera object.
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
+IMPORTED_ANIMATION_PROPERTY = "x3d_imported_animation"   # set on the scene when an X3D import made animation (interpolators, TimeSensors)
 LOD_HIDDEN_PROPERTY = "x3d_lod_hidden"   # set by the importer on the objects of an LOD level the first Viewpoint does not see
 HEAD_META_PROPERTY = "x3d_head_meta"
 # A Shape's Metadata* node read by the importer, kept on the object as nested {"node", "name", "reference", "value"}.
