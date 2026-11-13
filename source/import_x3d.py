@@ -17,7 +17,7 @@ import re
 import mathutils
 from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
-from . import mfstring
+from . import geospatial, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
                       LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
@@ -786,9 +786,12 @@ class vrmlNode(object):
                     return ret
             else:
                 return ret
-        if not ret:
-            logger.warning('value "%s" could not be used as a float tuple for field "%s"' % (f, field))
+            # a tuple of the wrong length (a two-value position, say) used to fall off the end and return None,
+            # which the callers that pass a default then unpacked or indexed: the import aborted
+            logger.warning('value "%s" has %d numbers, not the %d of field "%s"; using the default' % (f, len(ret), len(default), field))
             return default
+        logger.warning('value "%s" could not be used as a float tuple for field "%s"' % (f, field))
+        return default
 
     def getFieldAsBool(self, field, default, ancestry):
         self_real = self.getRealNode()  # in case we're an instance
@@ -2416,6 +2419,120 @@ def importMesh_ElevationGrid(geom, ancestry):
     d.foreach_set('uv', uvs)
 
     bpymesh.validate()
+    bpymesh.update()
+    return bpymesh
+
+
+def geo_system_of(node, ancestry):
+    """The geoSystem field of a Geospatial node as a geospatial.GeoSystem (GD WE when it has none)."""
+    return geospatial.parse_geo_system(node.getFieldAsMFStringArray('geoSystem', [], ancestry))
+
+
+def geo_origin_of(node, gs, ancestry):
+    """A Geospatial node's geoOrigin as (the origin in geocentric metres, the rotation that aligns the scene with the
+    origin's local east/up/south frame or None). X3D 4.0 discourages GeoOrigin (models built on different origins do
+    not combine) and X_ITE 16.7.1 still reads it: the node's coordinates become its geocentric ones minus the origin,
+    and with rotateYUp turned into that frame."""
+    import numpy as np
+    child = node.getChildBySpec('GeoOrigin')
+    if child is None:
+        return np.zeros(3), None
+    origin_node = child.getRealNode()
+    coords = origin_node.getFieldAsFloatTuple('geoCoords', (0.0, 0.0, 0.0), ancestry)
+    origin = np.array(geospatial.to_geocentric(geo_system_of(origin_node, ancestry), *coords))
+    frame = None
+    if origin_node.getFieldAsBool('rotateYUp', False, ancestry):
+        frame = geospatial.local_frame(gs, origin)
+    return origin, frame
+
+
+def geo_to_local(points, origin, frame):
+    """Geocentric points (an (n, 3) array or one point) in the coordinates of a node with this geoOrigin."""
+    points = points - origin
+    return points if frame is None else points @ frame
+
+
+def importMesh_GeoElevationGrid(geom, ancestry):
+    """GeoElevationGrid (X3D 4.0 Geospatial component), as X_ITE 16.7.1 builds it: the grid starts at geoGridOrigin
+    and steps xSpacing in longitude (easting) and zSpacing in latitude (northing), the heights times yScale are metres
+    along the ellipsoid normal, and every cell is two triangles, SW-NE-NW and SW-SE-NE, facing out of the ellipsoid
+    for ccw TRUE."""
+    import numpy as np
+    gs = geo_system_of(geom, ancestry)
+    x_dim = geom.getFieldAsInt('xDimension', 0, ancestry)
+    z_dim = geom.getFieldAsInt('zDimension', 0, ancestry)
+    if x_dim < 2 or z_dim < 2:
+        return None   # a grid with no cell has nothing to draw
+    height = geom.getFieldAsArray('height', 0, ancestry)
+    if len(height) < x_dim * z_dim:
+        logger.warning("GeoElevationGrid %d x %d has %d heights; the missing ones are 0", x_dim, z_dim, len(height))
+    y_scale = geom.getFieldAsFloat('yScale', 1.0, ancestry)
+    ccw = geom.getFieldAsBool('ccw', True, ancestry)
+
+    # float64 all the way to the vertices, which Blender keeps in float32: 0.5 m apart at the Earth's radius
+    points = geospatial.grid_points(
+        gs, geom.getFieldAsFloatTuple('geoGridOrigin', (0.0, 0.0, 0.0), ancestry), x_dim, z_dim,
+        geom.getFieldAsFloat('xSpacing', 1.0, ancestry), geom.getFieldAsFloat('zSpacing', 1.0, ancestry),
+        np.asarray(height, dtype=np.float64) * y_scale)
+    origin, frame = geo_origin_of(geom, gs, ancestry)
+    points = geo_to_local(points, origin, frame) * conversion_scale
+
+    bpymesh = bpy.data.meshes.new(name="GeoElevationGrid")
+    bpymesh.vertices.add(len(points))
+    bpymesh.vertices.foreach_set("co", points.astype(np.float32).ravel())
+
+    # p1 - p4 (z, x) .. (z, x+1)   Cell (x, z) is two triangles p1 p3 p2 and p1 p4 p3, in rows of z. The x and z
+    # | \ |      axes run east and north here (they run east and south in an ElevationGrid), so the same corner
+    # p2 - p3     order faces up the other way round.
+    cells = (np.arange(z_dim - 1)[:, None] * x_dim + np.arange(x_dim - 1)[None, :]).ravel()
+    p1, p2, p3, p4 = cells, cells + x_dim, cells + x_dim + 1, cells + 1
+    corners = np.stack((p1, p3, p2, p1, p4, p3) if ccw else (p1, p2, p3, p1, p3, p4), axis=1).reshape(-1)
+    num_polys = len(cells) * 2
+    cell_of_corner = np.repeat(np.arange(len(cells)), 6)   # a colour per face is one per cell
+    bpymesh.loops.add(num_polys * 3)
+    bpymesh.polygons.add(num_polys)
+    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
+    bpymesh.polygons.foreach_set("vertices", corners)
+    bpymesh.update(calc_edges=True)
+
+    colors = geom.getChildBySpec(['ColorRGBA', 'Color'])
+    if colors:
+        if colors.getSpec() == 'ColorRGBA':
+            rgb = np.array(colors.getFieldAsArray('color', 4, ancestry), dtype=np.float64).reshape(-1, 4)
+        else:
+            rgb = np.array([c + [1.0] for c in colors.getFieldAsArray('color', 3, ancestry)], dtype=np.float64)
+        per_vertex = geom.getFieldAsBool('colorPerVertex', True, ancestry)
+        if len(rgb) >= (len(points) if per_vertex else len(cells)):
+            set_new_float_color_attribute(bpymesh, rgb[corners if per_vertex else cell_of_corner].ravel().tolist())
+        else:
+            logger.warning("GeoElevationGrid has %d colours for %d %s; they are left out", len(rgb),
+                           len(points) if per_vertex else len(cells), "vertices" if per_vertex else "cells")
+
+    uvs = None
+    tex_coord = geom.getChildBySpec('TextureCoordinate')
+    if tex_coord:
+        uvs = np.array(tex_coord.getFieldAsArray('point', 2, ancestry), dtype=np.float64).reshape(-1, 2)
+        if len(uvs) < len(points):
+            logger.warning("GeoElevationGrid has %d texture coordinates for %d vertices; the default ones are used",
+                           len(uvs), len(points))
+            uvs = None
+    if uvs is None:   # X3D's default: S across the longitude (x) direction, T up the latitude (z) one
+        zz, xx = np.divmod(np.arange(len(points)), x_dim)
+        uvs = np.column_stack((xx / (x_dim - 1), zz / (z_dim - 1)))
+    importMesh_ApplyTextureToLoops(bpymesh, uvs[corners].ravel())
+
+    normals = geom.getChildBySpec('Normal')
+    if normals:
+        vectors = np.array(normals.getFieldAsArray('vector', 3, ancestry), dtype=np.float64).reshape(-1, 3)
+        per_vertex = geom.getFieldAsBool('normalPerVertex', True, ancestry)
+        if len(vectors) >= (len(points) if per_vertex else len(cells)):
+            lengths = np.linalg.norm(vectors, axis=1)
+            vectors = vectors / np.where(lengths > 0.0, lengths, 1.0)[:, None]
+            bpymesh.normals_split_custom_set(vectors[corners if per_vertex else cell_of_corner].tolist())
+        else:
+            logger.warning("GeoElevationGrid has %d normals for %d %s; they are left out", len(vectors),
+                           len(points) if per_vertex else len(cells), "vertices" if per_vertex else "cells")
+
     bpymesh.update()
     return bpymesh
 
@@ -5220,6 +5337,7 @@ geometry_importers = {
     'TriangleFanSet': importMesh_TriangleFanSet,
     'LineSet': importMesh_LineSet,
     'ElevationGrid': importMesh_ElevationGrid,
+    'GeoElevationGrid': importMesh_GeoElevationGrid,
     'Extrusion': importMesh_Extrusion,
     'PointSet': importMesh_PointSet,
     'Sphere': importMesh_Sphere,
@@ -5568,6 +5686,29 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
 # -----------------------------------------------------------------------------------
 
 
+def importGeoViewpoint_Matrix(node, orientation, bpycam, ancestry):
+    """The X3D matrix of a GeoViewpoint, as X_ITE 16.7.1 places it: its position (default 0 0 100000) in the node's
+    geoSystem, geocentric metres, and its orientation relative to the local east/up/south frame there (the default
+    orientation looks north, with up away from the Earth). Sets the camera's clip range: nearDistance and farDistance
+    when the file gives them, else from 1 % of the height above the ellipsoid out past the far side of the globe, since
+    Blender's 0.1 to 1000 would clip all of it."""
+    import numpy as np
+    gs = geo_system_of(node, ancestry)
+    position = np.array(geospatial.to_geocentric(
+        gs, *node.getFieldAsFloatTuple('position', (0.0, 0.0, 100000.0), ancestry)))
+    frame = geospatial.local_frame(gs, position)
+    origin, origin_frame = geo_origin_of(node, gs, ancestry)
+    if origin_frame is not None:
+        frame = origin_frame.T @ frame
+    rotation = Matrix(frame.tolist()).to_4x4() @ translateRotation(orientation)
+    height = geospatial.geocentric_to_geodetic(gs, *position)[2]
+    near = node.getFieldAsFloat('nearDistance', -1.0, ancestry)
+    far = node.getFieldAsFloat('farDistance', -1.0, ancestry)
+    bpycam.clip_start = (near if near > 0.0 else max(0.01 * height, 0.1)) * conversion_scale
+    bpycam.clip_end = (far if far > 0.0 else np.linalg.norm(position) + gs.a) * conversion_scale
+    return Matrix.Translation(Vector(geo_to_local(position, origin, origin_frame) * conversion_scale)) @ rotation
+
+
 def importViewpoint(bpycollection, node, ancestry, global_matrix):
     name = node.getDefName()
     if not name:
@@ -5576,14 +5717,17 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
     fieldOfView = node.getFieldAsFloat('fieldOfView', 0.785398, ancestry)  # max is documented to be 1.0 but some files have higher.
     # jump = node.getFieldAsBool('jump', True, ancestry)
     orientation = node.getFieldAsFloatTuple('orientation', (0.0, 0.0, 1.0, 0.0), ancestry)
-    position = node.getFieldAsFloatTuple('position', (0.0, 0.0, 0.0), ancestry, conversion_scale)
     description = node.getFieldAsString('description', '', ancestry)
 
     bpycam = bpy.data.cameras.new(name)
 
     bpycam.angle = blender_camera_angle(fieldOfView, bpycam.sensor_fit, *render_size(bpy.context.scene))
 
-    mtx = Matrix.Translation(Vector(position)) @ translateRotation(orientation)
+    if node.getSpec() == 'GeoViewpoint':
+        mtx = importGeoViewpoint_Matrix(node, orientation, bpycam, ancestry)
+    else:
+        position = node.getFieldAsFloatTuple('position', (0.0, 0.0, 0.0), ancestry, conversion_scale)
+        mtx = Matrix.Translation(Vector(position)) @ translateRotation(orientation)
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(name, bpycam)
     bpycollection.objects.link(bpyob)
@@ -6158,9 +6302,31 @@ def _resolve_inline_url(node, url):
     return None
 
 
+def _inverted(matrix, what="matrix"):
+    """The inverse of a 4x4 transform, computed in float64.
+
+    Matrix.inverted() works in float32, where the determinant of a uniform scale of 1e-16 is 1e-48 and underflows
+    to 0, so a unit scale of one light-year raised "matrix does not have an inverse". A scale of exactly 0 (which X3D
+    allows) really is singular: that logs a warning and gives the pseudo-inverse, which still undoes the matrix on
+    everything it can reach, all that a flattened parent's children occupy (the identity would apply it twice).
+    An inverse beyond float32 range logs a warning and gives the identity.
+    """
+    import numpy as np
+    values = np.array(matrix, dtype=np.float64)
+    try:
+        inverse = np.linalg.inv(values)
+    except np.linalg.LinAlgError:
+        logger.warning("%s is singular (a Transform scale of 0?); using its pseudo-inverse", what)
+        inverse = np.linalg.pinv(values)
+    if not np.abs(inverse).max() <= np.finfo(np.float32).max:
+        logger.warning("%s has no inverse in float32 range; using the identity", what)
+        return Matrix()
+    return Matrix(inverse.tolist())
+
+
 def _parent_keep_world(obj, parent, *, parent_inverse=None):
     obj.parent = parent
-    obj.matrix_parent_inverse = parent_inverse if parent_inverse is not None else parent.matrix_world.inverted()
+    obj.matrix_parent_inverse = parent_inverse if parent_inverse is not None else _inverted(parent.matrix_world, parent.name)
 
 
 def _splat_attributes(mesh, splats):
@@ -6321,7 +6487,7 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
             load_web3d(bpy.context, resolved, PREF_FLAT=PREF_FLAT, PREF_CIRCLE_DIV=PREF_CIRCLE_DIV,
                        global_scale=conversion_scale, global_matrix=empty.matrix_world @ frame,
                        solidify=solidify, solidify_value=solidify_value)
-            parent_inverse = empty.matrix_world.inverted()
+            parent_inverse = _inverted(empty.matrix_world, name)
         elif lower.endswith(('.gltf', '.glb')):
             from .bridge_gltf import import_gltf
             import_gltf(resolved)
@@ -6535,10 +6701,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
             # in the static world matrix; recover it so it is kept per key.
             static_world = bpyob.matrix_world.copy()
             static_chain = global_matrix @ above @ _x3d_transform_matrix(static_tx, static_rot, static_sca, cent, scaori) @ below
-            try:
-                own_offset = static_chain.inverted() @ static_world
-            except ValueError:
-                own_offset = Matrix()
+            own_offset = _inverted(static_chain, bpyob.name) @ static_world
 
             if bpyob.animation_data is None:
                 bpyob.animation_data_create()
@@ -6558,7 +6721,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
                 sca = _interpolate_channel(key_lists.get('scale'), value_lists.get('scale'), key, 'scale') or static_sca
                 world = global_matrix @ above @ _x3d_transform_matrix(tx, rot, sca, cent, scaori) @ below @ own_offset
                 if bpyob.parent is not None:
-                    world = bpyob.parent.matrix_world.inverted() @ world
+                    world = _inverted(bpyob.parent.matrix_world, bpyob.parent.name) @ world
                 frame = frame_start + key * cycle_interval * fps
                 last_frame = max(last_frame, frame)
                 loc, quat, scale = world.decompose()
@@ -6877,7 +7040,7 @@ def load_web3d(
             importGaussianSplats(bpycollection, node, ancestry, global_matrix)
         elif spec in {'PointLight', 'DirectionalLight', 'SpotLight'}:
             importLamp(bpycollection, node, spec, ancestry, global_matrix)
-        elif spec == 'Viewpoint':
+        elif spec in {'Viewpoint', 'GeoViewpoint'}:
             importViewpoint(bpycollection, node, ancestry, global_matrix)
         elif spec == 'Transform':
             # Only use transform nodes when we are not importing a flat object hierarchy
