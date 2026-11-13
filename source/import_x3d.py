@@ -2949,11 +2949,17 @@ def reference_distance(origin, radius, surfaces, axis=None, cut_off=None):
 
 
 def range_window(distance, reach):
-    """The range window KHR_lights_punctual recommends, which X_ITE's PhysicalMaterial also applies:
-    clamp(1 - (d / r)^4, 0, 1); 1 when the light has no range."""
+    """The range window a glTF viewer draws a light's range with: clamp(1 - (d / r)^4, 0, 1)^2, as Babylon.js 9.32
+    does (computeDistanceLightFalloff_GLTF in babylon.max.js squares saturate(1 - factor^2), factor = d^2 / r^2);
+    KHR_lights_punctual's recommended formula, which X_ITE's PhysicalMaterial applies (getRangeAttenuation,
+    x_ite.js line 67903), is the unsquared window. 1 when the light has no range. Works on numpy arrays too."""
     if reach is None or reach <= 0.0:
         return 1.0
-    return max(0.0, min(1.0, 1.0 - (distance / reach) ** 4))
+    window = 1.0 - (distance / reach) ** 4
+    if isinstance(window, float):
+        return max(0.0, min(1.0, window)) ** 2
+    import numpy as np
+    return np.clip(window, 0.0, 1.0) ** 2
 
 
 VIEW_SAMPLES = 64   # rays per side of the square grid the classic light fit casts from the first Viewpoint
@@ -2964,7 +2970,8 @@ def _view_samples(surfaces, camera, view):
     towards the view, weights, sRGB diffuse and emissive colours side by side), or None: a ray through each cell of a square grid over the view
     (the square X3D's fieldOfView spans) stops at the first surface it meets, so hidden faces, and pixels of lines,
     text, emissive-only and physical shapes, do not count. `camera` is the bound Viewpoint's camera, else `view` the
-    world matrix of X3D's default view (fieldOfView pi / 4)."""
+    world matrix of X3D's default view (fieldOfView pi / 4). Either is used without its scale (a Viewpoint under a
+    scaled Transform sees what the same camera unscaled sees, as Blender views through it)."""
     import numpy as np
     try:
         scene = bpy.context.scene
@@ -2985,11 +2992,11 @@ def _view_samples(surfaces, camera, view):
         return None
     try:
         if camera is not None:
-            matrix = camera.matrix_world.copy()
+            matrix = camera.matrix_world.normalized()
             corner = camera.data.view_frame(scene=scene)[0]
             half, depth = min(abs(corner.x), abs(corner.y)), abs(corner.z)
         elif view is not None:
-            matrix, half, depth = view, math.tan(0.785398 / 2.0), 1.0
+            matrix, half, depth = view.normalized(), math.tan(0.785398 / 2.0), 1.0
         else:
             return None
     except ReferenceError:
@@ -3026,14 +3033,28 @@ def _view_samples(surfaces, camera, view):
             np.array(colours, dtype=float))
 
 
-def _spot_falloff(cosine, cut_off, beam):
-    """How much of a spot light reaches a direction at `cosine` from its axis: 1 inside the beam, 0 outside the cut-off,
-    and between them (t^2, t from the cut-off's cosine to the beam's) as X_ITE and glTF viewers fall off."""
+def _x_ite_spot_factor(cosine, cut_off, beam):
+    """How much of a classic SpotLight X_ITE 16.7.1 draws in a direction at `cosine` from its axis (getSpotFactor,
+    x_ite.js line 66744): 0 from the cut-off out, 1 within the beam, and between them linear in the angle,
+    (angle - cutOffAngle) / (beamWidth - cutOffAngle); the cut-off is clamped to [0, pi / 2] and the beam to the
+    cut-off (SpotLight getCutOffAngle and getBeamWidth, x_ite.js lines 83041-83054)."""
+    import numpy as np
+    cut_off = min(max(cut_off, 0.0), math.pi / 2.0)
+    beam = min(max(beam, 0.0), cut_off)
+    angle = np.arccos(np.clip(cosine, -1.0, 1.0))
+    if cut_off - beam <= 1e-9:
+        return (angle < cut_off).astype(float)
+    return np.clip((angle - cut_off) / (beam - cut_off), 0.0, 1.0)
+
+
+def _gltf_spot_factor(cosine, cut_off, beam):
+    """How much of a KHR_lights_punctual spot light a glTF viewer draws at `cosine` from its axis, with the cut-off as
+    outerConeAngle and the beam as innerConeAngle (what the glTF exporter writes): t^2, t = clamp((cos - cos outer) /
+    max(0.001, cos inner - cos outer), 0, 1), as Babylon.js 9.32 does (computeDirectionalLightFalloff_GLTF with
+    SpotLight _computeAngleValues, babylon.max.js) and the extension's sample code."""
     import numpy as np
     outer, inner = math.cos(cut_off), math.cos(min(beam, cut_off))
-    if inner - outer <= 1e-9:
-        return (cosine >= outer).astype(float)
-    t = np.clip((cosine - outer) / (inner - outer), 0.0, 1.0)
+    t = np.clip((cosine - outer) / max(0.001, inner - outer), 0.0, 1.0)
     return t * t
 
 
@@ -3041,23 +3062,25 @@ def fit_classic_lights(faces, lights, headlight, view, srgb):
     """Fit a classic scene's lights to what X_ITE draws on the faces seen from the first Viewpoint, or None when no
     face is lit. Per colour channel, X = min(e + b L, 1) is X_ITE's display-space value on a face (e and b its sRGB
     emissive and diffuse colours, L the sum of i x color x attenuation(d / s) x cos x spot of the lights that reach it,
-    plus the headlight's cos when it is on) and G = srgb(min(E' + B E / pi, 1)) a glTF viewer's (E' and B the emissive
-    and diffuse colours Blender renders with, E the sum of
-    the glTF lights' lux there in their Blender colours: each point or spot light falls off as 1/d^2 from its reference
-    distance, within its range window).
+    spot X_ITE's, linear in the angle (see _x_ite_spot_factor), plus the headlight's cos when it is on) and
+    G = srgb(min(E' + B E / pi, 1)) a glTF viewer's (E' and B the emissive and diffuse colours Blender renders with, E
+    the sum of the glTF lights' lux there in their Blender colours: each point or spot light falls off as 1/d^2 from
+    its reference distance, within its range window, a spot light as t^2 in the cosine, see _gltf_spot_factor).
     Returns (f, factors, headlight): f is the one factor for every light that makes the weighted mean of |X - G| least
     (a sun f x i lux, a point or spot light f x i x attenuation(d / s) x d^2 / window(d) cd at its reference distance
     d); factors holds each light's own factor (index in `lights` -> factor), fitted by least squares near the display
     and pulled towards f, kept only when they draw closer than f; headlight is the headlight's lux. A light that
-    starts dark, or that no face in view sees, keeps f. `lights` holds (spec, intensity, attenuation, frame, reach,
-    origin, axis, cut-off, beam, reference distance, X3D color, Blender color)."""
+    starts dark, that no face in view sees, or that reaches nothing (reach 0: X_ITE lights a face only when
+    dL <= radius || radius < 0, x_ite.js line 66922, so a radius of 0 lights none) keeps f. `lights` holds (spec,
+    intensity, attenuation, frame, reach (None: unlimited), origin, axis, cut-off, beam, reference distance, X3D color,
+    Blender color)."""
     import numpy as np
     centre, normal, weight, colours = faces
     albedo, glow = colours[:, :3], colours[:, 3:6]
     white = np.ones(3)
     xite_columns, gltf_columns, keys = [], [], []   # per light: (faces, 3) display level, (faces, 3) lux per factor
-    if headlight and view is not None:
-        towards = -np.array(view.to_3x3() @ Vector((0.0, 0.0, -1.0)), dtype=float)
+    if headlight and view is not None:   # a unit DirectionalLight along the view (x_ite.js line 64123 normalises it)
+        towards = -np.array((view.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized(), dtype=float)
         cosine = np.maximum(normal @ towards, 0.0)
         xite_columns.append(np.outer(cosine, white))
         gltf_columns.append(np.outer(cosine, white))
@@ -3065,7 +3088,7 @@ def fit_classic_lights(faces, lights, headlight, view, srgb):
     for index, light in enumerate(lights):
         spec, intensity, attenuation, frame, reach, origin, axis, cut_off, beam, distance, shown, held = light
         given = max(0.0, intensity)
-        if given <= 0.0:
+        if given <= 0.0 or reach == 0.0:
             continue
         shown, held = np.array(shown, dtype=float), np.array(held, dtype=float)
         if spec == 'DirectionalLight':
@@ -3077,17 +3100,18 @@ def fit_classic_lights(faces, lights, headlight, view, srgb):
         offset = np.array(origin, dtype=float) - centre
         far = np.maximum(np.linalg.norm(offset, axis=1), 1e-9)
         cosine = np.maximum(np.einsum('ij,ij->i', normal, offset) / far, 0.0)
+        xite_cone = gltf_cone = 1.0
         if spec == 'SpotLight':
-            cosine = cosine * _spot_falloff(-(offset @ np.array(axis, dtype=float)) / far, cut_off, beam)
+            along = -(offset @ np.array(axis, dtype=float)) / far
+            xite_cone, gltf_cone = _x_ite_spot_factor(along, cut_off, beam), _gltf_spot_factor(along, cut_off, beam)
         a0, a1, a2 = (list(attenuation) + [0.0, 0.0, 0.0])[:3] if attenuation else (1.0, 0.0, 0.0)
         local = far / frame
         fade = 1.0 / np.maximum(a0 + a1 * local + a2 * local * local, 1.0)
         reached = np.ones(len(far)) if reach is None else (far <= reach).astype(float)
-        xite_columns.append(np.outer(given * fade * cosine * reached, shown))
-        window = 1.0 if reach is None else np.clip(1.0 - (far / reach) ** 4, 0.0, 1.0)
+        xite_columns.append(np.outer(given * fade * cosine * xite_cone * reached, shown))
         anchor = given * x3d_attenuation_factor(attenuation, distance / frame) * distance * distance \
             / max(range_window(distance, reach), 0.1)
-        gltf_columns.append(np.outer(anchor * window * cosine / (far * far), held))
+        gltf_columns.append(np.outer(anchor * range_window(far, reach) * cosine * gltf_cone / (far * far), held))
         keys.append(index)
     if not keys:
         return None
@@ -3162,7 +3186,7 @@ def fit_classic_lights(faces, lights, headlight, view, srgb):
             free[index[solution[index] < 0.0]] = False
         factors = solution.copy()
     scale = search(lambda scale: scale * factors, 0.25, 4.0) if factors.any() else 1.0
-    factors = scale * factors
+    factors = np.where(gltf.any(axis=0), scale * factors, f)   # a light no face in view sees keeps f
     if not factors.any() or miss(factors) >= miss(f * ones):
         factors = f * ones
     own = {key: float(value) for key, value in zip(keys, factors)}
@@ -3182,13 +3206,16 @@ def finalize_light_units(scene, units=None):
         with no falloff but attenuation), which no factor matches everywhere in a linear glTF viewer. So the lights
         are fitted to what X_ITE draws on the surfaces the first Viewpoint sees (rays cast through a grid over its
         view, see fit_classic_lights): a sun gets f_k x i lux and a point or spot light f_k x i x attenuation(d / s)
-        x d^2 cd, divided by the range window at d, which X_ITE's classic shader does not apply. f_k is one factor
-        for every light, or each light's own when that draws closer; with nothing lit in view, f = pi lin(a S) /
-        (A S), S the sum of what each light gives at its reference distance (and 1 for the headlight when it is on),
-        a the median sRGB albedo of the lit classic Materials and A = lin(a) when the colours were read as sRGB
-        (a when as is). Read as sRGB, a light's color becomes linear too (its file value kept in x3d_color);
+        x d^2 cd, divided by the glTF range window at d (see range_window), which X_ITE's classic shader does not
+        apply. f_k is one factor for every light, or each light's own when that draws closer; with nothing lit in
+        view, f = pi lin(a S) / (A S), S the sum of what each light gives at its reference distance (and 1 for the
+        headlight when it is on), a the median sRGB albedo of the lit classic Materials and A = lin(a) when the
+        colours were read as sRGB (a when as is). Read as sRGB, a light's color becomes linear too (its file value
+        kept in x3d_color);
       - the light's radius times s becomes its glTF range (Blender's custom distance); a radius of -1 (unlimited)
-        or 0 leaves the light without a range.
+        or 0 leaves the light without a range. A radius of 0 lights nothing in X_ITE (a face only when
+        dL <= radius || radius < 0, x_ite.js lines 66922 and 67826, the classic and the physical shader), so the
+        light gets energy 0 and keeps its scale, as a light that starts dark; it counts neither in the fit nor in S.
     The scene gets x3d_lighting_model and x3d_headlight_lux (what an X3D headlight, a DirectionalLight of 1 along the
     view, should be in a glTF viewer), since this importer does not make the headlight."""
     global imported_lights, lit_surfaces, navigation_headlight, bound_view, default_view
@@ -3199,9 +3226,11 @@ def finalize_light_units(scene, units=None):
         view = camera.matrix_world.copy() if camera is not None else default_view
     except ReferenceError:
         camera, view = None, default_view
+    # without its scale: a Viewpoint under a scaled Transform views (and its headlight shines) the same way
+    view = view.normalized() if view is not None else None
     imported_lights, lit_surfaces, navigation_headlight, bound_view, default_view = [], [], None, None, None
     lit_by_node.clear()
-    if units != 'X_ITE' or scene is None:
+    if scene is None:
         return
     try:
         bpy.context.view_layer.update()   # world matrices of objects parented since they were made
@@ -3233,18 +3262,32 @@ def finalize_light_units(scene, units=None):
     # light of 2.4 gives 23.9 lux where X_ITE lights it with 2.4), and an overexposed surface loses its detail,
     # while a classic surface lit physically is only darker.
     classic = counts['classic'] > 0 and counts['physical'] == 0
-    albedos.sort()
-    typical = albedos[len(albedos) // 2] if albedos else 0.8
-    held = srgb_to_linear(typical) if colour_space == 'SRGB' else typical   # the albedo Blender renders with
-
     # X_ITE multiplies a classic scene's light colours in display space, as it does its Material colours: read as sRGB,
-    # a light's color becomes linear in Blender (the file's value is kept for the export), like the Materials' colours.
+    # a light's color becomes linear in Blender (the file's value is kept for the export), like the Materials' colours,
+    # whatever the light units (the X3D 3.3 export sRGB-encodes a light's colour under SRGB as it does a Material's).
     linear_lights = classic and colour_space == 'SRGB'
 
     def tones(data):
         """(the light's X3D color, the colour Blender renders it with)."""
         given = tuple(float(channel) for channel in data.color[:3])
         return given, tuple(srgb_to_linear(channel) for channel in given) if linear_lights else given
+
+    def hold_colour(data):
+        if linear_lights:
+            given, held_colour = tones(data)
+            data[LIGHT_COLOR_PROPERTY] = given
+            data.color = held_colour
+
+    if units != 'X_ITE':
+        for bpyob, *_rest in lights:
+            try:
+                hold_colour(bpyob.data)
+            except ReferenceError:
+                continue
+        return
+    albedos.sort()
+    typical = albedos[len(albedos) // 2] if albedos else 0.8
+    held = srgb_to_linear(typical) if colour_space == 'SRGB' else typical   # the albedo Blender renders with
 
     plans = []
     shining = []   # what the classic factor fit needs of each light
@@ -3258,7 +3301,7 @@ def finalize_light_units(scene, units=None):
         given = max(0.0, intensity)
         axis = (matrix.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized()
         if spec == 'DirectionalLight':
-            plans.append((data, spec, intensity, None))
+            plans.append((data, spec, intensity, None, False))
             shining.append((spec, intensity, None, 1.0, None, None, axis, None, None, None) + tones(data))
             total += given
             continue
@@ -3267,16 +3310,18 @@ def finalize_light_units(scene, units=None):
         cut_off = data.spot_size / 2.0 if spec == 'SpotLight' else None
         beam = cut_off * (1.0 - data.spot_blend) if spec == 'SpotLight' else None
         reach = radius * frame if radius > 0.0 else None
+        dark = radius == 0.0   # X_ITE lights a face only when dL <= radius || radius < 0
         distance = reference_distance(origin, reach, boxes, axis if spec == 'SpotLight' else None, cut_off)
         if distance is None:   # lights nothing: matched at 1 m, adds nothing to the scene's level
             distance = 1.0
-        else:
+        elif not dark:
             total += given * x3d_attenuation_factor(attenuation, distance / frame)
-        if radius == 0.0:
-            logger.warning("ImportX3D: %s %r has radius 0, so X_ITE lights nothing with it; it keeps no glTF range",
-                           spec, bpyob.name)
-        plans.append((data, spec, intensity, (distance, frame, reach, attenuation)))
-        shining.append((spec, intensity, attenuation, frame, reach, origin, axis, cut_off, beam, distance) + tones(data))
+        if dark:
+            logger.warning("ImportX3D: %s %r has radius 0, so X_ITE lights nothing with it; it gets no energy and no "
+                           "glTF range", spec, bpyob.name)
+        plans.append((data, spec, intensity, (distance, frame, reach, attenuation), dark))
+        shining.append((spec, intensity, attenuation, frame, 0.0 if dark else reach, origin, axis, cut_off, beam,
+                        distance) + tones(data))
 
     f, own, headlight_lux = 1.0, {}, 1.0
     if classic:
@@ -3287,7 +3332,7 @@ def finalize_light_units(scene, units=None):
         else:   # nothing lit in view: the median albedo lit by every light at once shows as in X_ITE
             level = total if total > 0.0 else 1.0
             f = headlight_lux = math.pi * srgb_to_linear(min(typical * level, 1.0)) / (held * level)
-    for index, (data, spec, intensity, place) in enumerate(plans):
+    for index, (data, spec, intensity, place, dark) in enumerate(plans):
         unit = 1.0 if intensity <= 0.0 else intensity       # the scale of a light that starts dark (animated later)
         mine = own.get(index, f)
         if place is None:
@@ -3305,11 +3350,8 @@ def finalize_light_units(scene, units=None):
             if reach is not None:
                 data.cutoff_distance = reach
         data[LIGHT_ENERGY_PER_INTENSITY_PROPERTY] = energy / unit
-        data.energy = energy if intensity > 0.0 else 0.0
-        if linear_lights:
-            given, held_colour = tones(data)
-            data[LIGHT_COLOR_PROPERTY] = given
-            data.color = held_colour
+        data.energy = energy if intensity > 0.0 and not dark else 0.0
+        hold_colour(data)
     scene["x3d_lighting_model"] = 'classic' if classic else 'physical'
     scene["x3d_headlight_lux"] = headlight_lux if classic else 1.0
 
@@ -3407,13 +3449,15 @@ def line_colour_kind(bpydata):
 
 
 def wire_unlit(mat, colour, alpha_source=None, alpha_value=1.0, out=None):
-    """Draw `colour` (an output socket) unlit on `mat`: Emission (strength 1) for camera rays and Transparent BSDF for
-    every other ray (the light-path mix Blender's glTF importer uses for KHR_materials_unlit, so an unlit surface lights
-    nothing and casts no shadow, as in X3D), then a Mix Shader with Transparent BSDF when there is alpha.
+    """Draw `colour` (an output socket, or an RGB value left on the Emission node) unlit on `mat`: Emission (strength
+    1) for camera rays and Transparent BSDF for every other ray (the light-path mix Blender's glTF importer uses for
+    KHR_materials_unlit, so an unlit surface lights nothing and casts no shadow, as in X3D), then a Mix Shader with
+    Transparent BSDF when there is alpha. The Mix keeps `alpha_value` as its factor's value even when `alpha_source`
+    feeds it, as the Principled Alpha does, so the X3D export still reads 1 - transparency there.
 
     Both exporters read this shape: Blender's glTF exporter writes KHR_materials_unlit with the colour as
     baseColorFactor, baseColorTexture or COLOR_0, and alpha as alphaMode BLEND; this add-on's X3D export finds the
-    Emission node and writes an unlit material in its colour."""
+    Emission node and writes an unlit material in its colour and alpha."""
     tree = mat.node_tree
     if out is None:
         out = next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output), None) \
@@ -3422,7 +3466,10 @@ def wire_unlit(mat, colour, alpha_source=None, alpha_value=1.0, out=None):
     emission = tree.nodes.new('ShaderNodeEmission')
     emission.inputs['Strength'].default_value = 1.0
     emission.location = (x - 400, y - 60)
-    tree.links.new(colour, emission.inputs['Color'])
+    if isinstance(colour, bpy.types.NodeSocket):
+        tree.links.new(colour, emission.inputs['Color'])
+    else:
+        emission.inputs['Color'].default_value = tuple(colour[:3]) + (1.0,)
     path = tree.nodes.new('ShaderNodeLightPath')
     path.location = (x - 600, y + 250)
     indirect = tree.nodes.new('ShaderNodeBsdfTransparent')
@@ -3439,10 +3486,9 @@ def wire_unlit(mat, colour, alpha_source=None, alpha_value=1.0, out=None):
         mix = tree.nodes.new('ShaderNodeMixShader')
         clear = tree.nodes.new('ShaderNodeBsdfTransparent')
         mix.location, clear.location = (x - 100, y - 200), (x - 300, y - 300)
+        mix.inputs[0].default_value = alpha_value
         if alpha_source is not None:
             tree.links.new(alpha_source, mix.inputs[0])
-        else:
-            mix.inputs[0].default_value = alpha_value
         tree.links.new(clear.outputs[0], mix.inputs[1])
         tree.links.new(surface, mix.inputs[2])
         surface = mix.outputs[0]
@@ -3465,11 +3511,19 @@ def draws_unlit(appr):
     return appr.getChildBySpec(MATERIAL_SPECS) is None and appr.getChildBySpec(SHADER_SPECS) is None
 
 
-def unlit_surface_material(bpymat, vertex_colours=False):
+def unlit_surface_material(bpymat, vertex_colours=None):
     """The unlit copy of the default material the importer made for a surface without a material node: whatever feeds
     its Base Color (the texture, else the Color node's attribute), else white, drawn unlit (wire_unlit), with the
     Alpha when it is linked or below 1. Before, such a surface was lit grey (0.8), and a Color node's surface came out
-    black in a scene without lights."""
+    black in a scene without lights.
+
+    vertex_colours: None, or 'RGB' / 'RGBA' for a Color / ColorRGBA node. A ColorRGBA's alpha is the surface's alpha,
+    as line_point_material does for lines: X_ITE 16.7.1 draws a Shape without a material with its default
+    UnlitMaterial (getDefaultMaterial), whose shader takes vec4 (color.rgb, color.a * (1 - transparency))
+    (Unlit2.glsl, getEmissiveColor), and a ColorRGBA makes the geometry transparent (X3DGeometryNode.set_color__), so
+    the Shape blends under alphaMode AUTO (X3DShapeNode.set_transparent__). Blender's glTF exporter then writes
+    alphaMode BLEND and the alpha in COLOR_0. Before, the alpha stayed in the colour attribute (and in the X3D export)
+    but the material ignored it: the glb was OPAQUE. A Color node stays opaque."""
     hit = unlit_surface_cache.get((bpymat.name, vertex_colours))
     if hit is not None:
         return hit
@@ -3499,9 +3553,128 @@ def unlit_surface_material(bpymat, vertex_colours=False):
         rgb.location = (bsdf.location[0], bsdf.location[1] + 200)
         colour = rgb.outputs[0]
     alpha_source = alpha.links[0].from_socket if alpha.links else None
+    if vertex_colours == 'RGBA' and alpha_source is None and colour.node.type == 'VERTEX_COLOR':
+        alpha_source = colour.node.outputs['Alpha']      # the ColorRGBA's alpha, kept as it is in the attribute
     wire_unlit(mat, colour, alpha_source, float(alpha.default_value), out)
     tree.nodes.remove(bsdf)
     unlit_surface_cache[(bpymat.name, vertex_colours)] = mat
+    return mat
+
+
+# X_ITE 16.7.1 draws an UnlitMaterial with its Unlit shader (x_ite.js, Unlit2.glsl.js, getEmissiveColor): no lighting,
+# vec4 (emissiveColor, 1 - transparency), or vec4 (color.rgb, color.a * (1 - transparency)) when the geometry has a
+# Color or ColorRGBA node (X3D_COLOR_MATERIAL, X3DShapeNode options from geometryContext.colorMaterial), times the
+# emissiveTexture. That is glTF's KHR_materials_unlit, which draws baseColorFactor x baseColorTexture x COLOR_0.
+unlit_colour_cache = {}
+
+
+def _output_node(tree):
+    return next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output), None) \
+        or next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL'), None) or tree.nodes.new('ShaderNodeOutputMaterial')
+
+
+def unlit_pbr_material(bpymat, bsdf, emissive):
+    """Turn the Principled material appearance_CreatePBRMaterial built for an UnlitMaterial into wire_unlit's shape, in
+    place: the colour is what feeds Emission Color (the emissiveTexture, times emissiveColor) or else emissiveColor,
+    the alpha the Principled Alpha (1 - transparency, times the colour texture's alpha), and the render method stays
+    the one alphaMode chose. The Emission node keeps emissiveColor as its colour's value, where the X3D export reads it.
+
+    Before, the material stayed a Principled BSDF with a black Base Color and the colour as emission: Blender's glTF
+    exporter wrote baseColorFactor 0 0 0, emissiveFactor and KHR_materials_specular, which a glTF viewer lights, and
+    a Color node's COLOR_0, which glTF multiplies into the black baseColor, never reached the pixel (X_ITE draws the
+    vertex colours, Babylon.js drew the habsburg demo's Cloth, FellMat and BeadMat white)."""
+    tree = bpymat.node_tree
+    render = bpymat.surface_render_method
+    socket = bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission")
+    colour = socket.links[0].from_socket if socket.links else emissive
+    alpha = bsdf.inputs['Alpha']
+    alpha_source = alpha.links[0].from_socket if alpha.links else None
+    wire_unlit(bpymat, colour, alpha_source, float(alpha.default_value), _output_node(tree))
+    emission = next(n for n in tree.nodes if n.type == 'EMISSION')
+    emission.inputs['Color'].default_value = tuple(emissive[:3]) + (1.0,)
+    tree.nodes.remove(bsdf)
+    bpymat.surface_render_method = render
+    return bpymat
+
+
+def unlit_colour_material(bpymat, colour_kind, alpha_mode='AUTO'):
+    """The copy of an UnlitMaterial's unlit material (unlit_pbr_material) for a filled geometry with a Color ('RGB')
+    or ColorRGBA ('RGBA') node, made once per import for each material and kind, as X_ITE 16.7.1 draws it (Unlit2.glsl,
+    getEmissiveColor): the colours (ColorPerCorner) replace emissiveColor and multiply the emissiveTexture; a
+    ColorRGBA's alpha multiplies 1 - transparency (and the texture's alpha) and makes the geometry transparent
+    (ColorRGBA: setTransparent (true)), so the Shape blends under alphaMode AUTO (X3DShapeNode.set_transparent__).
+    Blender's glTF exporter writes it as KHR_materials_unlit with COLOR_0 (linear: the face importers convert the
+    Color values, which X_ITE reads in display space under an UnlitMaterial) and alphaMode BLEND for a ColorRGBA.
+    The Emission node keeps emissiveColor as its colour's value, so the X3D export writes the UnlitMaterial back with
+    the same emissiveColor and transparency beside the Color node. The copy is per alphaMode and per solid, which
+    the copy carries as use_backface_culling (one UnlitMaterial can be USEd on solid and two-sided geometry)."""
+    key = (bpymat.name, colour_kind, alpha_mode, bool(bpymat.use_backface_culling))
+    hit = unlit_colour_cache.get(key)
+    if hit is not None:
+        return hit
+    if bpymat.node_tree is None or not any(n.type == 'EMISSION' for n in bpymat.node_tree.nodes):
+        return bpymat
+    mat = bpymat.copy()
+    mat.name = bpymat.name + "_colour"
+    tree = mat.node_tree
+    out = _output_node(tree)
+    emission = next(n for n in tree.nodes if n.type == 'EMISSION')
+    emissive = tuple(emission.inputs['Color'].default_value)
+    texture = emission.inputs['Color'].links[0].from_socket if emission.inputs['Color'].links else None
+    if texture is not None and texture.node.bl_idname == "ShaderNodeMix" and texture.node.label == "X3D colour":
+        modulate = texture.node                       # _modulate_socket_by_color's texture x emissiveColor
+        texture = next(s.links[0].from_socket for s in modulate.inputs if s.type == 'RGBA' and s.is_linked)
+        tree.nodes.remove(modulate)
+    vcol = tree.nodes.new('ShaderNodeVertexColor')
+    vcol.layer_name = "ColorPerCorner"
+    vcol.location = (emission.location[0] - 500, emission.location[1] - 300)
+    colour = vcol.outputs['Color']
+    if texture is not None:
+        mix = tree.nodes.new("ShaderNodeMix")
+        mix.data_type, mix.blend_type, mix.label = 'RGBA', 'MULTIPLY', "X3D colour"
+        mix.location = (emission.location[0] - 250, emission.location[1] - 300)
+        mix.inputs[0].default_value = 1.0
+        color_a, color_b = (s for s in mix.inputs if s.type == 'RGBA')
+        tree.links.new(texture, color_a)
+        tree.links.new(colour, color_b)
+        colour = next(s for s in mix.outputs if s.type == 'RGBA')
+    # wire_unlit's alpha mix, when there is one: its factor (1 - transparency) and what feeds it (the texture's alpha)
+    surface = out.inputs['Surface'].links[0].from_node if out.inputs['Surface'].links else None
+    alpha_value, alpha_source = 1.0, None
+    if surface is not None and surface.type == 'MIX_SHADER' \
+            and not (surface.inputs[0].links and surface.inputs[0].links[0].from_node.type == 'LIGHT_PATH'):
+        alpha_value = float(surface.inputs[0].default_value)
+        alpha_source = surface.inputs[0].links[0].from_socket if surface.inputs[0].links else None
+    if colour_kind == 'RGBA' and alpha_mode != 'OPAQUE':
+        if alpha_source is None and alpha_value >= 1.0:
+            alpha_source = vcol.outputs['Alpha']
+        else:
+            multiply = tree.nodes.new("ShaderNodeMath")
+            multiply.operation, multiply.label = 'MULTIPLY', "X3D alpha"
+            multiply.location = (vcol.location[0] + 250, vcol.location[1] - 200)
+            multiply.inputs[0].default_value = 1.0      # the exporter reads 1 - transparency through it
+            multiply.inputs[1].default_value = alpha_value if alpha_source is None else 1.0
+            tree.links.new(vcol.outputs['Alpha'], multiply.inputs[0])
+            cut = alpha_source.node if alpha_source is not None and alpha_source.node.type == 'MATH' \
+                and alpha_source.node.operation == 'GREATER_THAN' else None   # alphaMode MASK: cut the product
+            upstream = (cut.inputs[0].links[0].from_socket if cut.inputs[0].links else None) if cut else alpha_source
+            if upstream is not None:
+                tree.links.new(upstream, multiply.inputs[1])
+            if cut is not None:
+                tree.links.new(multiply.outputs[0], cut.inputs[0])
+            else:
+                alpha_source = multiply.outputs[0]
+    for node in list(tree.nodes):                     # wire_unlit's own nodes, made again around the new colour
+        if node.type in {'EMISSION', 'LIGHT_PATH', 'BSDF_TRANSPARENT', 'MIX_SHADER'}:
+            tree.nodes.remove(node)
+    render = bpymat.surface_render_method
+    wire_unlit(mat, colour, alpha_source, alpha_value, out)
+    next(n for n in tree.nodes if n.type == 'EMISSION').inputs['Color'].default_value = emissive
+    if colour_kind == 'RGBA' and alpha_mode in {'AUTO', 'BLEND'}:
+        mat.surface_render_method = 'BLENDED'
+    else:
+        mat.surface_render_method = render
+    unlit_colour_cache[key] = mat
     return mat
 
 
@@ -4546,6 +4719,10 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
                 node_tree.links.new(source, math_node.inputs[0])
                 node_tree.links.new(math_node.outputs[0], bsdf.inputs["Alpha"])
 
+    if unlit and bsdf is not None and alpha > 0.0:
+        # transparency 1 stays Principled: Blender folds a Mix Shader whose factor is 0 into its Transparent BSDF before
+        # the glTF exporter looks, so the unlit shape could not carry alpha 0, which the Principled one does (MASK)
+        unlit_pbr_material(bpymat, bsdf, emissive)
     # Two-sided rendering follows the geometry's solid field, which importShape applies later.
     return bpymat
 
@@ -5128,7 +5305,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
     texmtx = None
     tex_has_alpha = False
 
-    is_vcol = (geom.getChildBySpec(['Color', 'ColorRGBA']) is not None)
+    colour_node = geom.getChildBySpec(['Color', 'ColorRGBA'])
+    is_vcol = colour_node is not None
+    colour_kind = ('RGBA' if colour_node.getSpec() == 'ColorRGBA' else 'RGB') if is_vcol else None
 
     if appr:
         (bpymat, bpyima,
@@ -5142,6 +5321,11 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if bpymat is not None and appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
             # X3D 4.0 path: a solid surface is single sided in Blender terms
             bpymat.use_backface_culling = geom.getFieldAsBool('solid', True, ancestry)
+            if colour_kind and geom.getSpec() not in LINE_POINT_SPECS \
+                    and appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')).getSpec() == 'UnlitMaterial':
+                # the Color / ColorRGBA replaces emissiveColor (see unlit_colour_material)
+                alpha_mode = (_attribute_raw(appr, 'alphaMode', 'AUTO') or 'AUTO').strip().strip('"').upper()
+                bpymat = unlit_colour_material(bpymat, colour_kind, alpha_mode)
     elif is_vcol:
         # this may be a rare case, however sometimes vertex colors get used without material
         # in such case a default material has to get forced
@@ -5153,7 +5337,10 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
     if geom_spec not in LINE_POINT_SPECS and draws_unlit(appr):
         if bpymat is None:                     # no Appearance at all: X3D draws it white, unlit
             bpymat = appearance_CreateDefaultMaterial().material
-        bpymat = unlit_surface_material(bpymat, is_vcol)
+        kind = colour_kind
+        if kind == 'RGBA' and appr and (_attribute_raw(appr, 'alphaMode', 'AUTO') or 'AUTO').strip().strip('"').upper() == 'OPAQUE':
+            kind = 'RGB'    # X_ITE takes the alpha from the geometry only under alphaMode AUTO (set_transparent__)
+        bpymat = unlit_surface_material(bpymat, kind)
 
     # ccw is handled by every geometry importer separately; some
     # geometries are easier to flip than others
@@ -6579,9 +6766,11 @@ def load_web3d(
     # NOTE - reset material cache
     # (otherwise we might get "StructRNA of type Material has been removed" errors)
     global material_cache, texture_cache, image_alpha_cache, line_material_cache, unlit_surface_cache
+    global unlit_colour_cache
     material_cache = {}
     line_material_cache = {}
     unlit_surface_cache = {}
+    unlit_colour_cache = {}
     # Same reason for textures: a cached Image outlives File > New and the next import fails with
     # "StructRNA of type Image has been removed".
     texture_cache = {}

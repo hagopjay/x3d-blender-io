@@ -380,7 +380,9 @@ class ImportFidelityTests(unittest.TestCase):
         src, _ = self.line_material_source(line)
         return {"diffuse": b("Classic").inputs["Base Color"].default_value[0],
                 "emissive": b("Classic").inputs["Emission Color"].default_value[0],
-                "unlit": b("Unlit").inputs["Emission Color"].default_value[0],
+                # an UnlitMaterial imports unlit (X_ITE 16.7.1 draws it with Unlit2.glsl): its colour is on the Emission node
+                "unlit": next(n for n in objects["Unlit"].data.materials[0].node_tree.nodes
+                              if n.type == 'EMISSION').inputs["Color"].default_value[0],
                 "physical base": b("Physical").inputs["Base Color"].default_value[0],
                 "physical emissive": b("Physical").inputs["Emission Color"].default_value[0],
                 "line": src.outputs[0].default_value[0]}

@@ -55,7 +55,7 @@ LIGHT_REFERENCE_DISTANCE_PROPERTY = "x3d_reference_distance"
 # light's Transforms and is unset for a radius of -1 or 0.
 LIGHT_RADIUS_PROPERTY = "x3d_radius"
 # A light's X3D color as the file gave it, kept when the import made the Blender colour linear (a classic scene read
-# as sRGB, the way X_ITE lights classic Materials), so the export can write the file's value back.
+# as sRGB, the way X_ITE lights classic Materials), so the X3D 3.3 export can write the file's value back.
 LIGHT_COLOR_PROPERTY = "x3d_color"
 # The import's colour space (AS_IS or SRGB) on the scene, so the export can write colours back the same way.
 COLOUR_SPACE_PROPERTY = "x3d_color_space"
@@ -745,6 +745,22 @@ def light_energy_per_intensity(data) -> float:
     return 1.0 if data.type == "SUN" else 1.75
 
 
+def light_intensity(data) -> float:
+    """The X3D intensity to write for a light: its Blender energy over light_energy_per_intensity, except for a point
+    or spot light the import found with ``radius`` 0. X_ITE lights nothing with such a light, so the import gives it
+    energy 0; its intensity is then the file's (LIGHT_INTENSITY_PROPERTY), so the export writes the same light back.
+    Once the light is given energy in Blender, the energy counts again."""
+    energy = max(0.0, float(data.energy))
+    if energy == 0.0 and data.type in ("POINT", "SPOT") and data.get(LIGHT_INTENSITY_PROPERTY) is not None:
+        try:
+            radius = float(data.get(LIGHT_RADIUS_PROPERTY))
+        except (TypeError, ValueError):
+            radius = None
+        if radius == 0.0:
+            return max(0.0, float(data[LIGHT_INTENSITY_PROPERTY]))
+    return energy / light_energy_per_intensity(data)
+
+
 def light_attenuation(data):
     """The X3D attenuation an import kept on a point or spot light, as three floats, else None."""
     value = data.get(LIGHT_ATTENUATION_PROPERTY)
@@ -774,17 +790,32 @@ def imported_spot_cone(data):
     return cut_off * (1.0 - float(data.spot_blend)), cut_off
 
 
-def light_colour(data):
-    """A light's X3D color: the file's value while the Blender colour is still what the import made of it, sRGB-encoded
-    when the import made it linear (LIGHT_COLOR_PROPERTY) and it was changed since, else the Blender colour."""
+def light_colour(data, colour_space):
+    """A light's X3D color next to classic Materials (the X3D 3.3 writer), written like their colours
+    (display_colour): under 'SRGB' the file's value (LIGHT_COLOR_PROPERTY) while the Blender colour is still what the
+    import made of it, else the Blender colour sRGB-encoded, the way X_ITE 16.7.1 lights a classic Material (its
+    X3DMaterialNode picks X3D_COLORSPACE_SRGB when isPhysical () is false, dist/x_ite.js line 71561, and the colour
+    maths runs on the color field as given); under 'AS_IS' the Blender colour unchanged. Clamped to [0, 1]."""
     colour = tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3])
-    stored = data.get(LIGHT_COLOR_PROPERTY)
-    if stored is None:
+    if colour_space != 'SRGB':
         return colour
-    stored = tuple(float(channel) for channel in stored)[:3]
-    if all(abs(srgb_to_linear(a) - b) < 1e-5 for a, b in zip(stored, colour)):
-        return stored
-    return tuple(linear_to_srgb(channel) for channel in colour)
+    stored = data.get(LIGHT_COLOR_PROPERTY)
+    if stored is not None:
+        stored = tuple(float(channel) for channel in stored)[:3]
+        if all(abs(srgb_to_linear(a) - b) < 1e-5 for a, b in zip(stored, colour)):
+            return stored
+    return display_colour(colour, colour_space)
+
+
+def physical_light_colour(data):
+    """A light's X3D color next to PhysicalMaterials (the X3D 4.0/4.1 writer): the Blender colour, linear, clamped to
+    [0, 1]. X_ITE 16.7.1 lights a PhysicalMaterial in linear space: X3DLightNode.getColor () hands the color field to
+    the shader unchanged (dist/x_ite.js lines 63900 and 82640), Punctual2.glsl's getLightIntensity returns
+    intensity * light.color (line 67903 on), PBR2.glsl multiplies that by the linear baseColor (l_diffuse, line 67826)
+    and ToneMapping2.glsl encodes the sum to sRGB at the end under X3D_COLORSPACE_LINEAR (line 67952), the colour space
+    X3DMaterialNode picks for a PhysicalMaterial (line 71561, isPhysical () line 87646). The importer keeps a physical
+    scene's light colours as given, so the colour comes back unchanged."""
+    return tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3])
 
 
 def srgb_to_linear(value):
@@ -806,14 +837,13 @@ def _extract_light(obj, local_matrix) -> IRLight:
     """
     data = obj.data
     light_type = {"POINT": "POINT", "SPOT": "SPOT", "SUN": "DIRECTIONAL"}.get(data.type, "DIRECTIONAL")
-    energy = max(0.0, float(data.energy))
-    intensity = energy / light_energy_per_intensity(data)
+    intensity = light_intensity(data)
     if data.get(LIGHT_INTENSITY_PROPERTY) is None:
         intensity = min(intensity, 1.0)
     light = IRLight(
         name=obj.name,
         light_type=light_type,
-        color=light_colour(data),
+        color=physical_light_colour(data),
         intensity=intensity,
         ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),

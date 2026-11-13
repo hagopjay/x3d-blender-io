@@ -94,7 +94,19 @@ class ImportTextureAlphaTests(unittest.TestCase):
         cls.mats = {m.name: m for m in bpy.data.materials}
 
     def _alpha(self, name):
-        return _principled(self.mats[name]).inputs["Alpha"]
+        """The Principled Alpha; for an UnlitMaterial, which imports unlit (X_ITE 16.7.1 draws it with Unlit2.glsl,
+        alpha = (1 - transparency) x the emissive texture's alpha), the factor of the Mix Shader with a Transparent BSDF
+        that feeds the output, where Blender's glTF exporter reads the alpha (None when there is no such mix: opaque)."""
+        material = self.mats[name]
+        principled = next((n for n in material.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if principled is not None:
+            return principled.inputs["Alpha"]
+        out = next(n for n in material.node_tree.nodes if n.type == 'OUTPUT_MATERIAL')
+        mix = out.inputs["Surface"].links[0].from_node
+        if mix.inputs[0].is_linked and mix.inputs[0].links[0].from_node.type == 'LIGHT_PATH':
+            return None                                     # only the unlit light-path mix: no alpha
+        self.assertEqual(mix.inputs[1].links[0].from_node.type, 'BSDF_TRANSPARENT')
+        return mix.inputs[0]
 
     def test_unlit_texture_alpha_times_transparency(self):
         socket = self._alpha("MA_UnlitFaded")
@@ -120,7 +132,7 @@ class ImportTextureAlphaTests(unittest.TestCase):
     def test_opaque_images_stay_opaque(self):
         for name in ("MA_UnlitSolidRGBA", "MA_UnlitSolidRGB"):
             with self.subTest(name=name):
-                self.assertFalse(self._alpha(name).is_linked)
+                self.assertIsNone(self._alpha(name))       # no alpha mix at all, so nothing links an alpha
                 self.assertNotEqual(self.mats[name].surface_render_method, 'BLENDED')
 
     def test_physical_base_texture_alpha_with_auto(self):

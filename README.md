@@ -71,7 +71,7 @@ writes them back, so an imported scene keeps them through export (the X3D 3.3 wr
 | `x3d_attenuation` | light data | a point or spot light's `attenuation`, when the file sets it | `attenuation` (also by the X3D 3.3 writer) |
 | `x3d_energy_per_intensity` | light data | Blender energy per unit of intensity, set by an import in **X_ITE** light units (below) | the divisor that turns the energy back into `intensity` (also in the X3D 3.3 writer); without it, 1.75 for point and spot lights and 1 for a sun |
 | `x3d_radius` | light data | a point or spot light's `radius` as the file set it (-1 for unlimited), in Blender units of the light's own frame | `radius` (also by the X3D 3.3 writer); Blender's cutoff distance holds the world-space glTF range |
-| `x3d_color` | light data | a light's `color` as the file gave it, when an **X_ITE**-units import of a classic scene read it as sRGB and made the Blender colour linear | `color`, while the Blender colour is unchanged (an edited colour is written sRGB-encoded) |
+| `x3d_color` | light data | a light's `color` as the file gave it, when an import with Colour Space **sRGB** read a classic scene's light colour as sRGB and made the Blender colour linear (whatever the Light Units) | `color` in the X3D 3.3 writer under Colour Space **sRGB**, while the Blender colour is unchanged (an edited colour is written sRGB-encoded); the X3D 4.0 writer, whose PhysicalMaterials X_ITE lights in linear space, and **As Is** write the Blender colour |
 | `x3d_reference_distance` | light data | the distance (m) at which an **X_ITE**-units import anchors a point or spot light's falloff | nothing |
 | `x3d_lighting_model`, `x3d_headlight_lux` | scene | from an **X_ITE**-units import: `physical` when any lit shape has a PhysicalMaterial, else `classic`, and the lux an X3D headlight (a DirectionalLight of 1 along the view) should get in a glTF viewer (fitted with the other lights below; 1 for a physical scene) | nothing |
 | `x3d_color_space` | scene | the import's Colour Space, `AS_IS` or `SRGB` | nothing by itself: an export with Colour Space **Auto** writes colours back the same way (below) |
@@ -105,7 +105,10 @@ becomes the mesh's active colour attribute, so the exports write it again.
 The export's **Colour Space** writes them back. **Auto** (the default) uses the colour space the scene was imported with
 (`x3d_color_space`), else the `BLENDER_X3D_COLOR_SPACE` environment variable, else sRGB. Under **sRGB** the X3D 3.3
 writer sRGB-encodes a Material's `diffuseColor`, `specularColor` and `emissiveColor`, and the X3D 4.0 writer an
-`UnlitMaterial`'s `emissiveColor`; `PhysicalMaterial` colours are always written linear. So an import and export with
+`UnlitMaterial`'s `emissiveColor`; `PhysicalMaterial` colours are always written linear. A light's `color` goes the
+same way: sRGB-encoded by the X3D 3.3 writer under sRGB (the file's value while the colour is unchanged, `x3d_color`; as is
+when no exported mesh has a material, since such a file re-imports as a physical scene),
+linear by the X3D 4.0 writer, which X_ITE lights with the PhysicalMaterials it writes. So an import and export with
 the same colour space give the file's numbers back, and a material made in Blender exported under sRGB shows in X_ITE
 as Blender renders it.
 
@@ -131,33 +134,41 @@ distance, where its 1/d² falloff is anchored: the median distance from the ligh
 the light is within its bounding sphere (a light above a large floor). A shape whose box holds the light (a bulb around
 it, the room it hangs in) counts only when nothing else is in reach, and a black, emissive-only shape not at all; 1 m
 when the light reaches nothing. Every USE of a shape counts, and an Inlined glTF counts as PhysicalMaterial, as X_ITE
-draws it. `w(d) = clamp(1 - (d / r)⁴, 0, 1)` (at least 0.1) is the range window KHR_lights_punctual recommends: X_ITE
-applies it to PhysicalMaterial but cuts classic Materials off hard at the radius, so a classic light makes up for it.
+draws it. `w(d) = clamp(1 - (d / r)⁴, 0, 1)²` (at least 0.1) is the range window Babylon.js 9.32 draws a glTF `range`
+with (it squares the window KHR_lights_punctual recommends, which X_ITE applies to PhysicalMaterial); X_ITE cuts classic
+Materials off hard at the radius, so a classic light makes up for it.
 
 A classic scene has no exact glTF match. X_ITE shades it in display space: `emissiveColor + diffuseColor · L`, where
-`L` adds up each light's `intensity · color · att · cos` (and the headlight's `cos`) as sRGB values, with no falloff but
-the `attenuation`. A glTF viewer adds linear light that falls off as 1/d². So the import fits the classic lights to what
-X_ITE draws where it matters, on the surfaces the first Viewpoint sees: it casts a 64 × 64 grid of rays over that view
-(X3D's default view when the file has none), and at each surface a ray meets first, per colour channel, compares X_ITE's
-`min(e + b · L, 1)` (`e` and `b` the sRGB emissive and diffuse colours) with what the glTF lights draw there,
-`srgb(min(E + B · lux / pi, 1))` (`E` and `B` the linear colours Blender renders with). Each light's factor `f` makes the
-mean difference least: first one factor for every light (so the lights keep their ratios), then each light's own factor
-by least squares near the display, pulled towards the shared one and kept only when it draws closer. Where X_ITE clips
-to white, the dimmest factor that reaches white wins. Hidden faces, lines, text and emissive-only shapes do not count. On
-one face lit at level `S` this is `f = pi · lin(a · S) / (A · S)` for an sRGB albedo `a` (`A = lin(a)`, or `a` when the
-colours were imported As Is), which is also the fallback when nothing lit is in view (`a` the median albedo, `S` what
-the lights give at their reference distances). Read as sRGB, a classic scene's light `color` becomes linear in Blender
-too, as its Material colours do (the file's value is kept in `x3d_color` for the export). A scene is classic when its lit
-shapes have a `Material` or `TwoSidedMaterial` and none has a `PhysicalMaterial`: classic units would light a
-PhysicalMaterial several times too bright (a key light of 2.4 gave a gold sphere 23.9 lux and blew it out), while a
-classic surface lit physically is only darker.
+`L` adds up each light's `intensity · color · att · cos · spot` (and the headlight's `cos`) as sRGB values, with no
+falloff but the `attenuation`; X_ITE's classic spot factor falls off linearly in the angle from `beamWidth` to
+`cutOffAngle`, a glTF viewer's as the square of a ramp in its cosine. A glTF viewer adds linear light that falls off as
+1/d². So the import fits the classic lights to what X_ITE draws where it matters, on the surfaces the first Viewpoint
+sees: it casts a 64 × 64 grid of rays over that view (X3D's default view when the file has none; a Transform's scale
+on the Viewpoint changes neither the view nor the headlight), and at each surface a ray meets first, per colour channel,
+compares X_ITE's `min(e + b · L, 1)` (`e` and `b` the sRGB emissive and diffuse colours) with what the glTF lights draw
+there, `srgb(min(E + B · lux / pi, 1))` (`E` and `B` the linear colours Blender renders with). Each light's factor
+`f` makes the mean difference least: first one factor for every light (so the lights keep their ratios), then each
+light's own factor by least squares near the display, pulled towards the shared one and kept only when it draws closer
+(a light no face in view sees keeps the shared one). Where X_ITE clips to white, the dimmest factor that reaches white
+wins. Hidden faces, lines, text and emissive-only shapes do not count. On one face lit at level `S` this is
+`f = pi · lin(a · S) / (A · S)` for an sRGB albedo `a` (`A = lin(a)`, or `a` when the colours were imported As Is),
+which is also the fallback when nothing lit is in view (`a` the median albedo, `S` what the lights give at their
+reference distances). Read as sRGB, a classic scene's light `color` becomes linear in Blender too, as its Material
+colours do (the file's value is kept in `x3d_color` for the X3D 3.3
+export). A scene is classic when its lit shapes have a
+`Material` or `TwoSidedMaterial` and none has a `PhysicalMaterial`: classic units would light a PhysicalMaterial
+several times too bright (a key light of 2.4 gave a gold sphere 23.9 lux and blew it out), while a classic surface lit
+physically is only darker.
 
 In **X_ITE** units the light's `radius · s` becomes its glTF `range`; a `radius` of -1 (unlimited in X_ITE) or 0 leaves
-it without one, since glTF has no range 0. A SpotLight's `beamWidth` becomes Blender's and glTF's inner cone
+it without one, since glTF has no range 0. X_ITE lights nothing with a `radius` of 0 (a face only when its distance is
+at most the radius, or the radius is negative), so such a light gets energy 0 (its scale is kept, as for a light that
+starts dark) and leaves the fit of the others alone. A SpotLight's `beamWidth` becomes Blender's and glTF's inner cone
 (`spot_blend = 1 - beamWidth / cutOffAngle`, 0 for X3D's hard edge when `beamWidth >= cutOffAngle`), as X_ITE falls off
 between the two. **Auto**, the default, reads the `BLENDER_X3D_LIGHT_UNITS` environment variable, else follows the
 Colour Space: **X_ITE** with **sRGB, as X_ITE draws** (the default), **Blender** with **As Is**. The X3D export writes the
-file's `intensity`, `color`, `attenuation`, `radius`, `beamWidth` and `cutOffAngle` back with either units. A round trip
+file's `intensity`, `color` (the X3D 3.3 writer; the X3D 4.0 writer writes it linear, see Colour Space above),
+`attenuation`, `radius`, `beamWidth` and `cutOffAngle` back with either units. A round trip
 that starts in Blender (export, then import) keeps its light energies only with Light Units **Blender**; by default the
 import draws the file's intensities as X_ITE does.
 
