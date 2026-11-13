@@ -2,255 +2,200 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>X3D Blender I/O: Blender, fluent in X3D 4.1</title>
-<meta name="description" content="An independent fork of Blender's X3D add-on that reads and writes X3D 4.0 and 4.1: PBR materials, animation, HAnim, Gaussian splats, glTF bridges and geospatial grids. Live demos, measured numbers, full credit to the original.">
-<meta name="theme-color" content="#07090f">
-<meta property="og:title" content="X3D Blender I/O: Blender, fluent in X3D 4.1">
-<meta property="og:description" content="978 real stars, live X3D in the browser, 320 tests, one very fast export. An X3D 4.0/4.1 fork of Blender's X3D add-on.">
-<meta property="og:image" content="showcase/img/bridge-cycles.webp">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307090f'/%3E%3Cpath d='M7 9l9 5 9-5M7 9v10l9 5 9-5V9M16 14v10' fill='none' stroke='%23ffb454' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
-<style>
-:root{
-  --bg:#07090f;--bg2:#0b101c;--surface:#0f1526;--surface2:#151c33;--line:rgba(160,182,235,.15);--line2:rgba(160,182,235,.28);
-  --text:#e9edf7;--muted:#9ba6c2;--amber:#ffb454;--amber2:#ffd28a;--cyan:#62d6ff;--green:#74e29a;--rose:#ff8aa1;--violet:#aa9cff;
-  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
-  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
-  --gut:clamp(18px,4vw,44px);
-}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth;color-scheme:dark}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-a{color:var(--amber);text-underline-offset:3px}a:hover{color:var(--amber2)}
-img{max-width:100%;display:block}
-.wrap{max-width:1200px;margin:0 auto;padding:0 var(--gut)}
-.mono{font-family:var(--mono)}
-.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
-h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.01em;line-height:1.06;margin:0}
-h2{font-size:clamp(2rem,4.6vw,3.6rem)}
-h3{font-size:1.35rem;line-height:1.2}
-p{margin:0}
-.lead{font-size:clamp(1.05rem,1.6vw,1.25rem);color:var(--muted);max-width:62ch}
-section{padding:clamp(56px,8vw,104px) 0;position:relative}
-.sec-head{display:grid;gap:14px;margin-bottom:clamp(28px,5vw,56px)}
-.skip{position:absolute;left:-999px;top:8px;background:var(--amber);color:#000;padding:8px 12px;border-radius:6px;z-index:99}.skip:focus{left:8px}
-
-/* nav */
-nav.top{position:fixed;inset:0 0 auto 0;z-index:40;display:flex;align-items:center;gap:22px;padding:12px var(--gut);background:linear-gradient(#07090fe6,#07090f00);backdrop-filter:blur(2px)}
-nav.top .brand{font:600 14px var(--mono);color:var(--text);text-decoration:none;letter-spacing:.02em;display:flex;gap:9px;align-items:center}
-nav.top .brand i{width:22px;height:22px;border-radius:6px;border:1px solid var(--amber);display:inline-grid;place-items:center;color:var(--amber);font-style:normal;font-size:12px}
-nav.top .links{display:flex;gap:18px;margin-left:auto;font:13px var(--mono)}
-nav.top .links a{color:var(--muted);text-decoration:none}nav.top .links a:hover{color:var(--text)}
-nav.top .gh{border:1px solid var(--line2);padding:6px 12px;border-radius:999px;color:var(--text)!important}
-@media(max-width:760px){nav.top .links a:not(.gh){display:none}}
-
-/* hero */
-.hero{min-height:100svh;padding:0;display:grid;align-items:center;overflow:hidden;isolation:isolate}
-#sky{position:absolute;inset:0;width:100%;height:100%;z-index:-1;cursor:grab;touch-action:pan-y}
-#sky:active{cursor:grabbing}
-.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(120% 90% at 70% 45%,transparent 35%,#07090f 100%),linear-gradient(90deg,#07090f 6%,#07090f00 55%)}
-.hero .wrap{width:100%;padding-top:96px;padding-bottom:120px;pointer-events:none}
-.hero .wrap>*{pointer-events:auto}
-.hero h1{font-size:clamp(2.7rem,7.2vw,6.3rem);margin:18px 0 26px;max-width:13ch}
-.hero h1 em{font-style:italic;color:var(--amber);position:relative}
-.hero .lead{max-width:50ch}
-.ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
-.btn{display:inline-flex;gap:10px;align-items:center;padding:13px 22px;border-radius:999px;font:600 14px var(--sans);text-decoration:none;border:1px solid var(--line2);color:var(--text);transition:transform .15s,background .15s,border-color .15s}
-.btn:hover{transform:translateY(-1px);border-color:var(--amber);color:var(--text)}
-.btn.primary{background:var(--amber);color:#1a1100;border-color:var(--amber)}.btn.primary:hover{background:var(--amber2);color:#1a1100}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}
-.chip{font:12px var(--mono);padding:5px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:#0b101c99}
-.hero .cap{position:absolute;left:var(--gut);bottom:22px;right:var(--gut);display:flex;justify-content:space-between;gap:20px;font:11.5px/1.5 var(--mono);color:#7f8aa8;pointer-events:none}
-.hero .cap b{color:var(--amber2);font-weight:600}
-@media(max-width:760px){.hero .cap span:last-child{display:none}.hero::after{background:linear-gradient(180deg,#07090f 38%,#07090f00 78%)}.hero .wrap{padding-top:96px;padding-bottom:0;align-self:start}.hero .cap{bottom:10px}.hero{min-height:max(100svh,820px)}}
-
-/* number wall */
-.wall{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:20px;overflow:hidden}
-.tile{background:var(--surface);padding:26px 24px 22px;text-align:left;border:0;color:inherit;font:inherit;cursor:pointer;position:relative;min-height:200px;display:flex;flex-direction:column;gap:8px;transition:background .2s}
-.tile:hover,.tile:focus-visible{background:var(--surface2);outline:none}
-.tile:focus-visible{box-shadow:inset 0 0 0 2px var(--amber)}
-.tile .n{white-space:nowrap;font:500 clamp(2.4rem,4.4vw,3.6rem)/1 var(--serif);color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.tile .n small{font-size:.42em;color:var(--amber);margin-left:.15em;font-family:var(--mono);letter-spacing:0}
-.tile .l{font-size:14.5px;color:var(--muted);line-height:1.4}
-.tile .r{margin-top:auto;font:11.5px/1.45 var(--mono);color:#8793b1;max-height:0;opacity:0;overflow:hidden;transition:max-height .3s,opacity .3s}
-.tile[aria-expanded=true] .r,.tile:hover .r,.tile:focus-visible .r{max-height:130px;opacity:1}
-.tile .g{position:absolute;right:14px;top:14px;font:10px var(--mono);letter-spacing:.1em;color:var(--green);border:1px solid #74e29a55;border-radius:99px;padding:2px 7px}
-.tile::after{content:"receipt +";position:absolute;right:16px;bottom:14px;font:10.5px var(--mono);color:#5d6985}
-.tile[aria-expanded=true]::after,.tile:hover::after{content:""}
-.tile.long .n{font-size:clamp(2rem,3.4vw,2.9rem)}
-.wall .tile:last-child{grid-column:1/-1;min-height:150px}
-@media(max-width:1000px){.wall{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:480px){.wall{grid-template-columns:1fr}.tile{min-height:0}}
-.wallnote{margin-top:14px;font:12px var(--mono);color:#7f8aa8}
-
-/* theatre */
-.theatre{display:grid;grid-template-columns:230px 1fr;gap:20px}
-.tabs{display:flex;flex-direction:column;gap:8px}
-.tab{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;text-align:left;color:var(--muted);cursor:pointer;font:inherit;transition:.15s}
-.tab b{display:block;color:var(--text);font:600 14px var(--sans);margin-bottom:3px}
-.tab span{font-size:12.5px;line-height:1.35;display:block}
-.tab[aria-selected=true]{border-color:var(--amber);background:var(--surface2)}
-.tab:hover{border-color:var(--line2)}
-.stage{position:relative;aspect-ratio:16/10;border-radius:20px;overflow:hidden;border:1px solid var(--line2);background:#03050a;box-shadow:0 30px 90px -30px #000,0 0 0 1px #ffffff06}
-.stage x3d-canvas,.stage .poster{position:absolute;inset:0;width:100%;height:100%;display:block}
-.stage .poster{object-fit:cover}
-.stage .badge{position:absolute;left:14px;bottom:14px;font:11.5px var(--mono);background:#07090fcc;border:1px solid var(--line2);padding:6px 10px;border-radius:99px;color:var(--amber2);z-index:3}
-.stage .go{position:absolute;inset:0;display:grid;place-items:center;z-index:2;background:linear-gradient(#0000,#000a)}
-.stage .go button{font:600 15px var(--sans);padding:14px 26px;border-radius:99px;border:0;background:var(--amber);color:#1a1100;cursor:pointer;box-shadow:0 10px 40px #ffb45455}
-.stage .go button:hover{background:var(--amber2)}
-.say{margin-top:14px;color:var(--muted);font-size:14.5px;max-width:78ch}
-.say b{color:var(--text)}
-@media(max-width:900px){.theatre{grid-template-columns:1fr}.tabs{flex-direction:row;overflow-x:auto;padding-bottom:4px}.tab{min-width:190px}}
-
-/* before/after */
-.ba-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:26px}
-.ba{--p:50%;position:relative;aspect-ratio:16/10;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#000;user-select:none}
-.ba img,.ba .empty{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.ba .after{clip-path:inset(0 0 0 var(--p))}
-.ba .empty{display:grid;place-items:center;background:repeating-linear-gradient(135deg,#0a0e19 0 14px,#0d1322 14px 28px);color:#6b7796;font:13px/1.6 var(--mono);text-align:center;padding:20px}
-.ba .empty b{display:block;font-size:30px;font-family:var(--serif);font-weight:500;color:#8c97b4;margin-bottom:6px}
-.ba .bar{position:absolute;top:0;bottom:0;left:var(--p);width:2px;background:var(--amber);box-shadow:0 0 18px #ffb454aa;pointer-events:none}
-.ba .bar::after{content:"";position:absolute;top:50%;left:-15px;width:32px;height:32px;border-radius:50%;background:var(--amber);transform:translateY(-50%);box-shadow:0 4px 18px #000a}
-.ba .bar::before{content:"◂ ▸";position:absolute;top:50%;left:-13px;width:28px;transform:translateY(-50%);z-index:1;text-align:center;font:11px var(--mono);color:#1a1100;letter-spacing:-.1em}
-.ba input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
-.ba input:focus-visible+.bar{box-shadow:0 0 0 3px #fff,0 0 18px #ffb454}
-.ba .tag{position:absolute;top:12px;font:11.5px var(--mono);background:#07090fd0;border:1px solid var(--line2);padding:4px 9px;border-radius:99px;pointer-events:none}
-.ba .tag.l{left:12px;color:var(--muted)}.ba .tag.r{right:12px;color:var(--amber2)}
-.ba-grid>figure:nth-child(3){grid-column:1/-1}.ba-grid>figure:nth-child(3) .ba{aspect-ratio:21/9}
-.ba-cap{margin-top:12px;font-size:14px;color:var(--muted)}.ba-cap b{color:var(--text)}
-
-/* capability cards */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
-.card{background:linear-gradient(180deg,var(--surface),#0c1120);border:1px solid var(--line);border-radius:18px;padding:24px 24px 22px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .2s}
-.card:hover{border-color:var(--line2);transform:translateY(-2px)}
-.card .k{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
-.card p{color:var(--muted);font-size:14.5px}
-.card .m{margin-top:auto;padding-top:8px;font:12px/1.5 var(--mono);color:#8995b3;border-top:1px dashed var(--line);margin-top:10px}
-.card .m b{color:var(--amber2);font-weight:600}
-.card.big{grid-column:span 2}
-@media(max-width:700px){.card.big{grid-column:auto}}
-
-/* pipeline */
-.pipe{border:1px solid var(--line);border-radius:22px;background:radial-gradient(80% 140% at 50% 0%,#141b33,#0b101c);padding:clamp(18px,3vw,34px);overflow-x:auto}
-.pipe svg{width:100%;min-width:760px;height:auto;display:block}
-.pipe text{font-family:var(--mono);fill:#c9d2ea;font-size:13px}
-.pipe .t2{fill:#8793b1;font-size:11px}
-.pipe .flow{stroke-dasharray:5 7;animation:dash 1.4s linear infinite}
-@keyframes dash{to{stroke-dashoffset:-24}}
-
-/* stories */
-.stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px}
-.story{border-left:2px solid var(--amber);padding:4px 0 4px 20px}
-.story .big{font:500 clamp(2rem,3.6vw,2.8rem)/1.05 var(--serif);color:var(--text)}
-.story .big s{color:#7f8aa8;text-decoration-thickness:2px;text-decoration-color:var(--rose)}
-.story h3{font:600 15px var(--sans);margin:8px 0 6px;color:var(--amber2)}
-.story p{font-size:14.5px;color:var(--muted)}
-
-/* changes table */
-.tablewrap{border:1px solid var(--line);border-radius:18px;overflow:hidden;overflow-x:auto}
-table.chg{width:100%;border-collapse:collapse;font-size:14px;min-width:720px}
-.chg th{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
-.chg td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top}
-.chg tr:last-child td{border-bottom:0}
-.chg td:first-child{color:var(--text);font-weight:600;width:24%}
-.chg .no{color:#a8b0c8}.chg .yes{color:var(--green)}
-.chg .src{font:11.5px var(--mono);color:#7f8aa8;white-space:nowrap}
-
-/* credits */
-.credit{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(24px,5vw,64px);align-items:start}
-.names{display:flex;flex-wrap:wrap;gap:10px}
-.names span{border:1px solid var(--line2);border-radius:99px;padding:7px 14px;font:13.5px var(--sans)}
-.names span small{color:var(--muted);font:11.5px var(--mono);margin-left:6px}
-@media(max-width:860px){.credit{grid-template-columns:1fr}}
-
-/* install */
-pre{margin:0;background:#05070d;border:1px solid var(--line);border-radius:14px;padding:18px 20px;overflow-x:auto;font:13px/1.7 var(--mono);color:#cfd7ee}
-pre .c{color:#6f7b99}pre .k{color:var(--amber)}
-
-footer{padding:56px 0 70px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
-footer .row{display:flex;flex-wrap:wrap;gap:22px 48px;justify-content:space-between}
-footer h4{margin:0 0 10px;font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
-footer ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
-footer .fine{margin-top:34px;font:12px/1.7 var(--mono);color:#6f7b99;max-width:110ch}
-
-.rv{opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
-.rv.in{opacity:1;transform:none}
-.nojs .rv{opacity:1;transform:none}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>X3D Blender I/O · Blender, fluent in X3D 4.1</title>
+<meta name="description" content="An independent fork of Blender's Web3D X3D add-on: X3D 4.0 and 4.1 import and export with physically based materials, animation, HAnim, Gaussian splats, geospatial grids and a glTF bridge, running live in your browser.">
+<meta name="theme-color" content="#03050b">
+<meta property="og:title" content="X3D Blender I/O · Blender, fluent in X3D 4.1">
+<meta property="og:description" content="978 real stars, Blender scenes running live as X3D, and the numbers that name their tools.">
+<meta property="og:image" content="https://hagopjay.github.io/x3d-blender-io/brag/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hagopjay.github.io/x3d-blender-io/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brag/v2.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js"}}</script>
 </head>
 <body class="nojs">
-<a class="skip" href="#main">Skip to content</a>
-<nav class="top" aria-label="Page">
-  <a class="brand" href="#top"><i>▣</i>X3D&nbsp;Blender&nbsp;I/O</a>
-  <div class="links"><a href="#numbers">Numbers</a><a href="#live">Live 3D</a><a href="#before-after">Before / after</a><a href="#stories">Bug hunts</a><a href="#credit">Credit</a><a class="gh" href="https://github.com/hagopjay/x3d-blender-io">GitHub ↗</a></div>
+
+<nav class="nav" aria-label="Page">
+  <a class="brand" href="#top" aria-label="X3D Blender I/O, back to top"><i aria-hidden="true"></i><span>X3D Blender I/O</span></a>
+  <a class="l keep" href="#poc1">POC #1</a>
+  <a class="l" href="#showpieces">Showpieces</a>
+  <a class="l" href="#numbers">Numbers</a>
+  <a class="l" href="#inside">Inside</a>
+  <a class="l" href="#credit">Credit</a>
+  <a class="gh" href="https://github.com/hagopjay/x3d-blender-io">GitHub ↗</a>
 </nav>
 
+<!-- ============ HERO · POC #1: the star view ============ -->
 <header class="hero" id="top">
-  <canvas id="sky" tabindex="0" role="img" aria-label="Interactive 3D map of the 978 real stars within 50 light-years of the Sun, from the HYG v4.1 catalogue. Drag to rotate, arrow keys also rotate."></canvas>
-  <div class="wrap">
-    <div class="eyebrow">Blender ⇄ X3D 4.0 / 4.1 · open source · GPL-3.0-or-later</div>
-    <h1>Blender, fluent in <em>X3D&nbsp;4.1.</em></h1>
-    <p class="lead">An independent fork of Blender's Web3D X3D add-on that now speaks the whole modern dialect: physically based materials, animation, HAnim humanoids, Gaussian splats, glTF bridges and geospatial grids. It stands on the shoulders of the original, and it keeps score.</p>
-    <div class="ctas"><a class="btn primary" href="https://github.com/hagopjay/x3d-blender-io">Get it on GitHub ↗</a><a class="btn" href="#live">See it run live ↓</a></div>
-    <div class="chips"><span class="chip">Blender 4.2+ · tested 4.5 → 5.3</span><span class="chip">import + export</span><span class="chip">PBR · HAnim · splats · geo</span><span class="chip">320 tests</span></div>
+  <div class="stage" id="heroStage">
+    <img class="poster" id="heroPoster" src="brag/hero-poster.webp" alt="" aria-hidden="true">
+    <canvas id="sky" aria-label="The 978 real stars within 50 light-years of the Sun, in 3D. Drag to orbit, hover a star for its name and distance."></canvas>
+    <div class="labels" id="labels" aria-hidden="true"></div>
+    <div class="tip" id="tip" hidden></div>
+    <div class="veil"></div>
+    <div class="copy"><div class="wrap"><div class="in" id="heroCopy">
+      <div class="eyebrow">POC #1 · the star view <i>· X3D 4.1</i></div>
+      <h1>Blender, fluent<br>in <em>X3D 4.1.</em></h1>
+      <p class="lead">Every point of light here is a real star: all 978 within 50 light-years of the Sun, from the HYG v4.1 catalogue, stored as X3D 4.1 Gaussian splats that this Blender add-on reads and writes. Drag to orbit. Hover a star.</p>
+      <div class="ctas">
+        <a class="btn primary" href="#poc1">See it in three engines ↓</a>
+        <a class="btn" href="#showpieces">Blender scenes, live ↓</a>
+      </div>
+    </div></div></div>
+    <div class="beat" id="beat1"><p>That whole sky is one <em>146 KB</em> X3D file.<br>Blender opens it. X_ITE draws it. Babylon.js draws the glb.</p></div>
+    <div class="scrollcue" id="cue">scroll to fly in</div>
+    <div class="dock"><div class="wrap">
+      <p class="ticker" id="ticker" aria-live="off" title="Next fact"></p>
+      <div class="chips" id="fly" aria-label="Fly to">
+        <button class="chip" data-fly="sol">☉ Sol</button>
+        <button class="chip" data-fly="Alpha Centauri">α Centauri</button>
+        <button class="chip" data-fly="Sirius">Sirius</button>
+        <button class="chip" data-fly="Vega">Vega</button>
+        <button class="chip" data-fly="Arcturus">Arcturus</button>
+        <button class="chip" data-fly="Capella">Capella</button>
+        <button class="chip" id="arecibo" aria-pressed="false"><b>◎</b> Arecibo message</button>
+        <button class="chip" data-fly="out">⤢ Whole bubble</button>
+      </div>
+      <div class="hud" id="hudBox"><b>HYG v4.1</b> · 978 stars · 1 unit = 1 light-year<br><span id="hud">three.js r170 · frame x east, y north, z up</span></div>
+    </div></div>
   </div>
-  <div class="cap"><span><b>Every dot is a real star.</b> The 978 stars within 50 light-years (HYG v4.1), as stored in the X3D 4.1 file this add-on reads and writes. Drag to turn it.</span><span><a href="showcase/scenes/stars-splats.x3d">stars-splats.x3d</a></span></div>
 </header>
 
 <main id="main">
 
+<!-- ============ POC #1 proof: one file, three renderers ============ -->
+<section id="poc1">
+  <div class="aura" style="width:520px;height:520px;left:-160px;top:60px;background:#3b5bff"></div>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">POC #1 · proof</div>
+      <h2>One X3D file. <em>Three renderers.</em></h2>
+      <p class="lead">The hero is three.js on the catalogue data. Below, the same stars as the X3D file itself in X_ITE, and as the glb this add-on exports from it in Babylon.js. Until <a href="https://github.com/hagopjay/x3d-blender-io/pull/37">PR #37</a> (13 Nov 2026), that glb came out about a hundred million times too small.</p>
+    </div>
+    <div class="engines">
+      <article class="eng glass gborder rv">
+        <div class="view" id="v-xite"><span class="tag">X3D 4.1 · X_ITE 16.7.1</span><img src="brag/poc1/xite.webp" alt="X_ITE rendering stars-view.x3d: 978 stars as Gaussian splats" loading="lazy"><div class="play"><button class="run" data-run="xite">▶ Run live</button></div><span class="status" hidden></span></div>
+        <div class="meta"><h3>The X3D file, as written</h3><p><code>stars-view.x3d</code> Inlines <code>stars-splats.x3d</code> under a scale of 1.057e-16, so one unit is one light-year. Two splats per star: a core and a halo.</p></div>
+      </article>
+      <article class="eng glass gborder rv">
+        <div class="view" id="v-bjs"><span class="tag good">glb · Babylon.js 9.32 · fixed</span><img src="brag/poc1/babylon.webp" alt="Babylon.js rendering the glb exported by the add-on: the same star layout" loading="lazy"><div class="play"><button class="run" data-run="bjs">▶ Run live</button></div><span class="status" hidden></span></div>
+        <div class="meta"><h3>The glb this add-on exports</h3><p>Imported into Blender 5.3 by this add-on, exported by Blender's glTF exporter, then gltf-validator 2.0.0-dev.3.10: 0 errors, 0 warnings. Same layout as X_ITE. glTF has no splats, so stars are points.</p></div>
+      </article>
+      <article class="eng glass gborder rv">
+        <div class="view"><span class="tag bad">same glb · before PR #37</span><div class="emptyview"><div><b>5 × 10⁻⁷ ly</b>the whole 50 light-year bubble,<br>shrunk to a speck at the origin:<br>StarSplats scale 10570 under 1.057e-16</div></div></div>
+        <div class="meta"><h3>What was wrong</h3><p>Blender inverts parent matrices in 32-bit floats. At a scale of 1e-16 the determinant underflows, and the glTF exporter's <code>inverted_safe()</code> returns about 1e8 instead of 9.46e15. The import now moves extreme scales onto the children.</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============ POC #2: under Giza ============ -->
+<section id="poc2" style="padding-top:40px">
+  <div class="wrap">
+    <div class="poc2 glass gborder rv">
+      <div class="ba" data-ba>
+        <img src="brag/poc2/giza-overview.webp" alt="Schematic X3D study of the Giza plateau: pyramids, causeway, Sphinx and colour-coded layers" loading="lazy">
+        <img class="after" src="brag/poc2/giza-osiris.webp" alt="Close view of the schematic Osiris Shaft: three levels, chambers and depth markers" loading="lazy">
+        <input type="range" min="0" max="100" value="50" aria-label="Reveal: plateau overview versus the Osiris Shaft"><div class="bar"></div>
+        <span class="tag l">the plateau</span><span class="tag r">Osiris Shaft</span>
+      </div>
+      <div class="body">
+        <div class="eyebrow">POC #2 · under Giza</div>
+        <h3>The Osiris Shaft and the <em>Hall of Records</em>, as X3D.</h3>
+        <p>A schematic X3D 4.0 study with three switchable layers: documented (cyan), theorized (amber) and speculative (magenta), from the 2017 Big Void to Cayce's Hall of Records. Underground positions are schematic, and the study says so.</p>
+        <div class="facts"><span>72 KB X3D 4.0</span><span>validator: 0 errors</span><span>this add-on → Blender 5.3 → glb: 111,257 triangles, 0 errors</span></div>
+        <div class="acts"><a class="btn primary" href="https://hagopjay.github.io/x3d.demo/demos/giza-osiris-hall/v1/">Open the study ↗</a><a class="btn" href="https://github.com/hagopjay/x3d.demo/pull/21">Source</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Showpieces ============ -->
+<section id="showpieces" style="background:linear-gradient(180deg,var(--bg),#070a18 30%,var(--bg))">
+  <div class="aura" style="width:600px;height:600px;right:-200px;top:200px;background:#ff7a3c"></div>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">Showpieces</div>
+      <h2>Made in Blender.<br><em>Running live, as X3D.</em></h2>
+      <p class="lead">Drag each slider from Blender's Cycles render to the same scene drawn live by X_ITE from the X3D file this add-on wrote. Then press play and fly it yourself, in X_ITE or as a glb in Babylon.js.</p>
+    </div>
+    <div class="shows" id="shows"></div>
+  </div>
+</section>
+
+<!-- ============ Numbers ============ -->
 <section id="numbers">
+  <div class="aura" style="width:680px;height:680px;left:50%;margin-left:-340px;top:34%;background:#ff7aa8;opacity:.2"></div>
   <div class="wrap">
-    <div class="sec-head rv"><div class="eyebrow">The scoreboard</div><h2>Numbers that name their tool.</h2><p class="lead">Tap a tile for its receipt. “Fork point” is commit 7f8c0fb of 8 October 2026: the upstream extension 2.5.1 with its April 2026 X3D 4.0 parser rewrite. Everything after it is this fork.</p></div>
-    <div class="wall rv" id="wall">
-      <button class="tile" aria-expanded="false" data-count="320"><span class="g">CONFIRMED</span><span class="n"><span class="v">320</span></span><span class="l">tests pass, up from 12 test methods at the fork point</span><span class="r">Runner .github/scripts/run_tests_in_blender.py on Blender 5.3.0 (bpy wheel) at main 0b936da, 13 Nov 2026. 12 = <code>def test_</code> count at 7f8c0fb.</span></button>
-      <button class="tile" aria-expanded="false" data-count="470" data-suffix="×"><span class="g">CONFIRMED</span><span class="n"><span class="v">470</span><small>×</small></span><span class="l">faster export of a 66,177-vertex relief: 315 s → 0.67 s</span><span class="r">Release notes, bulk attribute reads; Blender 5.x indexed corner reads were O(n) each, now one <code>foreach_get</code>. Output byte-identical. Test: test_extract_bulk_reads_bpy.</span></button>
-      <button class="tile" aria-expanded="false" data-count="35"><span class="g">CONFIRMED</span><span class="n"><span class="v">35</span></span><span class="l">pull requests merged in five weeks, 113 commits</span><span class="r">git log of hagopjay/x3d-blender-io: 8 Oct → 13 Nov 2026 (PR #35 merged 13 Nov).</span></button>
-      <button class="tile" aria-expanded="false" data-count="978"><span class="g">CONFIRMED</span><span class="n"><span class="v">978</span></span><span class="l">real stars in the hero, as X3D 4.1 Gaussian splats</span><span class="r">HYG v4.1 catalogue, every star within 50 ly, two splats each; file docs/showcase/scenes/stars-splats.x3d.</span></button>
-      <button class="tile long" aria-expanded="false" data-count="1721" data-suffix=" → 10"><span class="g">CONFIRMED</span><span class="n"><span class="v">1,721</span><small> → 10</small></span><span class="l">glb nodes after “Group instances” (THALASSA scene, 1,718 instances)</span><span class="r">Add-on main 9fbc3ca, bpy 5.3.0; EXT_mesh_gpu_instancing. 491,832 B → 125,224 B. Babylon.js 9.32.0 draws it pixel for pixel as the flat glb (0 of 262,144 differ).</span></button>
-      <button class="tile" aria-expanded="false" data-count="0" data-pair="0 / 0"><span class="g">CONFIRMED</span><span class="n"><span class="v">0 / 0</span></span><span class="l">errors / warnings from the Khronos glTF Validator on all 33 exported scenes</span><span class="r">gltf-validator 2.0.0-dev.3.10 via tools/fidelity_rig, Blender 5.3.0, PR #33 (13 Nov 2026). The validator proves structure, not looks.</span></button>
-      <button class="tile" aria-expanded="false" data-count="9.8" data-dec="1" data-suffix="×"><span class="g">CONFIRMED</span><span class="n"><span class="v">9.8</span><small>×</small></span><span class="l">closer to X_ITE: ellipsoid-earth mean error 50.8 → 5.16 once GeoElevationGrid imports</span><span class="r">Fidelity rig: X_ITE 16.7.1 on the X3D vs Babylon.js 9.32.0 on the exported glb, Chromium 153, 512×512, mean |Δ| 0-255. Moon: 3.33 → 0.44.</span></button>
-      <button class="tile" aria-expanded="false" data-count="16345"><span class="g">CONFIRMED</span><span class="n"><span class="v">16,345</span></span><span class="l">lines of add-on Python, up from 10,365 at the fork point</span><span class="r"><code>cat source/*.py | wc -l</code> at main 0b936da vs 7f8c0fb.</span></button>
-      <button class="tile" aria-expanded="false" data-count="194"><span class="g">CONFIRMED</span><span class="n"><span class="v">194</span></span><span class="l">case export conformance suite, run in CI on Blender 5.1.2</span><span class="r">docs/test-suite: case catalog, answer key and golden GLSL target; added in PR #24 (15–17 Oct 2026).</span></button>
+    <div class="sec-head rv"><div class="eyebrow">The scoreboard</div><h2>Numbers that <em>name their tool.</em></h2><p class="lead">Tap a tile for its receipt. “Fork point” is commit 7f8c0fb of 8 October 2026: the upstream extension 2.5.1 with its April 2026 X3D 4.0 parser rewrite. Everything after it is this fork.</p></div>
+    <div class="wall" id="wall">
+      <button class="tile hot rv" aria-expanded="false" data-count="50" data-suffix=" ly"><span class="g">NEW · PR #37</span><span class="n"><span class="v">50</span><small> ly</small></span><span class="l">radius of the stars-view glb's star bubble: it was 5 × 10⁻⁷ ly, about 10⁸ (9.5 × 10⁷) too small</span><span class="r">tests/test_import_extreme_scale_bpy.py on Blender 5.3.0 (bpy wheel); fidelity rig X_ITE 16.7.1 vs Babylon.js 9.32.0, Chromium 153: same layout, glTF Validator 0 errors.</span></button>
+      <button class="tile rv" aria-expanded="false" data-count="328"><span class="g">CONFIRMED</span><span class="n"><span class="v">328</span></span><span class="l">tests run, 318 pass and 10 skip; 12 test methods at the fork point</span><span class="r">.github/scripts/run_tests_in_blender.py on Blender 5.3.0 (bpy wheel), PR #37 head 7b570b6, 13 Nov 2026: Ran 328 tests, OK (skipped=10). 12 = <code>def test_</code> count at 7f8c0fb.</span></button>
+      <button class="tile rv" aria-expanded="false" data-count="470" data-suffix="×"><span class="g">CONFIRMED</span><span class="n"><span class="v">470</span><small>×</small></span><span class="l">faster export of a 66,177-vertex relief: 315 s → 0.67 s</span><span class="r">Release notes, bulk attribute reads: Blender 5.x indexed corner reads were O(n) each, now one <code>foreach_get</code>. Output byte-identical. Test: test_extract_bulk_reads_bpy.</span></button>
+      <button class="tile rv" aria-expanded="false" data-count="37"><span class="g">CONFIRMED</span><span class="n"><span class="v">37</span></span><span class="l">pull requests in five weeks, each through CI; 9 checks per PR as of #37</span><span class="r">github.com/hagopjay/x3d-blender-io pulls #1 to #37, 8 Oct to 13 Nov 2026. CI: Blender 4.5.14, 5.1.2 and 5.2.2 headless, the bpy wheel, two Pythons, the export suite, GitGuardian.</span></button>
+      <button class="tile rv" aria-expanded="false" data-count="1721" data-suffix=" → 10"><span class="g">CONFIRMED</span><span class="n"><span class="v">1,721</span><small> → 10</small></span><span class="l">glb nodes after “Group instances” on a 1,718-instance scene</span><span class="r">Add-on main 9fbc3ca, bpy 5.3.0; EXT_mesh_gpu_instancing. 491,832 B → 125,224 B. Babylon.js 9.32.0 draws it pixel for pixel as the flat glb (0 of 262,144 differ).</span></button>
+      <button class="tile rv" aria-expanded="false" data-count="0" data-pair="0 / 0"><span class="g">CONFIRMED</span><span class="n"><span class="v">0 / 0</span></span><span class="l">errors / warnings from the Khronos glTF Validator on all 33 exported scenes</span><span class="r">gltf-validator 2.0.0-dev.3.10 via tools/fidelity_rig, Blender 5.3.0, PR #33. The validator proves structure, not looks.</span></button>
+      <button class="tile rv" aria-expanded="false" data-count="9.8" data-dec="1" data-suffix="×"><span class="g">CONFIRMED</span><span class="n"><span class="v">9.8</span><small>×</small></span><span class="l">closer to X_ITE: ellipsoid-earth error 50.8 → 5.16 once GeoElevationGrid imports</span><span class="r">Fidelity rig: X_ITE 16.7.1 on the X3D vs Babylon.js 9.32.0 on the glb, Chromium 153, 512×512, mean |Δ| 0-255. Moon: 3.33 → 0.44.</span></button>
+      <button class="tile rv" aria-expanded="false" data-count="194"><span class="g">CONFIRMED</span><span class="n"><span class="v">194</span></span><span class="l">case export conformance suite, run in CI on every PR</span><span class="r">docs/test-suite: case catalog, answer key and golden GLSL target; PR #24 (15–17 Oct 2026); CI job on Blender 5.1.2.</span></button>
     </div>
-    <p class="wallnote">9 of 9 CI checks on every PR: Blender 4.5.14, 5.1.2 and 5.2.2 headless, the bpy wheel, two Python versions, the 194-case export conformance suite, GitGuardian.</p>
+    <p class="wallnote rv">Measured on Blender 5.3.0 (bpy wheel) unless a receipt says otherwise. Fidelity numbers are headless Chromium 153 with software GL; no frame rates are quoted.</p>
   </div>
 </section>
 
-<section id="live" style="background:linear-gradient(#07090f,#0a0f1c 50%,#07090f)">
+<!-- ============ Inside: pipeline + capabilities ============ -->
+<section id="inside" style="background:var(--bg2)">
+  <div class="aura" style="width:560px;height:560px;left:30%;top:-120px;background:#7b4dff"></div>
   <div class="wrap">
-    <div class="sec-head rv"><div class="eyebrow">Live, in your browser</div><h2>Real X3D files, running right here.</h2><p class="lead">No video, no screenshots once you press play: each scene below is an X3D file from this repository, rendered by X_ITE 16.7.1 from a CDN. Orbit, zoom, break it.</p></div>
-    <div class="theatre rv">
-      <div class="tabs" role="tablist" aria-label="Scenes">
-        <button class="tab" role="tab" aria-selected="true" data-i="0"><b>Earth, from a GeoElevationGrid</b><span>Imported as nothing before; now a real ellipsoid.</span></button>
-        <button class="tab" role="tab" aria-selected="false" data-i="1"><b>978 stars as splats</b><span>The hero's data as an X3D 4.1 GaussianSplats node.</span></button>
-        <button class="tab" role="tab" aria-selected="false" data-i="2"><b>A still life, 24,000 splats</b><span>Rendered in Blender, trained to splats, exported by the add-on.</span></button>
-        <button class="tab" role="tab" aria-selected="false" data-i="3"><b>Lights, as X_ITE draws them</b><span>Blender's lights mapped so both engines agree.</span></button>
-      </div>
-      <div>
-        <div class="stage" id="stage"><img class="poster" id="poster" alt="" width="960" height="600"><div class="go" id="go"><button id="goBtn">▶ Load live 3D</button></div><div class="badge" id="badge">poster · press play for the live scene</div></div>
-        <p class="say" id="say"></p>
-      </div>
+    <div class="sec-head rv"><div class="eyebrow">Inside</div><h2>The whole X3D 4 dialect, <em>both directions.</em></h2><p class="lead">Blender is where scenes get made; X3D 4 is what browsers, validators and AI tools agree to read. This add-on is the bridge, and it checks its own work.</p></div>
+    <div class="pipe glass gborder rv" aria-label="Diagram: Blender exports and imports X3D 4.0 and 4.1, which X_ITE and Castle draw, which becomes a validated glb for Babylon.js and other glTF engines, and which Inlines glb, PLY and splat assets.">
+      <svg viewBox="0 0 1000 320" role="img" aria-label="Blender to X3D and back; X3D to X_ITE and Castle, to glb, and Inline assets.">
+        <defs>
+          <linearGradient id="gA" x1="0" x2="1"><stop offset="0" stop-color="#ffd49a"/><stop offset="1" stop-color="#ff7aa8"/></linearGradient>
+          <linearGradient id="gB" x1="0" x2="1"><stop offset="0" stop-color="#6fd3ff"/><stop offset="1" stop-color="#b48cff"/></linearGradient>
+          <marker id="ar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="#ffb35c"/></marker>
+          <marker id="ab" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="#6fd3ff"/></marker>
+        </defs>
+        <g class="node"><rect x="16" y="104" width="200" height="112" rx="18" fill="#0e1630" stroke="#5167a8"/><text x="116" y="146" text-anchor="middle" font-size="20" font-weight="600">Blender</text><text class="t2" x="116" y="170" text-anchor="middle">4.2+ · tested 4.5 → 5.3</text><text class="t2" x="116" y="189" text-anchor="middle">Principled · splats · rigs</text></g>
+        <g class="node"><rect x="370" y="84" width="262" height="152" rx="20" fill="#1c1406" stroke="url(#gA)" stroke-width="1.6"/><text x="501" y="126" text-anchor="middle" font-size="21" font-weight="600" fill="#ffd49a">X3D 4.0 / 4.1</text><text class="t2" x="501" y="152" text-anchor="middle">PhysicalMaterial · UnlitMaterial</text><text class="t2" x="501" y="171" text-anchor="middle">HAnim 2.0 · Geospatial</text><text class="t2" x="501" y="190" text-anchor="middle">GaussianSplats · ROUTEs</text><text class="t2" x="501" y="209" text-anchor="middle">validated on write</text></g>
+        <path class="flow" d="M218 142 H366" stroke="#ffb35c" stroke-width="2.2" fill="none" marker-end="url(#ar)"/>
+        <path class="flow" d="M366 178 H220" stroke="#6fd3ff" stroke-width="2.2" fill="none" marker-end="url(#ab)"/>
+        <text class="t2" x="292" y="131" text-anchor="middle">export</text><text class="t2" x="292" y="198" text-anchor="middle">import</text>
+        <g class="node"><rect x="752" y="14" width="232" height="78" rx="16" fill="#0d1a2e" stroke="#3b6a8a"/><text x="868" y="47" text-anchor="middle" font-weight="600">X_ITE · Castle</text><text class="t2" x="868" y="68" text-anchor="middle">browser and native X3D</text></g>
+        <g class="node"><rect x="752" y="121" width="232" height="78" rx="16" fill="#0d1a2e" stroke="#3b6a8a"/><text x="868" y="154" text-anchor="middle" font-weight="600">glb → Babylon.js</text><text class="t2" x="868" y="175" text-anchor="middle">Khronos-validated, GPU instanced</text></g>
+        <g class="node"><rect x="752" y="228" width="232" height="78" rx="16" fill="#0d1a2e" stroke="#3b6a8a"/><text x="868" y="261" text-anchor="middle" font-weight="600">Inline: glb · PLY · splat</text><text class="t2" x="868" y="282" text-anchor="middle">referenced, never flattened</text></g>
+        <path class="flow" d="M634 134 C700 134 704 53 748 53" stroke="#ffb35c" stroke-width="2.2" fill="none" marker-end="url(#ar)"/>
+        <path class="flow" d="M634 160 H748" stroke="#ffb35c" stroke-width="2.2" fill="none" marker-end="url(#ar)"/>
+        <path class="flow" d="M634 186 C700 186 704 267 748 267" stroke="#6fd3ff" stroke-width="2.2" fill="none" marker-start="url(#ab)" marker-end="url(#ab)"/>
+      </svg>
+    </div>
+    <div class="cards">
+      <article class="card glass gborder rv"><div class="k">Export</div><h3>Physically based, on purpose</h3><p>Principled BSDF becomes <code>PhysicalMaterial</code> with glTF-style texture slots; emission-only trees become <code>UnlitMaterial</code>; shared data is written once with DEF/USE.</p><div class="m"><b>X3D Version</b> selector: 3.3 classic stays the default.</div></article>
+      <article class="card glass gborder rv"><div class="k">Import</div><h3>Reads what browsers draw</h3><p>PBR to Principled node trees, Switch shows only its chosen child, Geometry2D, IndexedQuadSet, TwoSidedMaterial, textures with alpha, ElevationGrid with colours.</p><div class="m">X3D's Blinn-Phong specular mapped to roughness.</div></article>
+      <article class="card glass gborder rv"><div class="k">Animation</div><h3>ROUTEs become keyframes, and back</h3><p>TimeSensor plus interpolators import as keyframes. Shape keys leave as a <code>CoordinateInterpolator</code> and come back as shape keys.</p><div class="m">glb animation time starts at 0 (was 1/24 s late).</div></article>
+      <article class="card glass gborder rv"><div class="k">Characters</div><h3>HAnim 2.0 humanoids</h3><p>Armatures export as <code>HAnimHumanoid</code> with joints, skinned meshes and weights; HAnim imports as an armature with bones, vertex groups and animation.</p></article>
+      <article class="card glass gborder rv"><div class="k">Splats</div><h3>Gaussian splats, native and exact</h3><p>The draft X3D 4.1 <code>GaussianSplats</code> node writes and reads, and Blender 5.3's native splat point clouds export straight to it. 20,000 degree-3 splats round-trip bit-exact.</p><div class="m">X_ITE 16.4.3 draws a 500,000-splat scene this exporter wrote.</div></article>
+      <article class="card glass gborder rv"><div class="k">Geospatial</div><h3>An earth that imports</h3><p><code>GeoElevationGrid</code> and <code>GeoViewpoint</code> in GD, GC, UTM and Web Mercator, on the spec's ellipsoids, in float64 with a GeoOrigin.</p><div class="m">Checked against PROJ · vertices within 0.25 m.</div></article>
+      <article class="card glass gborder rv"><div class="k">Scale</div><h3>Light-years to ångströms</h3><p>Extreme Transform scales import, export to glb at the right size and write back to X3D with their digits intact. 1e-16 used to print as <code>0.000000</code>.</p><div class="m"><b>New</b> in PR #37 · float64 inverses everywhere.</div></article>
+      <article class="card glass gborder rv"><div class="k">Colour + light</div><h3>Looks like X_ITE, by default</h3><p>sRGB by default, as X_ITE 16.7.1 and Castle draw it; colours converted once and written back as they came. Lights fitted to what the browser shows.</p><div class="m">Light units: <b>As X_ITE draws</b> or <b>As Blender</b>.</div></article>
+      <article class="card glass gborder rv"><div class="k">Proof</div><h3>It checks itself</h3><p>The X3D 4.0 writer validates its own output. A fidelity rig renders X_ITE on the X3D against Babylon.js on the glb and runs every glb through the Khronos validator.</p><div class="m">194-case export suite · Blender 4.5.14 / 5.1.2 / 5.2.2 in CI.</div></article>
     </div>
   </div>
 </section>
 
+<!-- ============ Before / after ============ -->
 <section id="before-after">
   <div class="wrap">
-    <div class="sec-head rv"><div class="eyebrow">Before / after</div><h2>Drag. The difference is the point.</h2><p class="lead">Three things this fork changed that you can see without reading a line of code.</p></div>
+    <div class="sec-head rv"><div class="eyebrow">Before / after</div><h2>Drag. <em>The difference is the point.</em></h2></div>
     <div class="ba-grid">
-      <figure class="rv" style="margin:0">
-        <div class="ba" data-ba>
-          <div class="empty"><div><b>nothing</b>unsupported type GeoElevationGrid<br>a 132-byte glb, no geometry</div></div>
-          <img class="after" src="showcase/img/posters/ellipsoid-earth.webp" alt="A grey ellipsoid globe built from a GeoElevationGrid, rendered by X_ITE" loading="lazy">
-          <input type="range" min="0" max="100" value="50" aria-label="Reveal: before and after GeoElevationGrid import"><div class="bar"></div>
-          <span class="tag l">fork point</span><span class="tag r">now</span>
-        </div>
-        <figcaption class="ba-cap"><b>GeoElevationGrid and GeoViewpoint.</b> The Geospatial component was skipped; the Showcase's earth and moon imported as empty scenes. Built in float64 as X_ITE builds it, checked against PROJ. Mean error against X_ITE 50.8 → 5.16.</figcaption>
-      </figure>
-      <figure class="rv" style="margin:0">
+      <figure class="glass gborder rv">
         <div class="ba" data-ba>
           <img src="showcase/img/posters/lights-before.webp" alt="A blue sphere and a grey cube on an orange floor, almost black" loading="lazy">
           <img class="after" src="showcase/img/posters/lights-after.webp" alt="The same scene, correctly lit" loading="lazy">
@@ -259,77 +204,58 @@ footer .fine{margin-top:34px;font:12px/1.7 var(--mono);color:#6f7b99;max-width:1
         </div>
         <figcaption class="ba-cap"><b>Lights that actually light.</b> Exported lights were written without <code>global="true"</code> and lit nothing outside their own group. One attribute, an entire scene.</figcaption>
       </figure>
-      <figure class="rv" style="margin:0">
+      <figure class="glass gborder rv">
         <div class="ba" data-ba>
           <img src="showcase/img/bridge-cycles.webp" alt="Blender Cycles render of a gold sphere, marble cube and orange vase on a plinth" loading="lazy">
-          <img class="after" src="showcase/img/bridge-xite.webp" alt="The same scene as Gaussian splats in X_ITE" loading="lazy">
+          <img class="after" src="showcase/img/bridge-xite.webp" alt="The same scene written by this add-on as X3D 4.0 PhysicalMaterial, drawn by X_ITE" loading="lazy">
           <input type="range" min="0" max="100" value="50" aria-label="Reveal: Blender Cycles versus X_ITE on the exported file"><div class="bar"></div>
-          <span class="tag l">Blender Cycles</span><span class="tag r">X3D 4.1 in X_ITE</span>
+          <span class="tag l">Blender Cycles</span><span class="tag r">X3D 4.0 in X_ITE</span>
         </div>
-        <figcaption class="ba-cap"><b>Blender to browser, round trip.</b> A Cycles render, then the same scene trained into splats and exported as X3D 4.1: SSIM 0.905, ΔE2000 4.50 against the Cycles frame (Blender 5.2.2, X_ITE 16.4.3; see the research showcase).</figcaption>
+        <figcaption class="ba-cap"><b>Blender to browser, measured.</b> The mesh this add-on wrote as X3D 4.0 PhysicalMaterial, drawn by X_ITE: SSIM 0.905, ΔE2000 4.50 against the Cycles frame (Blender 5.2.2 Cycles, X_ITE 16.4.3, 960×600). Trained into 132,923 Gaussian splats and written as X3D 4.1, it scores SSIM 0.977.</figcaption>
+      </figure>
+      <figure class="glass gborder rv">
+        <div class="ba" data-ba>
+          <div class="empty"><div><b>nothing</b>unsupported type GeoElevationGrid<br>a 132-byte glb, no geometry</div></div>
+          <img class="after" src="showcase/img/posters/ellipsoid-earth.webp" alt="An ellipsoid globe built from a GeoElevationGrid, rendered by X_ITE" loading="lazy">
+          <input type="range" min="0" max="100" value="50" aria-label="Reveal: before and after GeoElevationGrid import"><div class="bar"></div>
+          <span class="tag l">fork point</span><span class="tag r">now</span>
+        </div>
+        <figcaption class="ba-cap"><b>GeoElevationGrid and GeoViewpoint.</b> The earth and moon test scenes imported as empty scenes. Now built in float64 as X_ITE 16.7.1 builds them: mean |Δ| vs X_ITE 50.8 → 5.16 (fidelity rig, Babylon.js 9.32.0 on the glb, Chromium 153).</figcaption>
       </figure>
     </div>
   </div>
 </section>
 
-<section id="what" style="background:var(--bg2)">
+<!-- ============ Bug hunts ============ -->
+<section id="stories" style="background:var(--bg2)">
   <div class="wrap">
-    <div class="sec-head rv"><div class="eyebrow">What it does</div><h2>The whole X3D 4 dialect, both directions.</h2><p class="lead">Blender is where scenes get made; X3D 4 is what browsers, validators and AI tools agree to read. This add-on is the bridge, and it checks its own work.</p></div>
-    <div class="pipe rv" aria-label="Diagram: Blender to X3D 4.0/4.1 to X_ITE, Castle and glTF, with Inline and splat bridges">
-      <svg viewBox="0 0 980 300" role="img" aria-label="Blender exports and imports X3D 4.0 and 4.1. X3D renders in X_ITE and Castle, becomes glb for Babylon and Unreal, and inlines glb, ply and splat assets.">
-        <defs><marker id="ar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="#ffb454"/></marker></defs>
-        <rect x="14" y="96" width="190" height="108" rx="16" fill="#101a34" stroke="#4b5f9a"/><text x="109" y="138" text-anchor="middle" font-size="18" fill="#fff">Blender</text><text class="t2" x="109" y="162" text-anchor="middle">4.2 → 5.3 · Cycles</text><text class="t2" x="109" y="180" text-anchor="middle">Principled · splats · rigs</text>
-        <rect x="366" y="80" width="250" height="140" rx="18" fill="#1a1405" stroke="#ffb454" stroke-width="1.5"/><text x="491" y="122" text-anchor="middle" font-size="19" fill="#ffd28a">X3D 4.0 / 4.1</text><text class="t2" x="491" y="148" text-anchor="middle">PhysicalMaterial · UnlitMaterial</text><text class="t2" x="491" y="166" text-anchor="middle">HAnim 2.0 · Geospatial</text><text class="t2" x="491" y="184" text-anchor="middle">GaussianSplats · ROUTEs</text><text class="t2" x="491" y="202" text-anchor="middle">validated on write</text>
-        <path class="flow" d="M206 138 H362" stroke="#ffb454" stroke-width="2" fill="none" marker-end="url(#ar)"/><path class="flow" d="M362 172 H208" stroke="#62d6ff" stroke-width="2" fill="none" marker-end="url(#ar)"/>
-        <text class="t2" x="284" y="128" text-anchor="middle">export</text><text class="t2" x="284" y="192" text-anchor="middle">import</text>
-        <rect x="736" y="14" width="236" height="74" rx="14" fill="#0f1a2c" stroke="#3b6a8a"/><text x="854" y="46" text-anchor="middle" fill="#fff">X_ITE · Castle</text><text class="t2" x="854" y="66" text-anchor="middle">browser and native X3D</text>
-        <rect x="736" y="113" width="236" height="74" rx="14" fill="#0f1a2c" stroke="#3b6a8a"/><text x="854" y="145" text-anchor="middle" fill="#fff">glb → Babylon · Unreal</text><text class="t2" x="854" y="165" text-anchor="middle">validator-gated, GPU instanced</text>
-        <rect x="736" y="212" width="236" height="74" rx="14" fill="#0f1a2c" stroke="#3b6a8a"/><text x="854" y="244" text-anchor="middle" fill="#fff">Inline: glb · ply · splat</text><text class="t2" x="854" y="264" text-anchor="middle">referenced, never flattened</text>
-        <path class="flow" d="M618 130 C680 130 690 52 732 52" stroke="#ffb454" stroke-width="2" fill="none" marker-end="url(#ar)"/><path class="flow" d="M618 150 H732" stroke="#ffb454" stroke-width="2" fill="none" marker-end="url(#ar)"/><path class="flow" d="M618 170 C680 170 690 248 732 248" stroke="#ffb454" stroke-width="2" fill="none" marker-start="url(#ar)" marker-end="url(#ar)"/>
-      </svg>
-    </div>
-    <div class="cards" style="margin-top:22px">
-      <article class="card rv"><div class="k">Export</div><h3>Physically based, on purpose</h3><p>Principled BSDF becomes <code>PhysicalMaterial</code> with glTF-style texture slots; emission-only trees become <code>UnlitMaterial</code>; one Shape per material, shared data written once with DEF/USE.</p><div class="m"><b>X3D Version</b> selector: 3.3 classic stays default.</div></article>
-      <article class="card rv"><div class="k">Import</div><h3>Reads what browsers draw</h3><p>PBR to Principled node trees, Switch shows only its chosen child, Geometry2D, IndexedQuadSet, TwoSidedMaterial, textures with alpha, ElevationGrid with colours.</p><div class="m">Smooth spheres, cones and cylinders; X3D's Blinn-Phong specular mapped to roughness.</div></article>
-      <article class="card rv"><div class="k">Animation</div><h3>ROUTEs become keyframes, and back</h3><p>TimeSensor plus interpolators import as world-space keyframes. Shape keys leave as a <code>CoordinateInterpolator</code> into the Coordinate and return as shape keys.</p><div class="m">Also: glb animation time starts at 0 (was 1/24 s late).</div></article>
-      <article class="card rv"><div class="k">Characters</div><h3>HAnim 2.0 humanoids</h3><p>Armatures export as <code>HAnimHumanoid</code> with joint hierarchy, skinned meshes and weights; HAnim imports into an armature with bones, vertex groups and pose-bone animation.</p></article>
-      <article class="card rv big"><div class="k">Splats</div><h3>Gaussian splats, native and exact</h3><p>The draft X3D 4.1 <code>GaussianSplats</code> node writes and reads, and Blender 5.3's native splat point clouds (from PLY, SPZ, glTF, USD importers) export straight to it. X_ITE renders a 500,000-splat scene this exporter wrote.</p><div class="m"><b>20,000</b> degree-3 splats export and import bit-exact · files of ~18,000+ splats used to import as nothing (Expat 2.6) · Blender 4.5 to 5.3.</div></article>
-      <article class="card rv"><div class="k">Geospatial</div><h3>An earth that imports</h3><p><code>GeoElevationGrid</code> and <code>GeoViewpoint</code> in GD, GC, UTM and Web Mercator, on the spec's ellipsoids and X_ITE's solar-system bodies, in float64 with a GeoOrigin.</p><div class="m">Checked against PROJ 3.8.0 · vertices within 0.25 m.</div></article>
-      <article class="card rv"><div class="k">Colour</div><h3>sRGB by default, like X_ITE and Castle</h3><p>X_ITE 16.7.1 and Castle Game Engine both draw a classic 0.5 as 128. The import now matches, converts once, and the export writes colours back the way they came in.</p><div class="m">Light units: <b>As X_ITE draws</b> fits the lights to what the browser shows.</div></article>
-      <article class="card rv"><div class="k">Interop</div><h3>Inline bridge to glb, PLY, splat</h3><p>An Empty with <code>x3d_inline_url</code> exports as an <code>&lt;Inline&gt;</code>; Inline imports as that Empty with the asset beneath it: X3D recursively, glTF via Blender's importer, PLY and .splat as splat meshes.</p></article>
-      <article class="card rv big"><div class="k">Proof</div><h3>It checks itself</h3><p>The X3D 4.0 writer validates its own output. A fidelity rig renders X_ITE on the X3D against Babylon.js on the glb and runs every glb through the Khronos validator.</p><div class="m">194-case export suite · Blender 4.5.14 / 5.1.2 / 5.2.2 in CI.</div></article>
-      <article class="card rv"><div class="k">Install</div><h3>Beside the original</h3><p>Ships under its own extension id <code>x3d_blender_io</code>, so an upstream update never replaces it. Enable one of the two at a time.</p><div class="m">Blender 4.2 or newer.</div></article>
-    </div>
-  </div>
-</section>
-
-<section id="stories">
-  <div class="wrap">
-    <div class="sec-head rv"><div class="eyebrow">Bug hunts</div><h2>Found because we measured.</h2><p class="lead">Each of these was invisible until a number said otherwise. Each is now covered by a test.</p></div>
+    <div class="sec-head rv"><div class="eyebrow">Bug hunts</div><h2>Found because <em>we measured.</em></h2><p class="lead">Each was invisible until a number said otherwise. Each is now covered by a test.</p></div>
     <div class="stories">
-      <div class="story rv"><div class="big"><s>315 s</s> → 0.67 s</div><h3>A relief grid that took five minutes to export</h3><p>Blender 5.x made indexed corner reads cost time proportional to the collection; the exporter read one per corner. Bulk reads fixed it, with byte-identical output.</p></div>
-      <div class="story rv"><div class="big"><s>0</s> → 20,000</div><h3>Splat files that imported as nothing</h3><p>Expat 2.6 deferred big elements past the point where the reader stopped. Files of about 18,000 splats vanished. Now bit-exact at any size.</p></div>
-      <div class="story rv"><div class="big"><s>0.04</s> → 0.21</div><h3>Mid-grey that came in nearly black</h3><p>Per-vertex colours went through the sRGB curve twice, so a Color of 0.5 imported as 0.04.</p></div>
-      <div class="story rv"><div class="big"><s>1/24 s</s> → 0</div><h3>Every glb animation started late</h3><p>The importer puts X3D time 0 on Blender's frame_start, the factory frame 1. The rig now starts at 0: first sample 0.0 s.</p></div>
-      <div class="story rv"><div class="big"><s>crash</s> → 978 stars</div><h3>A scene one light-year across</h3><p>Blender inverts matrices in float32, where a 1e-16 scale underflows. The add-on now inverts in float64; the 978 stars load.</p></div>
-      <div class="story rv"><div class="big"><s>÷1.75</s> → 1×</div><h3>Lights that dimmed on every round trip</h3><p>Export divided point and spot energy by 1.75; import forgot to multiply back. Fixed both ways.</p></div>
+      <div class="story glass new rv"><div class="big"><s>5e-7 ly</s> <span>→ 50 ly</span></div><h3>A star map that exported as a speck <span class="badge">NEW · PR #37</span></h3><p>The glTF exporter inverted a 1e-16 matrix in 32-bit floats and got 1e8 instead of 9.46e15. Extreme scales now move onto the children; no world matrix changes.</p></div>
+      <div class="story glass rv"><div class="big"><s>315 s</s> <span>→ 0.67 s</span></div><h3>A relief grid that took five minutes to export</h3><p>Blender 5.x made indexed corner reads cost time proportional to the collection; the exporter read one per corner. Bulk reads fixed it, byte-identical.</p></div>
+      <div class="story glass rv"><div class="big"><s>0</s> <span>→ 20,000</span></div><h3>Splat files that imported as nothing</h3><p>Expat 2.6 deferred big elements past the point where the reader stopped. Files of about 18,000 splats vanished. Now bit-exact at any size.</p></div>
+      <div class="story glass rv"><div class="big"><s>0.04</s> <span>→ 0.21</span></div><h3>Mid-grey that came in nearly black</h3><p>Per-vertex colours went through the sRGB curve twice, so a Color of 0.5 imported as 0.04.</p></div>
+      <div class="story glass rv"><div class="big"><s>1/24 s</s> <span>→ 0</span></div><h3>Every glb animation started late</h3><p>The importer puts X3D time 0 on Blender's frame_start, the factory frame 1. The rig now starts at 0: first sample 0.0 s.</p></div>
+      <div class="story glass rv"><div class="big"><s>÷1.75</s> <span>→ 1×</span></div><h3>Lights that dimmed on every round trip</h3><p>Export divided point and spot energy by 1.75; import forgot to multiply back. Fixed both ways.</p></div>
     </div>
   </div>
 </section>
 
-<section id="changes" style="background:var(--bg2)">
+<!-- ============ Fork point vs now ============ -->
+<section id="changes">
   <div class="wrap">
-    <div class="sec-head rv"><div class="eyebrow">Fork point vs now</div><h2>What changed, stated plainly.</h2><p class="lead">From the release notes and pull requests. “Fork point” is 7f8c0fb, the upstream 2.5.1 code the fork started from.</p></div>
-    <div class="tablewrap rv"><table class="chg">
+    <div class="sec-head rv"><div class="eyebrow">Fork point vs now</div><h2>What changed, <em>stated plainly.</em></h2></div>
+    <div class="tablewrap glass rv"><table class="chg">
       <thead><tr><th>Capability</th><th>At the fork point</th><th>Now</th><th>Where</th></tr></thead>
       <tbody>
-      <tr><td>X3D 4.0 export of PBR materials</td><td class="no">Only the 3.3 <code>Material</code> writer</td><td class="yes"><code>PhysicalMaterial</code>, <code>UnlitMaterial</code>, textures, DEF/USE, validated</td><td class="src">PR #1 and README</td></tr>
+      <tr><td>X3D 4.0 export of PBR materials</td><td class="no">Only the 3.3 <code>Material</code> writer</td><td class="yes"><code>PhysicalMaterial</code>, <code>UnlitMaterial</code>, textures, DEF/USE, validated</td><td class="src">PR #1</td></tr>
       <tr><td>Animation from ROUTEs</td><td class="no">Not rebuilt</td><td class="yes">Keyframes; shape keys ⇄ CoordinateInterpolator</td><td class="src">PR #2, #16, #22</td></tr>
       <tr><td>HAnim humanoids</td><td class="no">Not supported</td><td class="yes">Import and export with skin and joint animation</td><td class="src">PR #2, #4</td></tr>
-      <tr><td>Gaussian splats</td><td class="no">Not supported</td><td class="yes">X3D 4.1 node, Blender 5.3 native, bit-exact round trip</td><td class="src">PR #5 #12</td></tr>
+      <tr><td>Gaussian splats</td><td class="no">Not supported</td><td class="yes">X3D 4.1 node, Blender 5.3 native, bit-exact round trip</td><td class="src">PR #5, #12</td></tr>
       <tr><td>GeoElevationGrid, GeoViewpoint</td><td class="no">Skipped, empty scene</td><td class="yes">Mesh and camera in float64 (UTM, GD, GC, WM)</td><td class="src">PR #35</td></tr>
-      <tr><td>Colour of classic materials</td><td class="no">Kept as is; per-vertex converted twice</td><td class="yes">sRGB as X_ITE and Castle draw; converted once; round-trips</td><td class="src">PR #27 #28 #29</td></tr>
-      <tr><td>Light units</td><td class="no">One fixed mapping, 1.75× lost per round trip</td><td class="yes">As Blender or As X_ITE draws, fitted per scene</td><td class="src">PR #28 #30</td></tr>
+      <tr><td>Extreme scales (1e-16, 1e16)</td><td class="no">Import crash; glb 1e8 too small; printed as 0</td><td class="yes">Imports, exports to glb at size, writes back exactly</td><td class="src">PR #35, #37</td></tr>
+      <tr><td>Colour of classic materials</td><td class="no">Kept as is; per-vertex converted twice</td><td class="yes">sRGB as X_ITE and Castle draw; round-trips</td><td class="src">PR #27–#29</td></tr>
+      <tr><td>Light units</td><td class="no">One fixed mapping, 1.75× lost per round trip</td><td class="yes">As Blender or As X_ITE draws, fitted per scene</td><td class="src">PR #28, #30</td></tr>
       <tr><td>Large-mesh export</td><td class="no">Quadratic: 315 s for 66,177 vertices</td><td class="yes">Linear: 0.67 s</td><td class="src">PR #25</td></tr>
       <tr><td>glb quality gate</td><td class="no">None</td><td class="yes">Khronos validator on every glb, manifest per scene</td><td class="src">PR #33</td></tr>
       <tr><td>Instanced glb</td><td class="no">One node per instance</td><td class="yes"><code>EXT_mesh_gpu_instancing</code> via Group instances</td><td class="src">PR #34</td></tr>
@@ -337,12 +263,13 @@ footer .fine{margin-top:34px;font:12px/1.7 var(--mono);color:#6f7b99;max-width:1
   </div>
 </section>
 
-<section id="credit">
+<!-- ============ Credit ============ -->
+<section id="credit" style="background:var(--bg2)">
   <div class="wrap credit">
     <div class="rv">
       <div class="eyebrow">Standing on shoulders</div>
-      <h2 style="margin:14px 0 22px">Full credit to the original.</h2>
-      <p class="lead">This work only exists because a community kept an X3D and VRML2 add-on alive in Blender for more than a decade. The importer, the exporter and the architecture are theirs; this fork extends them and keeps everything upstream still working unchanged.</p>
+      <h2>Full credit <em>to the original.</em></h2>
+      <p class="lead">This work only exists because a community kept an X3D and VRML2 add-on alive in Blender for more than a decade. The importer, the exporter and the architecture are theirs; this fork extends them and keeps everything upstream still working.</p>
     </div>
     <div class="rv">
       <div class="names" aria-label="Upstream authors as recorded in the extension manifest">
@@ -353,16 +280,17 @@ footer .fine{margin-top:34px;font:12px/1.7 var(--mono);color:#6f7b99;max-width:1
   </div>
 </section>
 
-<section id="get" style="background:var(--bg2)">
+<!-- ============ Get it ============ -->
+<section id="get">
   <div class="wrap">
-    <div class="sec-head rv"><div class="eyebrow">Try it</div><h2>Ten minutes to your first X3D 4.1 scene.</h2></div>
-    <pre class="rv"><span class="c"># 1. Get the add-on</span>
+    <div class="sec-head rv"><div class="eyebrow">Try it</div><h2>Ten minutes to <em>your first X3D 4.1 scene.</em></h2></div>
+    <pre class="glass rv"><span class="c"># 1. Get the add-on</span>
 git clone https://github.com/hagopjay/x3d-blender-io
 blender --command extension build --source-dir ./source --output-dir ./dist
 <span class="c"># 2. Blender → Edit → Preferences → Get Extensions → Install from Disk → dist/x3d_blender_io-*.zip</span>
 <span class="c"># 3. File → Export → X3D → X3D Version: <span class="k">X3D 4.0 (PBR)</span> or <span class="k">X3D 4.1 draft (GaussianSplats)</span></span>
 <span class="c"># 4. Open the file in X_ITE: https://create3000.github.io/x_ite/</span></pre>
-    <div class="ctas"><a class="btn primary" href="https://github.com/hagopjay/x3d-blender-io">Repository ↗</a><a class="btn" href="showcase/">Research showcase: Checkable 3D ↗</a><a class="btn" href="https://github.com/hagopjay/x3d-blender-io/blob/main/release_notes.md">Release notes ↗</a></div>
+    <div class="ctas rv"><a class="btn primary" href="https://github.com/hagopjay/x3d-blender-io">Repository ↗</a><a class="btn" href="showcase/">Research showcase: Checkable 3D ↗</a><a class="btn" href="https://github.com/hagopjay/x3d-blender-io/blob/main/release_notes.md">Release notes ↗</a><a class="btn" href="v1/">The first version of this page</a></div>
   </div>
 </section>
 
@@ -371,96 +299,22 @@ blender --command extension build --source-dir ./source --output-dir ./dist
 <footer>
   <div class="wrap">
     <div class="row">
-      <div><h4>Project</h4><ul><li><a href="https://github.com/hagopjay/x3d-blender-io">hagopjay/x3d-blender-io</a></li><li><a href="https://github.com/hagopjay/x3d-blender-io/blob/main/README.md">README</a></li><li><a href="showcase/">Checkable 3D showcase</a></li></ul></div>
-      <div><h4>Standing on</h4><ul><li><a href="https://create3000.github.io/x_ite/">X_ITE</a> · live X3D</li><li><a href="https://www.web3d.org/">Web3D Consortium</a> · X3D 4.0</li><li><a href="https://github.khronos.org/glTF-Validator/">Khronos glTF Validator</a></li><li><a href="https://www.babylonjs.com/">Babylon.js</a> · <a href="https://castle-engine.io/">Castle Game Engine</a></li></ul></div>
-      <div><h4>How to read the numbers</h4><ul><li>Each tile names its tool and version.</li><li>Fidelity = X_ITE vs Babylon.js on the glb, headless Chromium 153, software GL.</li><li>No frame rates are quoted.</li></ul></div>
+      <div><h4>Project</h4><ul><li><a href="https://github.com/hagopjay/x3d-blender-io">hagopjay/x3d-blender-io</a></li><li><a href="https://github.com/hagopjay/x3d-blender-io/blob/main/README.md">README</a></li><li><a href="showcase/">Checkable 3D showcase</a></li><li><a href="v1/">Brag page v1</a></li></ul></div>
+      <div><h4>Standing on</h4><ul><li><a href="https://create3000.github.io/x_ite/">X_ITE</a> · live X3D</li><li><a href="https://www.web3d.org/">Web3D Consortium</a> · X3D 4</li><li><a href="https://github.khronos.org/glTF-Validator/">Khronos glTF Validator</a></li><li><a href="https://www.babylonjs.com/">Babylon.js</a> · <a href="https://threejs.org/">three.js</a> · <a href="https://castle-engine.io/">Castle Game Engine</a></li><li><a href="https://codeberg.org/astronexus/hyg">HYG star database</a></li></ul></div>
+      <div><h4>How to read this page</h4><ul><li>Each number names its tool and version.</li><li>Posters are frames from the live renderers; press play for the real thing.</li><li>The live 3D loads X_ITE 16.7.1, Babylon.js 9.32.0 and three.js r170 from jsDelivr.</li></ul></div>
     </div>
-    <p class="fine">Measured 8 Oct – 13 Nov 2026 on Blender 5.3.0 (bpy wheel) unless a tile says otherwise. Copyright 2026 HagopJay and the upstream authors above, GPL-3.0-or-later. The star map is HYG v4.1 data. X_ITE is loaded from jsDelivr at version 16.7.1 only when you press play.</p>
+    <p class="fine">Copyright 2026 HagopJay and the upstream authors above, GPL-3.0-or-later. Star data: the HYG database by David Nash (astronexus), v4.1 positions and v4.2 names and distances, CC BY-SA 4.0; brag/stars.json and brag/star-names.json are adapted from it under the same licence. Showpiece scenes made in Blender by HagopJay. Measured 8 Oct – 13 Nov 2026.</p>
   </div>
 </footer>
 
-<script src="brag/stars.js"></script>
-<script>
-(function(){
-'use strict';
-document.body.classList.remove('nojs');
-var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+<div class="theatre" id="theatre" role="dialog" aria-modal="true" aria-labelledby="tTitle">
+  <header><h3 id="tTitle">Live</h3>
+    <div class="seg" role="group" aria-label="Renderer"><button data-eng="xite" aria-pressed="true">X3D · X_ITE</button><button data-eng="bjs" aria-pressed="false">glb · Babylon.js</button></div>
+    <button class="x" id="tClose" aria-label="Close">×</button></header>
+  <div class="tstage" id="tStage"></div>
+  <div class="tnote" id="tNote"></div>
+</div>
 
-/* star data */
-fetch('brag/stars.json').then(function(r){return r.json();}).then(function(j){
-  window.__setStars(j.stars.map(function(s){
-    var r=s[3]/255,g=s[4]/255,b=s[5]/255,m=(r+g+b)/3, k=2.1, c=function(v){return Math.max(0.12,Math.min(1,m+(v-m)*k+0.08));};
-    return [s[0],s[1],s[2],c(r),c(g),c(b),s[6]];}));
-}).catch(function(){});
-
-/* reveal */
-var rv = document.querySelectorAll('.rv');
-if ('IntersectionObserver' in window) {
-  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }); }, {threshold:.12, rootMargin:'0px 0px -6% 0px'});
-  rv.forEach(function(el){ io.observe(el); });
-} else rv.forEach(function(el){ el.classList.add('in'); });
-
-/* counters */
-function fmt(n, dec){ return n.toLocaleString('en-US', {minimumFractionDigits:dec, maximumFractionDigits:dec}); }
-var tiles = document.querySelectorAll('.tile');
-tiles.forEach(function(t){
-  t.addEventListener('click', function(){ t.setAttribute('aria-expanded', t.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'); });
-  var v = t.querySelector('.v'), target = parseFloat(t.dataset.count), dec = +(t.dataset.dec||0), pair = t.dataset.pair;
-  if (pair || isNaN(target) || reduce) return;
-  var final = v.textContent; v.textContent = fmt(0, dec);
-  var co = new IntersectionObserver(function(es){ if (!es[0].isIntersecting) return; co.disconnect();
-    var t0 = performance.now(), dur = 1500;
-    (function step(now){ var p = Math.min(1, (now - t0)/dur), e = 1 - Math.pow(1-p, 4); v.textContent = fmt(target*e, dec); if (p < 1) requestAnimationFrame(step); else v.textContent = final; })(t0);
-  }, {threshold:.6});
-  co.observe(t);
-});
-
-/* before/after */
-document.querySelectorAll('[data-ba]').forEach(function(ba){
-  var inp = ba.querySelector('input'), set = function(){ ba.style.setProperty('--p', inp.value + '%'); };
-  inp.addEventListener('input', set); set();
-  if (!reduce && 'IntersectionObserver' in window) {
-    var o = new IntersectionObserver(function(es){ if (!es[0].isIntersecting) return; o.disconnect();
-      var t0 = performance.now(); (function s(now){ var p = Math.min(1,(now-t0)/1600); inp.value = 50 + Math.sin(p*Math.PI*2)*(1-p)*38; set(); if (p<1) requestAnimationFrame(s); else { inp.value = 50; set(); } })(t0);
-    }, {threshold:.7}); o.observe(ba);
-  }
-});
-
-/* live theatre */
-var XITE = 'https://cdn.jsdelivr.net/npm/x_ite@16.7.1/dist/x_ite.min.js';
-var SCENES = [
-  {file:'showcase/scenes/ellipsoid-earth.x3d', poster:'showcase/img/posters/ellipsoid-earth.webp', alt:'Grey globe built from a GeoElevationGrid', say:'<b>GeoElevationGrid, 37 × 19 grid, geoSystem GD WE.</b> This file imported as an empty scene before PR #35; the globe is built in float64 and drawn here by X_ITE straight from the X3D. Drag to orbit.'},
-  {file:'showcase/scenes/stars-view.x3d', poster:'showcase/img/posters/stars-view.webp', alt:'Stars within 50 light-years as splats', say:'<b>The hero as an X3D 4.1 <code>GaussianSplats</code> node:</b> 978 HYG v4.1 stars (two splats each), an Inline scaled by 1.057e-16 (one light-year in metres), the very scene that used to crash the importer.'},
-  {file:'showcase/scenes/stilllife-splats-24k.x3d', poster:'showcase/img/posters/stilllife-splats-24k.webp', alt:'A still life as Gaussian splats', say:'<b>A Blender scene turned into 24,000 splats</b> (trained from Cycles renders), written by this add-on as X3D 4.1. 3 MB, so it streams when you press play.'},
-  {file:'showcase/scenes/lights-after.x3d', poster:'showcase/img/posters/lights-after.webp', alt:'A lit scene of a sphere and cube', say:'<b>Lights exported with <code>global="true"</code>.</b> The same scene lit nothing before this fix (see the second before/after above).'}
-];
-var cur = 0, ready = false, canvas = null, token = 0;
-var stage = document.getElementById('stage'), poster = document.getElementById('poster'), go = document.getElementById('go'), badge = document.getElementById('badge'), say = document.getElementById('say'), goBtn = document.getElementById('goBtn');
-function showPoster(i){ poster.src = SCENES[i].poster; poster.alt = SCENES[i].alt; say.innerHTML = SCENES[i].say; }
-function loadScene(i){
-  var tok = ++token, b = X3D.getBrowser(canvas), t0 = performance.now();
-  badge.textContent = 'loading ' + SCENES[i].file.split('/').pop() + '…'; poster.style.display = '';
-  b.loadURL(new X3D.MFString(SCENES[i].file)).then(function(){ if (tok!==token) return; poster.style.display='none'; badge.textContent = 'live · X_ITE ' + (b.version||'16.7.1') + ' · ' + ((performance.now()-t0)/1000).toFixed(1) + ' s'; })
-  .catch(function(e){ if (tok===token) badge.textContent = 'load failed: ' + String(e).slice(0,60); });
-}
-function select(i){
-  cur = i; document.querySelectorAll('.tab').forEach(function(t){ t.setAttribute('aria-selected', +t.dataset.i === i ? 'true':'false'); });
-  showPoster(i); if (ready) loadScene(i);
-}
-document.querySelectorAll('.tab').forEach(function(t){ t.addEventListener('click', function(){ select(+t.dataset.i); }); });
-goBtn.addEventListener('click', function(){
-  goBtn.disabled = true; goBtn.textContent = 'Loading X_ITE 16.7.1…';
-  var s = document.createElement('script'); s.src = XITE;
-  s.onload = function(){
-    var css = document.createElement('link'); css.rel='stylesheet'; css.href = XITE.replace('x_ite.min.js','x_ite.css'); document.head.appendChild(css);
-    canvas = document.createElement('x3d-canvas'); canvas.setAttribute('splashScreen','false'); canvas.setAttribute('notifications','false');
-    stage.insertBefore(canvas, poster); go.style.display='none'; ready = true; loadScene(cur);
-  };
-  s.onerror = function(){ goBtn.disabled=false; goBtn.textContent='Could not reach the CDN: retry'; };
-  document.head.appendChild(s);
-});
-select(0);
-})();
-</script>
+<script type="module" src="brag/page.mjs"></script>
 </body>
 </html>
