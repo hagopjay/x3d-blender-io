@@ -6,6 +6,7 @@
   "x_ite": "16.7.1",
   "babylonjs": "9.32.0",
   "babylonjs-loaders": "9.32.0",
-  "playwright": "1.63.0"
+  "playwright": "1.63.0",
+  "gltf-validator": "2.0.0-dev.3.10"
  }
 }

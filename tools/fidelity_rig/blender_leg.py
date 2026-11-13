@@ -14,6 +14,7 @@ try:
     importlib.import_module("io_scene_x3d").register()
 except ValueError:
     pass  # still registered
+bpy.context.scene.frame_start = 0  # the importer puts X3D time 0 on frame_start; the glTF exporter writes frame/fps, so 1 would be 1/24 s late
 assert bpy.ops.import_scene.x3d(filepath=x3d) == {"FINISHED"}
 lights = []
 for ob in bpy.context.scene.objects:
@@ -22,8 +23,8 @@ for ob in bpy.context.scene.objects:
         lights.append(dict(name=ob.name, type=d.type, energy=round(d.energy, 5),
                            range=(round(d.cutoff_distance, 4) if d.use_custom_distance else None),
                            ref=d.get("x3d_reference_distance"), factor=d.get("x3d_energy_per_intensity")))
-bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_lights=True, export_cameras=True,
-                          export_import_convert_lighting_mode="COMPAT", use_renderable=True, export_yup=True,
-                          export_apply=True, use_mesh_edges=True, use_mesh_vertices=True)
+assert bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_lights=True, export_cameras=True,
+                          export_import_convert_lighting_mode="COMPAT", use_renderable=True, export_yup=True, export_extras=True,
+                          export_apply=True, use_mesh_edges=True, use_mesh_vertices=True) == {"FINISHED"}
 sc = bpy.context.scene
-print("LEG", json.dumps({"x3d": x3d, "lights": lights, "model": sc.get("x3d_lighting_model"), "headlight_lux": sc.get("x3d_headlight_lux")}))
+print("LEG", json.dumps({"blender": bpy.app.version_string, "x3d": x3d, "lights": lights, "model": sc.get("x3d_lighting_model"), "headlight_lux": sc.get("x3d_headlight_lux")}))
