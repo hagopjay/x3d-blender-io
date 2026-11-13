@@ -297,6 +297,37 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     return "".join(xml)
 
 
+def _imported_primitive_xml(primitive, defs: _DefNames, indent):
+    """An imported Box, Sphere, Cylinder or Cone written back as that node (extract.primitive_for_mesh), DEF on its
+    first use and USE after, one per Blender mesh and solid (the way the import shared it). Fields at their X3D
+    default are left out."""
+    node, fields = primitive["node"], primitive["fields"]
+    key = f'{primitive.get("mesh") or id(primitive)}{"" if fields.get("solid", True) else "_2s"}'
+    primitive_def = defs.get("primitive", key, "GE_")
+    if not defs.first_use("primitive", key):
+        return f'{indent}<{node} USE="{primitive_def}" />\n'
+    attrs = [f'DEF="{primitive_def}"']
+    if node == "Box":
+        size = tuple(float(v) for v in fields.get("size", (2.0, 2.0, 2.0)))
+        if size != (2.0, 2.0, 2.0):
+            attrs.append(f'size="{_fmt3_length(size)}"')
+    elif node == "Sphere":
+        if float(fields.get("radius", 1.0)) != 1.0:
+            attrs.append(f'radius="{_fmt_length(float(fields["radius"]))}"')
+    else:
+        radius_field = "bottomRadius" if node == "Cone" else "radius"
+        if float(fields.get(radius_field, 1.0)) != 1.0:
+            attrs.append(f'{radius_field}="{_fmt_length(float(fields[radius_field]))}"')
+        if float(fields.get("height", 2.0)) != 2.0:
+            attrs.append(f'height="{_fmt_length(float(fields["height"]))}"')
+        for flag in (("bottom", "side", "top") if node == "Cylinder" else ("bottom", "side")):
+            if not fields.get(flag, True):
+                attrs.append(f'{flag}="false"')
+    if not fields.get("solid", True):
+        attrs.append('solid="false"')
+    return f'{indent}<{node}{"".join(" " + a for a in attrs)} />\n'
+
+
 def _primitive_geometry_xml(hint, indent):
     if hint == "Box":
         return f'{indent}<Box size="1.000000 1.000000 1.000000" />\n'
@@ -439,6 +470,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
         if geometry is not None:
             xml.append(_geometry_xml(geometry, defs, indent + "    "))
+        elif shape.primitive:
+            xml.append(_imported_primitive_xml(shape.primitive, defs, indent + "    "))
         else:
             xml.append(_primitive_geometry_xml(shape.geometry_hint, indent + "    "))
         xml.append(f"{indent}  </Shape>\n")

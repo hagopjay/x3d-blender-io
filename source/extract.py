@@ -263,6 +263,49 @@ def _color_values(mesh):
     return accessor, domain
 
 
+# Set by the import on a mesh it tessellated from a Box, Sphere, Cylinder or Cone (import_x3d.mark_primitive).
+PRIMITIVE_PROPERTY = "x3d_primitive"
+_PRIMITIVE_NODES = frozenset(("Box", "Sphere", "Cylinder", "Cone"))
+
+
+def _position_signature(mesh):
+    """import_x3d.position_signature: (vertex count, face count, weighted position sum)."""
+    count = len(mesh.vertices)
+    flat = [0.0] * (count * 3)
+    mesh.vertices.foreach_get("co", flat)
+    weighted = sum(value * (1 + (index % 7)) for index, value in enumerate(flat))
+    return [count, len(mesh.polygons), round(weighted, 5)]
+
+
+def primitive_for_mesh(mesh):
+    """The X3D primitive an unedited imported mesh came from, as {"node": ..., "fields": {...}}, or None.
+
+    None when the mesh has no record, when any vertex moved or the vertex or face count changed since the import,
+    or when it gained what a primitive cannot carry (several materials, colour attributes, shape keys)."""
+    import json
+    try:
+        raw = mesh.get(PRIMITIVE_PROPERTY)
+    except (AttributeError, TypeError):
+        return None
+    if not raw:
+        return None
+    try:
+        record = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if record.get("node") not in _PRIMITIVE_NODES or not isinstance(record.get("fields"), dict):
+        return None
+    if getattr(mesh, "shape_keys", None) is not None or len(getattr(mesh, "color_attributes", ()) or ()) \
+            or len([m for m in getattr(mesh, "materials", ()) if m is not None]) > 1:
+        return None
+    signature = record.get("signature")
+    current = _position_signature(mesh)
+    if not signature or len(signature) != 3 or signature[:2] != current[:2] \
+            or abs(float(signature[2]) - current[2]) > 1e-4 * max(1.0, abs(current[2])):
+        return None
+    return {"node": record["node"], "fields": dict(record["fields"])}
+
+
 def _edge_polylines(edges) -> list[list[int]]:
     """Chain mesh edges (pairs of vertex indices) into polylines, endpoints first."""
     adjacent: dict[int, list[int]] = {}
@@ -1131,6 +1174,20 @@ def extract_scene(
         geometry_key = obj.name if needs_eval else obj.data.name
         source_key = f"{obj.type}:{geometry_key}"
         source_keys.setdefault(source_key, obj.name)
+
+        primitive = primitive_for_mesh(obj.data) if obj.type == "MESH" and not needs_eval else None
+        if primitive is not None:
+            slots = obj.material_slots
+            material = next((slot.material for slot in slots if slot.material is not None), None) if slots else None
+            if material and material.name not in material_names:
+                analyzed = analyze_material(material)
+                if analyzed:
+                    ir_scene.materials.append(analyzed)
+                    material_names.add(material.name)
+            primitive["fields"]["solid"] = bool(getattr(material, "use_backface_culling", False)) if material else False
+            primitive["mesh"] = obj.data.name
+            return source_key, [IRShape(material_name=material.name if material else None,
+                                        geometry_hint=primitive["node"], primitive=primitive)]
 
         geometries = geometries_by_key.get(geometry_key)
         if shape_key_morph and not needs_eval:

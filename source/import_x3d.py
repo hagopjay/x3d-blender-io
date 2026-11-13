@@ -3899,6 +3899,29 @@ def phong_to_principled(shininess, specular_color):
     return roughness, level, tuple(c / peak for c in spec)
 
 
+# A Box, Sphere, Cylinder or Cone imports as a tessellated mesh; the node and its fields are kept on the mesh
+# (PRIMITIVE_PROPERTY, JSON) with a checksum of its vertex positions, so the X3D 4.0 export can write the primitive
+# back while the mesh is unedited (extract.primitive_for_mesh) instead of a much larger IndexedFaceSet.
+PRIMITIVE_PROPERTY = "x3d_primitive"
+
+
+def position_signature(bpymesh):
+    """(vertex count, face count, weighted position sum): changes when any vertex moves or is added or removed."""
+    count = len(bpymesh.vertices)
+    flat = [0.0] * (count * 3)
+    bpymesh.vertices.foreach_get("co", flat)
+    weighted = sum(value * (1 + (index % 7)) for index, value in enumerate(flat))
+    return [count, len(bpymesh.polygons), round(weighted, 5)]
+
+
+def mark_primitive(bpymesh, geom, ancestry, node_type, **fields):
+    """Remember the primitive node behind ``bpymesh`` (see PRIMITIVE_PROPERTY)."""
+    import json
+    fields["solid"] = geom.getFieldAsBool('solid', True, ancestry)
+    bpymesh[PRIMITIVE_PROPERTY] = json.dumps({"node": node_type, "fields": fields,
+                                              "signature": position_signature(bpymesh)})
+
+
 def importMesh_Sphere(geom, ancestry):
     # solid is ignored.
     # Extra field 'subdivision="n m"' attribute, specifying how many
@@ -3991,6 +4014,7 @@ def importMesh_Sphere(geom, ancestry):
 
     bpymesh.validate()
     bpymesh.update()
+    mark_primitive(bpymesh, geom, ancestry, 'Sphere', radius=r)
     return bpymesh
 
 
@@ -4049,6 +4073,7 @@ def importMesh_Cylinder(geom, ancestry):
     importMesh_ApplyTextureToLoops(bpymesh, loops)
 
     bpymesh.update()
+    mark_primitive(bpymesh, geom, ancestry, 'Cylinder', radius=radius, height=height, bottom=bottom, side=side, top=top)
     return bpymesh
 
 
@@ -4090,6 +4115,7 @@ def importMesh_Cone(geom, ancestry):
     importMesh_ApplyTextureToLoops(bpymesh, loops)
 
     bpymesh.update()
+    mark_primitive(bpymesh, geom, ancestry, 'Cone', bottomRadius=radius, height=height, bottom=bottom, side=side)
     return bpymesh
 
 
@@ -4136,6 +4162,7 @@ def importMesh_Box(geom, ancestry):
     bpymesh.flip_normals()
 
     bpymesh.update()
+    mark_primitive(bpymesh, geom, ancestry, 'Box', size=[2 * dx, 2 * dy, 2 * dz])
     return bpymesh
 
 
@@ -5560,6 +5587,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             bpycollection, vrmlname, bpydata, geom, geom_spec,
             node, bpymat, tex_has_alpha, texmtx,
             ancestry, global_matrix, solidify, solidify_value)
+        if texmtx is not None and isinstance(bpydata, bpy.types.Mesh) and PRIMITIVE_PROPERTY in bpydata:
+            del bpydata[PRIMITIVE_PROPERTY]  # its UVs carry a TextureTransform the primitive would lose
         if appr is not None and geom_spec not in LINE_POINT_SPECS and node.blendObject is not None:
             lit = None
             if appr.getChildBySpec('PhysicalMaterial') is not None:
