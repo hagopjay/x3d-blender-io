@@ -3714,6 +3714,50 @@ def unlit_pbr_material(bpymat, bsdf, emissive):
     return bpymat
 
 
+physical_colour_cache = {}
+
+
+def physical_colour_material(bpymat):
+    """The copy of a PhysicalMaterial's Principled material for a filled geometry with a Color or ColorRGBA node,
+    made once per import for each material and solid: the colours (ColorPerCorner) drive Base Color, and multiply a
+    baseTexture when there is one, as X_ITE 16.7.1 draws them (X3D 4.0: the Color node's values replace baseColor).
+    Without this the colours sat on the mesh but no node read them, so Cycles and EEVEE drew the flat baseColor and
+    Blender's glTF exporter (vertex colours 'MATERIAL') wrote them nowhere: a baked colour ramp came out white in
+    the glb. The Base Color socket keeps baseColor as its value, so the X3D export writes the PhysicalMaterial back
+    unchanged beside the Color node. The colours stay linear: the face importers keep a Color under a
+    PhysicalMaterial as given (vertex_colours_linear)."""
+    key = (bpymat.name, bool(bpymat.use_backface_culling))
+    hit = physical_colour_cache.get(key)
+    if hit is not None:
+        return hit
+    tree = bpymat.node_tree
+    bsdf = next((n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED'), None) if tree is not None else None
+    if bsdf is None:
+        return bpymat
+    mat = bpymat.copy()
+    mat.name = bpymat.name + "_colour"
+    tree = mat.node_tree
+    bsdf = next(n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    base = bsdf.inputs['Base Color']
+    vcol = tree.nodes.new('ShaderNodeVertexColor')
+    vcol.layer_name = "ColorPerCorner"
+    vcol.location = (bsdf.location[0] - 500, bsdf.location[1] + 260)
+    if base.links:
+        texture = base.links[0].from_socket
+        mix = tree.nodes.new('ShaderNodeMix')
+        mix.data_type = 'RGBA'
+        mix.blend_type = 'MULTIPLY'
+        mix.inputs['Factor'].default_value = 1.0
+        mix.location = (bsdf.location[0] - 250, bsdf.location[1] + 200)
+        tree.links.new(texture, mix.inputs['A'])
+        tree.links.new(vcol.outputs['Color'], mix.inputs['B'])
+        tree.links.new(mix.outputs['Result'], base)
+    else:
+        tree.links.new(vcol.outputs['Color'], base)
+    physical_colour_cache[key] = mat
+    return mat
+
+
 def unlit_colour_material(bpymat, colour_kind, alpha_mode='AUTO'):
     """The copy of an UnlitMaterial's unlit material (unlit_pbr_material) for a filled geometry with a Color ('RGB')
     or ColorRGBA ('RGBA') node, made once per import for each material and kind, as X_ITE 16.7.1 draws it (Unlit2.glsl,
@@ -5473,6 +5517,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
                 # the Color / ColorRGBA replaces emissiveColor (see unlit_colour_material)
                 alpha_mode = (_attribute_raw(appr, 'alphaMode', 'AUTO') or 'AUTO').strip().strip('"').upper()
                 bpymat = unlit_colour_material(bpymat, colour_kind, alpha_mode)
+            elif colour_kind and geom.getSpec() not in LINE_POINT_SPECS:
+                bpymat = physical_colour_material(bpymat)
     elif is_vcol:
         # this may be a rare case, however sometimes vertex colors get used without material
         # in such case a default material has to get forced
@@ -6475,7 +6521,7 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
     if resolved in _INLINE_STACK or resolved == os.path.abspath(current_file_path or ""):
         logger.warning("Can't Inline a file that is already being loaded: %s", resolved)
         return empty
-    empty["x3d_inline_resolved_path"] = resolved
+    empty["x3d_inline_resolved_path"] = mfstring.portable_path(resolved, os.path.dirname(current_file_path or ""))
 
     before = set(bpy.data.objects)
     lower = resolved.lower()
@@ -6962,11 +7008,12 @@ def load_web3d(
     # NOTE - reset material cache
     # (otherwise we might get "StructRNA of type Material has been removed" errors)
     global material_cache, texture_cache, image_alpha_cache, line_material_cache, unlit_surface_cache
-    global unlit_colour_cache
+    global unlit_colour_cache, physical_colour_cache
     material_cache = {}
     line_material_cache = {}
     unlit_surface_cache = {}
     unlit_colour_cache = {}
+    physical_colour_cache = {}
     # Same reason for textures: a cached Image outlives File > New and the next import fails with
     # "StructRNA of type Image has been removed".
     texture_cache = {}

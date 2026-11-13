@@ -742,12 +742,36 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     return sorted(components.items())
 
 
+def _geometries_by_material_kind(ir_scene: IRScene) -> tuple[set, set]:
+    """Names of the geometries drawn with an UnlitMaterial, and of those drawn with anything else."""
+    unlit_materials = {material.name for material in ir_scene.materials if material.unlit}
+    unlit, other = set(), set()
+
+    def visit(instances):
+        for instance in instances:
+            for shape in instance.iter_shapes():
+                if shape.geometry_name:
+                    (unlit if shape.material_name in unlit_materials else other).add(shape.geometry_name)
+            visit(instance.children)
+
+    visit(ir_scene.instances)
+    for humanoid in ir_scene.humanoids:
+        for shape in humanoid.skin_shapes:
+            if shape.geometry_name:
+                (unlit if shape.material_name in unlit_materials else other).add(shape.geometry_name)
+    return unlit, other
+
+
 def with_display_colours(ir_scene: IRScene, colour_space: str) -> IRScene:
     """``ir_scene`` with its UnlitMaterial colours in X3D's display encoding under ``colour_space`` 'SRGB'.
 
     X_ITE draws an UnlitMaterial emissiveColor of 0.5 as 128, in display space (measured 12 Nov 2026, X_ITE 16.7.1),
-    while Blender holds linear colours, so they are sRGB-encoded. PhysicalMaterial colours stay linear: X_ITE lights
-    them the glTF way. Under 'AS_IS' the scene is returned unchanged.
+    while Blender holds linear colours, so they are sRGB-encoded. The per-vertex colours (ColorRGBA) of a geometry
+    drawn only with an UnlitMaterial are encoded the same way: the importer turned such a Color into linear values
+    (set_new_float_color_attribute), so writing them unchanged darkened every round trip (an aurora ribbon's
+    0.456 0.086 0.599 came back as 0.176 0.008 0.317). PhysicalMaterial colours, and the vertex colours of geometry
+    drawn with one, stay linear: X_ITE lights them the glTF way and the importer keeps them as given. Under 'AS_IS'
+    the scene is returned unchanged.
     """
     if colour_space != "SRGB" or not any(material.unlit for material in ir_scene.materials):
         return ir_scene
@@ -757,7 +781,14 @@ def with_display_colours(ir_scene: IRScene, colour_space: str) -> IRScene:
             colour = tuple(material.emissive_color)
             material = replace(material, emissive_color=display_colour(colour[:3], colour_space) + tuple(colour[3:]))
         materials.append(material)
-    return replace(ir_scene, materials=materials)
+    unlit, other = _geometries_by_material_kind(ir_scene)
+    encode = unlit - other
+    geometries = [
+        replace(geometry, color=[display_colour(c[:3], colour_space) + tuple(c[3:]) for c in geometry.color])
+        if geometry.name in encode and geometry.color else geometry
+        for geometry in ir_scene.geometries
+    ]
+    return replace(ir_scene, materials=materials, geometries=geometries)
 
 
 def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d", version: str = "4.0",
