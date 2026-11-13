@@ -1,5 +1,7 @@
 // Render jobs: X_ITE on the X3D, Babylon.js on the glb, same 512x512 headless Chromium (SwiftShader).
 // Usage: node render.mjs jobs.json   (jobs: [{name, x3d, glb, clear:[r,g,b], headlight: lux|null, outdir}])
+// A job with xiteOnly: true renders only X_ITE (no glb, no Babylon.js) and also writes xite_console.txt (X_ITE's console
+// errors and warnings): roundtrip.py renders the original and the re-export that way.
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url); const { chromium } = require('playwright');
@@ -22,6 +24,7 @@ for (const job of jobs) {
   // X_ITE
   const a = await browser.newPage({ viewport: { width: 512, height: 512 } });
   a.on('pageerror', e => console.log('xite pageerror', job.name, String(e).slice(0, 200)));
+  const consoleLog = []; a.on('console', m => { if (['error', 'warning'].includes(m.type())) consoleLog.push(`${m.type()}: ${m.text()}`); });
   await a.goto(`${base}/xite.html`, { waitUntil: 'load' });
   try {
     await a.evaluate(async (url) => { const b = X3D.getBrowser('x3d-canvas');
@@ -31,7 +34,9 @@ for (const job of jobs) {
     await a.locator('x3d-canvas').screenshot({ path: `${out}/xite.png` });
     if (job === jobs[0]) console.log('X_ITE', await a.evaluate(() => window.__ver));
   } catch (e) { console.log('xite fail', job.name, String(e).slice(0, 200)); }
+  if (job.xiteOnly) fs.writeFileSync(`${out}/xite_console.txt`, consoleLog.join('\n').slice(0, 20000));
   await a.close();
+  if (job.xiteOnly) continue;
   // Babylon.js
   const b = await browser.newPage({ viewport: { width: 512, height: 512 } });
   b.on('pageerror', e => console.log('babylon pageerror', job.name, String(e).slice(0, 200)));

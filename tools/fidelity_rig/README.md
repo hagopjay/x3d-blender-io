@@ -68,3 +68,42 @@ deltas above) and engine support (what Babylon.js, three.js or X_ITE actually dr
 - **Animation time.** The importer puts X3D time 0 on `scene.frame_start` and the glTF exporter writes `frame / fps`, so with the factory frame 1 a glb's animation runs one frame late (first sampler time 0.041667 s at 24 fps, Blender 5.3.0). `blender_leg.py` sets `frame_start = 0` before the import: first sample 0.0 s, last 2.0 s for a 2 s cycle. `export_anim_slide_to_zero` is not used: it is ignored when `export_force_sampling` is False and slides each action by its own first key. Integer-frame sampling still drops a key that falls between frames (a key at 0.3 of a 2 s cycle is frame 14.4: 0.125 units of position error at that key), and a cycle that is not a whole number of frames stops a frame early (0.7 s ends at 0.6667 s); `export_force_sampling=False` gives exact keys for Transform animation, but HAnim joint animation was not tested with it.
 - **export_apply.** `export_apply=True` does not drop the add-on's morphs: with and without it the glb is byte-identical on 34 of 34 repo scenes and on two CoordinateInterpolator scenes (Blender 5.3.0). The exporter's own help text says it prevents shape keys; that holds only for a mesh with shape keys and a non-armature modifier, which the add-on makes only with its Solidify import option (off by default; then the glb carries a weights channel with no targets and fails the validator with `ANIMATION_CHANNEL_TARGET_NODE_WEIGHTS_NO_MORPHS`).
 - **Identity.** The importer tags each Blender object it creates with `x3d_def` (the node's DEF, else the nearest DEF'd Transform), `x3d_def_path` (DEF'd ancestors, outermost first) and `x3d_use` (the DEF a USE points at), and the mesh and material with their DEF, and the rig exports with `export_extras=True`, so they reach the glb's node, mesh and material `extras`. Object names alone are not the DEF: Blender suffixes duplicates (`BoxShape.001`) and flat import drops Transforms. Two anonymous Shapes under one DEF'd Transform share that `x3d_def`. The glb is byte-identical across two separate imports of the same file.
+
+## Round-trip audit (X3D -> add-on -> X3D 4.0 -> X_ITE)
+
+`roundtrip.py` checks what the add-on does to a scene that goes in and comes out again, with every option at its default
+(sRGB colour space, AUTO light units, X3D 4.0 export, animation off, the operator's other defaults):
+
+```
+BPY_PYTHON=$(which python3) python3 roundtrip.py LABEL ../../source probes.json            # or scenes-demo.json, or any scenes list
+python3 roundtrip.py LABEL ../../source scenes-demo.json --only demo-chirp --no-render     # one scene, no browser
+python3 roundtrip.py LABEL ../../source scenes-demo.json --animation                       # export with use_animation=True
+python3 roundtrip.py LABEL ../../source scenes-demo.json --reuse                           # redo only the analysis
+```
+
+Per scene it writes `out/LABEL/<scene>/roundtrip.x3d` (+ `roundtrip.glb`, the Blender glTF export of the same imported scene,
+and `asis/` with the same pair imported and exported under `BLENDER_X3D_COLOR_SPACE=AS_IS`), `audit.json`, and under
+`orig/`, `reexp/`, `orig2/` the X_ITE renders of the original, the re-export and a second render of the original (the
+noise floor of timers and animation); `render.mjs` renders only X_ITE for those (`xiteOnly` jobs; it also keeps X_ITE's
+console errors in `xite_console.txt`). `out/LABEL/roundtrip_results.json` has every row. The audit reports:
+
+- the re-export's validity (`source/validate.py` well-formedness, and the `x3d` Python package's field checks when installed);
+- node counts by type, original against re-export (`lost`, `added`, `reduced`, `increased`);
+- X_ITE original against X_ITE re-export, each at its own first Viewpoint (so the camera round trip is part of the number):
+  mean |delta| per pixel (0-255) over the frame, the share of pixels with any channel off by more than 16, the delta over the
+  foreground (pixels that differ from the frame's border colour in either image), and FLIP (flip-evaluator, LDR, 67 ppd);
+- a numeric colour audit. Every Material, TwoSidedMaterial, UnlitMaterial and PhysicalMaterial colour field and every
+  per-vertex Color / ColorRGBA is brought to display sRGB (classic and Unlit colours already are; PhysicalMaterial colours are
+  linear and are encoded) and compared with its re-export counterpart, paired by Shape order when the Shape counts match and
+  by nearest colour (reorder-safe) otherwise. A classic Material `diffuseColor 0.8` that comes back as PhysicalMaterial
+  `baseColor 0.6038` is an error of 0. The same pass is run with AS_IS, and the glb's `baseColorFactor`, `emissiveFactor`
+  (an Unlit or line colour sits in `baseColorFactor` under `KHR_materials_unlit`) and `COLOR_0` are compared with the original
+  colour converted sRGB -> linear.
+
+`roundtrip_audit.py` holds the analysis (plain Python and numpy; `tests/test_roundtrip_audit.py` runs it without Blender or a
+browser, `tests/test_roundtrip_audit_bpy.py` runs the p2 probe through the real import and export). `scenes-demo.json` lists
+ten public x3d.demo scenes (classic Material, PhysicalMaterial, UnlitMaterial, textures, vertex colours, lights, Transform and
+coordinate animation); its paths assume x3d.demo is cloned next to this checkout (`../../../x3d.demo`). Limits: a still frame
+cannot show a lost animation (the animated scenes agree at time 0; read `nodes.lost` for TimeSensor and interpolators); X_ITE in
+SwiftShader crashed the page on the 1.2 MB UnlitMaterial + shader scene (no number) and renders the 876 KB 62-light scene
+differently on every run (noise floor above the delta, so no usable number).

@@ -1,0 +1,52 @@
+[
+ {
+  "name": "demo-chirp",
+  "x3d": "../../../x3d.demo/docs/demos/stem/v1/chirp/scenes/chirp.x3d",
+  "wait": 2500
+ },
+ {
+  "name": "demo-living-heart",
+  "x3d": "../../../x3d.demo/docs/demos/stem/v1/living-heart/scenes/heart.x3d",
+  "wait": 2500
+ },
+ {
+  "name": "demo-cannonball",
+  "x3d": "../../../x3d.demo/docs/demos/ten-minute-physics/v1/01-cannonball.x3d",
+  "wait": 2500
+ },
+ {
+  "name": "demo-ode-integrators",
+  "x3d": "../../../x3d.demo/docs/demos/ten-minute-physics/v6/19-ode-integrators.x3d",
+  "wait": 3000
+ },
+ {
+  "name": "demo-double-pendulum",
+  "x3d": "../../../x3d.demo/docs/demos/ten-minute-physics/v4/25-double-pendulum.x3d",
+  "wait": 3000
+ },
+ {
+  "name": "demo-materials-textures",
+  "x3d": "../../../x3d.demo/docs/demos/gobbler-worlds-within/v1/data/worlds/materials/materials.x3d",
+  "wait": 5000
+ },
+ {
+  "name": "demo-ontology-constellation",
+  "x3d": "../../../x3d.demo/docs/demos/ontology-constellation/v1/ontology-constellation.x3d",
+  "wait": 4000
+ },
+ {
+  "name": "demo-habsburg-unlit-color",
+  "x3d": "../../../x3d.demo/docs/demos/dynasty-loom/v1/habsburg.x3d",
+  "wait": 4000
+ },
+ {
+  "name": "demo-wedgwood-unlit-textures",
+  "x3d": "../../../x3d.demo/docs/demos/dynasty-loom/v1/pocket-darwin_wedgwood.x3d",
+  "wait": 8000
+ },
+ {
+  "name": "demo-material-odyssey",
+  "x3d": "../../../x3d.demo/docs/demos/material-odyssey-webgpu/v1/odyssey.x3d",
+  "wait": 10000
+ }
+]
