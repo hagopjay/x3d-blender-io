@@ -22,8 +22,8 @@ for ob in bpy.context.scene.objects:
         lights.append(dict(name=ob.name, type=d.type, energy=round(d.energy, 5),
                            range=(round(d.cutoff_distance, 4) if d.use_custom_distance else None),
                            ref=d.get("x3d_reference_distance"), factor=d.get("x3d_energy_per_intensity")))
-bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_lights=True, export_cameras=True,
+assert bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_lights=True, export_cameras=True,
                           export_import_convert_lighting_mode="COMPAT", use_renderable=True, export_yup=True,
-                          export_apply=True, use_mesh_edges=True, use_mesh_vertices=True)
+                          export_apply=True, use_mesh_edges=True, use_mesh_vertices=True) == {"FINISHED"}
 sc = bpy.context.scene
-print("LEG", json.dumps({"x3d": x3d, "lights": lights, "model": sc.get("x3d_lighting_model"), "headlight_lux": sc.get("x3d_headlight_lux")}))
+print("LEG", json.dumps({"blender": bpy.app.version_string, "x3d": x3d, "lights": lights, "model": sc.get("x3d_lighting_model"), "headlight_lux": sc.get("x3d_headlight_lux")}))
