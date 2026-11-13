@@ -20,12 +20,12 @@ import mathutils
 
 from bpy_extras.io_utils import create_derived_objects
 
-from .material_node_search import (imageTexture_in_material, get_diffuse_color, get_emissive_color,
+from .material_node_search import (analyze_material, imageTexture_in_material, get_diffuse_color, get_emissive_color,
                                    get_vector_mapping_properties, get_movie_texture_properties)
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
 from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, light_attenuation, light_colour,
-                      light_energy_per_intensity, light_radius, resolve_export_colour_space)
+                      light_intensity, light_radius, resolve_export_colour_space)
 
 # h3d defines
 H3D_TOP_LEVEL = 'TOP_LEVEL_TI'
@@ -463,6 +463,11 @@ def export(file,
         fw('%s</Transform>\n' % ident)
         return ident
 
+    # The colour space light colours are written in: the export's, when the file holds a classic Material for them to
+    # light (X_ITE multiplies a classic Material's colours and its lights' colours in display space); else as is, since
+    # a file without one re-imports as a physical scene, whose light colours the importer keeps as given.
+    light_space = {'value': color_space}
+
     def writeSpotLight(ident, obj, matrix, light, world):
         # note, light_id is not re-used
         light_id = quoteattr(unique_name(obj, LA_ + obj.name, uuid_cache_light, clean_func=clean_def, sep="_"))
@@ -475,7 +480,7 @@ def export(file,
             amb_intensity = 0.0
 
         # compute cutoff and beamwidth
-        intensity = min(light.energy / light_energy_per_intensity(light), 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
+        intensity = min(light_intensity(light), 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
         if light.get(LIGHT_INTENSITY_PROPERTY) is not None:   # imported from X3D: the file's cone
             beamWidth, cutOffAngle = imported_spot_cone(light)
         else:
@@ -498,7 +503,7 @@ def export(file,
         fw(ident_step + 'radius="%g"\n' % radius)
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
-        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light)))
+        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light, light_space['value'])))
         fw(ident_step + 'beamWidth="%.4f"\n' % beamWidth)
         fw(ident_step + 'cutOffAngle="%.4f"\n' % cutOffAngle)
         fw(ident_step + 'direction="%.4f %.4f %.4f"\n' % orientation)
@@ -521,7 +526,7 @@ def export(file,
 
         # sun strength is not scaled (unless an import recorded its scale), matching extract.py; the X3D 3.x
         # schemas limit intensity to [0, 1]
-        intensity = min(light.energy / light_energy_per_intensity(light), 1.0)
+        intensity = min(light_intensity(light), 1.0)
 
         orientation = matrix_direction_neg_z(matrix)
 
@@ -530,7 +535,7 @@ def export(file,
         fw('DEF=%s\n' % light_id)
         fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
-        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light)))
+        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light, light_space['value'])))
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
         fw(ident_step + 'direction="%.4f %.4f %.4f"\n' % orientation)
         fw(ident_step + '/>\n')
@@ -547,7 +552,7 @@ def export(file,
             ambi = 0.0
             amb_intensity = 0.0
 
-        intensity = min(light.energy / light_energy_per_intensity(light), 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
+        intensity = min(light_intensity(light), 1.0)  # the X3D 3.x schemas limit intensity to [0, 1]
         location = matrix.to_translation()[:]
 
         ident_step = ident + (' ' * (-len(ident) +
@@ -555,7 +560,7 @@ def export(file,
         fw('DEF=%s\n' % light_id)
         fw(ident_step + 'global="true"\n')  # light the whole scene, as Blender does, not only sibling nodes
         fw(ident_step + 'ambientIntensity="%.4f"\n' % amb_intensity)
-        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light)))
+        fw(ident_step + 'color="%.4f %.4f %.4f"\n' % clamp_color(light_colour(light, light_space['value'])))
 
         fw(ident_step + 'intensity="%.4f"\n' % intensity)
         radius = light_radius(light)
@@ -1088,6 +1093,13 @@ def export(file,
             ambient = 0.0  # material.ambient / 3.0
             diffuse_color = get_diffuse_color(material) or (0.8, 0.8, 0.8, 1.0)  # Default diffuse color
             emissive_color = get_emissive_color(material) or (0.0, 0.0, 0.0, 1.0)  # Default emissive color
+            analyzed = analyze_material(material)
+            if analyzed is not None and analyzed.unlit:
+                # X3D 3.3 has no UnlitMaterial: an unlit (Emission) material is written as a Material that draws its
+                # emissiveColor only, with a black diffuseColor, as an imported UnlitMaterial always was (X_ITE 16.7.1
+                # adds getEmissiveColor () to the diffuse colour times the lights, x_ite.js Material2.glsl), keeping
+                # the alpha for transparency.
+                diffuse_color = (0.0, 0.0, 0.0) + tuple(diffuse_color[3:])
 
             if world and 0:
                 ambiColor = ((material.ambient * 2.0) * world.ambient_color)[:]
@@ -1770,6 +1782,10 @@ def export(file,
 
         if use_visible:
             objects = tuple(obj for obj in objects if obj.visible_get())
+
+        light_space['value'] = color_space if any(
+            obj.type in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'} and any(slot.material for slot in obj.material_slots)
+            for obj in objects) else 'AS_IS'
 
         print('Info: starting X3D export to %r...' % file.name)
         ident = ''

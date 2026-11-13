@@ -79,8 +79,11 @@ class ImportUnlitEmissiveTests(unittest.TestCase):
         cls.mats = {m.name: m for m in bpy.data.materials}
 
     def _emission(self, name):
-        p = _principled(self.mats[name])
-        return p.inputs.get("Emission Color") or p.inputs.get("Emission")
+        # X_ITE 16.7.1 draws an UnlitMaterial with its Unlit shader (x_ite.js, Unlit2.glsl.js: emissiveColor times the
+        # emissiveTexture, no lighting), so the importer builds the unlit (Emission) shape that glTF writes as
+        # KHR_materials_unlit; the colour and texture sit on the Emission node's Color, where they sat on the
+        # Principled BSDF's Emission Color before.
+        return next(n for n in self.mats[name].node_tree.nodes if n.type == 'EMISSION').inputs["Color"]
 
     def test_texture_times_colour(self):
         socket = self._emission("MA_Tinted")

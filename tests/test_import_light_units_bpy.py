@@ -62,7 +62,25 @@ def srgb(value):
 
 
 def window(distance, reach):
-    return max(0.0, min(1.0, 1.0 - (distance / reach) ** 4))
+    # the range window Babylon.js 9.32 draws a KHR_lights_punctual range with: computeDistanceLightFalloff_GLTF
+    # (babylon.max.js) squares saturate(1 - (d / r)^4), where the extension's recommended formula does not; this helper
+    # was unsquared, so the range test below could not see Babylon draw a light near its radius darker than X_ITE
+    return max(0.0, min(1.0, 1.0 - (distance / reach) ** 4)) ** 2
+
+
+def face_means(candela, depth, reach, albedo=0.8, cells=32):
+    """(X_ITE, Babylon) mean display value over a 1 m x 1 m face `depth` below a point light of `candela` (in glTF):
+    X_ITE draws albedo x cos within the radius with no falloff (x_ite.js line 66922), Babylon srgb(lin(albedo) x
+    candela x cos x window / d^2 / pi), with its squared range window."""
+    xite = gltf = 0.0
+    for row in range(cells):
+        for column in range(cells):
+            x, y = (column + 0.5) / cells - 0.5, (row + 0.5) / cells - 0.5
+            distance = math.sqrt(x * x + y * y + depth * depth)
+            cosine = depth / distance
+            xite += albedo * cosine if distance <= reach else 0.0
+            gltf += srgb(lin(albedo) * candela * cosine * window(distance, reach) / distance ** 2 / math.pi)
+    return xite / cells ** 2, gltf / cells ** 2
 
 
 # one triangle, so an Inline can load a glTF without a file on disk beside the test
@@ -189,17 +207,129 @@ class ImportLightUnitsTests(unittest.TestCase):
                               + _box(CLASSIC))
         self.assertEqual([round(c, 5) for c in lights["Sun"].color], [1.0, round(lin(0.5), 5), round(lin(0.25), 5)])
         self.assertEqual(list(lights["Sun"]["x3d_color"]), [1.0, 0.5, 0.25])
-        for version in ("X3D40", "X3D33"):
+        # X3D 3.3 writes classic Materials: the file's value comes back. X3D 4.0 writes PhysicalMaterials, which
+        # X_ITE 16.7.1 lights in linear space (dist/x_ite.js: Punctual2.glsl getLightIntensity, line 67903, returns
+        # intensity * light.color, PBR2.glsl multiplies it by the linear baseColor, line 67826): Blender's colour.
+        for version, expected in (("X3D40", [1.0, round(lin(0.5), 3), round(lin(0.25), 3)]),
+                                  ("X3D33", [1.0, 0.5, 0.25])):
             path = os.path.join(self.tmpdir, "colour_%s.x3d" % version)
             bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False)
             colour = ET.parse(path).getroot().find(".//DirectionalLight").attrib["color"]
-            self.assertEqual([round(float(v), 3) for v in colour.replace(",", " ").split()], [1.0, 0.5, 0.25],
-                             msg=version)
+            self.assertEqual([round(float(v), 3) for v in colour.replace(",", " ").split()], expected, msg=version)
         lights["Sun"].color = (lin(0.5), lin(0.5), lin(0.5))              # changed in Blender: written as sRGB
         path = os.path.join(self.tmpdir, "colour_changed.x3d")
-        bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False)
+        bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D33", use_selection=False)
         colour = ET.parse(path).getroot().find(".//DirectionalLight").attrib["color"]
         self.assertEqual([round(float(v), 3) for v in colour.replace(",", " ").split()], [0.5, 0.5, 0.5])
+
+    def test_x3d40_export_writes_the_linear_light_colour_a_physical_import_keeps(self):
+        import bpy
+        lights = self._import("<PointLight DEF='Lamp' location='0 0 3' color='1 0.5 0.2' global='true'/>\n"
+                              + _box(CLASSIC))
+        held = tuple(lights["Lamp"].color)
+        self.assertAlmostEqual(held[1], lin(0.5), places=5)
+        path = os.path.join(self.tmpdir, "linear_light.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False),
+                         {"FINISHED"})
+        root = ET.parse(path).getroot()
+        self.assertIsNotNone(root.find(".//PhysicalMaterial"))
+        colour = [float(v) for v in root.find(".//PointLight").attrib["color"].replace(",", " ").split()]
+        for got, want in zip(colour, held):
+            self.assertAlmostEqual(got, want, places=5)
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
+        back = [obj.data for obj in bpy.context.scene.objects if obj.type == "LIGHT"]
+        self.assertEqual(len(back), 1)
+        for got, want in zip(back[0].color, held):
+            self.assertAlmostEqual(got, want, places=5)
+
+    def _blender_light_scene(self, colour=(1.0, 0.5, 0.2)):
+        """A plane with a grey classic-exported material and a point light made in Blender (no x3d_color)."""
+        import bpy
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.mesh.primitive_plane_add(size=4)
+        material = bpy.data.materials.new("Grey")
+        bpy.context.object.data.materials.append(material)
+        data = bpy.data.lights.new("Lamp", 'POINT')
+        data.color = colour
+        data.energy = 100.0
+        lamp = bpy.data.objects.new("Lamp", data)
+        lamp.location = (0.0, 0.0, 3.0)
+        bpy.context.scene.collection.objects.link(lamp)
+        return data
+
+    def test_blender_light_colour_survives_an_srgb_x3d33_round_trip(self):
+        import bpy
+        self._blender_light_scene()
+        path = os.path.join(self.tmpdir, "blender_light.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D33", use_selection=False),
+                         {"FINISHED"})
+        colour = ET.parse(path).getroot().find(".//PointLight").attrib["color"]
+        for got, want in zip(colour.replace(",", " ").split(), (1.0, srgb(0.5), srgb(0.2))):
+            self.assertAlmostEqual(float(got), want, delta=1e-4)                   # sRGB-encoded, like the Material
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
+        back = [obj.data for obj in bpy.context.scene.objects if obj.type == "LIGHT"]
+        self.assertEqual(len(back), 1)
+        for got, want in zip(back[0].color, (1.0, 0.5, 0.2)):
+            self.assertAlmostEqual(got, want, places=3)
+
+    def _x3d33_round_trip(self, name, **import_options):
+        """Export the current scene as X3D 3.3 with the defaults and import it again: (the written colour, the light's
+        Blender colour after the re-import)."""
+        import bpy
+        path = os.path.join(self.tmpdir, name)
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D33", use_selection=False),
+                         {"FINISHED"})
+        written = [float(v) for v in ET.parse(path).getroot().find(".//PointLight").attrib["color"].split()]
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path, **import_options), {"FINISHED"})
+        back = [obj.data for obj in bpy.context.scene.objects if obj.type == "LIGHT"]
+        self.assertEqual(len(back), 1)
+        return written, tuple(back[0].color)
+
+    def test_blender_light_units_read_a_classic_light_colour_as_srgb_too(self):
+        # the colour space, not the light units, decides how a classic scene's light colours are read, so an sRGB
+        # import and export with Light Units Blender gives the file's colour back, and so does a Blender-made light
+        lights = self._import("<PointLight DEF='Lamp' location='0 0 3' color='1 0.5 0.2' global='true'/>\n"
+                              + _box(CLASSIC), light_units='BLENDER')
+        self.assertEqual([round(c, 5) for c in lights["Lamp"].color], [1.0, round(lin(0.5), 5), round(lin(0.2), 5)])
+        self.assertEqual([round(c, 6) for c in lights["Lamp"]["x3d_color"]], [1.0, 0.5, 0.2])
+        written, _back = self._x3d33_round_trip("blender_units.x3d", light_units='BLENDER')
+        self.assertEqual([round(v, 4) for v in written], [1.0, 0.5, 0.2])
+        self._blender_light_scene()
+        _written, back = self._x3d33_round_trip("blender_units_made.x3d", light_units='BLENDER')
+        for got, want in zip(back, (1.0, 0.5, 0.2)):
+            self.assertAlmostEqual(got, want, places=3)
+
+    def test_a_light_with_no_classic_material_to_light_is_written_as_is(self):
+        # without a Material in the file the re-import is physical and keeps a light colour as given, so the X3D 3.3
+        # writer leaves it unencoded and the Blender colour comes back
+        import bpy
+        self._blender_light_scene()
+        plane = next(obj for obj in bpy.context.scene.objects if obj.type == "MESH")
+        plane.data.materials.clear()
+        written, back = self._x3d33_round_trip("no_material.x3d")
+        self.assertEqual([round(v, 4) for v in written], [1.0, 0.5, 0.2])
+        for got, want in zip(back, (1.0, 0.5, 0.2)):
+            self.assertAlmostEqual(got, want, places=4)
+
+    def test_as_is_x3d33_export_writes_the_blender_light_colour(self):
+        import bpy
+        self._blender_light_scene()
+        path = os.path.join(self.tmpdir, "as_is_blender.x3d")
+        bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D33", use_selection=False, color_space='AS_IS')
+        colour = ET.parse(path).getroot().find(".//PointLight").attrib["color"]
+        self.assertEqual([round(float(v), 4) for v in colour.replace(",", " ").split()], [1.0, 0.5, 0.2])
+        # an imported classic light: the Blender (linear) colour, not the file's value kept in x3d_color
+        lights = self._import("<PointLight DEF='Lamp' location='0 0 3' color='1 0.5 0.2' global='true'/>\n"
+                              + _box(CLASSIC))
+        self.assertIn("x3d_color", lights["Lamp"])
+        path = os.path.join(self.tmpdir, "as_is_imported.x3d")
+        bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D33", use_selection=False, color_space='AS_IS')
+        colour = ET.parse(path).getroot().find(".//PointLight").attrib["color"]
+        self.assertEqual([round(float(v), 4) for v in colour.replace(",", " ").split()],
+                         [1.0, round(lin(0.5), 4), round(lin(0.2), 4)])
 
     def test_physical_light_colour_is_kept(self):
         lights = self._import("<DirectionalLight DEF='Sun' color='1 0.5 0.25' global='true'/>\n" + _box(PHYSICAL))
@@ -224,13 +354,101 @@ class ImportLightUnitsTests(unittest.TestCase):
         self.assertLess(lamp.energy, K * factor(0.8) * 0.8 * 9.0 / 2.0)          # matched at 3 m, A was overexposed
 
     def test_classic_light_makes_up_for_the_range_window(self):
-        # X_ITE's classic shader cuts off hard at the radius; a glTF viewer fades the range out as 1 - (d / r)^4
+        # X_ITE's classic shader cuts off hard at the radius; Babylon fades the range out as (1 - (d / r)^4)^2. Over
+        # the face (2.95 m away) that window falls from 0.50 at its centre to 0.45 at its corners, where X_ITE draws no
+        # falloff, so the fit matches the face as a whole: Babylon's mean over it is X_ITE's
         body = ("<PointLight DEF='Lamp' location='0 0 0' intensity='1' radius='4' global='true'/>\n"
                 + _box(CLASSIC, z=-3))
         lamp = self._import(body)["Lamp"]
-        lux = lamp.energy / K / 2.95 ** 2 * window(2.95, 4.0)                     # the face is 2.95 m away
-        self.assertAlmostEqual(srgb(lin(0.8) * lux / math.pi), 0.8, delta=0.01)
+        xite, gltf = face_means(lamp.energy / K, 2.95, 4.0)
+        self.assertAlmostEqual(gltf, xite, delta=0.01)
         self.assertGreater(lamp.energy, 1.3 * K * math.pi * 2.95 ** 2)
+
+    def test_classic_light_near_its_radius_draws_through_the_squared_window(self):
+        # the face 2.95 m away sits near the radius 3.5 (Babylon's window there is 0.25, X_ITE draws it at full)
+        body = ("<PointLight DEF='Lamp' location='0 0 0' intensity='1' radius='3.5' global='true'/>\n"
+                + _box(CLASSIC, z=-3))
+        lamp = self._import(body)["Lamp"]
+        xite, gltf = face_means(lamp.energy / K, 2.95, 3.5)
+        self.assertAlmostEqual(gltf, xite, delta=0.01)
+
+    def test_classic_spot_light_falls_off_linearly_in_angle_as_x_ite_draws(self):
+        # X_ITE's classic getSpotFactor is (angle - cutOffAngle) / (beamWidth - cutOffAngle); a glTF viewer's spot is
+        # t^2, t linear in the cosine from the outer cone to the inner one. A patch 30 degrees off the axis of a spot of
+        # cutOff 45 and beam 22.5 degrees: X_ITE draws 0.8 x cos x 0.65 there
+        x = 3.0 * math.tan(math.radians(30.0))
+        body = (f"<Viewpoint position='{x} 0 1' fieldOfView='0.2'/>\n"
+                "<SpotLight DEF='Spot' location='0 0 0' direction='0 0 -1' cutOffAngle='0.785398' "
+                "beamWidth='0.392699' intensity='1' global='true'/>\n"
+                + _box(CLASSIC, x=x, z=-3, name="Patch").replace("1 1 0.1", "0.1 0.1 0.1"))
+        spot = self._import(body)["Spot"]
+        far = math.hypot(x, 2.95)
+        angle, facing = math.atan2(x, 2.95), 2.95 / far
+        cut, beam = 0.785398, 0.392699
+        shown = 0.8 * facing * (angle - cut) / (beam - cut)
+        inner, outer = math.cos(beam), math.cos(cut)
+        cone = max(0.0, min(1.0, (math.cos(angle) - outer) / max(0.001, inner - outer))) ** 2
+        lux = spot.energy / K / far ** 2 * facing * cone * window(far, 100.0)
+        self.assertAlmostEqual(srgb(lin(0.8) * lux / math.pi), shown, delta=0.01)
+
+    def test_radius_zero_lights_nothing_and_leaves_the_other_lights_alone(self):
+        # X_ITE lights a face only when dL <= radius || radius < 0, so a light of radius 0 draws nothing: it gets no
+        # energy (its scale is kept, as for a light that starts dark), and the sun keeps what it gets alone
+        import bpy
+        sun = "<DirectionalLight DEF='Sun' intensity='0.3' global='true'/>\n"
+        zero = "<PointLight DEF='Zero' location='0 0 1' intensity='0.7' radius='0' global='true'/>\n"
+        alone = self._import(sun + _box(CLASSIC))["Sun"].energy
+        with self.assertLogs(level="WARNING"):
+            lights = self._import(sun + zero + _box(CLASSIC))
+        self.assertAlmostEqual(lights["Sun"].energy, alone, places=4)
+        self.assertAlmostEqual(alone, 0.3 * factor(0.3), places=4)
+        self.assertEqual(lights["Zero"].energy, 0.0)
+        self.assertGreater(lights["Zero"]["x3d_energy_per_intensity"], 0.0)
+        self.assertFalse(lights["Zero"].use_custom_distance)
+        self.assertEqual(lights["Zero"]["x3d_radius"], 0.0)
+        path = os.path.join(self.tmpdir, "zero.x3d")
+        for version in ("X3D40", "X3D33"):                                   # both exports write the file's light back
+            bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False)
+            written = ET.parse(path).getroot().find(".//PointLight").attrib
+            self.assertEqual(float(written["radius"]), 0.0, version)
+            self.assertAlmostEqual(float(written["intensity"]), 0.7, places=4, msg=version)
+        with self.assertLogs(level="WARNING"):                                # X_ITE's PBR shader gates the same way
+            self.assertEqual(self._import(zero + _box(PHYSICAL))["Zero"].energy, 0.0)
+
+    def test_a_light_no_face_sees_keeps_the_shared_factor(self):
+        from unittest import mock
+        module = __import__("io_scene_x3d.import_x3d", fromlist=["fit_classic_lights"])
+        fitted = []
+        fit = module.fit_classic_lights
+
+        def keep(*args):
+            fitted.append(fit(*args))
+            return fitted[-1]
+        body = ("<DirectionalLight DEF='Front' intensity='0.5' direction='0 0 -1' global='true'/>\n"
+                "<DirectionalLight DEF='Side' intensity='0.9' direction='-1 0 -0.3' global='true'/>\n"
+                "<DirectionalLight DEF='Back' intensity='0.4' direction='0 0 1' global='true'/>\n"
+                + _box("<Material diffuseColor='0.9 0.2 0.1'/>", x=-1.5, name="A").replace("1 1 0.1", "1 1 1")
+                + _box("<Material diffuseColor='0.2 0.3 0.9'/>", x=1.5, name="B").replace("1 1 0.1", "1 1 1")
+                + _box("<Material diffuseColor='0.5 0.5 0.5'/>", z=-1, name="C").replace("1 1 0.1", "2 2 2"))
+        with mock.patch.object(module, "fit_classic_lights", keep):
+            lights = self._import(body)
+        f, own, _headlight = fitted[0]
+        self.assertNotAlmostEqual(own[0], f, places=4)                   # the lights in view have their own factors
+        self.assertAlmostEqual(lights["Back"].energy, 0.4 * f, places=5)  # the back light lights no face in view
+
+    def test_a_scaled_viewpoint_sees_what_the_same_camera_unscaled_sees(self):
+        # the headlight is a unit DirectionalLight along the view (X_ITE normalises its direction, x_ite.js 64123);
+        # a Transform's scale on the Viewpoint changes neither the view nor the headlight
+        header = "<?xml version='1.0' encoding='UTF-8'?>\n<X3D profile='Immersive' version='4.0'><Scene>\n"
+        sun = "<DirectionalLight DEF='Sun' intensity='0.1' global='true'/>\n" + _box(CLASSIC)
+        import bpy
+        for view in ("<Viewpoint position='0 0 10'/>\n",
+                     "<Transform scale='0.1 0.1 0.1'><Viewpoint position='0 0 100'/></Transform>\n",
+                     "<Transform scale='3 3 3'><Viewpoint position='0 0 3.3333333'/></Transform>\n",
+                     "<Transform scale='0.1 0.2 0.1'><Viewpoint position='0 0 100'/></Transform>\n"):
+            lights = self._import(view + sun, header=header)
+            self.assertAlmostEqual(lights["Sun"].energy, 0.1 * factor(1.1), places=4, msg=view)
+            self.assertAlmostEqual(bpy.context.scene["x3d_headlight_lux"], factor(1.1), places=4, msg=view)
 
     def test_reference_distance_skips_surfaces_beyond_the_radius(self):
         body = ("<PointLight DEF='Lamp' location='0 0 0' intensity='1' radius='5' global='true'/>\n"

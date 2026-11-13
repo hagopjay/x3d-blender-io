@@ -175,9 +175,11 @@ class SwatchBookRoundTripTests(unittest.TestCase):
         self.assertEqual(glass.surface_render_method, "BLENDED")
 
         neon = materials["MA_Neon"]
-        bsdf = neon.node_tree.nodes["Principled BSDF"]
-        self.assertAlmostEqual(bsdf.inputs["Emission Strength"].default_value, 1.0, places=5)
-        self.assertAlmostEqual(bsdf.inputs["Emission Color"].default_value[1], 0.5, places=5)
+        # written as an UnlitMaterial, which X_ITE 16.7.1 draws unlit (Unlit2.glsl), so it comes back as the unlit
+        # Emission shape (KHR_materials_unlit in glTF) rather than a Principled BSDF's emission: same strength and colour
+        emission = next(n for n in neon.node_tree.nodes if n.type == "EMISSION")
+        self.assertAlmostEqual(emission.inputs["Strength"].default_value, 1.0, places=5)
+        self.assertAlmostEqual(emission.inputs["Color"].default_value[1], 0.5, places=5)
 
         checker = materials["MA_Checker"]
         image_nodes = [node for node in checker.node_tree.nodes if node.type == "TEX_IMAGE"]

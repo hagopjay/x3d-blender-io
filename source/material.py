@@ -424,6 +424,43 @@ def _select_primary_shader(surface_node):
     return None, None
 
 
+def _alpha_constant(socket, depth=0):
+    """The constant part of an alpha socket (see _mix_alpha): its value when unlinked, a Value node's, the product
+    of a Math Multiply's two inputs, through Reroutes; 1 for anything else (a per-pixel alpha)."""
+    if socket is None or depth > 16:
+        return 1.0
+    if not getattr(socket, "links", None):
+        return _socket_numeric_value(socket, 1.0)
+    node = socket.links[0].from_node
+    if node.bl_idname == ShaderNodeTypes.VALUE:
+        return _socket_numeric_value(node.outputs[0], 1.0)
+    if node.bl_idname == ShaderNodeTypes.REROUTE and node.inputs:
+        return _alpha_constant(node.inputs[0], depth + 1)
+    if node.bl_idname == ShaderNodeTypes.MATH and getattr(node, "operation", "") == "MULTIPLY":
+        return _alpha_constant(node.inputs[0], depth + 1) * _alpha_constant(node.inputs[1], depth + 1)
+    return 1.0
+
+
+def _mix_alpha(material):
+    """The alpha of a Mix Shader with a Transparent BSDF on its first shader input that feeds the active output (the
+    importer's wire_unlit and Blender's glTF importer put a material's alpha there), else 1. A Mix whose factor is the
+    Light Path's Is Camera Ray is the unlit light-path trick, not alpha. A linked factor gives its constant part: a
+    Value, or a Math Multiply of constants, and 1 for an image's, a colour attribute's or any other per-pixel alpha,
+    which the X3D file carries itself (Blender's glTF importer links the factor straight to the texture or COLOR_0
+    alpha for alphaMode BLEND, leaving the Mix Shader's default 0.5 on it)."""
+    surface = _linked_surface_node(material)
+    if surface is None or surface.bl_idname != ShaderNodeTypes.MIX_SHADER:
+        return 1.0
+    factor = surface.inputs[0]
+    first = _upstream_node(surface.inputs[1])
+    if first is None or first.bl_idname != "ShaderNodeBsdfTransparent":
+        return 1.0
+    source = _upstream_node(factor)
+    if source is not None and source.bl_idname == "ShaderNodeLightPath":
+        return 1.0
+    return _clamp01(_alpha_constant(factor))
+
+
 def analyze_material(material):
     if not material:
         return None
@@ -455,7 +492,7 @@ def analyze_material(material):
     if emission_node and not principled_node:
         emissive_color = _resolve_rgba_socket(emission_node.inputs.get("Color"), _node_default_rgba(emission_node, "Color", emissive_color))
         strength = _resolve_float_socket(emission_node.inputs.get("Strength"), _node_default_float(emission_node, "Strength", 1.0))
-        emissive_color = tuple(channel * strength for channel in emissive_color[:3]) + (1.0,)
+        emissive_color = tuple(channel * strength for channel in emissive_color[:3]) + (_mix_alpha(material),)
         base_color = emissive_color
         unlit = True
 
