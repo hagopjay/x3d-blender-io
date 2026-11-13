@@ -107,3 +107,100 @@ coordinate animation); its paths assume x3d.demo is cloned next to this checkout
 cannot show a lost animation (the animated scenes agree at time 0; read `nodes.lost` for TimeSensor and interpolators); X_ITE in
 SwiftShader crashed the page on the 1.2 MB UnlitMaterial + shader scene (no number) and renders the 876 KB 62-light scene
 differently on every run (noise floor above the delta, so no usable number).
+
+## Export gate (glTF validator + render diff against X_ITE, both exports)
+
+`gate.py` gates every Blender export of the add-on on the Khronos glTF Validator **and** on a render diff against X_ITE. One
+command runs, per scene of one or more scenes JSONs, both exports and compares the numbers with `gate-baseline.json`:
+
+```
+BPY_PYTHON=$(which python3) python3 gate.py                                   # the 5 probes (probes.json), exit 1 on any FAIL
+python3 gate.py --scenes probes.json scenes-repo.json scenes-demo.json        # the 43 scenes the baseline was seeded from
+python3 gate.py --scenes scenes-gate-ci.json --jobs 2                         # the CI subset: 5 probes + lights-after, lod-control, stars-splats, stilllife-x3d40
+python3 gate.py --only p2-point-classic --json one.json                       # one scene, results copied to one.json
+python3 gate.py --scenes ... --reuse                                          # re-evaluate the last run's measurements (no Blender, no browser)
+python3 gate.py --scenes ... --update-baseline [--allow-worse]                # rewrite measured values (see below)
+```
+
+Leg A is the glb leg (`blender_leg.py`, `manifest.validate`, Babylon.js on the glb against X_ITE on the X3D from the first
+Viewpoint, the same pieces and the same masks as `compare.py`); leg B is the X3D re-export leg (`roundtrip_leg.py` with the
+add-on's defaults, `roundtrip.validate_reexport`, node counts, X_ITE on the original against X_ITE on the re-export with
+`roundtrip_audit.image_deltas` and FLIP). X_ITE on the original is rendered once and serves both legs. Per scene it prints PASS,
+FAIL (with the reasons) or IMPROVED, and writes `out/LABEL/gate_results.json` (default LABEL `gate`; before the exit code is decided),
+`out/LABEL/<scene>/measured.json`, `manifest.json`, `scene.glb`, the renders, `diff_x4.png` (glb leg) and
+`diff_roundtrip_x4.png` plus `reexp/` (the re-export and its X_ITE render). `compare.py` keeps its CLI and outputs; its
+first-Viewpoint helpers moved to `viewpoint.py`, which `gate.py` shares.
+
+| # | Check | Fails when |
+|---|---|---|
+| 1 | `validator` | the glb is missing, the validator did not run, errors > 0 (always, whatever the baseline says), or warnings > the baseline's |
+| 2 | `glb_content` | the glb is EMPTY (the validator accepts an empty glb) while the X3D has geometry; or it has no triangles while the X3D has surfaces (a points-only or lines-only glb); or its triangles fall below the baseline by more than 5%. A points-only / lines-only glb of an X3D that is only points / lines / splats passes and is reported as `points` / `lines` / `points+lines` |
+| 3 | `geometry_delta` | Babylon.js-on-glb against X_ITE-on-X3D mean \|delta\| over the glb's geometry exceeds baseline + tolerance (or the geometry is no longer visible) |
+| 4 | `reexport` | the re-export is not well-formed X3D, `x3d` (x3d.py) reports an error or is not installed, or more node types were lost than the baseline's count |
+| 5 | `roundtrip_delta` | X_ITE original against X_ITE re-export: mean \|delta\| (0-255) or FLIP (flip-evaluator 1.7, LDR) exceeds baseline + tolerance |
+
+**Tolerance** (written in the baseline header and used by the code): allowed = baseline + max(abs, rel x baseline), with
+abs 0.5 and rel 5% for mean \|delta\|, abs 0.01 and rel 5% for FLIP, and 5% for the triangle floor. A value better than the
+baseline by more than the same margin is flagged IMPROVED (the scene still passes; `--fail-on-improvement` makes it exit 1) so
+the baseline gets tightened with `--update-baseline`.
+
+**`gate-baseline.json`** holds the header (`rig`: X_ITE, Babylon.js, Chromium, the renderer, Blender, the validator, flip-evaluator,
+the add-on git revision of the seeding run; X_ITE, Babylon.js, the Chromium major version, Blender, the validator and flip-evaluator are compared on every run and a difference
+prints `FINGERPRINT differs` and fails under `--strict-fingerprint`, which CI uses), the `tolerance` rule and per scene:
+`validator.warnings`, `glb.class` and `glb.triangles`, `geometry_delta`, `reexport.nodes_lost`, `roundtrip.mean_abs_delta` and
+`flip`, plus the entries a person writes, every one with a reason (an entry whose reason is empty or still starts with
+`UNEXPLAINED` fails the run):
+
+- `known`: `{defect, reason, checks}` names the round-trip audit's defect id (D1-D14, H1: the defects the round-trip audit at commit acd6882 found; see
+  the "Round-trip audit" section above) that explains why the baseline value is high. It annotates the report line (`[known D4]`) and
+  excuses nothing: the baseline value is still the limit, so a known defect cannot get worse unnoticed and its fix shows as IMPROVED.
+- `allow_empty`: the only way a glb with no triangles passes while the X3D has geometry.
+- `skip`: a check that cannot be gated (a page crash, a scene that renders differently on every run).
+- `tolerance`: a per-scene override for `geometry_delta` / `roundtrip_delta` for animated scenes that X_ITE samples at a run-dependent moment.
+
+**`--update-baseline`** runs the scenes and records what it measured. It never loosens a threshold silently: a new value that is
+worse than the baseline (higher delta, FLIP, warnings or nodes lost; fewer triangles) is printed as `REFUSED` and the old value
+stays, unless `--allow-worse` is given (printed as `LOOSENED`). Float moves under 0.01 are ignored so a rerun does not churn the
+file. Measurements a baseline must never absorb (validator errors, an EMPTY glb, no re-export, x3d.py errors) are not recorded;
+with `--allow-worse` they are recorded as `skip` / `allow_empty` entries whose reason is `UNEXPLAINED` and which fail the next
+check until a person writes the real reason. Scenes not run are left alone, and the update ends by printing the verdict of the run
+against the baseline it just wrote. Seed or re-baseline from a full run, then commit the diff.
+
+### Seed run (13 Nov 2026, add-on at 54e85e4, no source change since the audit commit acd6882)
+
+Rig: Khronos glTF-Validator 2.0.0-dev.3.10, X_ITE 16.7.1, Babylon.js 9.32.0, Chromium 153.0.8010.12 (SwiftShader), Blender 5.3.0 (bpy
+5.3.0), FLIP flip-evaluator 1.7 (LDR, 67 ppd), Python 3.13, 4 shared vCPUs, no GPU. Scenes: `probes.json`, `scenes-repo.json` (33 with
+the probes) and `scenes-demo.json` (10 public x3d.demo scenes): 43 scenes, `--jobs 2`, 638 s (a second identical run) to 663 s (the seed run).
+
+- Validator: 43 of 43 glbs have 0 errors; 41 have 0 warnings, `demo-materials-textures` 11 and `demo-material-odyssey` 203, all
+  `MESH_PRIMITIVE_GENERATED_TANGENT_SPACE` (a normal map without tangents; the first 10 are kept in the results).
+- Content: 38 glbs hold triangles, 4 are `points` only (`stars-view`, `stars-splats`, `stars-view-poc1`, `stilllife-splats-24k`: splats
+  become points with POSITION only), and 1 is `empty`: `demo-living-heart`, whose only Shape is an empty placeholder (allowed with
+  that reason in the baseline). The gate fails an empty glb of a scene that has geometry; before the baseline entry it failed
+  `demo-living-heart`.
+- Re-export: 43 of 43 well-formed, x3d.py 0 errors, node types lost between 0 and 20 per scene (baseline).
+- Determinism: a second full run against the seeded baseline passed 43 of 43. 36 scenes reproduced every number to within 0.01 (mean
+  |delta|) and 0.0001 (FLIP); the 7 that moved are all animated or unstable, and all but two stayed inside the tolerance: `demo-cannonball`
+  (geometry 17.83, then 17.60), `demo-double-pendulum` (39.31, then 40.85; round trip 0.47, then 0.76), `demo-ode-integrators`,
+  `demo-materials-textures` (round trip 10.52, then 10.73), `repair-0-written` (round trip 1.36, then 0.98), `repair-1-validator`
+  (geometry 42.57, then 24.67) and `demo-material-odyssey` (round trip 29.05, then 39.49; the audit measured 44.36). The last three carry a
+  `tolerance` (the two `repair-*`) or `skip` entry with those numbers as the reason.
+  `demo-wedgwood-unlit-textures` has no X_ITE render (page crash, H1), so its two render checks are skipped with that reason.
+- Known defects annotated: D1 1 scene, D2 2, D3 3, D4 4, D5 25, D6 7, D7 4, D8 11, D9 1, D10 2, D11 14, D12 3, D13 25, H1 2 (check
+  lines carry `[known Dn]`).
+
+What the gate is not: it proves structure (validator), non-emptiness and a bounded visual distance to X_ITE on a few dozen scenes in
+one headless rig. It does not prove that Babylon.js, three.js or Unreal draw the glb the way X_ITE draws the X3D beyond those
+scenes, it does not measure quality (a path-traced reference is separate), and a still frame cannot show lost animation (the node count
+does). A baseline measured on this rig applies to this rig: another Blender, Chromium or SwiftShader build can move the numbers
+(the fingerprint says so).
+
+### CI (`fidelity-gate` job in `.github/workflows/ci.yml`)
+
+Runs after `unit` on ubuntu-latest (Python 3.13, `bpy==5.3.0 x3d numpy pillow flip-evaluator==1.7`, `npm install` in this folder, `npx
+playwright install --with-deps chromium`) on `scenes-gate-ci.json`: the 5 probes plus `lights-after`, `lod-control`, `stars-splats`
+and `stilllife-x3d40`, with `--strict-fingerprint`. A manual run (`workflow_dispatch`, input `gate_full`) takes the 33 scenes of
+`scenes-repo.json`. The artifact `fidelity-gate-results` holds `gate_results.json`, each scene's `measured.json`, manifest, validator
+report, renders, `diff_x4.png`, `diff_roundtrip_x4.png` and the re-export. `tests/test_gate_logic.py` (thresholds, EMPTY
+classification, baseline update refusals, report formatting, exit codes; synthetic measurements, no browser) and
+`tests/test_gate_baseline.py` (the committed baseline lints clean, matches the pins and covers every scene list) run in the `unit` job.
