@@ -14,6 +14,7 @@ try:
     importlib.import_module("io_scene_x3d").register()
 except ValueError:
     pass  # still registered
+bpy.context.scene.frame_start = 0  # the importer puts X3D time 0 on frame_start; the glTF exporter writes frame/fps, so 1 would be 1/24 s late
 assert bpy.ops.import_scene.x3d(filepath=x3d) == {"FINISHED"}
 lights = []
 for ob in bpy.context.scene.objects:
