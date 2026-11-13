@@ -99,6 +99,7 @@ def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
 # Viewpoint description read by the importer, kept on the camera object.
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
+LOD_HIDDEN_PROPERTY = "x3d_lod_hidden"   # set by the importer on the objects of an LOD level the first Viewpoint does not see
 HEAD_META_PROPERTY = "x3d_head_meta"
 # A Shape's Metadata* node read by the importer, kept on the object as nested {"node", "name", "reference", "value"}.
 METADATA_PROPERTY = "x3d_metadata"
@@ -689,6 +690,10 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
         if use_selection and not obj.select_get():
             continue
         if use_visible and not obj.visible_get():
+            continue
+        if obj.get(LOD_HIDDEN_PROPERTY) is not None and obj.hide_render:
+            # an LOD level the importer hid: written as geometry it would be drawn on top of the level that is shown
+            # (the 4.0 writer has no LOD node); unhide it (hide_render off) to export it
             continue
         yield obj
 
