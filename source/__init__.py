@@ -112,6 +112,12 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         default=False,
     )
 
+    gpu_instances: BoolProperty(
+        name=translate(lang, "gpu_instances"),
+        description=translate(lang, "gpu_instances_description"),
+        default=False,
+    )
+
     solidify: BoolProperty(
         name=translate(lang, "solidify"),
         description=translate(lang, "solidify_description"),
@@ -184,6 +190,9 @@ def import_ui_general(layout, operator):
     if body:
         line = body.row(align=True)
         line.prop(operator, "as_collection")
+
+        line = body.row(align=True)
+        line.prop(operator, "gpu_instances")
 
 def import_ui_transform(layout, operator):
     header, body = layout.panel("IMPORT_SCENE_OT_x3d_transform", default_closed=False)

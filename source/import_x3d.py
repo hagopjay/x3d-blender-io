@@ -6991,6 +6991,44 @@ def load_with_profiler(
     st.print_stats(0.1)
 
 
+GPU_INSTANCES_ENV = "BLENDER_X3D_GPU_INSTANCES"
+
+
+def resolve_gpu_instances(value):
+    """On when the option is set or BLENDER_X3D_GPU_INSTANCES is 1, true, yes or on (the operator's checkbox is a plain
+    bool, so the environment can only add to it, as the rig and a headless convert do)."""
+    return bool(value) or os.environ.get(GPU_INSTANCES_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def group_instances(objects, min_count=2):
+    """Parent every set of >= min_count loose mesh objects that share one mesh to an Empty named "<mesh>.instances".
+
+    The import is flat (PREF_FLAT): a Group, or a Transform with a USE below it, leaves its instances as scene
+    roots, and Blender's glTF exporter writes EXT_mesh_gpu_instancing only for children of one Empty that share a mesh
+    and have no children of their own. The Empty sits at the origin with an identity matrix, so no world matrix
+    changes; it carries the custom property ``x3d_instance_group`` (the mesh name). Returns the new Empties."""
+    by_mesh = {}
+    for ob in objects:
+        if ob.type == 'MESH' and ob.data is not None and ob.parent is None and not ob.children:
+            by_mesh.setdefault(ob.data.name, []).append(ob)
+    groups = []
+    for mesh_name, members in by_mesh.items():
+        if len(members) < min_count:
+            continue
+        collection = members[0].users_collection[0] if members[0].users_collection else bpy.context.scene.collection
+        empty = bpy.data.objects.new(mesh_name + ".instances", None)
+        collection.objects.link(empty)
+        empty.empty_display_type = 'PLAIN_AXES'
+        empty.empty_display_size = 0.2
+        empty["x3d_instance_group"] = mesh_name
+        for ob in members:
+            world = ob.matrix_world.copy()
+            ob.parent = empty
+            ob.matrix_world = world
+        groups.append(empty)
+    return groups
+
+
 def load(context,
          filepath,
          *,
@@ -7003,13 +7041,16 @@ def load(context,
          solidify_value=0.1,
          circle_divisions=None,
          color_space=None,
-         light_units=None
+         light_units=None,
+         gpu_instances=None
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
     color_space: 'AS_IS' or 'SRGB' (see COLOUR_SPACES; None or 'AUTO': BLENDER_X3D_COLOR_SPACE, else 'SRGB').
     light_units: 'BLENDER' or 'X_ITE' (see LIGHT_UNITS; None or 'AUTO': BLENDER_X3D_LIGHT_UNITS, else X_ITE with
-    the SRGB colour space and BLENDER with AS_IS)."""
+    the SRGB colour space and BLENDER with AS_IS).
+    gpu_instances: group objects that share a mesh under one Empty each, so the glTF exporter's GPU Instances option
+    writes EXT_mesh_gpu_instancing (also on when BLENDER_X3D_GPU_INSTANCES is 1; see group_instances)."""
     global colour_space, lighting_units, navigation_headlight, bound_view, default_view
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
@@ -7033,6 +7074,7 @@ def load(context,
 
     paths = [os.path.join(directory, name.name) for name in files] if files else [filepath]
 
+    objects_before = {ob.name for ob in bpy.data.objects}
     for file in paths:
         # loadWithProfiler(operator, context, filepath, global_matrix)
         load_web3d(context, file,
@@ -7044,6 +7086,8 @@ def load(context,
                 solidify=solidify,
                 solidify_value=solidify_value
                 )
+    if resolve_gpu_instances(gpu_instances):
+        group_instances([ob for ob in bpy.data.objects if ob.name not in objects_before])
     finalize_light_units(context.scene if context is not None else None, lighting_units)
     if context is not None and getattr(context, "scene", None) is not None:
         context.scene[COLOUR_SPACE_PROPERTY] = colour_space

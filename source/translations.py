@@ -79,6 +79,8 @@ def get_translation():
                     "as the needed API method for exporting shaders got removed from blender. "
                     "\nThis feature may get fixed eventually, but no support expected",
             "as_collection": "Import as collection",
+            "gpu_instances": "Group instances",
+            "gpu_instances_description": "Parent objects that share a mesh to one Empty each, so the glTF exporter's GPU Instances option writes EXT_mesh_gpu_instancing (an Empty per mesh; world matrices unchanged)",
             "as_collection_description": "Import the file as a new collection inside the active collection",
             "solidify": "Solidify",
             "solidify_description": "Solidify objects by adding a solify modifier to each of the objects",
