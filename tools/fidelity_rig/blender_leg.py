@@ -1,6 +1,8 @@
 """X3D -> add-on (this checkout) -> glb, the way the Foundry convert does it: COMPAT light units, renderable
 objects only, cameras and lights on. Usage: python blender_leg.py ADDON_SOURCE_DIR in.x3d out.glb
-Options come from the environment (BLENDER_X3D_COLOR_SPACE, BLENDER_X3D_LIGHT_UNITS, BLENDER_X3D_CIRCLE_DIV)."""
+Options come from the environment (BLENDER_X3D_COLOR_SPACE, BLENDER_X3D_LIGHT_UNITS, BLENDER_X3D_CIRCLE_DIV,
+BLENDER_X3D_GPU_INSTANCES=1: shared meshes are grouped under an Empty on import and the glb is written with
+EXT_mesh_gpu_instancing)."""
 import json, os, sys, tempfile
 from pathlib import Path
 src, x3d, glb = sys.argv[1:4]
@@ -25,6 +27,7 @@ for ob in bpy.context.scene.objects:
                            ref=d.get("x3d_reference_distance"), factor=d.get("x3d_energy_per_intensity")))
 assert bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_lights=True, export_cameras=True,
                           export_import_convert_lighting_mode="COMPAT", use_renderable=True, export_yup=True, export_extras=True,
-                          export_apply=True, use_mesh_edges=True, use_mesh_vertices=True) == {"FINISHED"}
+                          export_apply=True, use_mesh_edges=True, use_mesh_vertices=True,
+                          export_gpu_instances=os.environ.get("BLENDER_X3D_GPU_INSTANCES", "").strip().lower() in ("1", "true", "yes", "on")) == {"FINISHED"}
 sc = bpy.context.scene
 print("LEG", json.dumps({"blender": bpy.app.version_string, "x3d": x3d, "lights": lights, "model": sc.get("x3d_lighting_model"), "headlight_lux": sc.get("x3d_headlight_lux")}))
