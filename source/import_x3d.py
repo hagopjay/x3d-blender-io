@@ -19,7 +19,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, LINE_WIDTH_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
                       METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
@@ -5576,6 +5576,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if bpydata is None:
             logger.warning('ImportX3D warning: empty shape, skipping node "%s"' % vrmlname)
             return
+        if isinstance(bpydata, bpy.types.Mesh) and geom_spec not in LINE_POINT_SPECS:
+            # the file's solid for the export to write back (D14): a classic Material's surface stays two-sided in Blender
+            bpydata[SOLID_PROPERTY] = geom.getFieldAsBool('solid', True, ancestry)
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
@@ -5725,6 +5728,21 @@ def importLamp_SharedFields(bpylamp, node, ancestry):
             bpylamp[prop] = value
 
 
+def _light_scope_has_geometry(node, ancestry):
+    """True when a light that is not global has a Shape (or an Inline, which may hold one) among its parent's other
+    children, at any depth: X3D 4.0 lights those and nothing else. With no known parent it counts as lighting."""
+    parent = ancestry[-1] if ancestry else None
+    if parent is None:
+        return True
+    me = node.getRealNode()
+    for sibling in parent.getRealNode().children:
+        if sibling.getRealNode() is me:
+            continue
+        if sibling.findSpecRecursive('Shape') is not None or sibling.findSpecRecursive('Inline') is not None:
+            return True
+    return False
+
+
 def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     if spec == 'PointLight':
         bpylamp, mtx = importLamp_PointLight(node, ancestry)
@@ -5736,6 +5754,12 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
         logger.warning("Error, not a lamp")
         raise ValueError
     importLamp_SharedFields(bpylamp, node, ancestry)
+    # X3D 4.0 light scoping: Blender has none, so keep the file's `global` (point and spot lights default TRUE, directional
+    # ones FALSE) and whether a light that is not global had any geometry in its scope, for the export (D1)
+    given_global = node.getFieldAsBool('global', spec != 'DirectionalLight', ancestry)
+    bpylamp[LIGHT_GLOBAL_PROPERTY] = bool(given_global)
+    if not given_global:
+        bpylamp[LIGHT_SCOPE_LIT_PROPERTY] = _light_scope_has_geometry(node, ancestry)
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(bpylamp.name, bpylamp)
     bpycollection.objects.link(bpyob)

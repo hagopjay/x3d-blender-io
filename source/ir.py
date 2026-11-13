@@ -220,6 +220,9 @@ class IRLight:
     # X3D 4.0 shadows (default FALSE); shadowIntensity (default 1) is written only when set.
     shadows: bool = False
     shadow_intensity: float | None = None
+    # True when the light the file had was not global and lit nothing (no geometry in its scope): it is written with
+    # global="false" again, so it lights nothing in a browser either. Every other light is written global="true".
+    scoped: bool = False
 
 
 @dataclass

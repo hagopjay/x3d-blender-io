@@ -38,6 +38,9 @@ SPLAT_SCALE_ATTR = "splat_scale"
 SPLAT_ROTATION_ATTR = "splat_rotation"
 SPLAT_OPACITY_ATTR = "splat_opacity"
 SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
+# A mesh's X3D ``solid`` as the file gave it (the import leaves a classic Material's surface two-sided in Blender, so the
+# material's backface-culling flag cannot tell the export).
+SOLID_PROPERTY = "x3d_solid"
 # A line set's LineProperties linewidthScaleFactor, kept on the object by the importer (Blender draws no line width).
 LINE_WIDTH_PROPERTY = "x3d_line_width"
 INLINE_URL_PROPERTY = "x3d_inline_url"
@@ -50,6 +53,12 @@ INLINE_SOURCE_PATHS: dict[int, str] = {}
 # X3D light fields with no Blender setting, kept on the light data by the importer.
 LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
+# A light's X3D ``global`` field as the file gave it (X3D's default: TRUE for point and spot lights, FALSE for directional
+# ones), and, for a light that is not global, whether any geometry sat in its scope (its parent's other children). Blender
+# lights light the whole scene and the export puts each light in a Transform of its own, so a scoped light that lit
+# geometry in the file is written global, and one that lit nothing keeps global="false".
+LIGHT_GLOBAL_PROPERTY = "x3d_global"
+LIGHT_SCOPE_LIT_PROPERTY = "x3d_scope_lit"
 # The intensity a light had in the X3D file it was imported from; it also marks the light as imported.
 LIGHT_INTENSITY_PROPERTY = "x3d_intensity"
 # Blender energy per unit of X3D intensity, set by an import in X_ITE light units (see import_x3d.LIGHT_UNITS);
@@ -459,6 +468,7 @@ def extract_mesh_geometries(
     use_triangulate: bool = False,
     use_normals: bool = False,
     vertex_matrix=None,
+    recorded_solid: bool | None = None,
 ) -> list[IRMeshGeometry]:
     """Split a Blender mesh into one IRMeshGeometry per used material slot.
 
@@ -560,6 +570,7 @@ def extract_mesh_geometries(
 
         material = material_for_slot(slot_index)
         solid = bool(getattr(material, "use_backface_culling", False)) if material else False
+        solid = solid or bool(recorded_solid)
         crease_angle = None
         if normal_at is None:
             crease_angle = _crease_from_sharp_edges(mesh) if any_smooth else 0.0
@@ -954,6 +965,8 @@ def _extract_light(obj, local_matrix, material_model='physical', colour_space='A
         color=light_colour(data, colour_space) if material_model == 'classic' else physical_light_colour(data),
         intensity=intensity,
         ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
+        scoped=data.get(LIGHT_GLOBAL_PROPERTY) is not None and not data.get(LIGHT_GLOBAL_PROPERTY)
+        and not data.get(LIGHT_SCOPE_LIT_PROPERTY, True),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
         direction=_direction_neg_z(local_matrix),
         shadows=bool(getattr(data, "use_shadow", False)),
@@ -1279,7 +1292,9 @@ def extract_scene(
                 if analyzed:
                     ir_scene.materials.append(analyzed)
                     material_names.add(material.name)
-            primitive["fields"]["solid"] = bool(getattr(material, "use_backface_culling", False)) if material else False
+            # the file's own solid (kept with the primitive) or, as before, the material's culling
+            primitive["fields"]["solid"] = bool(primitive["fields"].get("solid", False)) or (
+                bool(getattr(material, "use_backface_culling", False)) if material else False)
             primitive["mesh"] = obj.data.name
             return source_key, [IRShape(material_name=material.name if material else None,
                                         geometry_hint=primitive["node"], primitive=primitive)]
@@ -1308,6 +1323,7 @@ def extract_scene(
                         material_slots=obj.material_slots,
                         use_triangulate=use_triangulate,
                         use_normals=use_normals,
+                        recorded_solid=obj.data.get(SOLID_PROPERTY) if obj.type == "MESH" else None,
                     )
                 else:
                     geometries = []
@@ -1403,6 +1419,15 @@ def extract_scene(
         elif obj.type == "LIGHT":
             # Light values are local to the object's Transform, which carries the matrix.
             instance.light = _extract_light(obj, local_matrix.__class__(), ir_scene.material_model, colour_space)
+            if instance.light.scoped:
+                ir_scene.diagnostics.append(
+                    f"Light {obj.name!r} was not global and lit nothing in the imported file; it is written with "
+                    'global="false" again, so it still lights nothing.')
+            elif obj.data.get(LIGHT_GLOBAL_PROPERTY) is not None and not obj.data.get(LIGHT_GLOBAL_PROPERTY):
+                ir_scene.diagnostics.append(
+                    f"Light {obj.name!r} was scoped to its group in the imported file (global=false); it is written "
+                    'with global="true" because a Blender light lights the whole scene, so it now lights geometry '
+                    "outside that scope too.")
             ir_scene.object_names.append(obj.name)
         elif obj.type == "CAMERA":
             instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene, distance_scale)

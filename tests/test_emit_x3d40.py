@@ -637,6 +637,9 @@ class EmitSplatsAndInlineTests(unittest.TestCase):
         self.assertIn('<PointSet DEF="GS_Cloud">', xml)
         self.assertIn("<ColorRGBA", xml)
         self.assertIn("written as PointSet", xml)
+        # the diagnostic says why and names the option that writes the node (audit D4)
+        self.assertIn("X3D 4.0 has no GaussianSplats node", xml)
+        self.assertIn("X3D 4.1 draft (GaussianSplats)", xml)
         self.assertNotIn("<component", xml)  # the PointSet Shape has no material
 
     def test_inline_written_in_transform(self):

@@ -456,8 +456,9 @@ def _light_xml(light, defs: _DefNames, indent):
         f'ambientIntensity="{_fmt(light.ambient_intensity)}"',
         # Each light sits inside its object's Transform. X3D scopes a light whose global field is FALSE to the
         # siblings in its parent group (DirectionalLight's default), which here is nothing, so it would light no
-        # geometry. Blender lights illuminate the whole scene, so say so explicitly for every light type.
-        'global="true"',
+        # geometry. Blender lights illuminate the whole scene, so say so explicitly for every light type, except a
+        # light that lit nothing in the file it was imported from (IRLight.scoped), which stays out of the scene's light.
+        f'global="{"false" if light.scoped else "true"}"',
     ]
     if light.shadows:
         attrs.append('shadows="true"')
@@ -955,7 +956,9 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     diagnostics = list(ir_scene.diagnostics)
     if version == "4.0" and ir_scene.splats:
         diagnostics.append(
-            f"{len(ir_scene.splats)} Gaussian splat object(s) written as PointSet; choose X3D 4.1 for the GaussianSplats node."
+            f"{len(ir_scene.splats)} Gaussian splat object(s) written as PointSet (centres and colours only: scale, "
+            "opacity and anisotropy are lost) because X3D 4.0 has no GaussianSplats node; set Export > X3D Version to "
+            "'X3D 4.1 draft (GaussianSplats)' to write the GaussianSplats node."
         )
 
     write = file.write
