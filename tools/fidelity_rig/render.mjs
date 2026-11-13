@@ -47,12 +47,12 @@ for (const job of jobs) {
       const cam = new BABYLON.FreeCamera('x3d-viewpoint', new BABYLON.Vector3(...v.position), scene);
       cam.upVector = new BABYLON.Vector3(...v.up);
       cam.setTarget(new BABYLON.Vector3(v.position[0] + v.forward[0], v.position[1] + v.forward[1], v.position[2] + v.forward[2]));
-      cam.fov = v.fov; cam.maxZ = 10000;
+      cam.fov = v.fov; cam.maxZ = v.maxZ ?? 10000;   // a GeoViewpoint brings its own clip range
       if (v.ortho) {   // OrthoViewpoint: fieldOfView is minX minY maxX maxY
         cam.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
         [cam.orthoLeft, cam.orthoBottom, cam.orthoRight, cam.orthoTop] = v.ortho;
       }
-      cam.minZ = 0.01; scene.activeCamera = cam;
+      cam.minZ = v.minZ ?? 0.01; scene.activeCamera = cam;
       if (job.headlight) { const h = new BABYLON.DirectionalLight('headlight', new BABYLON.Vector3(0, 0, -1), scene);
         h.intensity = job.headlight; scene.registerBeforeRender(() => { h.direction = cam.getDirection(new BABYLON.Vector3(0, 0, -1)); }); }
       await Promise.race([scene.whenReadyAsync(), new Promise(r => setTimeout(r, 8000))]);

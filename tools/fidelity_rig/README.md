@@ -17,7 +17,8 @@ python3 compare.py after ../../source probes.json   # sRGB colours and X_ITE lig
 ```
 
 X_ITE renders with StraightenHorizon off, so a rolled Viewpoint is drawn as authored in both legs; an
-OrthoViewpoint becomes an orthographic Babylon.js camera with the same extents. The geometry mask takes two Babylon.js
+OrthoViewpoint becomes an orthographic Babylon.js camera with the same extents, and a GeoViewpoint is placed in the
+geocentric space the glb is in (its geoOrigin applied) with a clip range that holds the globe. The geometry mask takes two Babylon.js
 renders, cleared to magenta and to green, so magenta geometry is not mistaken for background. compare.py deletes a
 scene's old images before rendering and stops when render.mjs fails.
 
