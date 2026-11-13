@@ -102,6 +102,10 @@ class IRPBRMaterial:
     emissive_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
     metallic: float | None = None
     roughness: float | None = None
+    # Principled "Specular IOR Level" and "Specular Tint" (the dielectric specular the X3D import builds from a
+    # Material's specularColor and shininess); the classic Material writer turns them back into those two fields.
+    specular_level: float | None = None
+    specular_tint: tuple[float, float, float] | None = None
     normal_scale: float | None = None
     occlusion_strength: float | None = None
     alpha_mode: str = "OPAQUE"
@@ -346,6 +350,11 @@ class IRScene:
     background_color: tuple[float, float, float] | None = None
     # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
     background: IRBackground | None = None
+    # How the exported materials are lit: 'classic' (X3D Material, Phong; X_ITE shades it in display space) or
+    # 'physical' (PhysicalMaterial, glTF style). Taken from the scene's x3d_lighting_model unless the export option sets it.
+    material_model: str = "physical"
+    # The NavigationInfo headlight the scene had when it was imported (True/False), None when it never had one.
+    headlight: bool | None = None
 
     def iter_instances(self):
         """Depth-first walk over every instance, nested children included."""

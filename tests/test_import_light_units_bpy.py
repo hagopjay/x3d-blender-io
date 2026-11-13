@@ -207,15 +207,20 @@ class ImportLightUnitsTests(unittest.TestCase):
                               + _box(CLASSIC))
         self.assertEqual([round(c, 5) for c in lights["Sun"].color], [1.0, round(lin(0.5), 5), round(lin(0.25), 5)])
         self.assertEqual(list(lights["Sun"]["x3d_color"]), [1.0, 0.5, 0.25])
-        # X3D 3.3 writes classic Materials: the file's value comes back. X3D 4.0 writes PhysicalMaterials, which
-        # X_ITE 16.7.1 lights in linear space (dist/x_ite.js: Punctual2.glsl getLightIntensity, line 67903, returns
-        # intensity * light.color, PBR2.glsl multiplies it by the linear baseColor, line 67826): Blender's colour.
-        for version, expected in (("X3D40", [1.0, round(lin(0.5), 3), round(lin(0.25), 3)]),
-                                  ("X3D33", [1.0, 0.5, 0.25])):
+        # X3D 3.3 writes classic Materials: the file's value comes back. X3D 4.0 keeps Materials for a scene that was
+        # lit by them (material_model AUTO), so it writes the file's value too; with PhysicalMaterials forced
+        # (material_model PHYSICAL), which X_ITE 16.7.1 lights in linear space (dist/x_ite.js: Punctual2.glsl
+        # getLightIntensity, line 67903, returns intensity * light.color, PBR2.glsl multiplies it by the linear
+        # baseColor, line 67826), it is Blender's colour.
+        for version, extra, expected in (("X3D40", {}, [1.0, 0.5, 0.25]),
+                                         ("X3D40", {"material_model": "PHYSICAL"},
+                                          [1.0, round(lin(0.5), 3), round(lin(0.25), 3)]),
+                                         ("X3D33", {}, [1.0, 0.5, 0.25])):
             path = os.path.join(self.tmpdir, "colour_%s.x3d" % version)
-            bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False)
+            bpy.ops.export_scene.x3d(filepath=path, x3d_version=version, use_selection=False, **extra)
             colour = ET.parse(path).getroot().find(".//DirectionalLight").attrib["color"]
-            self.assertEqual([round(float(v), 3) for v in colour.replace(",", " ").split()], expected, msg=version)
+            self.assertEqual([round(float(v), 3) for v in colour.replace(",", " ").split()], expected,
+                             msg=(version, extra))
         lights["Sun"].color = (lin(0.5), lin(0.5), lin(0.5))              # changed in Blender: written as sRGB
         path = os.path.join(self.tmpdir, "colour_changed.x3d")
         bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D33", use_selection=False)
@@ -229,8 +234,8 @@ class ImportLightUnitsTests(unittest.TestCase):
         held = tuple(lights["Lamp"].color)
         self.assertAlmostEqual(held[1], lin(0.5), places=5)
         path = os.path.join(self.tmpdir, "linear_light.x3d")
-        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False),
-                         {"FINISHED"})
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40", use_selection=False,
+                                                  material_model="PHYSICAL"), {"FINISHED"})
         root = ET.parse(path).getroot()
         self.assertIsNotNone(root.find(".//PhysicalMaterial"))
         colour = [float(v) for v in root.find(".//PointLight").attrib["color"].replace(",", " ").split()]

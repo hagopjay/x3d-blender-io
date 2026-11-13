@@ -104,6 +104,8 @@ class ExportSettings:
     animation_step: int = 1
     # 'AS_IS' or 'SRGB' after resolve_export_colour_space (see extract.display_colour)
     color_space: str = "AS_IS"
+    # 'AUTO' (the scene's lighting model, else physical), 'CLASSIC' or 'PHYSICAL'; see extract.resolve_material_model
+    material_model: str = "AUTO"
 
     @property
     def use_modern_path(self) -> bool:
@@ -171,6 +173,8 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
                 use_animation=settings.use_animation,
                 animation_step=settings.animation_step,
                 metadata=_scene_metadata(settings, export_file),
+                material_model=settings.material_model,
+                colour_space=settings.color_space,
             )
             resolve_texture_urls(ir_scene, export_file, settings.path_mode, copy_set)
         writer(

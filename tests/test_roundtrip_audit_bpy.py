@@ -58,10 +58,11 @@ class RoundTripAuditTests(unittest.TestCase):
         audit, glb, re_root = self._round_trip("SRGB")
         self.assertTrue(audit["shapes"]["ordered"])
         self.assertLess(audit["fields"]["Material.diffuseColor"]["ordered_max_abs"], 1e-4)
-        self.assertEqual(audit["fields"]["Material.diffuseColor"]["convention_change"], {"display->linear": 3})
-        self.assertEqual(audit["fields"]["Material.specularColor"]["dropped"], 3)   # PhysicalMaterial has no specularColor
+        # a Material-lit scene stays Material-lit: the colours come back as display values, and specularColor with them
+        self.assertEqual(audit["fields"]["Material.diffuseColor"]["convention_change"], {"display->display": 3})
+        self.assertEqual(audit["fields"]["Material.specularColor"]["dropped"], 0)
         self.assertLess(glb["base"]["orig_to_glb_max"], 1e-4)
-        self.assertEqual(audit["material_classes"]["re"], {"PhysicalMaterial": 3})
+        self.assertEqual(audit["material_classes"]["re"], {"Material": 3})
 
     def test_as_is_shows_the_error_the_audit_is_for(self):
         audit, glb, _ = self._round_trip("AS_IS")

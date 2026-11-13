@@ -1881,6 +1881,7 @@ def save(context,
          use_animation=False,
          animation_step=1,
          color_space='AUTO',
+         material_model='AUTO',
          ):
     from .export_pipeline import ExportSettings, save as pipeline_save
 
@@ -1917,6 +1918,7 @@ def save(context,
         use_animation=use_animation,
         animation_step=animation_step,
         color_space=resolve_export_colour_space(color_space, getattr(context, "scene", None)),
+        material_model=material_model,
     )
     logger.info("save: colour space %s", settings.color_space)
 

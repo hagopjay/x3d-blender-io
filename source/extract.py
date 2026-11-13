@@ -62,6 +62,11 @@ LIGHT_COLOR_PROPERTY = "x3d_color"
 # The import's colour space (AS_IS or SRGB) on the scene, so the export can write colours back the same way.
 COLOUR_SPACE_PROPERTY = "x3d_color_space"
 COLOUR_SPACES = ('AS_IS', 'SRGB')
+# How the import lit the scene (classic Phong Materials, or glTF-style PhysicalMaterials), kept on the scene; and the
+# first NavigationInfo's headlight (True when the file had no NavigationInfo), so the export writes them back.
+LIGHTING_MODEL_PROPERTY = "x3d_lighting_model"
+HEADLIGHT_PROPERTY = "x3d_headlight"
+MATERIAL_MODELS = ('classic', 'physical')
 
 
 def linear_to_srgb(value):
@@ -107,6 +112,36 @@ METADATA_NODE_TYPES = frozenset(
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+
+
+def resolve_material_model(value=None, scene=None, default='physical'):
+    """'classic' (write X3D Materials: Phong, diffuse, specular, shininess) or 'physical' (PhysicalMaterial, glTF style).
+
+    The export option when given (not AUTO); else the lighting model the scene was imported with
+    (LIGHTING_MODEL_PROPERTY): a file lit by Materials stays lit by Materials, which X_ITE shades in display space and
+    far brighter than a PhysicalMaterial of the same colour (measured: a 0.8 grey box lit by a point light draws 204
+    with a Material and 130 with the PhysicalMaterial the export used to write); else `default`, 'physical': a scene
+    made in Blender is a Principled BSDF scene, which is PBR."""
+    raw = str(value or "").strip().lower()
+    if raw in ("auto", "none"):
+        raw = ""
+    if not raw and scene is not None:
+        try:
+            raw = str(scene.get(LIGHTING_MODEL_PROPERTY) or "").strip().lower()
+        except (AttributeError, TypeError):
+            raw = ""
+    return raw if raw in MATERIAL_MODELS else default
+
+
+def scene_headlight(scene):
+    """The headlight the import recorded for the scene (True or False), None for a scene that was not imported."""
+    try:
+        recorded = scene.get(HEADLIGHT_PROPERTY)
+    except (AttributeError, TypeError):
+        return None
+    if recorded is None:
+        return None
+    return bool(recorded)
 
 
 def is_splat_mesh(obj) -> bool:
@@ -869,7 +904,7 @@ def srgb_to_linear(value):
     return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
 
 
-def _extract_light(obj, local_matrix) -> IRLight:
+def _extract_light(obj, local_matrix, material_model='physical', colour_space='AS_IS') -> IRLight:
     """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
 
     A light imported from X3D (it carries ``x3d_intensity``) is written without capping intensity at 1: the
@@ -888,7 +923,9 @@ def _extract_light(obj, local_matrix) -> IRLight:
     light = IRLight(
         name=obj.name,
         light_type=light_type,
-        color=physical_light_colour(data),
+        # the light's colour is read the way the Materials it lights are: sRGB values next to Materials (classic), linear
+        # next to PhysicalMaterials (see light_colour and physical_light_colour)
+        color=light_colour(data, colour_space) if material_model == 'classic' else physical_light_colour(data),
         intensity=intensity,
         ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
@@ -1089,6 +1126,8 @@ def extract_scene(
     use_animation: bool = False,
     animation_step: int = 1,
     metadata: dict | None = None,
+    material_model: str | None = None,
+    colour_space: str = 'AS_IS',
 ) -> IRScene:
     """Build the scene IR used by the X3D 4.0 emitter.
 
@@ -1111,6 +1150,8 @@ def extract_scene(
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    ir_scene.material_model = resolve_material_model(material_model, scene)
+    ir_scene.headlight = scene_headlight(scene)
     # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
     ir_scene.background = scene_background(scene)
     world = getattr(scene, "world", None)
@@ -1301,7 +1342,7 @@ def extract_scene(
             ir_scene.object_names.append(obj.name)
         elif obj.type == "LIGHT":
             # Light values are local to the object's Transform, which carries the matrix.
-            instance.light = _extract_light(obj, local_matrix.__class__())
+            instance.light = _extract_light(obj, local_matrix.__class__(), ir_scene.material_model, colour_space)
             ir_scene.object_names.append(obj.name)
         elif obj.type == "CAMERA":
             instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene)

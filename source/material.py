@@ -516,6 +516,8 @@ def analyze_material(material):
     emissive_color = (0.0, 0.0, 0.0, 1.0)
     metallic = None
     roughness = None
+    specular_level = None
+    specular_tint = None
     unlit = False
 
     if principled_node:
@@ -534,6 +536,12 @@ def analyze_material(material):
         emissive_color = tuple(channel * emissive_strength for channel in emissive_color[:3]) + (base_color[3],)
         metallic = _resolve_float_socket(principled_node.inputs.get("Metallic"), _node_default_float(principled_node, "Metallic", 0.0))
         roughness = _resolve_float_socket(principled_node.inputs.get("Roughness"), _node_default_float(principled_node, "Roughness", 0.5))
+        level_socket = principled_node.inputs.get("Specular IOR Level")
+        if level_socket is not None:
+            specular_level = _resolve_float_socket(level_socket, _node_default_float(principled_node, "Specular IOR Level", 0.5))
+        tint_socket = principled_node.inputs.get("Specular Tint")
+        if tint_socket is not None:
+            specular_tint = tuple(_resolve_rgba_socket(tint_socket, _node_default_rgba(principled_node, "Specular Tint", (1.0, 1.0, 1.0, 1.0)))[:3])
 
     if emission_node and not principled_node:
         emissive_color = _resolve_rgba_socket(emission_node.inputs.get("Color"), _node_default_rgba(emission_node, "Color", emissive_color))
@@ -554,6 +562,8 @@ def analyze_material(material):
         emissive_color=emissive_color,
         metallic=metallic,
         roughness=roughness,
+        specular_level=specular_level,
+        specular_tint=specular_tint,
         alpha_mode=alpha_mode,
         alpha_cutoff=getattr(material, "alpha_threshold", None),
         double_sided=not getattr(material, "use_backface_culling", False),

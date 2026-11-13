@@ -15,7 +15,7 @@ import math
 import os
 import re
 import struct
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from itertools import chain
 from xml.sax.saxutils import escape, quoteattr
 
@@ -142,6 +142,46 @@ def _mfstring(values):
 # Appearance
 
 
+@dataclass(frozen=True)
+class _Look:
+    """How the materials of one export are written: ``classic`` writes an X3D Material (Phong) for every material it can
+    express that way, ``colour_space`` is what the classic colours are encoded for ('SRGB' or 'AS_IS')."""
+
+    classic: bool = False
+    colour_space: str = "AS_IS"
+
+
+_PLAIN_LOOK = _Look()
+# Metallic above this has no Phong counterpart (a Material has no metal reflection): such a material stays a PhysicalMaterial.
+_CLASSIC_MAX_METALLIC = 0.1
+
+
+def _is_classic(material, look: _Look) -> bool:
+    """True when ``material`` is written as an X3D Material: the export is classic, and the material is lit (not
+    UnlitMaterial) and expressible as Phong, that is not metallic and without a metallic-roughness texture."""
+    if not look.classic or material is None or material.unlit:
+        return False
+    if material.metallic is not None and material.metallic > _CLASSIC_MAX_METALLIC:
+        return False
+    return material.metallic_roughness_texture is None
+
+
+def phong_from_principled(roughness, specular_level, specular_tint):
+    """(shininess, linear specularColor) of X3D's Blinn-Phong for a Principled BSDF's roughness, Specular IOR Level and
+    Specular Tint: the inverse of import_x3d.phong_to_principled. A Blinn-Phong exponent n = 128 x shininess matches
+    a GGX alpha of sqrt(2 / (n + 2)), and Blender's roughness is sqrt(alpha), so n = 2 / roughness^4 - 2; the peak
+    (largest specularColor channel) is F0 (n + 2) / 8, F0 = 0.08 x level the reflectance at normal incidence. A level
+    the import capped at 1 (a bright specularColor on a broad lobe) comes back as the largest peak that level can
+    carry, since the capped value is all Blender holds."""
+    roughness = 0.5 if roughness is None else max(0.05, min(1.0, float(roughness)))
+    n = max(0.0, 2.0 / roughness ** 4 - 2.0)
+    shininess = max(0.0, min(1.0, n / 128.0))
+    level = 0.5 if specular_level is None else max(0.0, min(1.0, float(specular_level)))
+    peak = min(1.0, 0.08 * level * (n + 2.0) / 8.0)
+    tint = tuple(max(0.0, min(1.0, float(c))) for c in (specular_tint or (1.0, 1.0, 1.0))[:3])
+    return shininess, tuple(peak * c for c in tint)
+
+
 def _texture_url(texture_ref, output_dir=None):
     url = texture_ref.url
     if url is None:
@@ -182,6 +222,43 @@ def _texture_transform_xml(material, indent):
             f'rotation="{_fmt(transform.rotation)}" scale="{_fmt2(transform.scale)}" />\n'
         )
     return ""
+
+
+def _classic_material_xml(material, material_def, indent, look: _Look, *, output_dir=None):
+    """``(material xml, appearance texture xml)`` of a Material written for ``material``. The base colour texture goes in
+    the Appearance's texture field, the way a classic file has it (X3D 17.2.2: an RGB texture replaces diffuseColor)."""
+    alpha = material.base_color[3] if len(material.base_color) > 3 else 1.0
+    transparency = max(0.0, min(1.0, 1.0 - alpha))
+    shininess, specular = phong_from_principled(material.roughness, material.specular_level, material.specular_tint)
+    space = look.colour_space
+    attrs = [f'DEF="{material_def}"',
+             f'diffuseColor="{_fmt3(_sfcolor(display_colour(material.base_color[:3], space)))}"']
+    if max(specular) > 0.0005:
+        attrs.append(f'specularColor="{_fmt3(_sfcolor(display_colour(specular, space)))}"')
+    if abs(shininess - 0.2) > 0.0005:
+        attrs.append(f'shininess="{_fmt(shininess)}"')
+    if any(channel > 0.0 for channel in material.emissive_color[:3]):
+        attrs.append(f'emissiveColor="{_fmt3(_sfcolor(display_colour(_sfcolor(material.emissive_color), space)))}"')
+    if transparency > 0.0:
+        attrs.append(f'transparency="{_fmt(transparency)}"')
+    if material.normal_scale is not None and material.normal_scale != 1.0:
+        attrs.append(f'normalScale="{_fmt(material.normal_scale)}"')
+    if material.occlusion_strength is not None and material.occlusion_strength != 1.0:
+        attrs.append(f'occlusionStrength="{_fmt(material.occlusion_strength)}"')
+    inner = "".join(
+        _texture_xml(ref, indent + "  ", container_field=field, output_dir=output_dir)
+        for field, ref in (("emissiveTexture", material.emissive_texture), ("normalTexture", material.normal_texture),
+                           ("occlusionTexture", material.occlusion_texture))
+        if ref is not None
+    )
+    if inner:
+        xml = f"{indent}<Material {' '.join(attrs)}>\n{inner}{indent}</Material>\n"
+    else:
+        xml = f"{indent}<Material {' '.join(attrs)} />\n"
+    texture = ""
+    if material.base_color_texture is not None:
+        texture = _texture_xml(material.base_color_texture, indent, container_field="texture", output_dir=output_dir)
+    return xml, texture
 
 
 def _material_xml(material, material_def, indent, *, output_dir=None):
@@ -227,7 +304,7 @@ def _material_xml(material, material_def, indent, *, output_dir=None):
     return f"{indent}<{tag} {' '.join(attrs)} />\n"
 
 
-def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None):
+def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK):
     app_def = defs.get("appearance", material.name, "APP_")
     if not defs.first_use("appearance", material.name):
         return f'{indent}<Appearance USE="{app_def}" />\n'
@@ -240,13 +317,21 @@ def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None):
         if material.alpha_cutoff is not None:
             attrs.append(f'alphaCutoff="{_fmt(material.alpha_cutoff)}"')
     xml = [f"{indent}<Appearance {' '.join(attrs)}>\n"]
-    xml.append(_material_xml(material, material_def, indent + "  ", output_dir=output_dir))
+    if _is_classic(material, look):
+        material_xml, texture_xml = _classic_material_xml(material, material_def, indent + "  ", look, output_dir=output_dir)
+        xml.append(material_xml)
+        xml.append(texture_xml)
+    else:
+        xml.append(_material_xml(material, material_def, indent + "  ", output_dir=output_dir))
     xml.append(_texture_transform_xml(material, indent + "  "))
     xml.append(f"{indent}</Appearance>\n")
     return "".join(xml)
 
 
-def _default_appearance_xml(indent):
+def _default_appearance_xml(indent, look: _Look = _PLAIN_LOOK):
+    if look.classic:
+        grey = _fmt3(display_colour((0.8, 0.8, 0.8), look.colour_space))
+        return f'{indent}<Appearance>\n{indent}  <Material diffuseColor="{grey}" />\n{indent}</Appearance>\n'
     return (
         f"{indent}<Appearance>\n"
         f'{indent}  <PhysicalMaterial baseColor="0.800000 0.800000 0.800000" metallic="0.000000" roughness="0.500000" />\n'
@@ -444,7 +529,7 @@ def _metadata_xml(node, indent, container_field=None):
 
 
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
-                  splats=None, version="4.0"):
+                  splats=None, version="4.0", look: _Look = _PLAIN_LOOK):
     humanoids = humanoids or {}
     splats = splats or {}
     tx, ty, tz = instance.transform.translation
@@ -464,9 +549,9 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
             xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata"))
         material = materials.get(shape.material_name) if shape.material_name else None
         if material is not None:
-            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir))
+            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look))
         else:
-            xml.append(_default_appearance_xml(indent + "    "))
+            xml.append(_default_appearance_xml(indent + "    ", look))
         geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
         if geometry is not None:
             xml.append(_geometry_xml(geometry, defs, indent + "    "))
@@ -479,7 +564,7 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         humanoid = humanoids[instance.humanoid_name]
         placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
                                 skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes)
-        xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir))
+        xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir, look=look))
     if instance.inline is not None:
         inline_def = defs.get("inline", instance.object_name, "IN_")
         xml.append(f"{indent}  <Inline DEF=\"{inline_def}\" url='{_mfstring([instance.inline.url])}' />\n")
@@ -491,7 +576,7 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
     for child in instance.children:
         xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids,
-                                 splats=splats, version=version))
+                                 splats=splats, version=version, look=look))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
 
@@ -517,7 +602,7 @@ def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field
     return "".join(xml)
 
 
-def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, output_dir=None):
+def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK):
     humanoid_def = defs.get("humanoid", humanoid.name, "hanim_")
     tx = humanoid.transform
     xml = [
@@ -542,9 +627,9 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(f'{indent}  <Shape containerField="skin">\n')
         material = materials.get(shape.material_name) if shape.material_name else None
         if material is not None:
-            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir))
+            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look))
         else:
-            xml.append(_default_appearance_xml(indent + "    "))
+            xml.append(_default_appearance_xml(indent + "    ", look))
         geometry = geometries.get(shape.geometry_name)
         if geometry is not None:
             xml.append(_geometry_xml(geometry, defs, indent + "    "))
@@ -775,9 +860,11 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     return sorted(components.items())
 
 
-def _geometries_by_material_kind(ir_scene: IRScene) -> tuple[set, set]:
-    """Names of the geometries drawn with an UnlitMaterial, and of those drawn with anything else."""
-    unlit_materials = {material.name for material in ir_scene.materials if material.unlit}
+def _geometries_by_material_kind(ir_scene: IRScene, display_materials=None) -> tuple[set, set]:
+    """Names of the geometries drawn with a material whose colours X_ITE reads as display values (``display_materials``,
+    by default the UnlitMaterials), and of those drawn with anything else."""
+    unlit_materials = ({material.name for material in ir_scene.materials if material.unlit}
+                       if display_materials is None else set(display_materials))
     unlit, other = set(), set()
 
     def visit(instances):
@@ -802,20 +889,25 @@ def with_display_colours(ir_scene: IRScene, colour_space: str) -> IRScene:
     while Blender holds linear colours, so they are sRGB-encoded. The per-vertex colours (ColorRGBA) of a geometry
     drawn only with an UnlitMaterial are encoded the same way: the importer turned such a Color into linear values
     (set_new_float_color_attribute), so writing them unchanged darkened every round trip (an aurora ribbon's
-    0.456 0.086 0.599 came back as 0.176 0.008 0.317). PhysicalMaterial colours, and the vertex colours of geometry
-    drawn with one, stay linear: X_ITE lights them the glTF way and the importer keeps them as given. Under 'AS_IS'
-    the scene is returned unchanged.
+    0.456 0.086 0.599 came back as 0.176 0.008 0.317). The same holds for the vertex colours of geometry drawn only
+    with a Material (the classic model, ``ir_scene.material_model``): X_ITE reads them as display values. The Material's
+    own colours are encoded where it is written (_classic_material_xml). PhysicalMaterial colours, and the vertex
+    colours of geometry drawn with one, stay linear: X_ITE lights them the glTF way and the importer keeps them as
+    given. Under 'AS_IS' the scene is returned unchanged.
     """
-    if colour_space != "SRGB" or not any(material.unlit for material in ir_scene.materials):
+    classic = ir_scene.material_model == "classic"
+    if colour_space != "SRGB" or not (classic or any(material.unlit for material in ir_scene.materials)):
         return ir_scene
+    look = _Look(classic=classic, colour_space=colour_space)
     materials = []
     for material in ir_scene.materials:
         if material.unlit:
             colour = tuple(material.emissive_color)
             material = replace(material, emissive_color=display_colour(colour[:3], colour_space) + tuple(colour[3:]))
         materials.append(material)
-    unlit, other = _geometries_by_material_kind(ir_scene)
-    encode = unlit - other
+    drawn_display = {m.name for m in ir_scene.materials if m.unlit or _is_classic(m, look)}
+    shown, other = _geometries_by_material_kind(ir_scene, drawn_display)
+    encode = shown - other
     geometries = [
         replace(geometry, color=[display_colour(c[:3], colour_space) + tuple(c[3:]) for c in geometry.color])
         if geometry.name in encode and geometry.color else geometry
@@ -836,6 +928,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     if version not in {"4.0", "4.1"}:
         raise ValueError(f"Unsupported X3D version for the modern writer: {version!r}")
     ir_scene = with_display_colours(ir_scene, colour_space)
+    look = _Look(classic=ir_scene.material_model == "classic", colour_space=colour_space)
     diagnostics = list(ir_scene.diagnostics)
     if version == "4.0" and ir_scene.splats:
         diagnostics.append(
@@ -879,7 +972,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     splats = ir_scene.splats_by_name()
     for instance in ir_scene.instances:
         write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids,
-                            splats=splats, version=version))
+                            splats=splats, version=version, look=look))
     write(_animation_xml(ir_scene, defs, "    "))
 
     write("  </Scene>\n")

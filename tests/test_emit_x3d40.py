@@ -224,6 +224,70 @@ class EmitX3D40Tests(unittest.TestCase):
             self.assertAlmostEqual(got, want, places=4)
         self.assertEqual(emitted("AS_IS")[2], [0.214041, 0.0, 1.0])
 
+    def _classic_scene(self, **material):
+        return IRScene(
+            name="Classic",
+            material_model="classic",
+            geometries=[IRMeshGeometry(name="Mesh", coord=[(0, 0, 0), (1, 0, 0), (0, 1, 0)], coord_index=[0, 1, 2, -1],
+                                       color=[(0.214041, 0.214041, 0.214041, 1.0)] * 3)],
+            materials=[IRPBRMaterial(name="Lit", **material)],
+            instances=[IRInstance(source_key="MESH:Mesh", object_name="Mesh", object_type="MESH",
+                                  shapes=[IRShape("Mesh", "Lit")])],
+        )
+
+    def _emit(self, scene, **kwargs):
+        buffer = io.StringIO()
+        export_ir_scene(buffer, scene, generator="unit-test", **kwargs)
+        return ET.fromstring(buffer.getvalue())
+
+    def test_classic_scene_writes_material_with_phong_fields(self):
+        """A scene lit by Materials keeps Materials (D5, D13): diffuse, specular and shininess come back from the
+        Principled values phong_to_principled made of them; colours are sRGB-encoded under SRGB."""
+        from emit_x3d40 import phong_from_principled
+        # what import_x3d.phong_to_principled gives specularColor 0.3 (linear 0.073) and shininess 0.5
+        n = 64.0
+        roughness = (2.0 / (n + 2.0)) ** 0.25
+        level = 8.0 * 0.0732 / (n + 2.0) / 0.08
+        shininess, specular = phong_from_principled(roughness, level, (1.0, 1.0, 1.0))
+        self.assertAlmostEqual(shininess, 0.5, places=4)
+        self.assertAlmostEqual(specular[0], 0.0732, places=4)
+        scene = self._classic_scene(base_color=(0.603827, 0.603827, 0.603827, 1.0), roughness=roughness,
+                                    specular_level=level, specular_tint=(1.0, 1.0, 1.0),
+                                    emissive_color=(0.0, 0.0, 0.0, 1.0), metallic=0.0)
+        root = self._emit(scene, colour_space="SRGB")
+        self.assertIsNone(root.find(".//PhysicalMaterial"))
+        material = root.find(".//Material")
+        diffuse = [float(v) for v in material.attrib["diffuseColor"].split()]
+        specular_out = [float(v) for v in material.attrib["specularColor"].split()]
+        for got in diffuse:
+            self.assertAlmostEqual(got, 0.8, places=3)
+        for got in specular_out:
+            self.assertAlmostEqual(got, 0.3, places=2)
+        self.assertAlmostEqual(float(material.attrib["shininess"]), 0.5, places=3)
+        self.assertNotIn("emissiveColor", material.attrib)
+        self.assertEqual(validate_xml_text(ET.tostring(root, encoding="unicode")).errors, [])
+
+    def test_classic_scene_vertex_colours_are_display_encoded(self):
+        root = self._emit(self._classic_scene(base_color=(0.8, 0.8, 0.8, 1.0)), colour_space="SRGB")
+        values = [float(v) for v in root.find(".//ColorRGBA").attrib["color"].split()]
+        for got in values[:3]:
+            self.assertAlmostEqual(got, 0.5, places=4)
+
+    def test_physical_scene_and_metallic_materials_stay_physical(self):
+        scene = self._classic_scene(base_color=(0.8, 0.8, 0.8, 1.0))
+        scene.material_model = "physical"
+        self.assertIsNotNone(self._emit(scene, colour_space="SRGB").find(".//PhysicalMaterial"))
+        metal = self._classic_scene(base_color=(0.8, 0.8, 0.8, 1.0), metallic=0.9, roughness=0.2)
+        root = self._emit(metal, colour_space="SRGB")
+        self.assertIsNotNone(root.find(".//PhysicalMaterial"))
+        self.assertIsNone(root.find(".//Material"))
+
+    def test_classic_texture_goes_in_the_appearance_texture_field(self):
+        scene = self._classic_scene(base_color=(0.8, 0.8, 0.8, 1.0),
+                                    base_color_texture=IRTextureRef(image_name="a.png", filepath="a.png", usage="baseColor"))
+        appearance = self._emit(scene).find(".//Appearance")
+        self.assertEqual([child.tag for child in appearance], ["Material", "ImageTexture"])
+
     def test_emits_valid_x3d40_with_unlit_material(self):
         scene = IRScene(
             name="UnlitFixture",

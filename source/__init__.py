@@ -267,6 +267,14 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         default='AUTO',
         description=translate(lang, "export_color_space_description"),
     )
+    material_model: EnumProperty(
+        name=translate(lang, "export_material_model"),
+        items=(('AUTO', translate(lang, "material_model_auto"), translate(lang, "material_model_auto_description")),
+               ('CLASSIC', translate(lang, "material_model_classic"), translate(lang, "material_model_classic_description")),
+               ('PHYSICAL', translate(lang, "material_model_physical"), translate(lang, "material_model_physical_description"))),
+        default='AUTO',
+        description=translate(lang, "export_material_model_description"),
+    )
     use_animation: BoolProperty(
         name="Animation",
         description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes",
@@ -572,6 +580,9 @@ def export_ui_include(layout, operator):
     if body:
         body.prop(operator, "x3d_version")
         body.prop(operator, "color_space")
+        sub = body.column()
+        sub.enabled = operator.x3d_version in {'X3D40', 'X3D41'}
+        sub.prop(operator, "material_model")
         row = body.row(align=True)
         row.prop(operator, "batch_mode")
         sub = row.row(align=True)
