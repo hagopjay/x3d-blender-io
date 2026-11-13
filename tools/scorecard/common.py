@@ -5,7 +5,6 @@
 running with logs, and the rig fingerprint. Needs no browser and no Blender; numpy is used only for viewpoint maths."""
 from __future__ import annotations
 
-import ast
 import hashlib
 import importlib.util
 import json
@@ -48,22 +47,14 @@ _VIEWPOINT = None
 
 
 def rig_viewpoint():
-    """The rig's own first_viewpoint(path, src) from compare.py. compare.py is a script (it reads sys.argv and renders on import),
-    so its viewpoint functions are taken from its source by name and executed in a private namespace: the rig stays the one
-    implementation, nothing is copied here."""
+    """The rig's own first_viewpoint(path, src) from tools/fidelity_rig/viewpoint.py (shared by compare.py and gate.py), loaded by
+    path so the name `viewpoint` is not taken; nothing is copied here."""
     global _VIEWPOINT
     if _VIEWPOINT is None:
-        src = (RIG / "compare.py").read_text()
-        tree = ast.parse(src)
-        wanted = {"_floats", "_rot", "geo_viewpoint", "first_viewpoint"}
-        body = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in wanted]
-        missing = wanted - {n.name for n in body}
-        if missing:
-            raise RuntimeError(f"tools/fidelity_rig/compare.py no longer defines {sorted(missing)}")
-        import numpy as np
-        ns = dict(np=np, re=re, ET=ET, sys=sys, os=os)
-        exec(compile(ast.Module(body=body, type_ignores=[]), str(RIG / "compare.py"), "exec"), ns)
-        _VIEWPOINT = ns["first_viewpoint"]
+        spec = importlib.util.spec_from_file_location("fidelity_rig_viewpoint", RIG / "viewpoint.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _VIEWPOINT = mod.first_viewpoint
     return _VIEWPOINT
 
 

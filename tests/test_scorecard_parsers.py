@@ -89,7 +89,7 @@ class SceneFactTests(unittest.TestCase):
         self.assertEqual((f["clear"], f["headlight_on"]), ([0.0, 0.0, 0.0], True))
 
     def test_rig_viewpoint_is_the_rigs_function(self):
-        """first_viewpoint comes from tools/fidelity_rig/compare.py itself (not a copy): the probe's Viewpoint is at 0 0 10 looking down -Z."""
+        """first_viewpoint comes from tools/fidelity_rig/viewpoint.py itself (not a copy): the probe's Viewpoint is at 0 0 10 looking down -Z."""
         v = common.rig_viewpoint()(str(PROBE), str(ROOT / "source"))
         self.assertEqual(v["position"], [0.0, 0.0, 10.0])
         self.assertAlmostEqual(v["forward"][2], -1.0)
