@@ -143,11 +143,35 @@ class Thresholds(unittest.TestCase):
         self.assertEqual(res["geometry_delta"]["status"], "SKIP")
         self.assertEqual(res["roundtrip_delta"]["status"], "SKIP")
 
+    def test_skip_entry_takes_an_unstable_check_out_of_the_gate_even_when_it_measured(self):
+        e = baseline_entry(skip=dict(roundtrip_delta="renders differently on every run", geometry_delta="same"))
+        m = measured(geometry_delta=99.0, roundtrip=dict(render_ok=True, mean_abs_delta=99.0, flip=0.9))
+        res = by_check(gate.evaluate_scene(m, e, TOL))
+        self.assertEqual(res["roundtrip_delta"]["status"], "SKIP")
+        self.assertIn("renders differently on every run", res["roundtrip_delta"]["detail"])
+        self.assertIn("99.0", res["roundtrip_delta"]["detail"])
+        self.assertEqual(res["geometry_delta"]["status"], "SKIP")
+        self.assertEqual(gate.scene_verdict(list(res.values())), "PASS")
+
+    def test_per_scene_tolerance_override_for_run_dependent_scenes(self):
+        e = baseline_entry(geometry_delta=40.0, tolerance=dict(geometry_delta=dict(abs=20.0), reason="animated: sampled at run-dependent moments"))
+        for gd, want in [(59.0, "PASS"), (60.5, "FAIL"), (24.0, "PASS"), (19.0, "IMPROVED")]:
+            r = by_check(gate.evaluate_scene(measured(geometry_delta=gd), e, TOL))["geometry_delta"]
+            self.assertEqual(r["status"], want, (gd, r))
+        # the override is for that check only: the round-trip check keeps the header rule
+        r = by_check(gate.evaluate_scene(measured(roundtrip=dict(render_ok=True, mean_abs_delta=6.0, flip=0.05)), e, TOL))["roundtrip_delta"]
+        self.assertEqual(r["status"], "FAIL")
+        self.assertEqual(gate.lint_baseline(dict(scenes=dict(s=e))), [])
+        for bad in (dict(geometry_delta=dict(abs=20.0)), dict(flip=dict(abs=1.0), reason="x"), dict(reason="UNEXPLAINED: x")):
+            self.assertTrue(gate.lint_baseline(dict(scenes=dict(s=baseline_entry(tolerance=bad)))), bad)
+
     def test_geometry_not_visible(self):
         r = by_check(gate.evaluate_scene(measured(geometry_delta=None), baseline_entry(), TOL))["geometry_delta"]
         self.assertEqual(r["status"], "FAIL")
         r = by_check(gate.evaluate_scene(measured(geometry_delta=None), baseline_entry(geometry_delta=None), TOL))["geometry_delta"]
         self.assertEqual(r["status"], "PASS")
+        r = by_check(gate.evaluate_scene(measured(geometry_delta=None), baseline_entry(geometry_delta=None), TOL))["geometry_delta"]
+        self.assertIn("100 triangles that Babylon.js did not draw", r["detail"])
 
     def test_scene_without_baseline_fails(self):
         res = gate.evaluate_scene(measured(), None, TOL)

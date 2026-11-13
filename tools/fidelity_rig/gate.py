@@ -153,6 +153,16 @@ def describe_kinds(kinds):
     return "+".join(names) if names else "nothing"
 
 
+def rule_for(entry, tol, check, kind):
+    """The tolerance rule for `check` of this scene: the baseline header's rule for `kind` ("image_delta" or "flip"), overridden
+    per scene by entry["tolerance"][check] (animated scenes are sampled at run-dependent moments; the override carries a reason)."""
+    rule = dict(tol[kind])
+    over = ((entry or {}).get("tolerance") or {}).get(check)
+    if over and kind == "image_delta":
+        rule.update(over)
+    return rule
+
+
 def _known_for(entry, check):
     return [k["defect"] for k in (entry or {}).get("known", []) if check in k.get("checks", [])]
 
@@ -234,23 +244,28 @@ def evaluate_scene(m, entry, tol):
     gd = m.get("geometry_delta")
     if not glb_ok:
         out.append(_result(chk, STATUS_SKIP, "no glb", entry))
+    elif sk:   # a skip entry (with its written reason) takes the check out of the gate; the measurement is still reported
+        out.append(_result(chk, STATUS_SKIP, f"not gated ({sk}); measured {gd}", entry))
     elif not m.get("glb_render_ok", False):
-        out.append(_result(chk, STATUS_SKIP if sk else STATUS_FAIL, f"no render ({sk})" if sk else "X_ITE or Babylon.js render missing", entry))
+        out.append(_result(chk, STATUS_FAIL, "X_ITE or Babylon.js render missing", entry))
     elif entry is None:
         out.append(_result(chk, STATUS_SKIP, f"measured {gd}, no baseline", entry))
     else:
         bg = base.get("geometry_delta") if entry is not None else None
         if gd is None:
             if bg is None:
-                out.append(_result(chk, STATUS_PASS, "no geometry visible in Babylon.js (baseline too)", entry))
+                nt = (m.get("glb") or {}).get("triangles", 0)
+                out.append(_result(chk, STATUS_PASS, "no geometry visible in Babylon.js (baseline too)"
+                                   + (f"; the glb holds {nt} triangles that Babylon.js did not draw" if nt else ""), entry))
             else:
                 out.append(_result(chk, STATUS_FAIL, f"no geometry visible in Babylon.js (baseline {bg})", entry))
         else:
             b = bg if bg is not None else 0.0
-            lim = allowed_max(b, tol["image_delta"])
+            rule = rule_for(entry, tol, chk, "image_delta")
+            lim = allowed_max(b, rule)
             if gd > lim:
                 out.append(_result(chk, STATUS_FAIL, f"{gd} > baseline {bg} + tolerance (limit {lim:.2f})", entry))
-            elif gd < improved_below(b, tol["image_delta"]):
+            elif gd < improved_below(b, rule):
                 out.append(_result(chk, STATUS_IMPROVED, f"{gd} < baseline {bg}", entry))
             else:
                 out.append(_result(chk, STATUS_PASS, f"{gd} (baseline {bg}, limit {lim:.2f})", entry))
@@ -293,8 +308,10 @@ def evaluate_scene(m, entry, tol):
     rt = m.get("roundtrip") or {}
     if not re_ok:
         out.append(_result(chk, STATUS_SKIP, "no re-export", entry))
+    elif sk:
+        out.append(_result(chk, STATUS_SKIP, f"not gated ({sk}); measured mean|delta| {rt.get('mean_abs_delta')}, FLIP {rt.get('flip')}", entry))
     elif not rt.get("render_ok"):
-        out.append(_result(chk, STATUS_SKIP if sk else STATUS_FAIL, f"no render ({sk})" if sk else "X_ITE render of the original or the re-export missing", entry))
+        out.append(_result(chk, STATUS_FAIL, "X_ITE render of the original or the re-export missing", entry))
     elif entry is None:
         out.append(_result(chk, STATUS_SKIP, f"measured mean|delta| {rt['mean_abs_delta']}, FLIP {rt.get('flip')}, no baseline", entry))
     else:
@@ -303,9 +320,10 @@ def evaluate_scene(m, entry, tol):
         d, f = rt["mean_abs_delta"], rt.get("flip")
         why, better = [], []
         b0 = bd if bd is not None else 0.0
-        if d > allowed_max(b0, tol["image_delta"]):
-            why.append(f"mean|delta| {d} > baseline {bd} + tolerance (limit {allowed_max(b0, tol['image_delta']):.2f})")
-        elif bd is not None and d < improved_below(bd, tol["image_delta"]):
+        rule = rule_for(entry, tol, chk, "image_delta")
+        if d > allowed_max(b0, rule):
+            why.append(f"mean|delta| {d} > baseline {bd} + tolerance (limit {allowed_max(b0, rule):.2f})")
+        elif bd is not None and d < improved_below(bd, rule):
             better.append(f"mean|delta| {d} < baseline {bd}")
         if f is not None:
             f0 = bf if bf is not None else 0.0
@@ -353,6 +371,15 @@ def lint_baseline(baseline):
         for c in (e.get("skip") or {}):
             if c not in CHECKS:
                 problems.append(f"{name}: skip names an unknown check {c!r}")
+        over = e.get("tolerance")
+        if over is not None:
+            if not str(over.get("reason", "")).strip():
+                problems.append(f"{name}: tolerance override has no reason")
+            elif str(over["reason"]).upper().startswith("UNEXPLAINED"):
+                problems.append(f"{name}: tolerance override reason is still UNEXPLAINED, write one")
+            for c in over:
+                if c != "reason" and c not in ("geometry_delta", "roundtrip_delta"):
+                    problems.append(f"{name}: tolerance override names {c!r}; only geometry_delta and roundtrip_delta can be overridden")
     return problems
 
 
@@ -815,11 +842,12 @@ def run_gate(scenes, label, src, jobs=1, chunk=8, reuse=False):
         for stale in ("xite.png", "babylon.png", "babylon_mask.png", "babylon_mask_green.png"):
             if os.path.exists(f"{j['outdir']}/{stale}"):
                 os.remove(f"{j['outdir']}/{stale}")
-    chromium = None
+    chromium = next((m.get("chromium") for m in measurements.values() if m.get("chromium")), None)   # a reused run remembers its browser
     if jobs_list:
         log(f"gate: rendering {len(jobs_list)} jobs (X_ITE on the X3D, Babylon.js on the glb, X_ITE on the re-export)")
         chromium = run_renders(jobs_list, label, chunk)
     for sc in todo_scenes:
+        measurements[sc["name"]]["chromium"] = chromium
         m = finish_scene(measurements[sc["name"]], f"{RIG}/out/{label}/{sc['name']}")
         _write_json(f"{RIG}/out/{label}/{sc['name']}/measured.json", m)
     log(f"gate: measured {len(todo_scenes)} scenes in {time.time() - t0:.0f} s")
@@ -872,14 +900,14 @@ def main(argv=None):
         rows.append(dict(scene=sc["name"], verdict=scene_verdict(checks), checks=checks))
     elapsed = time.time() - t0
     report = format_report(rows, note, elapsed)
-    log("\n" + report)
+    log("\n" + ("Against the baseline before the update:\n" if ns.update_baseline else "") + report)
     res = dict(schema=RESULTS_SCHEMA, rig=fp, tolerance=tol, scenes=rows, measurements=measurements, baseline_lint=problems,
                fingerprint_differs=diff, seconds=round(elapsed, 1), update_baseline=ns.update_baseline)
     _write_json(f"{RIG}/out/{ns.label}/gate_results.json", res)   # before the exit code is decided
     if ns.json:
         _write_json(ns.json, res)
     if ns.update_baseline:
-        return update(baseline, ns, measurements, fp, tol)
+        return update(baseline, ns, measurements, fp, tol, scenes)
     code = 0
     if any(r["verdict"] == "FAIL" for r in rows) or problems:
         code = 1
@@ -891,11 +919,11 @@ def main(argv=None):
     return code
 
 
-def update(baseline, ns, measurements, fp, tol):
+def update(baseline, ns, measurements, fp, tol, scenes):
     new, moves, refusals = merge_baseline(baseline, measurements, ns.allow_worse)
     new["schema"] = BASELINE_SCHEMA
     new["tolerance"] = tol
-    new["rig"] = fp
+    new["rig"] = {k: (v if v is not None else (baseline.get("rig") or {}).get(k)) for k, v in fp.items()}   # a subset run that did not render keeps the old browser
     new["scenes"] = dict(sorted(new["scenes"].items()))
     log("\nBASELINE UPDATE" + (" (--allow-worse)" if ns.allow_worse else ""))
     for ln in moves:
@@ -911,6 +939,11 @@ def update(baseline, ns, measurements, fp, tol):
     problems = lint_baseline(new)
     for p in problems:
         log("BASELINE LINT:", p)
+    rows = []   # the verdict of this run against the baseline just written
+    for sc in scenes:
+        checks = evaluate_scene(measurements[sc["name"]], new["scenes"].get(sc["name"]), tol)
+        rows.append(dict(scene=sc["name"], verdict=scene_verdict(checks), checks=checks))
+    log("\nAgainst the updated baseline:\n" + format_report(rows))
     return 1 if (refusals or problems) else 0
 
 
