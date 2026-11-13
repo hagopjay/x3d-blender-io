@@ -204,3 +204,7 @@ and `stilllife-x3d40`, with `--strict-fingerprint`. A manual run (`workflow_disp
 report, renders, `diff_x4.png`, `diff_roundtrip_x4.png` and the re-export. `tests/test_gate_logic.py` (thresholds, EMPTY
 classification, baseline update refusals, report formatting, exit codes; synthetic measurements, no browser) and
 `tests/test_gate_baseline.py` (the committed baseline lints clean, matches the pins and covers every scene list) run in the `unit` job.
+
+## Cross-engine scorecard
+
+`tools/scorecard/` drives this rig's pieces (`render.mjs`, `blender_leg.py`, `validate_glb.mjs`, `manifest.py`, `first_viewpoint`) together with a Cycles reference, EEVEE and the optional Castle legs into one `results.json` (validator verdict and FLIP per scene and engine) and a `scorecard.md` / `scorecard.html`; see `tools/scorecard/README.md`. `render.mjs` takes an optional per-job `legs` list (`["xite"]`, `["babylon"]`) and prints `TIME` lines for it; without them it behaves as before.
