@@ -21,6 +21,9 @@ OrthoViewpoint becomes an orthographic Babylon.js camera with the same extents. 
 renders, cleared to magenta and to green, so magenta geometry is not mistaken for background. compare.py deletes a
 scene's old images before rendering and stops when render.mjs fails.
 
+After a run, `node gltf_validate.mjs out/LABEL` checks every glb with the Khronos glTF Validator (gltf-validator 2.0.0-dev.3.10) and exits 1 on any error.
+Measured 13 Nov 2026 on the glb of two Blender scenes exported with this add-on (LUMEN Interference Atelier and Asterion, X3D 4.0, 89,568 and 93,682 triangles): 0 errors and 0 warnings each. The same two scenes through this rig (X_ITE 16.7.1, Babylon.js 9.32.0, Chromium 153, SwiftShader): mean |delta| 3.32 (LUMEN) and 3.48 (Asterion), geometry share 1.0.
+
 `probes/` holds five light probes (a 0.8 grey under one light, three boxes at 1.8, 2.0 and 4.2 m). Measured 12 Nov 2026
 (Blender 5.3, X_ITE 16.7.1, Babylon.js 9.32.0, Chromium 153, SwiftShader; centre patch, X_ITE / Babylon.js):
 
