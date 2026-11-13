@@ -16,12 +16,14 @@ import os
 try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .material import analyze_material
+    from .matrix_safety import inverted64, scale_to_children_matrix
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from material import analyze_material
+    from matrix_safety import inverted64, scale_to_children_matrix
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
@@ -521,7 +523,7 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
     skin_geometries: list[IRMeshGeometry] = []
     humanoid = IRHumanoid(name=armature.name, transform=_matrix_transform(local_matrix), root_joints=roots)
     skin_def = f"hanim_{_safe_key(armature.name)}_skinCoord"
-    armature_inverse = armature.matrix_world.inverted()
+    armature_inverse = inverted64(armature.matrix_world, armature.name)
 
     for mesh_obj in skinned:
         mesh = mesh_obj.data
@@ -922,7 +924,7 @@ def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, f
             for name, (obj, parent) in objects_by_name.items():
                 matrix = obj.matrix_world
                 if use_hierarchy and parent is not None:
-                    matrix = parent.matrix_world.inverted() @ matrix
+                    matrix = inverted64(parent.matrix_world, parent.name) @ matrix
                 elif global_matrix is not None:
                     matrix = global_matrix @ matrix
                 samples[name].append(_matrix_transform(matrix))
@@ -1182,14 +1184,16 @@ def extract_scene(
 
     def build_instance(obj, parent):
         if use_hierarchy and parent is not None:
-            local_matrix = parent.matrix_world.inverted() @ obj.matrix_world
+            local_matrix = inverted64(parent.matrix_world, parent.name) @ obj.matrix_world
             if parent.get(INLINE_URL_PROPERTY):
                 # the parent's Transform includes the asset frame; take it back out
                 local_matrix = content_frame.inverted() @ local_matrix
         else:
             local_matrix = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
         if obj.type == "EMPTY" and obj.get(INLINE_URL_PROPERTY):
-            local_matrix = local_matrix @ content_frame
+            # the import may have moved an extreme scale onto the loaded content (matrix_safety); the Inline's
+            # Transform gets it back, since that content is not written
+            local_matrix = local_matrix @ scale_to_children_matrix(obj) @ content_frame
 
         instance = IRInstance(
             source_key=f"{obj.type}:{obj.name}",

@@ -89,6 +89,19 @@ def _fmt3(values):
     return "%.6f %.6f %.6f" % tuple(values[:3])
 
 
+def _fmt_length(value: float) -> str:
+    """A translation or scale component: six decimals as before, but significant digits below 1e-3, where six
+    decimals kept too few digits or printed 0 (a scale of 1.057e-16, one unit = one light-year, became
+    "0.000000"; a molecule built in metres lost every atom position)."""
+    if value != 0.0 and abs(value) < 1e-3:
+        return "%.9g" % value
+    return "%.6f" % value
+
+
+def _fmt3_length(values):
+    return " ".join(_fmt_length(float(value)) for value in values[:3])
+
+
 def _sfcolor(values):
     """Fit an RGB triple into the SFColor range [0, 1] that the X3D 4.0 XSD enforces.
 
@@ -409,9 +422,9 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     transform_def = defs.get("transform", instance.object_name, "OB_")
     xml = [
         f'{indent}<Transform DEF="{transform_def}" '
-        f'translation="{_fmt3((tx, ty, tz))}" '
+        f'translation="{_fmt3_length((tx, ty, tz))}" '
         f'rotation="{_fmt4((rx, ry, rz, ra))}" '
-        f'scale="{_fmt3((sx, sy, sz))}">\n'
+        f'scale="{_fmt3_length((sx, sy, sz))}">\n'
     ]
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
     for index, shape in enumerate(instance.iter_shapes()):
@@ -477,8 +490,8 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
     xml = [
         f'{indent}<HAnimHumanoid DEF="{humanoid_def}" name={quoteattr(humanoid.name)} version="2.0" '
         f'skeletalConfiguration="BLENDER" '
-        f'translation="{_fmt3(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
-        f'scale="{_fmt3(tx.scale)}">\n'
+        f'translation="{_fmt3_length(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
+        f'scale="{_fmt3_length(tx.scale)}">\n'
     ]
     for root in humanoid.root_joints:
         xml.append(_joint_xml(root, humanoid.name, defs, indent + "  ", container_field="skeleton"))
@@ -543,7 +556,7 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
             node_def = f"PI_{safe_target}"
             xml.append(
                 f'{indent}<PositionInterpolator DEF="{node_def}" key="{keys}" '
-                f'keyValue="{" ".join(_fmt3(value) for value in animation.translations)}" />\n'
+                f'keyValue="{" ".join(_fmt3_length(value) for value in animation.translations)}" />\n'
             )
             routes.append((timer_def, "fraction_changed", node_def, "set_fraction"))
             routes.append((node_def, "value_changed", target_def, "set_translation"))
@@ -559,7 +572,7 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
             node_def = f"SI_{safe_target}"
             xml.append(
                 f'{indent}<PositionInterpolator DEF="{node_def}" key="{keys}" '
-                f'keyValue="{" ".join(_fmt3(value) for value in animation.scales)}" />\n'
+                f'keyValue="{" ".join(_fmt3_length(value) for value in animation.scales)}" />\n'
             )
             routes.append((timer_def, "fraction_changed", node_def, "set_fraction"))
             routes.append((node_def, "value_changed", target_def, "set_scale"))

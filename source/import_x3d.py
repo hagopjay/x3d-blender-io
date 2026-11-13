@@ -17,7 +17,7 @@ import re
 import mathutils
 from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
-from . import geospatial, mfstring
+from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
                       LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
@@ -7230,9 +7230,11 @@ def load(context,
         from .populate import populate_scene
 
         paths = [os.path.join(directory, name.name) for name in files] if files else [filepath]
+        objects_before = {ob.name for ob in bpy.data.objects}
         for file in paths:
             ir_scene = parse_file(file)
             populate_scene(context, ir_scene)
+        matrix_safety.push_scale_to_children([ob for ob in bpy.data.objects if ob.name not in objects_before])
         return {'FINISHED'}
 
     paths = [os.path.join(directory, name.name) for name in files] if files else [filepath]
@@ -7249,8 +7251,12 @@ def load(context,
                 solidify=solidify,
                 solidify_value=solidify_value
                 )
+    new_objects = [ob for ob in bpy.data.objects if ob.name not in objects_before]
+    # Blender inverts parent matrices in float32: an Inline under scale 1e-16 (one unit = one light-year) would
+    # export to glTF about 1e8 too small. Move such scales onto the children; no world matrix changes.
+    matrix_safety.push_scale_to_children(new_objects)
     if resolve_gpu_instances(gpu_instances):
-        group_instances([ob for ob in bpy.data.objects if ob.name not in objects_before])
+        group_instances(new_objects)
     finalize_light_units(context.scene if context is not None else None, lighting_units)
     if context is not None and getattr(context, "scene", None) is not None:
         context.scene[COLOUR_SPACE_PROPERTY] = colour_space

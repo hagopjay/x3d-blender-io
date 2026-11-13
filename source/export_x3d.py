@@ -24,6 +24,7 @@ from .material_node_search import (analyze_material, imageTexture_in_material, g
                                    get_vector_mapping_properties, get_movie_texture_properties)
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
+from .matrix_safety import inverted64
 from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, light_attenuation, light_colour,
                       light_intensity, light_radius, resolve_export_colour_space)
 
@@ -34,6 +35,11 @@ H3D_VIEW_MATRIX = 'view_matrix'
 
 # local blender export caches
 media_cache = {}
+
+def _fmt3_length(values):
+    """Six decimals, or significant digits below 1e-3 where six decimals printed too few digits or 0."""
+    return " ".join(("%.9g" % v) if v != 0.0 and abs(v) < 1e-3 else ("%.6f" % v) for v in (float(x) for x in values[:3]))
+
 
 def clamp_color(col):
     return tuple([max(min(c, 1.0), 0.0) for c in col])
@@ -450,9 +456,9 @@ def export(file,
         rot = rot.to_axis_angle()
         rot = (*rot[0], rot[1])
 
-        fw(ident_step + 'translation="%.6f %.6f %.6f"\n' % loc[:])
+        fw(ident_step + 'translation="%s"\n' % _fmt3_length(loc[:]))
         # fw(ident_step + 'center="%.6f %.6f %.6f"\n' % (0, 0, 0))
-        fw(ident_step + 'scale="%.6f %.6f %.6f"\n' % sca[:])
+        fw(ident_step + 'scale="%s"\n' % _fmt3_length(sca[:]))
         fw(ident_step + 'rotation="%.6f %.6f %.6f %.6f"\n' % rot)
         fw(ident_step + '>\n')
         ident += '\t'
@@ -1641,7 +1647,6 @@ def export(file,
     # Export Object Hierarchy (recursively called)
     # -------------------------------------------------------------------------
     def export_object(ident, obj_main_parent, obj_main, obj_children):
-        matrix_fallback = mathutils.Matrix()
         world = scene.world
         derived_dict = create_derived_objects(depsgraph, [obj_main])
         derived = derived_dict.get(obj_main)
@@ -1649,10 +1654,10 @@ def export(file,
         if use_hierarchy:
             obj_main_matrix_world = obj_main.matrix_world
             if obj_main_parent:
-                obj_main_matrix = obj_main_parent.matrix_world.inverted(matrix_fallback) @ obj_main_matrix_world
+                obj_main_matrix = inverted64(obj_main_parent.matrix_world, obj_main_parent.name) @ obj_main_matrix_world
             else:
                 obj_main_matrix = obj_main_matrix_world
-            obj_main_matrix_world_invert = obj_main_matrix_world.inverted(matrix_fallback)
+            obj_main_matrix_world_invert = inverted64(obj_main_matrix_world, obj_main.name)  # float64: scales like 1e-16
 
             obj_main_id = quoteattr(unique_name(obj_main, obj_main.name, uuid_cache_object, clean_func=clean_def, sep="_"))
 
