@@ -278,7 +278,8 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
     )
     use_animation: BoolProperty(
         name="Animation",
-        description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes",
+        description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes. "
+                    "Off unless set, except for a scene imported from X3D with animation, which keeps it",
         default=False,
     )
     animation_step: IntProperty(
@@ -538,6 +539,11 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         update = _meta_license_custom_update,
     )
 
+    def invoke(self, context, event):
+        if not self.properties.is_property_set("use_animation") and context.scene.get("x3d_imported_animation"):
+            self.use_animation = True   # the dialog shows what the export will do
+        return super().invoke(context, event)
+
     @property
     def check_extension(self):
         return self.batch_mode == 'OFF'
@@ -561,6 +567,9 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         keywords["global_matrix"] = global_matrix
         if self.meta_license == 'CUSTOM' and self.meta_license_custom:
             keywords["meta_license"] = self.meta_license_custom
+        if not self.properties.is_property_set("use_animation") and context.scene.get("x3d_imported_animation"):
+            # a scene imported from X3D with interpolators keeps its animation, unless Animation was set (off) by hand
+            keywords["use_animation"] = True
 
         return export_x3d.save(context, **keywords)
 
