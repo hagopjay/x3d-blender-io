@@ -1,0 +1,1609 @@
+{
+ "schema": "x3d-blender-io.gate-baseline/v1",
+ "tolerance": {
+  "image_delta": {
+   "abs": 0.5,
+   "rel": 0.05
+  },
+  "flip": {
+   "abs": 0.01,
+   "rel": 0.05
+  },
+  "triangles": {
+   "rel": 0.05
+  }
+ },
+ "scenes": {
+  "annotation": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 4502
+   },
+   "geometry_delta": 14.78,
+   "reexport": {
+    "nodes_lost": 5
+   },
+   "roundtrip": {
+    "mean_abs_delta": 8.46,
+    "flip": 0.13508
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "annotation-standard": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 4502
+   },
+   "geometry_delta": 14.63,
+   "reexport": {
+    "nodes_lost": 4
+   },
+   "roundtrip": {
+    "mean_abs_delta": 7.92,
+    "flip": 0.13088
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "asterion": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 93682
+   },
+   "geometry_delta": 3.48,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.01,
+    "flip": 0.00103
+   }
+  },
+  "demo-cannonball": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1452
+   },
+   "geometry_delta": 17.83,
+   "reexport": {
+    "nodes_lost": 4
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.13,
+    "flip": 0.00167
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-chirp": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 960
+   },
+   "geometry_delta": 1.48,
+   "reexport": {
+    "nodes_lost": 6
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-double-pendulum": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 4320
+   },
+   "geometry_delta": 39.31,
+   "reexport": {
+    "nodes_lost": 5
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.47,
+    "flip": 0.0065
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-habsburg-unlit-color": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 240
+   },
+   "geometry_delta": 27.41,
+   "reexport": {
+    "nodes_lost": 19
+   },
+   "roundtrip": {
+    "mean_abs_delta": 7.77,
+    "flip": 0.13648
+   },
+   "known": [
+    {
+     "defect": "D6",
+     "reason": "NavigationInfo headlight is re-derived from \"has lights\", not carried from the original (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D12",
+     "reason": "IndexedLineSet colours and LineProperties widths are not re-exported and a NurbsCurve renders as nothing (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-living-heart": {
+   "allow_empty": {
+    "reason": "The scene holds no renderable geometry: its only Shape is a placeholder (a Switch with whichChoice -1 around an IndexedTriangleSet with an empty Coordinate; a script fills the frames at run time). The import yields one hidden mesh with 0 polygons, so an empty glb is correct (Confirmed 13 Nov 2026, Blender 5.3.0 bpy)."
+   },
+   "geometry_delta": null,
+   "glb": {
+    "class": "empty",
+    "triangles": 0
+   },
+   "reexport": {
+    "nodes_lost": 11
+   },
+   "roundtrip": {
+    "flip": 0.0,
+    "mean_abs_delta": 0.0
+   },
+   "validator": {
+    "warnings": 0
+   },
+   "known": [
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-material-odyssey": {
+   "validator": {
+    "warnings": 203
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 75314
+   },
+   "geometry_delta": null,
+   "reexport": {
+    "nodes_lost": 10
+   },
+   "roundtrip": {
+    "mean_abs_delta": 29.05,
+    "flip": 0.3346
+   },
+   "known": [
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D9",
+     "reason": "Import drops baseTexture and emissiveTexture when one ImageTexture is DEFd as base and USEd as emissive (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "H1",
+     "reason": "Harness limit, not an add-on defect. X_ITE draws this scene differently on every run (the audit measured noise 74.5 against a delta of 44.4; this gate measured 29.05 on one run), so no round-trip delta is a usable threshold. Separately, Babylon.js drew none of the 75,314 glb triangles from the 28.8 MB glb within the rig timeout (geometry share 0.0); cause not investigated and not necessarily the add-on (this gate, Confirmed 13 Nov 2026).",
+     "checks": [
+      "roundtrip_delta",
+      "geometry_delta"
+     ]
+    }
+   ],
+   "skip": {
+    "roundtrip_delta": "X_ITE renders this scene differently on every run (H1): noise 74.5 vs delta 44.4 in the audit"
+   }
+  },
+  "demo-materials-textures": {
+   "validator": {
+    "warnings": 11
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 13562
+   },
+   "geometry_delta": 15.74,
+   "reexport": {
+    "nodes_lost": 9
+   },
+   "roundtrip": {
+    "mean_abs_delta": 10.52,
+    "flip": 0.15911
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D6",
+     "reason": "NavigationInfo headlight is re-derived from \"has lights\", not carried from the original (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D10",
+     "reason": "The Blender material graph replaces baseColor with the texture or vertex colour instead of multiplying, so the baseColor tint is lost in Blender and in the glb (round-trip audit, Confirmed on lumen; Likely on materials-textures).",
+     "checks": [
+      "geometry_delta"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-ode-integrators": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 3360
+   },
+   "geometry_delta": 33.95,
+   "reexport": {
+    "nodes_lost": 4
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.03,
+    "flip": 0.00065
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-ontology-constellation": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 219262
+   },
+   "geometry_delta": 25.29,
+   "reexport": {
+    "nodes_lost": 5
+   },
+   "roundtrip": {
+    "mean_abs_delta": 5.95,
+    "flip": 0.08657
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D6",
+     "reason": "NavigationInfo headlight is re-derived from \"has lights\", not carried from the original (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "demo-wedgwood-unlit-textures": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 22348
+   },
+   "reexport": {
+    "nodes_lost": 20
+   },
+   "known": [
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "H1",
+     "reason": "Harness limit, not an add-on defect. X_ITE 16.7.1 crashes the Chromium 153 page in SwiftShader on the 1.2 MB ComposedShader and webp scene, on the original as on the re-export, so the scene has no X_ITE render at all (round-trip audit, Confirmed; also reproduced by this gate on 13 Nov 2026).",
+     "checks": [
+      "geometry_delta",
+      "roundtrip_delta"
+     ]
+    }
+   ],
+   "skip": {
+    "geometry_delta": "X_ITE page crash in SwiftShader (H1), no render to compare",
+    "roundtrip_delta": "X_ITE page crash in SwiftShader (H1), no render to compare"
+   }
+  },
+  "ellipsoid-earth": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1296
+   },
+   "geometry_delta": 14.64,
+   "reexport": {
+    "nodes_lost": 3
+   },
+   "roundtrip": {
+    "mean_abs_delta": 50.8,
+    "flip": 0.32432
+   },
+   "known": [
+    {
+     "defect": "D2",
+     "reason": "A planet-scale GeoViewpoint becomes a plain Viewpoint with no far clip, so X_ITE draws nothing in the re-export (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "ellipsoid-moon": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1296
+   },
+   "geometry_delta": 17.32,
+   "reexport": {
+    "nodes_lost": 3
+   },
+   "roundtrip": {
+    "mean_abs_delta": 3.33,
+    "flip": 0.02296
+   },
+   "known": [
+    {
+     "defect": "D2",
+     "reason": "A planet-scale GeoViewpoint becomes a plain Viewpoint with no far clip, so X_ITE draws nothing in the re-export (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "geolod-no-origin": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 2422
+   },
+   "geometry_delta": 16.72,
+   "reexport": {
+    "nodes_lost": 5
+   },
+   "roundtrip": {
+    "mean_abs_delta": 9.86,
+    "flip": 0.15026
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D7",
+     "reason": "LOD and GeoLOD levels are all imported as visible objects, so the re-export draws every level on top of each other (round-trip audit, Confirmed for the re-export; the glb delta of lod-scaled is Suspected to be the same cause).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "geolod-origin": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 2216
+   },
+   "geometry_delta": 16.51,
+   "reexport": {
+    "nodes_lost": 6
+   },
+   "roundtrip": {
+    "mean_abs_delta": 9.62,
+    "flip": 0.14703
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D7",
+     "reason": "LOD and GeoLOD levels are all imported as visible objects, so the re-export draws every level on top of each other (round-trip audit, Confirmed for the re-export; the glb delta of lod-scaled is Suspected to be the same cause).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "lights-after": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 974
+   },
+   "geometry_delta": 0.12,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.0,
+    "flip": 0.00013
+   }
+  },
+  "lights-before": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 974
+   },
+   "geometry_delta": 70.17,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 61.89,
+    "flip": 0.68606
+   },
+   "known": [
+    {
+     "defect": "D1",
+     "reason": "Importer ignores light scoping and the exporter writes global=\"true\" on every light, so lights that light nothing in X_ITE light the re-export (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    }
+   ]
+  },
+  "lod-control": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 24
+   },
+   "geometry_delta": 0.86,
+   "reexport": {
+    "nodes_lost": 2
+   },
+   "roundtrip": {
+    "mean_abs_delta": 4.98,
+    "flip": 0.06099
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D7",
+     "reason": "LOD and GeoLOD levels are all imported as visible objects, so the re-export draws every level on top of each other (round-trip audit, Confirmed for the re-export; the glb delta of lod-scaled is Suspected to be the same cause).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "lod-scaled": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 24
+   },
+   "geometry_delta": 143.84,
+   "reexport": {
+    "nodes_lost": 2
+   },
+   "roundtrip": {
+    "mean_abs_delta": 8.34,
+    "flip": 0.07585
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D7",
+     "reason": "LOD and GeoLOD levels are all imported as visible objects, so the re-export draws every level on top of each other (round-trip audit, Confirmed for the re-export; the glb delta of lod-scaled is Suspected to be the same cause).",
+     "checks": [
+      "roundtrip_delta",
+      "geometry_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "lumen": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 89568
+   },
+   "geometry_delta": 16.61,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.0,
+    "flip": 1e-05
+   },
+   "known": [
+    {
+     "defect": "D10",
+     "reason": "The Blender material graph replaces baseColor with the texture or vertex colour instead of multiplying, so the baseColor tint is lost in Blender and in the glb (round-trip audit, Confirmed on lumen; Likely on materials-textures).",
+     "checks": [
+      "geometry_delta"
+     ]
+    }
+   ]
+  },
+  "nurbs-weights": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 8375
+   },
+   "geometry_delta": 15.67,
+   "reexport": {
+    "nodes_lost": 8
+   },
+   "roundtrip": {
+    "mean_abs_delta": 5.19,
+    "flip": 0.09436
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D12",
+     "reason": "IndexedLineSet colours and LineProperties widths are not re-exported and a NurbsCurve renders as nothing (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "nurbs-weights-premultiplied": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 9012
+   },
+   "geometry_delta": 17.44,
+   "reexport": {
+    "nodes_lost": 8
+   },
+   "roundtrip": {
+    "mean_abs_delta": 5.76,
+    "flip": 0.10427
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D12",
+     "reason": "IndexedLineSet colours and LineProperties widths are not re-exported and a NurbsCurve renders as nothing (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "p1-point-physical": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 36
+   },
+   "geometry_delta": 0.24,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
+   }
+  },
+  "p2-point-classic": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 36
+   },
+   "geometry_delta": 47.07,
+   "reexport": {
+    "nodes_lost": 1
+   },
+   "roundtrip": {
+    "mean_abs_delta": 9.23,
+    "flip": 0.0753
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "p3-directional-classic-i1": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 36
+   },
+   "geometry_delta": 1.5,
+   "reexport": {
+    "nodes_lost": 1
+   },
+   "roundtrip": {
+    "mean_abs_delta": 6.84,
+    "flip": 0.0633
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "p4-point-quadratic-physical": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 36
+   },
+   "geometry_delta": 3.37,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
+   }
+  },
+  "p5-directional-physical-i03": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 36
+   },
+   "geometry_delta": 0.2,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
+   }
+  },
+  "prismatica-aurora-cathedral": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 27544
+   },
+   "geometry_delta": 2.52,
+   "reexport": {
+    "nodes_lost": 2
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.99,
+    "flip": 0.02101
+   }
+  },
+  "profile-tables": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 2990
+   },
+   "geometry_delta": 14.25,
+   "reexport": {
+    "nodes_lost": 3
+   },
+   "roundtrip": {
+    "mean_abs_delta": 5.05,
+    "flip": 0.09021
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "profile-tables-fixed": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 2990
+   },
+   "geometry_delta": 14.25,
+   "reexport": {
+    "nodes_lost": 3
+   },
+   "roundtrip": {
+    "mean_abs_delta": 5.05,
+    "flip": 0.09021
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "quaternion-wxyz": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1499
+   },
+   "geometry_delta": 17.09,
+   "reexport": {
+    "nodes_lost": 4
+   },
+   "roundtrip": {
+    "mean_abs_delta": 11.92,
+    "flip": 0.19609
+   },
+   "known": [
+    {
+     "defect": "D4",
+     "reason": "Gaussian splats degrade to a PointSet in the default X3D 4.0 export (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "quaternion-xyzw": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1499
+   },
+   "geometry_delta": 16.7,
+   "reexport": {
+    "nodes_lost": 4
+   },
+   "roundtrip": {
+    "mean_abs_delta": 10.83,
+    "flip": 0.17115
+   },
+   "known": [
+    {
+     "defect": "D4",
+     "reason": "Gaussian splats degrade to a PointSet in the default X3D 4.0 export (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D11",
+     "reason": "Text becomes a mesh with a different font; Billboard, FontStyle and AnnotationTarget are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "repair-0-written": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1920
+   },
+   "geometry_delta": 42.58,
+   "reexport": {
+    "nodes_lost": 5
+   },
+   "roundtrip": {
+    "mean_abs_delta": 1.36,
+    "flip": 0.01764
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D6",
+     "reason": "NavigationInfo headlight is re-derived from \"has lights\", not carried from the original (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ],
+   "tolerance": {
+    "geometry_delta": {
+     "abs": 20.0
+    },
+    "roundtrip_delta": {
+     "abs": 1.0
+    },
+    "reason": "Animated scene (a TimeSensor-driven rotation): X_ITE is captured at a run-dependent moment, so the numbers move between identical runs. Measured 13 Nov 2026 on this rig: repair-1-validator geometry_delta 42.57 then 24.67 and roundtrip mean|delta| 0.89 then 1.06; repair-0-written roundtrip 1.36 then 0.98."
+   }
+  },
+  "repair-1-validator": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1920
+   },
+   "geometry_delta": 42.57,
+   "reexport": {
+    "nodes_lost": 5
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.89,
+    "flip": 0.0124
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D6",
+     "reason": "NavigationInfo headlight is re-derived from \"has lights\", not carried from the original (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ],
+   "tolerance": {
+    "geometry_delta": {
+     "abs": 20.0
+    },
+    "roundtrip_delta": {
+     "abs": 1.0
+    },
+    "reason": "Animated scene (a TimeSensor-driven rotation): X_ITE is captured at a run-dependent moment, so the numbers move between identical runs. Measured 13 Nov 2026 on this rig: repair-1-validator geometry_delta 42.57 then 24.67 and roundtrip mean|delta| 0.89 then 1.06; repair-0-written roundtrip 1.36 then 0.98; repair-2-render stable (17.15, 0.2)."
+   }
+  },
+  "repair-2-render": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 1920
+   },
+   "geometry_delta": 17.15,
+   "reexport": {
+    "nodes_lost": 5
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.2,
+    "flip": 0.00346
+   },
+   "known": [
+    {
+     "defect": "D5",
+     "reason": "A classic Material is always re-exported as PhysicalMaterial, which X_ITE lights far darker than Phong (round-trip audit, Confirmed; Material.specularColor is dropped too, D13).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D6",
+     "reason": "NavigationInfo headlight is re-derived from \"has lights\", not carried from the original (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "D8",
+     "reason": "The default export drops all imported animation (use_animation defaults to False): TimeSensor, interpolators and ROUTEs are lost (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    },
+    {
+     "defect": "D13",
+     "reason": "Phong specular (specularColor, shininess) is dropped on every classic Material (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "stars-splats": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "points",
+    "triangles": 0
+   },
+   "geometry_delta": null,
+   "reexport": {
+    "nodes_lost": 1
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.0,
+    "flip": 0.0
+   },
+   "known": [
+    {
+     "defect": "D4",
+     "reason": "Gaussian splats degrade to a PointSet in the default X3D 4.0 export (round-trip audit, Confirmed).",
+     "checks": [
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "stars-view": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "points",
+    "triangles": 0
+   },
+   "geometry_delta": 148.88,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.58,
+    "flip": 0.01331
+   },
+   "known": [
+    {
+     "defect": "D3",
+     "reason": "Inline URLs are written verbatim, not rebased or copied, so a re-export in another folder loses everything inlined (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    },
+    {
+     "defect": "D6",
+     "reason": "NavigationInfo headlight is re-derived from \"has lights\", not carried from the original (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    }
+   ]
+  },
+  "stars-view-poc1": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "points",
+    "triangles": 0
+   },
+   "geometry_delta": 146.86,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 1.02,
+    "flip": 0.02667
+   },
+   "known": [
+    {
+     "defect": "D3",
+     "reason": "Inline URLs are written verbatim, not rebased or copied, so a re-export in another folder loses everything inlined (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    }
+   ]
+  },
+  "stilllife-splats-24k": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "points",
+    "triangles": 0
+   },
+   "geometry_delta": 193.15,
+   "reexport": {
+    "nodes_lost": 1
+   },
+   "roundtrip": {
+    "mean_abs_delta": 19.81,
+    "flip": 0.25899
+   },
+   "known": [
+    {
+     "defect": "D4",
+     "reason": "Gaussian splats degrade to a PointSet in the default X3D 4.0 export (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta",
+      "reexport"
+     ]
+    }
+   ]
+  },
+  "stilllife-stage": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 27560
+   },
+   "geometry_delta": 0.46,
+   "reexport": {
+    "nodes_lost": 0
+   },
+   "roundtrip": {
+    "mean_abs_delta": 21.14,
+    "flip": 0.27605
+   },
+   "known": [
+    {
+     "defect": "D3",
+     "reason": "Inline URLs are written verbatim, not rebased or copied, so a re-export in another folder loses everything inlined (round-trip audit, Confirmed).",
+     "checks": [
+      "roundtrip_delta"
+     ]
+    }
+   ]
+  },
+  "stilllife-x3d40": {
+   "validator": {
+    "warnings": 0
+   },
+   "glb": {
+    "class": "triangles",
+    "triangles": 27560
+   },
+   "geometry_delta": 0.47,
+   "reexport": {
+    "nodes_lost": 1
+   },
+   "roundtrip": {
+    "mean_abs_delta": 0.43,
+    "flip": 0.00974
+   }
+  }
+ },
+ "rig": {
+  "x_ite": "16.7.1",
+  "babylon": "9.32.0",
+  "chromium": "153.0.8010.12",
+  "renderer": "SwiftShader (--use-angle=swiftshader)",
+  "blender": "5.3.0",
+  "validator": "2.0.0-dev.3.10",
+  "flip_evaluator": "1.7",
+  "addon_git_revision": "54e85e46ca8a776c731c88df91053dd43312047c",
+  "addon_source_dirty": false
+ }
+}
