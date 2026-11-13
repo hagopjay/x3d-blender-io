@@ -1,0 +1,71 @@
+[
+ {
+  "id": "asterion",
+  "wide": true,
+  "kicker": "Modelled in Blender · written by this add-on · drawn live",
+  "title": "Asterion",
+  "text": "HagopJay's orrery: champagne-gold rings, a faceted core, five specimen spheres and a field of beads, modelled and lit in Blender, then written out as X3D 4.0 by this add-on. Drag the slider. Left is Blender's Cycles path tracer. Right is the X3D file running in the browser in X_ITE, with no plugin.",
+  "facts": [
+   "284 shapes",
+   "93,682 triangles · gltf-validator",
+   "glb: 0 errors, 0 warnings · gltf-validator 2.0.0-dev.3.10",
+   "Babylon.js 9.32.0 vs X_ITE 16.7.1: mean |Δ| 1.68 / 255 at 1600×900"
+  ],
+  "cycles": "brag/showpieces/asterion/asterion-cycles.webp",
+  "poster": "brag/showpieces/asterion/asterion-xite.webp",
+  "x3d": "brag/showpieces/asterion/asterion.x3d",
+  "glb": "brag/showpieces/asterion/asterion.glb",
+  "note": "2 MB of X3D, three shadow-casting lights, so it takes a moment to load"
+ },
+ {
+  "id": "lumen",
+  "kicker": "Light baked in Blender, carried into X3D",
+  "title": "LUMEN · interference atelier",
+  "text": "Two wave sources interfering across a sculpted sheet. The height colours were baked to vertex colours in Blender and exported by this add-on as X3D 4.0: 36,864 colours, straight into the browser.",
+  "facts": [
+   "89,568 triangles · gltf-validator 2.0.0-dev.3.10",
+   "36,864 baked colours · ColorRGBA in the X3D",
+   "X3D 4.0"
+  ],
+  "cycles": "brag/showpieces/lumen/lumen-cycles.webp",
+  "poster": "brag/showpieces/lumen/lumen-xite.webp",
+  "x3d": "brag/showpieces/lumen/lumen.x3d",
+  "note": "4 MB of X3D; the glb leg is held back while a vertex-colour export bug is fixed"
+ },
+ {
+  "id": "stilllife",
+  "kicker": "Scored against the path tracer",
+  "title": "Still life",
+  "text": "The add-on's test piece: built in Blender, written as X3D 4.0 PhysicalMaterial with a marble texture, then measured against the Cycles render it came from.",
+  "facts": [
+   "SSIM 0.905 vs Cycles · Blender 5.2.2, X_ITE 16.4.3, 960×600",
+   "PhysicalMaterial",
+   "glb: 0 errors, 0 warnings · gltf-validator 2.0.0-dev.3.10"
+  ],
+  "cycles": "brag/showpieces/stilllife/stilllife-cycles-reference.webp",
+  "poster": "brag/showpieces/stilllife/stilllife-xite.webp",
+  "x3d": "showcase/scenes/stilllife-stage.x3d",
+  "glb": "brag/showpieces/stilllife/stilllife-addon.glb"
+ },
+ {
+  "id": "prismatica",
+  "kicker": "From an Unreal 5.8 C++ project",
+  "title": "PRISMATICA · Aurora Cathedral",
+  "text": "Aurora curtains from HagopJay's Unreal project, converted to X3D by his own Python converter. This add-on imports that X3D into Blender and Blender's glTF exporter writes the glb, so one cathedral runs as X3D in X_ITE and as glTF in Babylon.js. Slide between them.",
+  "facts": [
+   "X3D 1.1 MB",
+   "27,544 triangles · gltf-validator",
+   "glb: 0 errors, 0 warnings · gltf-validator 2.0.0-dev.3.10",
+   "KHR_materials_unlit"
+  ],
+  "cycles": "brag/showpieces/prismatica/prismatica-crown-babylon.webp",
+  "leftTag": "glb in Babylon.js",
+  "rightTag": "X3D in X_ITE",
+  "poster": "brag/showpieces/prismatica/prismatica-crown-xite.webp",
+  "x3d": "brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d",
+  "glb": "brag/showpieces/prismatica/prismatica-aurora-cathedral.glb",
+  "viewpoint": "VP_AuroraCrown",
+  "studio": false,
+  "wide": true
+ }
+]

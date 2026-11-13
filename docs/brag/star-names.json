@@ -1,0 +1,385 @@
+{
+ "about": "Names for 20 of the 978 stars in stars.json (the same stars as showcase/scenes/stars-splats.x3d). Matched one-to-one against the HYG catalogue v4.2 (positions as v4.1) by one rotation fit over all 978 stars: max position residual 0.0084 ly, at the JSON 0.01 ly rounding (Python 3.13, numpy 2.5.4). The frame is Likely an east-north-up horizon frame at 37.2284 N, 80.4234 W.",
+ "catalogue": "HYG database by David Nash (astronexus), CC BY-SA 4.0, https://codeberg.org/astronexus/hyg",
+ "frame_rotation_row_major": [
+  [
+   -0.2348,
+   -0.972044,
+   0.000647
+  ],
+  [
+   0.590169,
+   -0.142028,
+   0.794688
+  ],
+  [
+   -0.77238,
+   0.186974,
+   0.607018
+  ]
+ ],
+ "ncp": [
+  0.000647,
+  0.794688,
+  0.607018
+ ],
+ "galactic_north": [
+  0.396562,
+  -0.121572,
+  0.909923
+ ],
+ "galactic_center": [
+  0.861591,
+  -0.292831,
+  -0.414622
+ ],
+ "arecibo_direction": [
+  0.800254,
+  0.420822,
+  0.427203
+ ],
+ "stars": [
+  {
+   "index": 296,
+   "name": "Proxima Centauri",
+   "also": [],
+   "hip": 70890,
+   "gliese": "Gl 551",
+   "distance_ly": 4.227,
+   "spectral": "M5Ve",
+   "apparent_mag": 11.01,
+   "light_arriving_2026_11_13_left": "2022-08",
+   "note": "Nearest star to the Sun. Red dwarf flare star, far too faint for the naked eye; has a planet, Proxima b, in its habitable zone. HYG (Hipparcos) distance 4.227 ly; Gaia DR3 gives about 4.246 ly.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 301,
+   "name": "Alpha Centauri A",
+   "also": [
+    "Rigil Kentaurus"
+   ],
+   "hip": 71683,
+   "gliese": "Gl 559A",
+   "distance_ly": 4.321,
+   "spectral": "G2V",
+   "apparent_mag": -0.01,
+   "light_arriving_2026_11_13_left": "2022-07",
+   "note": "Sun-like G2V star; with B it is the nearest star system visible to the naked eye and the third-brightest point in the night sky (A+B combined).",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 300,
+   "name": "Alpha Centauri B",
+   "also": [
+    "Toliman"
+   ],
+   "hip": 71681,
+   "gliese": "Gl 559B",
+   "distance_ly": 4.321,
+   "spectral": "K1V",
+   "apparent_mag": 1.35,
+   "light_arriving_2026_11_13_left": "2022-07",
+   "note": "K1V companion of Alpha Centauri A; the pair orbit each other about every 80 years. Same HYG distance as A.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 389,
+   "name": "Barnard's Star",
+   "also": [],
+   "hip": 87937,
+   "gliese": "Gl 699",
+   "distance_ly": 5.948,
+   "spectral": "sdM4",
+   "apparent_mag": 9.54,
+   "light_arriving_2026_11_13_left": "2020-12",
+   "note": "Red dwarf with the largest proper motion of any star (about 10.3 arcsec per year); the nearest single star after the Alpha Centauri system.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 726,
+   "name": "Wolf 359",
+   "also": [],
+   "hip": null,
+   "gliese": "Gl 406",
+   "distance_ly": 7.797,
+   "spectral": "M6",
+   "apparent_mag": 13.45,
+   "light_arriving_2026_11_13_left": "2019-01",
+   "note": "Faint, low-mass M6 red dwarf, about 7.8 ly away; the setting of Star Trek's Battle of Wolf 359.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 141,
+   "name": "Sirius",
+   "also": [
+    "Alpha Canis Majoris"
+   ],
+   "hip": 32349,
+   "gliese": "Gl 244A",
+   "distance_ly": 8.601,
+   "spectral": "A0m...",
+   "apparent_mag": -1.44,
+   "light_arriving_2026_11_13_left": "2018-04",
+   "note": "Brightest star in the night sky. Its white-dwarf companion Sirius B is a separate entry in the data at index 641 (HYG Gl 244B, DA2, 8.60 ly).",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 73,
+   "name": "Epsilon Eridani",
+   "also": [
+    "Ran"
+   ],
+   "hip": 16537,
+   "gliese": "Gl 144",
+   "distance_ly": 10.49,
+   "spectral": "K2V",
+   "apparent_mag": 3.72,
+   "light_arriving_2026_11_13_left": "2016-05",
+   "note": "Young K2 dwarf with a dusty debris disk; one of the first two SETI targets (Project Ozma, 1960).",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 160,
+   "name": "Procyon",
+   "also": [
+    "Alpha Canis Minoris"
+   ],
+   "hip": 37279,
+   "gliese": "Gl 280A",
+   "distance_ly": 11.462,
+   "spectral": "F5IV-V",
+   "apparent_mag": 0.4,
+   "light_arriving_2026_11_13_left": "2015-05",
+   "note": "F5 subgiant, among the ten brightest stars; has a white-dwarf companion, Procyon B.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 446,
+   "name": "61 Cygni A",
+   "also": [],
+   "hip": 104214,
+   "gliese": "Gl 820A",
+   "distance_ly": 11.371,
+   "spectral": "K5V",
+   "apparent_mag": 5.2,
+   "light_arriving_2026_11_13_left": "2015-06",
+   "note": "First star whose distance was measured (Friedrich Bessel, 1838). Its K7 partner 61 Cygni B is index 447.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 464,
+   "name": "Epsilon Indi",
+   "also": [],
+   "hip": 108870,
+   "gliese": "Gl 845",
+   "distance_ly": 11.815,
+   "spectral": "K5V",
+   "apparent_mag": 4.69,
+   "light_arriving_2026_11_13_left": "2015-01",
+   "note": "K5 dwarf visible to the naked eye from the southern hemisphere; orbited by a pair of brown dwarfs.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 34,
+   "name": "Tau Ceti",
+   "also": [],
+   "hip": 8102,
+   "gliese": "Gl 71",
+   "distance_ly": 11.905,
+   "spectral": "G8V",
+   "apparent_mag": 3.49,
+   "light_arriving_2026_11_13_left": "2014-12",
+   "note": "Nearest single G-type (Sun-like) star; with Epsilon Eridani, a Project Ozma SETI target in 1960.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 421,
+   "name": "Altair",
+   "also": [
+    "Alpha Aquilae"
+   ],
+   "hip": 97649,
+   "gliese": "Gl 768",
+   "distance_ly": 16.73,
+   "spectral": "A7IV-V",
+   "apparent_mag": 0.76,
+   "light_arriving_2026_11_13_left": "2010-02",
+   "note": "Spins so fast it is visibly flattened at the poles; one corner of the Summer Triangle.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 397,
+   "name": "Vega",
+   "also": [
+    "Alpha Lyrae"
+   ],
+   "hip": 91262,
+   "gliese": "Gl 721",
+   "distance_ly": 25.045,
+   "spectral": "A0Vvar",
+   "apparent_mag": 0.03,
+   "light_arriving_2026_11_13_left": "2001-10",
+   "note": "Historic zero point of the magnitude scale; one corner of the Summer Triangle; precession will make it the pole star in about 12,000 years.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 484,
+   "name": "Fomalhaut",
+   "also": [
+    "Alpha Piscis Austrini"
+   ],
+   "hip": 113368,
+   "gliese": "Gl 881",
+   "distance_ly": 25.126,
+   "spectral": "A3V",
+   "apparent_mag": 1.17,
+   "light_arriving_2026_11_13_left": "2001-09",
+   "note": "A3V star ringed by a dusty debris belt imaged by Hubble and JWST.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 164,
+   "name": "Pollux",
+   "also": [
+    "Beta Geminorum"
+   ],
+   "hip": 37826,
+   "gliese": "Gl 286",
+   "distance_ly": 33.785,
+   "spectral": "K0IIIvar",
+   "apparent_mag": 1.16,
+   "light_arriving_2026_11_13_left": "1993-01",
+   "note": "Orange K0 giant, often called the nearest giant star to the Sun; has a known giant planet.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 289,
+   "name": "Arcturus",
+   "also": [
+    "Alpha Bootis"
+   ],
+   "hip": 69673,
+   "gliese": "Gl 541",
+   "distance_ly": 36.717,
+   "spectral": "K2IIIp",
+   "apparent_mag": -0.05,
+   "light_arriving_2026_11_13_left": "1990-02",
+   "note": "Brightest star in the northern celestial hemisphere; orange K giant. Its light switched on the 1933 Chicago World's Fair.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 105,
+   "name": "Capella",
+   "also": [
+    "Alpha Aurigae"
+   ],
+   "hip": 24608,
+   "gliese": "Gl 194A",
+   "distance_ly": 42.803,
+   "spectral": "M1: comp",
+   "apparent_mag": 0.08,
+   "light_arriving_2026_11_13_left": "1984-01",
+   "note": "A pair of yellow giants (G8III + G0III) in a 104-day orbit. HYG's spectral field reads 'M1: comp' (a catalogue artefact), and the secondary is a separate HYG entry, Gl 194B, at index 616 (42.20 ly).",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 240,
+   "name": "Denebola",
+   "also": [
+    "Beta Leonis"
+   ],
+   "hip": 57632,
+   "gliese": "Gl 448",
+   "distance_ly": 35.877,
+   "spectral": "A3Vvar",
+   "apparent_mag": 2.14,
+   "light_arriving_2026_11_13_left": "1990-12",
+   "note": "The lion's tail in Leo; A3V star with a debris disk.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 376,
+   "name": "Rasalhague",
+   "also": [
+    "Alpha Ophiuchi"
+   ],
+   "hip": 86032,
+   "gliese": "Gl 681",
+   "distance_ly": 48.586,
+   "spectral": "A5III",
+   "apparent_mag": 2.08,
+   "light_arriving_2026_11_13_left": "1978-04",
+   "note": "Brightest star in Ophiuchus; a fast-spinning A5 giant at 48.6 ly, near the edge of this map.",
+   "grade": "Confirmed"
+  },
+  {
+   "index": 451,
+   "name": "Alderamin",
+   "also": [
+    "Alpha Cephei"
+   ],
+   "hip": 105199,
+   "gliese": "Gl 826",
+   "distance_ly": 49.046,
+   "spectral": "A7IV-V",
+   "apparent_mag": 2.45,
+   "light_arriving_2026_11_13_left": "1977-10",
+   "note": "Brightest star in Cepheus at 49.0 ly, near the map edge; precession will bring it close to the north celestial pole in several thousand years.",
+   "grade": "Confirmed"
+  }
+ ],
+ "facts": [
+  {
+   "text": "The Arecibo message was beamed from Puerto Rico on 16 November 1974, toward the globular cluster M13.",
+   "grade": "Confirmed",
+   "source": "Wikipedia 'Arecibo message' (cites Cornell News), fetched 2026-11-13"
+  },
+  {
+   "text": "By 13 November 2026 the Arecibo message has travelled 51.99 light-years (18990 days at the speed of light; 1 ly = 365.25 days of light travel). That is past the edge of this map: it crossed the 49.90 ly catalogue cut around October 2024.",
+   "grade": "Confirmed",
+   "source": "arithmetic, Python 3.13 datetime"
+  },
+  {
+   "text": "The Arecibo beam points at M13 (RA 16h41m41.24s, Dec +36d27m35.5s, J2000), about 25,000 light-years away, so it will arrive in roughly 25,000 years. Direction in this JSON frame: arecibo_direction.",
+   "grade": "Confirmed",
+   "source": "Wikipedia 'Arecibo message' and 'Messier 13'; direction = frame_rotation x J2000 unit vector"
+  },
+  {
+   "text": "The light from Sirius we see tonight (13 Nov 2026) left it around 2018-04: Sirius is 8.60 ly away in HYG. Each star in 'stars' has light_arriving_2026_11_13_left for the same calculation.",
+   "grade": "Confirmed",
+   "source": "HYG v4.2 distance; arithmetic"
+  },
+  {
+   "text": "Arcturus's light opened the 1933 Chicago World's Fair (A Century of Progress): it was chosen because its light was thought to have left at the time of the previous Chicago fair in 1893. At 36.7 ly, it actually left in 1896.",
+   "grade": "Confirmed",
+   "source": "Wikipedia 'Arcturus' (cites University of Illinois Chicago collection), fetched 2026-11-13"
+  },
+  {
+   "text": "Every radio and TV signal humanity sent after about December 1976 is still inside this map's 49.90 ly sphere; everything earlier has left it. The Apollo 11 landing broadcast (20 July 1969, 20:17 UTC) is now 57.3 ly out.",
+   "grade": "Confirmed",
+   "source": "arithmetic; Apollo 11 landing time from Wikipedia 'Apollo 11'"
+  },
+  {
+   "text": "'A Message From Earth' (501 messages via the RT-70 radar telescope in Ukraine) was sent on 9 October 2008 toward Gliese 581c. Gliese 581 is in this map at index 312, 20.27 ly away in HYG, so the signal is now 18.09 ly out (89 percent of the way) and arrives around January 2029.",
+   "grade": "Confirmed",
+   "source": "Wikipedia 'Gliese 581c' (cites The Telegraph, 9 Oct 2008: 'early 2029'); HYG v4.2 distance; arithmetic",
+   "index": 312
+  },
+  {
+   "text": "Voyager 1, the farthest spacecraft, becomes one light-day from Earth on 19 November 2026, around 02 UTC: JPL Horizons gives a one-way light time of 1439.99 min on 19 Nov 00:00 UT and 1440.11 min on 20 Nov 00:00 UT, and it stays beyond 24 h through mid 2028 (minimum 1441.4 min on 24 Apr 2027). On this map's scale that is 0.0027 ly: still inside the Sun's dot.",
+   "grade": "Confirmed",
+   "source": "JPL Horizons API, target -31, observer table, quantities 20 and 21, queried 2026-11-13"
+  },
+  {
+   "text": "The map's edge is a 15.3 parsec cut, which is 49.90 ly, not exactly 50 ly: HYG v4.2 has exactly 978 stars (Sun excluded) with dist <= 15.3 pc, and the farthest star in stars.json is 49.87 ly from the Sun.",
+   "grade": "Confirmed",
+   "source": "HYG v4.2 CSV; numpy 2.5.4"
+  },
+  {
+   "text": "The JSON frame is a local horizon frame (x east, y north, z up) on the repository's campus site (37.2284 N, 80.4234 W, from geolod-origin.x3d), with J2000 coordinates precessed to about 2027 and local sidereal time about 11h07m: Leo and Ursa Major are high in that sky, Alpha Centauri is below the horizon.",
+   "grade": "Likely",
+   "source": "rotation fit (see frame_rotation.interpretation)"
+  }
+ ],
+ "grading": "grade on each star grades the identification (Confirmed = full catalogue match). Notes are standard astronomy knowledge (Likely) except numbers quoted from HYG. Each fact carries its own grade and source."
+}
