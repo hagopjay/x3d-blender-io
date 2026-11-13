@@ -64,10 +64,13 @@ class RoundTripAuditTests(unittest.TestCase):
         self.assertLess(glb["base"]["orig_to_glb_max"], 1e-4)
         self.assertEqual(audit["material_classes"]["re"], {"Material": 3})
 
-    def test_as_is_shows_the_error_the_audit_is_for(self):
-        audit, glb, _ = self._round_trip("AS_IS")
-        # 0.8 written unchanged under PhysicalMaterial (linear) is drawn as sRGB 0.906
-        self.assertAlmostEqual(audit["fields"]["Material.diffuseColor"]["ordered_max_abs"], 0.1063, places=3)
+    def test_as_is_keeps_the_material_so_the_x3d_leg_is_exact_and_the_glb_shows_the_error(self):
+        audit, glb, re_root = self._round_trip("AS_IS")
+        # Material-lit stays Material-lit, so 0.8 written unchanged is drawn as sRGB 0.8 again. Until the export kept
+        # Materials, the AS_IS leg wrote 0.8 unchanged under PhysicalMaterial (linear), which X_ITE draws as sRGB 0.906:
+        # an error of 0.1063 that this test used to assert (the old expectation was the bug).
+        self.assertLess(audit["fields"]["Material.diffuseColor"]["ordered_max_abs"], 1e-4)
+        self.assertEqual(audit["material_classes"]["re"], {"Material": 3})
         self.assertGreater(glb["base"]["orig_to_glb_max"], 0.15)   # glb baseColorFactor 0.8 against the expected linear 0.604
 
 

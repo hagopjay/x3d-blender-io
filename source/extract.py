@@ -83,6 +83,9 @@ COLOUR_SPACES = ('AS_IS', 'SRGB')
 LIGHTING_MODEL_PROPERTY = "x3d_lighting_model"
 HEADLIGHT_PROPERTY = "x3d_headlight"
 MATERIAL_MODELS = ('classic', 'physical')
+# On a material the import made from a classic Material or TwoSidedMaterial, so the export can write one back in a scene
+# whose lights were fitted for PhysicalMaterials (a file that mixes both).
+MATERIAL_MODEL_PROPERTY = "x3d_material_model"
 
 
 def linear_to_srgb(value):
@@ -1218,6 +1221,7 @@ def extract_scene(
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
     ir_scene.material_model = resolve_material_model(material_model, scene)
+    ir_scene.material_model_forced = str(material_model or "").strip().lower() in MATERIAL_MODELS
     ir_scene.headlight = scene_headlight(scene)
     # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
     ir_scene.background = scene_background(scene)

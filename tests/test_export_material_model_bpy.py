@@ -88,6 +88,20 @@ class ExportMaterialModelTests(unittest.TestCase):
         self.assertIsNone(root.find(".//PhysicalMaterial"))
         self.assertIsNotNone(root.find(".//Material"))
 
+    def test_a_file_that_mixes_both_keeps_each_material_as_it_was(self):
+        path = os.path.join(self.tmpdir, "mixed.x3d")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(SCENE.format(material=PHYSICAL).replace(
+                "</Scene>", "<Transform translation='3 0 0'><Shape><Appearance>" + CLASSIC +
+                "</Appearance><Box/></Shape></Transform></Scene>"))
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
+        self.assertEqual(bpy.context.scene["x3d_lighting_model"], "physical")      # one PhysicalMaterial decides
+        root = self._export()
+        self.assertEqual(len(root.findall(".//PhysicalMaterial")), 1)
+        self.assertEqual(len(root.findall(".//Material")), 1)
+        forced = self._export(material_model="PHYSICAL")
+        self.assertEqual(len(forced.findall(".//PhysicalMaterial")), 2)
+
     def test_a_scene_made_in_blender_stays_physical(self):
         bpy.ops.mesh.primitive_cube_add()
         bpy.context.object.data.materials.append(bpy.data.materials.new("Grey"))

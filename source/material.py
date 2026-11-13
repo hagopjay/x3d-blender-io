@@ -501,6 +501,18 @@ def _mix_alpha(material):
     return _clamp01(_alpha_constant(factor))
 
 
+MATERIAL_MODEL_PROPERTY = "x3d_material_model"
+
+
+def _recorded_model(material):
+    """'classic' when the X3D import made ``material`` from a Material or TwoSidedMaterial, else None."""
+    try:
+        value = str(material.get(MATERIAL_MODEL_PROPERTY) or "").strip().lower()
+    except (AttributeError, TypeError):
+        return None
+    return value if value == "classic" else None
+
+
 def analyze_material(material):
     if not material:
         return None
@@ -564,6 +576,7 @@ def analyze_material(material):
         roughness=roughness,
         specular_level=specular_level,
         specular_tint=specular_tint,
+        model=_recorded_model(material),
         alpha_mode=alpha_mode,
         alpha_cutoff=getattr(material, "alpha_threshold", None),
         double_sided=not getattr(material, "use_backface_culling", False),

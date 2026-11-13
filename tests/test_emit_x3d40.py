@@ -282,6 +282,16 @@ class EmitX3D40Tests(unittest.TestCase):
         self.assertIsNotNone(root.find(".//PhysicalMaterial"))
         self.assertIsNone(root.find(".//Material"))
 
+    def test_a_material_imported_from_a_material_stays_one_in_a_physical_scene(self):
+        """A file that mixes Material and PhysicalMaterial is lit as physical overall, but each shape keeps what it was."""
+        scene = self._classic_scene(base_color=(0.8, 0.8, 0.8, 1.0), model="classic")
+        scene.material_model = "physical"
+        self.assertIsNotNone(self._emit(scene, colour_space="SRGB").find(".//Material"))
+        scene.material_model_forced = True              # the export option chose PhysicalMaterial for everything
+        root = self._emit(scene, colour_space="SRGB")
+        self.assertIsNotNone(root.find(".//PhysicalMaterial"))
+        self.assertIsNone(root.find(".//Material"))
+
     def test_classic_texture_goes_in_the_appearance_texture_field(self):
         scene = self._classic_scene(base_color=(0.8, 0.8, 0.8, 1.0),
                                     base_color_texture=IRTextureRef(image_name="a.png", filepath="a.png", usage="baseColor"))

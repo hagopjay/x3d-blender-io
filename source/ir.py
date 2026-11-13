@@ -106,6 +106,9 @@ class IRPBRMaterial:
     # Material's specularColor and shininess); the classic Material writer turns them back into those two fields.
     specular_level: float | None = None
     specular_tint: tuple[float, float, float] | None = None
+    # 'classic' when the import made this material from a Material or TwoSidedMaterial (it is written as a Material again
+    # unless the export option says otherwise), else None: it follows the scene's ``material_model``.
+    model: str | None = None
     normal_scale: float | None = None
     occlusion_strength: float | None = None
     alpha_mode: str = "OPAQUE"
@@ -368,6 +371,8 @@ class IRScene:
     # How the exported materials are lit: 'classic' (X3D Material, Phong; X_ITE shades it in display space) or
     # 'physical' (PhysicalMaterial, glTF style). Taken from the scene's x3d_lighting_model unless the export option sets it.
     material_model: str = "physical"
+    # True when the export option chose the model (every material then follows it, whatever it was imported as).
+    material_model_forced: bool = False
     # The NavigationInfo headlight the scene had when it was imported (True/False), None when it never had one.
     headlight: bool | None = None
 

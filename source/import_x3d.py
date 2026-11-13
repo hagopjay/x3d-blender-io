@@ -19,7 +19,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
                       METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
@@ -4383,6 +4383,8 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
     if mat_name:
         bpymat[X3D_DEF_PROPERTY] = mat_name
+    if mat:
+        bpymat[MATERIAL_MODEL_PROPERTY] = 'classic'   # a Material or TwoSidedMaterial: the 4.0 export writes one again
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
 
     bpymat_wrap.base_color = diff_color

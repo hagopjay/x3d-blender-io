@@ -144,11 +144,14 @@ def _mfstring(values):
 
 @dataclass(frozen=True)
 class _Look:
-    """How the materials of one export are written: ``classic`` writes an X3D Material (Phong) for every material it can
-    express that way, ``colour_space`` is what the classic colours are encoded for ('SRGB' or 'AS_IS')."""
+    """How the materials of one export are written: ``classic`` is the scene's material model (X3D Materials, Phong, or
+    PhysicalMaterials), ``forced`` that the export option chose it (every material then follows it; otherwise a
+    material the import made from a Material keeps being one), ``colour_space`` what the classic colours are encoded
+    for ('SRGB' or 'AS_IS')."""
 
     classic: bool = False
     colour_space: str = "AS_IS"
+    forced: bool = False
 
 
 _PLAIN_LOOK = _Look()
@@ -157,13 +160,18 @@ _CLASSIC_MAX_METALLIC = 0.1
 
 
 def _is_classic(material, look: _Look) -> bool:
-    """True when ``material`` is written as an X3D Material: the export is classic, and the material is lit (not
-    UnlitMaterial) and expressible as Phong, that is not metallic and without a metallic-roughness texture."""
-    if not look.classic or material is None or material.unlit:
+    """True when ``material`` is written as an X3D Material: it is lit (not an UnlitMaterial), expressible as Phong (not
+    metallic, no metallic-roughness texture), and either the export option chose the classic model or, left to the
+    scene, the material was imported from a Material or the scene's model is classic."""
+    if material is None or material.unlit:
         return False
     if material.metallic is not None and material.metallic > _CLASSIC_MAX_METALLIC:
         return False
-    return material.metallic_roughness_texture is None
+    if material.metallic_roughness_texture is not None:
+        return False
+    if look.forced:
+        return look.classic
+    return look.classic or material.model == "classic"
 
 
 def phong_from_principled(roughness, specular_level, specular_tint):
@@ -919,10 +927,10 @@ def with_display_colours(ir_scene: IRScene, colour_space: str) -> IRScene:
     colours of geometry drawn with one, stay linear: X_ITE lights them the glTF way and the importer keeps them as
     given. Under 'AS_IS' the scene is returned unchanged.
     """
-    classic = ir_scene.material_model == "classic"
-    if colour_space != "SRGB" or not (classic or any(material.unlit for material in ir_scene.materials)):
+    look = _Look(classic=ir_scene.material_model == "classic", colour_space=colour_space,
+                 forced=ir_scene.material_model_forced)
+    if colour_space != "SRGB" or not any(material.unlit or _is_classic(material, look) for material in ir_scene.materials):
         return ir_scene
-    look = _Look(classic=classic, colour_space=colour_space)
     materials = []
     for material in ir_scene.materials:
         if material.unlit:
@@ -952,7 +960,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     if version not in {"4.0", "4.1"}:
         raise ValueError(f"Unsupported X3D version for the modern writer: {version!r}")
     ir_scene = with_display_colours(ir_scene, colour_space)
-    look = _Look(classic=ir_scene.material_model == "classic", colour_space=colour_space)
+    look = _Look(classic=ir_scene.material_model == "classic", colour_space=colour_space,
+                 forced=ir_scene.material_model_forced)
     diagnostics = list(ir_scene.diagnostics)
     if version == "4.0" and ir_scene.splats:
         diagnostics.append(
