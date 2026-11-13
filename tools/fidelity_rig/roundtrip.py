@@ -153,7 +153,8 @@ def main():
         row["viewpoint_pose_diff"] = ra.pose_difference(ra.viewpoint_pose(orig_root), ra.viewpoint_pose(re_root))
         v = row["validation"]
         log(f"   re-export: well-formed {v['well_formed']}, x3d.py {v['x3d_py'] if isinstance(v['x3d_py'], str) else (v['x3d_py'].get('errors'), v['x3d_py'].get('warnings'))}; "
-            f"nodes lost {sorted(row['nodes']['lost'])}")
+            f"nodes lost {sorted(set(row['nodes']['lost']) - set(row['nodes']['by_design']))}"
+            + (f" (by design, X3D 4.0 export: {sorted(row['nodes']['by_design'])})" if row['nodes']['by_design'] else ""))
         json.dump(row, open(f"{out}/audit.json", "w"), indent=1, default=float)
         results.append(row)
         wait = sc.get("wait", 2500)

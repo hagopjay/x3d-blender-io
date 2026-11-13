@@ -88,7 +88,7 @@ noise floor of timers and animation); `render.mjs` renders only X_ITE for those 
 console errors in `xite_console.txt`). `out/LABEL/roundtrip_results.json` has every row. The audit reports:
 
 - the re-export's validity (`source/validate.py` well-formedness, and the `x3d` Python package's field checks when installed);
-- node counts by type, original against re-export (`lost`, `added`, `reduced`, `increased`);
+- node counts by type, original against re-export (`lost`, `added`, `reduced`, `increased`; `by_design` names a lost node the default X3D 4.0 export does not write on purpose, today `GaussianSplats`, with the way out, X3D 4.1);
 - X_ITE original against X_ITE re-export, each at its own first Viewpoint (so the camera round trip is part of the number):
   mean |delta| per pixel (0-255) over the frame, the share of pixels with any channel off by more than 16, the delta over the
   foreground (pixels that differ from the frame's border colour in either image), and FLIP (flip-evaluator, LDR, 67 ppd);

@@ -102,6 +102,13 @@ class IRPBRMaterial:
     emissive_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
     metallic: float | None = None
     roughness: float | None = None
+    # Principled "Specular IOR Level" and "Specular Tint" (the dielectric specular the X3D import builds from a
+    # Material's specularColor and shininess); the classic Material writer turns them back into those two fields.
+    specular_level: float | None = None
+    specular_tint: tuple[float, float, float] | None = None
+    # 'classic' when the import made this material from a Material or TwoSidedMaterial (it is written as a Material again
+    # unless the export option says otherwise), else None: it follows the scene's ``material_model``.
+    model: str | None = None
     normal_scale: float | None = None
     occlusion_strength: float | None = None
     alpha_mode: str = "OPAQUE"
@@ -130,6 +137,9 @@ class IRPBRMaterial:
 @dataclass
 class IRInlineAsset:
     url: str
+    # Where the asset was found when it was imported (absolute); the export writes ``url`` relative to its own folder
+    # from it, since the url as the file gave it is relative to the folder the file lived in.
+    source_path: str | None = None
     asset_type: str = "x3d"
     transform: IRTransform = field(default_factory=IRTransform)
     import_policy: str = "native"
@@ -177,6 +187,10 @@ class IRViewpoint:
     transform: IRTransform = field(default_factory=IRTransform)
     field_of_view: float | None = None
     name: str | None = None
+    # X3D 4.0 Viewpoint nearDistance and farDistance (the camera's clip range), written only when the camera's range is
+    # not Blender's default 0.1 to 1000: a planet-scale view clips everything without them.
+    near_distance: float | None = None
+    far_distance: float | None = None
 
 
 @dataclass
@@ -209,6 +223,9 @@ class IRLight:
     # X3D 4.0 shadows (default FALSE); shadowIntensity (default 1) is written only when set.
     shadows: bool = False
     shadow_intensity: float | None = None
+    # True when the light the file had was not global and lit nothing (no geometry in its scope): it is written with
+    # global="false" again, so it lights nothing in a browser either. Every other light is written global="true".
+    scoped: bool = False
 
 
 @dataclass
@@ -275,6 +292,11 @@ class IRInstance:
     # Set by the extractor when a mesh-like object evaluated to no faces (edge-only mesh, zero vertices, Geometry
     # Nodes output that is only instances). Such an object keeps its Transform but must not get a placeholder Shape.
     no_faces: bool = False
+    # False for an object hidden for render (a Switch's other choices after an import): the Transform gets visible="false"
+    # (X3D 4.0), so the content survives the export without being drawn.
+    visible: bool = True
+    # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
+    line_width: float | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -346,6 +368,13 @@ class IRScene:
     background_color: tuple[float, float, float] | None = None
     # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
     background: IRBackground | None = None
+    # How the exported materials are lit: 'classic' (X3D Material, Phong; X_ITE shades it in display space) or
+    # 'physical' (PhysicalMaterial, glTF style). Taken from the scene's x3d_lighting_model unless the export option sets it.
+    material_model: str = "physical"
+    # True when the export option chose the model (every material then follows it, whatever it was imported as).
+    material_model_forced: bool = False
+    # The NavigationInfo headlight the scene had when it was imported (True/False), None when it never had one.
+    headlight: bool | None = None
 
     def iter_instances(self):
         """Depth-first walk over every instance, nested children included."""

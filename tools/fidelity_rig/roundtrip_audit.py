@@ -68,10 +68,22 @@ def node_counts(root):
     return Counter(e.tag for e in root.iter() if e.tag not in skip)
 
 
+# Nodes the default X3D 4.0 export does not write, by design, with the reason and the way out. `lost` still lists them (the
+# node really is absent from the re-export); `by_design` says which of those are known and why, so a reader does not take
+# them for a defect.
+BY_DESIGN = {
+    "GaussianSplats": "X3D 4.0 has no GaussianSplats node, so the 4.0 export writes the splat centres as a PointSet (scale, "
+                      "opacity and anisotropy are lost) and says so in a meta info; choose X3D Version 'X3D 4.1 draft "
+                      "(GaussianSplats)' to write the node",
+}
+
+
 def count_diff(orig, re_):
-    """Per tag: original count, re-export count. Lost = in the original and not in the re-export."""
+    """Per tag: original count, re-export count. Lost = in the original and not in the re-export; `by_design` = the
+    lost tags that are expected (BY_DESIGN), each with its reason."""
     rows = {t: (orig.get(t, 0), re_.get(t, 0)) for t in sorted(set(orig) | set(re_))}
     return dict(rows=rows,
+                by_design={t: BY_DESIGN[t] for t, v in rows.items() if t in BY_DESIGN and v[0] > 0 and v[1] == 0},
                 lost={t: v for t, v in rows.items() if v[0] > 0 and v[1] == 0},
                 added={t: v for t, v in rows.items() if v[0] == 0 and v[1] > 0},
                 reduced={t: v for t, v in rows.items() if 0 < v[1] < v[0]},

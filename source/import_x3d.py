@@ -19,7 +19,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
                       METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
@@ -3349,6 +3349,7 @@ def finalize_light_units(scene, units=None):
     lit_by_node.clear()
     if scene is None:
         return
+    scene[HEADLIGHT_PROPERTY] = bool(headlight)   # the X3D 4.0 export writes the NavigationInfo headlight back as it was
     try:
         bpy.context.view_layer.update()   # world matrices of objects parented since they were made
     except (AttributeError, RuntimeError):
@@ -4382,6 +4383,8 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
     if mat_name:
         bpymat[X3D_DEF_PROPERTY] = mat_name
+    if mat:
+        bpymat[MATERIAL_MODEL_PROPERTY] = 'classic'   # a Material or TwoSidedMaterial: the 4.0 export writes one again
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
 
     bpymat_wrap.base_color = diff_color
@@ -5575,11 +5578,16 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if bpydata is None:
             logger.warning('ImportX3D warning: empty shape, skipping node "%s"' % vrmlname)
             return
+        if isinstance(bpydata, bpy.types.Mesh) and geom_spec not in LINE_POINT_SPECS:
+            # the file's solid for the export to write back (D14): a classic Material's surface stays two-sided in Blender
+            bpydata[SOLID_PROPERTY] = geom.getFieldAsBool('solid', True, ancestry)
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
             name = bpymat.name if bpymat is not None else (vrmlname or geom_spec)
             bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata))
+            line_properties = appr.getChildBySpec('LineProperties') if appr is not None else None
+            line_width = line_properties.getFieldAsFloat('linewidthScaleFactor', None, ancestry) if line_properties else None
 
         # There are no geometry importers that can legally return
         # no object.  It's either a bpy object, or an exception
@@ -5601,6 +5609,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
                 lit_by_node[node.getRealNode()] = lit
                 lit_surfaces.append((node.blendObject,) + lit)
         tag_x3d_identity(node.blendObject, node, ancestry)
+        if geom_spec in LINE_POINT_SPECS and line_width is not None and node.blendObject is not None:
+            node.blendObject[LINE_WIDTH_PROPERTY] = line_width   # Blender draws no line width; the 4.0 export writes it back
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
@@ -5720,6 +5730,21 @@ def importLamp_SharedFields(bpylamp, node, ancestry):
             bpylamp[prop] = value
 
 
+def _light_scope_has_geometry(node, ancestry):
+    """True when a light that is not global has a Shape (or an Inline, which may hold one) among its parent's other
+    children, at any depth: X3D 4.0 lights those and nothing else. With no known parent it counts as lighting."""
+    parent = ancestry[-1] if ancestry else None
+    if parent is None:
+        return True
+    me = node.getRealNode()
+    for sibling in parent.getRealNode().children:
+        if sibling.getRealNode() is me:
+            continue
+        if sibling.findSpecRecursive('Shape') is not None or sibling.findSpecRecursive('Inline') is not None:
+            return True
+    return False
+
+
 def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     if spec == 'PointLight':
         bpylamp, mtx = importLamp_PointLight(node, ancestry)
@@ -5731,6 +5756,12 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
         logger.warning("Error, not a lamp")
         raise ValueError
     importLamp_SharedFields(bpylamp, node, ancestry)
+    # X3D 4.0 light scoping: Blender has none, so keep the file's `global` (point and spot lights default TRUE, directional
+    # ones FALSE) and whether a light that is not global had any geometry in its scope, for the export (D1)
+    given_global = node.getFieldAsBool('global', spec != 'DirectionalLight', ancestry)
+    bpylamp[LIGHT_GLOBAL_PROPERTY] = bool(given_global)
+    if not given_global:
+        bpylamp[LIGHT_SCOPE_LIT_PROPERTY] = _light_scope_has_geometry(node, ancestry)
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(bpylamp.name, bpylamp)
     bpycollection.objects.link(bpyob)
@@ -6551,6 +6582,7 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
         logger.warning("Can't Inline a file that is already being loaded: %s", resolved)
         return empty
     empty["x3d_inline_resolved_path"] = mfstring.portable_path(resolved, os.path.dirname(current_file_path or ""))
+    INLINE_SOURCE_PATHS[empty.session_uid] = resolved   # session only; the export rebases the url from it (D3)
 
     before = set(bpy.data.objects)
     lower = resolved.lower()

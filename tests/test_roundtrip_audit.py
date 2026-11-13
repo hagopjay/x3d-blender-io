@@ -64,6 +64,12 @@ class ColourAuditTests(unittest.TestCase):
         self.assertIn("PhysicalMaterial", diff["added"])
         self.assertNotIn("Scene", diff["rows"])
 
+    def test_gaussian_splats_lost_in_the_4_0_export_are_reported_as_by_design(self):
+        diff = ra.count_diff({"GaussianSplats": 1, "Shape": 1}, {"PointSet": 1, "Shape": 1})
+        self.assertIn("GaussianSplats", diff["lost"])
+        self.assertIn("X3D 4.1", diff["by_design"]["GaussianSplats"])
+        self.assertEqual(ra.count_diff({"Material": 1}, {})["by_design"], {})
+
     def test_linear_physical_reexport_of_classic_colours_is_exact(self):
         audit = ra.colour_audit(ra.parse(ORIG, text=True), ra.parse(_re_export(ra.srgb_to_linear), text=True))
         self.assertTrue(audit["shapes"]["ordered"])

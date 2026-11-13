@@ -249,9 +249,10 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
              "X3D 3.3 (Material, classic)",
              "Legacy exporter: Phong Material, lights, cameras, hierarchy. Widest viewer support"),
             ('X3D40',
-             "X3D 4.0 (PhysicalMaterial, PBR)",
-             "Physically based materials with glTF-style textures, UVs, normals, vertex colours, DEF/USE sharing, "
-             "hierarchy, lights, cameras, animation and HAnim. Gaussian splats degrade to PointSet"),
+             "X3D 4.0 (Material or PhysicalMaterial)",
+             "PhysicalMaterial (PBR) or, for a scene imported from Material-lit X3D, Material (see Materials), with "
+             "glTF-style textures, UVs, normals, vertex colours, DEF/USE sharing, hierarchy, lights, cameras, "
+             "animation and HAnim. Gaussian splats degrade to PointSet (X3D 4.1 writes GaussianSplats)"),
             ('X3D41',
              "X3D 4.1 draft (GaussianSplats)",
              "Everything in 4.0 plus the draft GaussianSplats node for splat point clouds. "
@@ -266,6 +267,14 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
                ('SRGB', translate(lang, "color_space_srgb"), translate(lang, "export_color_space_srgb_description"))),
         default='AUTO',
         description=translate(lang, "export_color_space_description"),
+    )
+    material_model: EnumProperty(
+        name=translate(lang, "export_material_model"),
+        items=(('AUTO', translate(lang, "material_model_auto"), translate(lang, "material_model_auto_description")),
+               ('CLASSIC', translate(lang, "material_model_classic"), translate(lang, "material_model_classic_description")),
+               ('PHYSICAL', translate(lang, "material_model_physical"), translate(lang, "material_model_physical_description"))),
+        default='AUTO',
+        description=translate(lang, "export_material_model_description"),
     )
     use_animation: BoolProperty(
         name="Animation",
@@ -572,6 +581,9 @@ def export_ui_include(layout, operator):
     if body:
         body.prop(operator, "x3d_version")
         body.prop(operator, "color_space")
+        sub = body.column()
+        sub.enabled = operator.x3d_version in {'X3D40', 'X3D41'}
+        sub.prop(operator, "material_model")
         row = body.row(align=True)
         row.prop(operator, "batch_mode")
         sub = row.row(align=True)
