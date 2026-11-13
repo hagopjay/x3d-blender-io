@@ -38,6 +38,8 @@ SPLAT_SCALE_ATTR = "splat_scale"
 SPLAT_ROTATION_ATTR = "splat_rotation"
 SPLAT_OPACITY_ATTR = "splat_opacity"
 SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
+# A line set's LineProperties linewidthScaleFactor, kept on the object by the importer (Blender draws no line width).
+LINE_WIDTH_PROPERTY = "x3d_line_width"
 INLINE_URL_PROPERTY = "x3d_inline_url"
 INLINE_SOURCE_PROPERTY = "x3d_inline_source"
 # Where each Inline asset was found at import: the placeholder empty's ``session_uid`` -> absolute path. Kept in this
@@ -117,6 +119,15 @@ METADATA_NODE_TYPES = frozenset(
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+
+
+def _line_width(obj):
+    """The LineProperties linewidthScaleFactor the import kept on a line object, else None."""
+    try:
+        width = float(obj.get(LINE_WIDTH_PROPERTY))
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return width if math.isfinite(width) and width >= 0.0 else None
 
 
 def _session_uid(obj):
@@ -393,8 +404,11 @@ def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None) -> list[IRMeshGe
     for line in lines:
         coord_index.extend(remap[v] for v in line)
         coord_index.append(-1)
+    # a line set's colours (the import's POINT colour attribute, one per vertex) go back as a Color / ColorRGBA node
+    color_at, color_domain = _color_values(mesh)
+    color = [color_at(old) for old in used] if color_at is not None and color_domain == "POINT" else []
     return [IRMeshGeometry(name=name, coord=coord, coord_index=coord_index, source_mesh=name,
-                           orig_vertex_index=used, is_lines=True)]
+                           orig_vertex_index=used, is_lines=True, color=color)]
 
 
 
@@ -1343,6 +1357,7 @@ def extract_scene(
             object_type=obj.type,
             transform=_matrix_transform(local_matrix),
         )
+        instance.visible = not bool(getattr(obj, "hide_render", False))
         objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
 
         if obj.name in skinned_names:
@@ -1377,6 +1392,7 @@ def extract_scene(
             instance.shapes = shapes
             instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
             instance.metadata = object_metadata(obj.get(METADATA_PROPERTY))
+            instance.line_width = _line_width(obj)
             if shapes:
                 instance.geometry_name = shapes[0].geometry_name
                 instance.material_name = shapes[0].material_name

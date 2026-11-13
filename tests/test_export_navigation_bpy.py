@@ -88,6 +88,15 @@ class ExportNavigationTests(unittest.TestCase):
         self.assertAlmostEqual(float(viewpoint.attrib["nearDistance"]), 2.0, places=4)
         self.assertAlmostEqual(float(viewpoint.attrib["farDistance"]), 50000.0, places=1)
 
+    def test_hidden_switch_choices_are_written_invisible_not_visible(self):
+        # a Switch's other choices are imported hidden; the export wrote them visible, so every choice was drawn
+        # (habsburg-unlit-color: the silver marks of the cards the page had switched off)
+        self._import("<Switch whichChoice='0'><Shape DEF='Shown'><Box/></Shape><Shape DEF='Hidden'><Box/></Shape></Switch>")
+        root = self._export()
+        flags = {t.attrib["DEF"]: t.attrib.get("visible", "true") for t in root.iter("Transform")
+                 if t.attrib.get("DEF") in ("OB_Shown", "OB_Hidden")}
+        self.assertEqual(flags, {"OB_Shown": "true", "OB_Hidden": "false"})
+
 
 if __name__ == "__main__":
     unittest.main()

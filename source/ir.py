@@ -286,6 +286,11 @@ class IRInstance:
     # Set by the extractor when a mesh-like object evaluated to no faces (edge-only mesh, zero vertices, Geometry
     # Nodes output that is only instances). Such an object keeps its Transform but must not get a placeholder Shape.
     no_faces: bool = False
+    # False for an object hidden for render (a Switch's other choices after an import): the Transform gets visible="false"
+    # (X3D 4.0), so the content survives the export without being drawn.
+    visible: bool = True
+    # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
+    line_width: float | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.

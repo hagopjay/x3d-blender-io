@@ -231,7 +231,7 @@ def _classic_material_xml(material, material_def, indent, look: _Look, *, output
     transparency = max(0.0, min(1.0, 1.0 - alpha))
     shininess, specular = phong_from_principled(material.roughness, material.specular_level, material.specular_tint)
     space = look.colour_space
-    attrs = [f'DEF="{material_def}"',
+    attrs = ([f'DEF="{material_def}"'] if material_def else []) + [
              f'diffuseColor="{_fmt3(_sfcolor(display_colour(material.base_color[:3], space)))}"']
     if max(specular) > 0.0005:
         attrs.append(f'specularColor="{_fmt3(_sfcolor(display_colour(specular, space)))}"')
@@ -265,7 +265,7 @@ def _material_xml(material, material_def, indent, *, output_dir=None):
     tag = "UnlitMaterial" if material.unlit else "PhysicalMaterial"
     alpha = material.base_color[3] if len(material.base_color) > 3 else 1.0
     transparency = max(0.0, min(1.0, 1.0 - alpha))
-    attrs = [f'DEF="{material_def}"']
+    attrs = [f'DEF="{material_def}"'] if material_def else []
     textures = []
 
     if material.unlit:
@@ -304,11 +304,15 @@ def _material_xml(material, material_def, indent, *, output_dir=None):
     return f"{indent}<{tag} {' '.join(attrs)} />\n"
 
 
-def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK):
-    app_def = defs.get("appearance", material.name, "APP_")
-    if not defs.first_use("appearance", material.name):
+def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK, line_width=None):
+    """The Appearance of ``material``. ``line_width`` (a LineProperties linewidthScaleFactor) gives the line shapes of
+    that width an Appearance of their own, with the material written again without a DEF, since a LineProperties is part
+    of the Appearance a shape shares."""
+    key = material.name if line_width is None else f"{material.name}@lw{_fmt_short(line_width)}"
+    app_def = defs.get("appearance", key, "APP_")
+    if not defs.first_use("appearance", key):
         return f'{indent}<Appearance USE="{app_def}" />\n'
-    material_def = defs.get("material", material.name, "MA_")
+    material_def = defs.get("material", material.name, "MA_") if line_width is None else None
     attrs = [f'DEF="{app_def}"']
     if material.alpha_mode == "BLEND":
         attrs.append('alphaMode="BLEND"')
@@ -324,6 +328,8 @@ def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look:
     else:
         xml.append(_material_xml(material, material_def, indent + "  ", output_dir=output_dir))
     xml.append(_texture_transform_xml(material, indent + "  "))
+    if line_width is not None:
+        xml.append(f'{indent}  <LineProperties linewidthScaleFactor="{_fmt_short(line_width)}" />\n')
     xml.append(f"{indent}</Appearance>\n")
     return "".join(xml)
 
@@ -349,11 +355,21 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     if not defs.first_use("geometry", geometry.name):
         return f'{indent}<{node} USE="{geometry_def}" />\n'
     if geometry.is_lines:
-        return (
-            f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n'
-            f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n'
-            f"{indent}</IndexedLineSet>\n"
-        )
+        xml = [
+            f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n',
+            f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n',
+        ]
+        if geometry.color and len(geometry.color) == len(geometry.coord):
+            # one colour per vertex, which X3D draws in place of the material's emissiveColor (a Color node: colorIndex
+            # follows coordIndex); ColorRGBA only when an alpha is below 1
+            if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
+                values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
+                xml.append(f'{indent}  <ColorRGBA color="{values}" />\n')
+            else:
+                values = " ".join(_fmt3(_sfcolor(color[:3])) for color in geometry.color)
+                xml.append(f'{indent}  <Color color="{values}" />\n')
+        xml.append(f"{indent}</IndexedLineSet>\n")
+        return "".join(xml)
     attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
     if not geometry.solid:
         attrs.append('solid="false"')
@@ -540,11 +556,12 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
     sx, sy, sz = instance.transform.scale
     transform_def = defs.get("transform", instance.object_name, "OB_")
+    visible_attr = "" if instance.visible else ' visible="false"'
     xml = [
         f'{indent}<Transform DEF="{transform_def}" '
         f'translation="{_fmt3_length((tx, ty, tz))}" '
         f'rotation="{_fmt4((rx, ry, rz, ra))}" '
-        f'scale="{_fmt3_length((sx, sy, sz))}">\n'
+        f'scale="{_fmt3_length((sx, sy, sz))}"{visible_attr}>\n'
     ]
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
     for index, shape in enumerate(instance.iter_shapes()):
@@ -552,11 +569,13 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         if index == 0 and instance.metadata is not None:
             xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata"))
         material = materials.get(shape.material_name) if shape.material_name else None
+        geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
+        line_width = instance.line_width if geometry is not None and geometry.is_lines else None
         if material is not None:
-            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look))
+            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look,
+                                       line_width=line_width))
         else:
             xml.append(_default_appearance_xml(indent + "    ", look))
-        geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
         if geometry is not None:
             xml.append(_geometry_xml(geometry, defs, indent + "    "))
         elif shape.primitive:

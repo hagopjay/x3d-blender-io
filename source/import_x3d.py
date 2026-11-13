@@ -19,7 +19,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, INLINE_SOURCE_PATHS, LINE_WIDTH_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
                       METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
@@ -5581,6 +5581,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
             name = bpymat.name if bpymat is not None else (vrmlname or geom_spec)
             bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata))
+            line_properties = appr.getChildBySpec('LineProperties') if appr is not None else None
+            line_width = line_properties.getFieldAsFloat('linewidthScaleFactor', None, ancestry) if line_properties else None
 
         # There are no geometry importers that can legally return
         # no object.  It's either a bpy object, or an exception
@@ -5602,6 +5604,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
                 lit_by_node[node.getRealNode()] = lit
                 lit_surfaces.append((node.blendObject,) + lit)
         tag_x3d_identity(node.blendObject, node, ancestry)
+        if geom_spec in LINE_POINT_SPECS and line_width is not None and node.blendObject is not None:
+            node.blendObject[LINE_WIDTH_PROPERTY] = line_width   # Blender draws no line width; the 4.0 export writes it back
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
