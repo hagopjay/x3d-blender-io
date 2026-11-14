@@ -132,7 +132,7 @@ def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
     raw = aliases.get(raw, raw)
     if not raw and scene is not None:
         try:
-            recorded = scene.get(COLOUR_SPACE_PROPERTY)
+            recorded = imported_scene_property(scene, COLOUR_SPACE_PROPERTY)
         except (AttributeError, TypeError):
             recorded = None
         raw = aliases.get(str(recorded or "").strip().upper(), str(recorded or "").strip().upper())
@@ -154,6 +154,66 @@ METADATA_NODE_TYPES = frozenset(
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+# The headlight level an import in classic light units matched (a rig and diagnostics value; the export does not read it).
+HEADLIGHT_LUX_PROPERTY = "x3d_headlight_lux"
+# Set by the importer on every object it makes. The scene-level properties below describe what an import brought in, so
+# they stop applying when none of that content is left in the scene (scene_has_imported_content).
+IMPORTED_OBJECT_PROPERTY = "x3d_imported"
+SCENE_IMPORT_PROPERTIES = (COLOUR_SPACE_PROPERTY, LIGHTING_MODEL_PROPERTY, HEADLIGHT_PROPERTY, HEADLIGHT_LUX_PROPERTY,
+                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY)
+# What marks content of a file imported before IMPORTED_OBJECT_PROPERTY existed: a DEF, USE or Inline record on the
+# object, a primitive, solid, light or splat record on its data (the importer's own names; extract cannot import them).
+_IMPORTED_OBJECT_MARKS = (IMPORTED_OBJECT_PROPERTY, "x3d_def", "x3d_def_path", "x3d_use", INLINE_URL_PROPERTY)
+_IMPORTED_DATA_MARKS = ("x3d_def", SOLID_PROPERTY, "x3d_primitive", LIGHT_INTENSITY_PROPERTY, SPLAT_PROPERTY)
+
+
+def is_imported_object(obj) -> bool:
+    """True for an object the X3D import made (see IMPORTED_OBJECT_PROPERTY and the older marks above)."""
+    try:
+        if any(key in obj for key in _IMPORTED_OBJECT_MARKS):
+            return True
+        data = getattr(obj, "data", None)
+        return data is not None and any(key in data for key in _IMPORTED_DATA_MARKS)
+    except (TypeError, ReferenceError):
+        return False
+
+
+def scene_has_imported_content(scene) -> bool:
+    """True while ``scene`` still holds an object an X3D import made. A stand-in without ``objects`` (not a Blender
+    scene) counts as holding some: there is nothing to check, so its properties are trusted."""
+    objects = getattr(scene, "objects", None)
+    if objects is None:
+        return True
+    return any(is_imported_object(obj) for obj in objects)
+
+
+def imported_scene_property(scene, key):
+    """The value the import kept on ``scene`` under ``key``, or None when it was never set or the scene no longer holds
+    imported content: the flags are the file's (its headlight, its lighting model, its Background), and once the imported
+    objects are gone the scene is a Blender scene again, whatever it was imported from."""
+    try:
+        value = scene.get(key)
+    except (AttributeError, TypeError):
+        return None
+    if value is None or not scene_has_imported_content(scene):
+        return None
+    return value
+
+
+def clear_stale_scene_properties(scene) -> bool:
+    """Drop the scene-level import properties when the scene holds no imported content, so the next import starts from
+    a clean scene (a file without a Background or animation must not inherit an earlier file's). True if any were."""
+    if scene is None or scene_has_imported_content(scene):
+        return False
+    cleared = False
+    for key in SCENE_IMPORT_PROPERTIES:
+        try:
+            if key in scene:
+                del scene[key]
+                cleared = True
+        except (TypeError, KeyError, ReferenceError):
+            continue
+    return cleared
 
 
 def _line_width(obj):
@@ -185,18 +245,16 @@ def resolve_material_model(value=None, scene=None, default='physical'):
         raw = ""
     if not raw and scene is not None:
         try:
-            raw = str(scene.get(LIGHTING_MODEL_PROPERTY) or "").strip().lower()
+            raw = str(imported_scene_property(scene, LIGHTING_MODEL_PROPERTY) or "").strip().lower()
         except (AttributeError, TypeError):
             raw = ""
     return raw if raw in MATERIAL_MODELS else default
 
 
 def scene_headlight(scene):
-    """The headlight the import recorded for the scene (True or False), None for a scene that was not imported."""
-    try:
-        recorded = scene.get(HEADLIGHT_PROPERTY)
-    except (AttributeError, TypeError):
-        return None
+    """The headlight the import recorded for the scene (True or False), None for a scene that was not imported or no
+    longer holds what was."""
+    recorded = imported_scene_property(scene, HEADLIGHT_PROPERTY)
     if recorded is None:
         return None
     return bool(recorded)
@@ -809,7 +867,7 @@ def _direction_neg_z(matrix):
 def scene_head_meta(scene) -> list[tuple[str, str]]:
     """The (name, content) pairs of the head meta the importer kept on ``scene``, in file order."""
     entries = []
-    for item in scene.get(HEAD_META_PROPERTY) or ():
+    for item in imported_scene_property(scene, HEAD_META_PROPERTY) or ():
         get = getattr(item, "get", None)
         if get is None:
             continue
@@ -844,7 +902,7 @@ def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
 
 def scene_background(scene) -> IRBackground | None:
     """The Background the importer kept on ``scene``, or None when there is none (or it has no sky colour)."""
-    stored = scene.get(BACKGROUND_PROPERTY)
+    stored = imported_scene_property(scene, BACKGROUND_PROPERTY)
     get = getattr(stored, "get", None)
     if get is None:
         return None

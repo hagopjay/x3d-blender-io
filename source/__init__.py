@@ -231,6 +231,12 @@ def import_ui_mesh(layout, operator):
         line.prop(operator, "light_units")
 
 
+def _scene_imported_animation(scene):
+    """True for a scene whose X3D import made animation and which still holds imported content."""
+    from .extract import IMPORTED_ANIMATION_PROPERTY, imported_scene_property
+    return bool(imported_scene_property(scene, IMPORTED_ANIMATION_PROPERTY))
+
+
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ExportX3D(bpy.types.Operator, ExportHelper):
     """Export selection to Extensible 3D file (.x3d)"""
@@ -543,7 +549,7 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
     )
 
     def invoke(self, context, event):
-        if not self.properties.is_property_set("use_animation") and context.scene.get("x3d_imported_animation"):
+        if not self.properties.is_property_set("use_animation") and _scene_imported_animation(context.scene):
             self.use_animation = True   # the dialog shows what the export will do
         return super().invoke(context, event)
 
@@ -570,7 +576,7 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         keywords["global_matrix"] = global_matrix
         if self.meta_license == 'CUSTOM' and self.meta_license_custom:
             keywords["meta_license"] = self.meta_license_custom
-        if not self.properties.is_property_set("use_animation") and context.scene.get("x3d_imported_animation"):
+        if not self.properties.is_property_set("use_animation") and _scene_imported_animation(context.scene):
             # a scene imported from X3D with interpolators keeps its animation, unless Animation was set (off) by hand
             keywords["use_animation"] = True
 

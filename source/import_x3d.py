@@ -23,7 +23,8 @@ from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROP
                       IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
-                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, record_inline_source, scene_head_meta)
+                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, record_inline_source, scene_head_meta,
+                      HEADLIGHT_LUX_PROPERTY, IMPORTED_OBJECT_PROPERTY, LIGHTING_MODEL_PROPERTY, clear_stale_scene_properties)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -3473,8 +3474,8 @@ def finalize_light_units(scene, units=None):
         data[LIGHT_ENERGY_PER_INTENSITY_PROPERTY] = energy / unit
         data.energy = energy if intensity > 0.0 and not dark else 0.0
         hold_colour(data)
-    scene["x3d_lighting_model"] = 'classic' if classic else 'physical'
-    scene["x3d_headlight_lux"] = headlight_lux if classic else 1.0
+    scene[LIGHTING_MODEL_PROPERTY] = 'classic' if classic else 'physical'
+    scene[HEADLIGHT_LUX_PROPERTY] = headlight_lux if classic else 1.0
 
 
 def resolve_circle_divisions(value=None, default=16):
@@ -7570,6 +7571,10 @@ def load(context,
 
     paths = [os.path.join(directory, name.name) for name in files] if files else [filepath]
 
+    if getattr(context, "scene", None) is not None:
+        # a scene whose imported objects were deleted carries the last file's headlight, lighting model, Background and
+        # animation mark; the file coming in must not inherit the ones it does not set itself
+        clear_stale_scene_properties(context.scene)
     objects_before = {ob.name for ob in bpy.data.objects}
     actions_before = {action.name for action in bpy.data.actions}
     for file in paths:
@@ -7585,6 +7590,8 @@ def load(context,
                 )
     finalize_lod()
     new_objects = [ob for ob in bpy.data.objects if ob.name not in objects_before]
+    for ob in new_objects:
+        ob[IMPORTED_OBJECT_PROPERTY] = True     # what the scene-level flags (headlight, lighting model...) apply to
     # Blender inverts parent matrices in float32: an Inline under scale 1e-16 (one unit = one light-year) would
     # export to glTF about 1e8 too small. Move such scales onto the children; no world matrix changes.
     matrix_safety.push_scale_to_children(new_objects)
