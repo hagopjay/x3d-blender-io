@@ -78,6 +78,30 @@ class ExportInlineTests(unittest.TestCase):
         info = [m.attrib["content"] for m in root.iter("meta") if m.attrib.get("name") == "info"]
         self.assertTrue(any("missing.x3d" in text and "not found" in text for text in info), info)
 
+    def _placeholders(self):
+        return [ob for ob in bpy.context.scene.objects if ob.get("x3d_inline_url")]
+
+    def test_an_edited_url_is_not_overridden_by_where_the_import_found_the_old_one(self):
+        # review round 1 (emitter F3): the recorded import path won over the url the user typed afterwards
+        self._import_stage("parts/part.x3d")
+        os.makedirs(os.path.join(self.out, "alt"))
+        with open(os.path.join(self.out, "alt", "other.x3d"), "w", encoding="utf-8") as handle:
+            handle.write(PART)
+        self._placeholders()[0]["x3d_inline_url"] = "alt/other.x3d"
+        root, _path = self._export()
+        self.assertEqual(root.find(".//Inline").attrib["url"].strip('"'), "alt/other.x3d")
+
+    def test_a_duplicated_placeholder_is_rebased_like_its_original(self):
+        # review round 1 (emitter F4): the copy has a new session id, so only the original found its target
+        self._import_stage("parts/part.x3d")
+        original = self._placeholders()[0]
+        copy = original.copy()
+        copy.name = "Copy"
+        bpy.context.scene.collection.objects.link(copy)
+        root, _path = self._export()
+        urls = [i.attrib["url"].strip('"') for i in root.iter("Inline")]
+        self.assertEqual(urls, ["../../src/parts/part.x3d"] * 2)
+
 
 if __name__ == "__main__":
     unittest.main()

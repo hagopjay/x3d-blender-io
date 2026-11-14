@@ -48,8 +48,28 @@ INLINE_SOURCE_PROPERTY = "x3d_inline_source"
 # Where each Inline asset was found at import: the placeholder empty's ``session_uid`` -> absolute path. Kept in this
 # session only (an absolute path in a custom property would travel into a glb's extras and .blend files and name the
 # importing machine's folders; the portable x3d_inline_resolved_path is relative to the importing file), so the
-# export can write the Inline's url relative to its own folder (export_pipeline.resolve_inline_urls).
-INLINE_SOURCE_PATHS: dict[int, str] = {}
+# export can write the Inline's url relative to its own folder (export_pipeline.resolve_inline_urls). The value is the
+# url the empty got at import together with the path, so a url edited afterwards is not overridden by the old location.
+INLINE_SOURCE_PATHS: dict[int, tuple[str, str]] = {}
+# The same paths by the url they were found for: a duplicated placeholder has no entry of its own and takes the path its
+# url was imported with, when that is unambiguous.
+INLINE_SOURCE_BY_URL: dict[str, set[str]] = {}
+
+
+def record_inline_source(uid, url, path):
+    """Remember where the Inline ``url`` of the placeholder with session id ``uid`` was found at import."""
+    INLINE_SOURCE_PATHS[uid] = (url, path)
+    INLINE_SOURCE_BY_URL.setdefault(url, set()).add(path)
+
+
+def inline_source_path(uid, url):
+    """The absolute path the import found for ``url``: the placeholder's own record while its url is unchanged, for a
+    placeholder with no record (a duplicate) the single path any import found for that url, else None."""
+    record = INLINE_SOURCE_PATHS.get(uid)
+    if record is not None:
+        return record[1] if record[0] == url else None
+    paths = INLINE_SOURCE_BY_URL.get(url)
+    return next(iter(paths)) if paths and len(paths) == 1 else None
 # X3D light fields with no Blender setting, kept on the light data by the importer.
 LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
@@ -1448,7 +1468,7 @@ def extract_scene(
         elif obj.type == "EMPTY":
             inline_url = obj.get(INLINE_URL_PROPERTY)
             if inline_url:
-                instance.inline = IRInlineAsset(url=str(inline_url), source_path=INLINE_SOURCE_PATHS.get(_session_uid(obj)))
+                instance.inline = IRInlineAsset(url=str(inline_url), source_path=inline_source_path(_session_uid(obj), str(inline_url)))
             ir_scene.object_names.append(obj.name)
         else:
             skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1
