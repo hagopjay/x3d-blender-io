@@ -103,7 +103,14 @@ class BragPageFindingsTests(unittest.TestCase):
         bsdf = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
         base = bsdf.inputs["Base Color"]
         self.assertTrue(base.links, "Base Color does not read the Color node")
-        self.assertEqual(base.links[0].from_node.bl_idname, "ShaderNodeVertexColor")
+        # the Color node multiplies baseColor (X_ITE 16.7.1 and glTF); before it replaced it: the old expectation here was
+        # a Base Color fed by the colour attribute alone, which dropped the 0.2 from Blender and from the glb
+        mix = base.links[0].from_node
+        self.assertEqual(mix.bl_idname, "ShaderNodeMix")
+        self.assertEqual(mix.blend_type, "MULTIPLY")
+        color_a, color_b = (s for s in mix.inputs if s.type == "RGBA")
+        self.assertEqual(color_a.links[0].from_node.bl_idname, "ShaderNodeVertexColor")
+        self.assertAlmostEqual(color_b.default_value[0], 0.2, places=4)
         self.assertAlmostEqual(base.default_value[0], 0.2, places=4)  # baseColor kept for the X3D export
         glb = os.path.join(self.tmp, "physical.glb")
         self.assertEqual(bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB"), {"FINISHED"})
@@ -116,6 +123,8 @@ class BragPageFindingsTests(unittest.TestCase):
         # under a PhysicalMaterial the Color stays linear: 0.456 is kept as given
         reds = {round(values[i], 2) for i in range(0, len(values), width)}
         self.assertIn(0.46, reds)
+        factor = gltf["materials"][0]["pbrMetallicRoughness"].get("baseColorFactor", [1, 1, 1, 1])
+        self.assertAlmostEqual(factor[0], 0.2, places=3)   # baseColor reaches the glb beside COLOR_0, which multiplies it
 
     def test_glb_extras_carry_no_absolute_inline_path(self):
         child = os.path.join(self.tmp, "parts", "child.x3d")

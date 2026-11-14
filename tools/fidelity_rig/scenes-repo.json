@@ -1,0 +1,204 @@
+[
+ {
+  "name": "p1-point-physical",
+  "x3d": "probes/p1-point-physical.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p2-point-classic",
+  "x3d": "probes/p2-point-classic.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p3-directional-classic-i1",
+  "x3d": "probes/p3-directional-classic-i1.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p4-point-quadratic-physical",
+  "x3d": "probes/p4-point-quadratic-physical.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p5-directional-physical-i03",
+  "x3d": "probes/p5-directional-physical-i03.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "stars-view",
+  "x3d": "../../docs/brag/poc1/stars-view.x3d"
+ },
+ {
+  "name": "asterion",
+  "x3d": "../../docs/brag/showpieces/asterion/asterion.x3d"
+ },
+ {
+  "name": "lumen",
+  "x3d": "../../docs/brag/showpieces/lumen/lumen.x3d"
+ },
+ {
+  "name": "prismatica-aurora-cathedral",
+  "x3d": "../../docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d"
+ },
+ {
+  "name": "annotation-standard",
+  "x3d": "../../docs/showcase/scenes/annotation-standard.x3d"
+ },
+ {
+  "name": "annotation",
+  "x3d": "../../docs/showcase/scenes/annotation.x3d"
+ },
+ {
+  "name": "ellipsoid-earth",
+  "x3d": "../../docs/showcase/scenes/ellipsoid-earth.x3d"
+ },
+ {
+  "name": "ellipsoid-moon",
+  "x3d": "../../docs/showcase/scenes/ellipsoid-moon.x3d"
+ },
+ {
+  "name": "geolod-no-origin",
+  "x3d": "../../docs/showcase/scenes/geolod-no-origin.x3d"
+ },
+ {
+  "name": "geolod-origin",
+  "x3d": "../../docs/showcase/scenes/geolod-origin.x3d"
+ },
+ {
+  "name": "lights-after",
+  "x3d": "../../docs/showcase/scenes/lights-after.x3d"
+ },
+ {
+  "name": "lights-before",
+  "x3d": "../../docs/showcase/scenes/lights-before.x3d"
+ },
+ {
+  "name": "lod-control",
+  "x3d": "../../docs/showcase/scenes/lod-control.x3d"
+ },
+ {
+  "name": "lod-scaled",
+  "x3d": "../../docs/showcase/scenes/lod-scaled.x3d"
+ },
+ {
+  "name": "nurbs-weights-premultiplied",
+  "x3d": "../../docs/showcase/scenes/nurbs-weights-premultiplied.x3d"
+ },
+ {
+  "name": "nurbs-weights",
+  "x3d": "../../docs/showcase/scenes/nurbs-weights.x3d"
+ },
+ {
+  "name": "profile-tables-fixed",
+  "x3d": "../../docs/showcase/scenes/profile-tables-fixed.x3d"
+ },
+ {
+  "name": "profile-tables",
+  "x3d": "../../docs/showcase/scenes/profile-tables.x3d"
+ },
+ {
+  "name": "quaternion-wxyz",
+  "x3d": "../../docs/showcase/scenes/quaternion-wxyz.x3d"
+ },
+ {
+  "name": "quaternion-xyzw",
+  "x3d": "../../docs/showcase/scenes/quaternion-xyzw.x3d"
+ },
+ {
+  "name": "repair-0-written",
+  "x3d": "../../docs/showcase/scenes/repair-0-written.x3d"
+ },
+ {
+  "name": "repair-1-validator",
+  "x3d": "../../docs/showcase/scenes/repair-1-validator.x3d"
+ },
+ {
+  "name": "repair-2-render",
+  "x3d": "../../docs/showcase/scenes/repair-2-render.x3d"
+ },
+ {
+  "name": "stars-splats",
+  "x3d": "../../docs/showcase/scenes/stars-splats.x3d"
+ },
+ {
+  "name": "stars-view-poc1",
+  "x3d": "../../docs/showcase/scenes/stars-view.x3d"
+ },
+ {
+  "name": "stilllife-splats-24k",
+  "x3d": "../../docs/showcase/scenes/stilllife-splats-24k.x3d"
+ },
+ {
+  "name": "stilllife-stage",
+  "x3d": "../../docs/showcase/scenes/stilllife-stage.x3d"
+ },
+ {
+  "name": "stilllife-x3d40",
+  "x3d": "../../docs/showcase/scenes/stilllife-x3d40.x3d"
+ }
+]

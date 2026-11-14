@@ -16,7 +16,7 @@ if str(SOURCE_DIR) not in sys.path:
 
 from ir import IRGaussianSplats
 from splat_io import (
-    read_antimatter_splat, read_ply, read_splats, rgb_to_sh0, sh0_to_rgb, write_antimatter_splat, write_ply,
+    read_antimatter_splat, read_ply, read_splats, display_to_linear, rgb_to_sh0, sh0_to_rgb, write_antimatter_splat, write_ply,
 )
 
 
@@ -35,6 +35,11 @@ def _sample(count=5, degree=2):
 
 
 class SplatIOTests(unittest.TestCase):
+    def test_display_to_linear_is_the_srgb_decode(self):
+        self.assertEqual(display_to_linear((0.0, 1.0, 0.04045))[:2], (0.0, 1.0))
+        for got, want in zip(display_to_linear((0.5, 0.2, 0.9)), (0.21404114, 0.03310477, 0.78741200)):
+            self.assertAlmostEqual(got, want, places=6)
+
     def test_sh0_rgb_round_trip(self):
         rgb = (0.1, 0.5, 0.9)
         back = sh0_to_rgb(rgb_to_sh0(rgb))

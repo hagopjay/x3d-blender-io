@@ -25,8 +25,8 @@ from .material_node_search import (analyze_material, imageTexture_in_material, g
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
 from .matrix_safety import inverted64
-from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, light_attenuation, light_colour,
-                      light_intensity, light_radius, resolve_export_colour_space)
+from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, is_lod_hidden, light_attenuation,
+                      light_colour, light_intensity, light_radius, resolve_export_colour_space)
 
 # h3d defines
 H3D_TOP_LEVEL = 'TOP_LEVEL_TI'
@@ -1788,6 +1788,9 @@ def export(file,
         if use_visible:
             objects = tuple(obj for obj in objects if obj.visible_get())
 
+        # an LOD level the importer hid is not written, as in the X3D 4.0 export
+        objects = [obj for obj in objects if not is_lod_hidden(obj)]
+
         light_space['value'] = color_space if any(
             obj.type in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'} and any(slot.material for slot in obj.material_slots)
             for obj in objects) else 'AS_IS'
@@ -1881,6 +1884,7 @@ def save(context,
          use_animation=False,
          animation_step=1,
          color_space='AUTO',
+         material_model='AUTO',
          ):
     from .export_pipeline import ExportSettings, save as pipeline_save
 
@@ -1917,6 +1921,7 @@ def save(context,
         use_animation=use_animation,
         animation_step=animation_step,
         color_space=resolve_export_colour_space(color_space, getattr(context, "scene", None)),
+        material_model=material_model,
     )
     logger.info("save: colour space %s", settings.color_space)
 

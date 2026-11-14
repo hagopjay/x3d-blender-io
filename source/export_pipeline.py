@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 import os
 from typing import Callable
 
@@ -13,8 +14,12 @@ from bpy_extras.io_utils import path_reference, path_reference_copy
 
 try:
     from .extract import extract_scene
+    from .inline_paths import rebase_inline_url
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import extract_scene
+    from inline_paths import rebase_inline_url
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_texture_urls(ir_scene, export_file: str, path_mode: str, copy_set: set) -> None:
@@ -75,6 +80,26 @@ def resolve_texture_urls(ir_scene, export_file: str, path_mode: str, copy_set: s
         seen[image.name] = url
 
 
+def resolve_inline_urls(ir_scene, export_file: str, path_mode: str) -> None:
+    """Write every Inline's url as seen from the folder the X3D file goes to (see inline_paths.rebase_inline_url).
+
+    The urls the import kept are relative to the folder the source file lived in; written as they are into a file in
+    another folder they point at nothing. A target that cannot be found keeps its url and adds a warning to the
+    export's diagnostics. Nothing is copied.
+    """
+    export_dir = os.path.dirname(os.path.abspath(export_file))
+    blend_dir = os.path.dirname(bpy.data.filepath) if bpy.data.filepath else None
+    for instance in ir_scene.iter_instances():
+        inline = instance.inline
+        if inline is None:
+            continue
+        inline.url, warning = rebase_inline_url(inline.url, export_dir, source_path=inline.source_path,
+                                                blend_dir=blend_dir, path_mode=path_mode)
+        if warning:
+            ir_scene.diagnostics.append(warning)
+            logger.warning("Export: %s", warning)
+
+
 @dataclass(slots=True)
 class ExportSettings:
     filepath: str
@@ -104,6 +129,8 @@ class ExportSettings:
     animation_step: int = 1
     # 'AS_IS' or 'SRGB' after resolve_export_colour_space (see extract.display_colour)
     color_space: str = "AS_IS"
+    # 'AUTO' (the scene's lighting model, else physical), 'CLASSIC' or 'PHYSICAL'; see extract.resolve_material_model
+    material_model: str = "AUTO"
 
     @property
     def use_modern_path(self) -> bool:
@@ -171,8 +198,11 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
                 use_animation=settings.use_animation,
                 animation_step=settings.animation_step,
                 metadata=_scene_metadata(settings, export_file),
+                material_model=settings.material_model,
+                colour_space=settings.color_space,
             )
             resolve_texture_urls(ir_scene, export_file, settings.path_mode, copy_set)
+            resolve_inline_urls(ir_scene, export_file, settings.path_mode)
         writer(
             export_file=export_file,
             depsgraph=depsgraph,

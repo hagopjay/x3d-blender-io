@@ -114,8 +114,10 @@ class ColourRoundTripTests(unittest.TestCase):
         self.assertIsNotNone(node, "the X3D 4.0 export dropped the Color node")
         values = _floats(node.attrib["color"])
         step = 4 if node.tag == "ColorRGBA" else 3
-        # a classic Color goes to linear on import and stays linear under the PhysicalMaterial the 4.0 export writes
-        self.assertColours(values[:3], [0.214, 0.214, 0.214])
+        # a classic Color goes to linear on import and comes back as the file's display value under the Material the 4.0
+        # export now keeps for a Material-lit scene (it used to stay linear under a PhysicalMaterial, which X_ITE draws
+        # differently: that old expectation was the bug)
+        self.assertColours(values[:3], [0.5, 0.5, 0.5])
         self.assertEqual(len(values), 3 * step)
 
     def test_colour_under_physical_material_round_trips_unchanged(self):

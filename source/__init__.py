@@ -231,6 +231,12 @@ def import_ui_mesh(layout, operator):
         line.prop(operator, "light_units")
 
 
+def _scene_imported_animation(scene):
+    """True for a scene whose X3D import made animation and which still holds imported content."""
+    from .extract import IMPORTED_ANIMATION_PROPERTY, imported_scene_property
+    return bool(imported_scene_property(scene, IMPORTED_ANIMATION_PROPERTY))
+
+
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ExportX3D(bpy.types.Operator, ExportHelper):
     """Export selection to Extensible 3D file (.x3d)"""
@@ -249,9 +255,10 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
              "X3D 3.3 (Material, classic)",
              "Legacy exporter: Phong Material, lights, cameras, hierarchy. Widest viewer support"),
             ('X3D40',
-             "X3D 4.0 (PhysicalMaterial, PBR)",
-             "Physically based materials with glTF-style textures, UVs, normals, vertex colours, DEF/USE sharing, "
-             "hierarchy, lights, cameras, animation and HAnim. Gaussian splats degrade to PointSet"),
+             "X3D 4.0 (Material or PhysicalMaterial)",
+             "PhysicalMaterial (PBR) or, for a scene imported from Material-lit X3D, Material (see Materials), with "
+             "glTF-style textures, UVs, normals, vertex colours, DEF/USE sharing, hierarchy, lights, cameras, "
+             "animation and HAnim. Gaussian splats degrade to PointSet (X3D 4.1 writes GaussianSplats)"),
             ('X3D41',
              "X3D 4.1 draft (GaussianSplats)",
              "Everything in 4.0 plus the draft GaussianSplats node for splat point clouds. "
@@ -267,10 +274,22 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         default='AUTO',
         description=translate(lang, "export_color_space_description"),
     )
+    material_model: EnumProperty(
+        name=translate(lang, "export_material_model"),
+        items=(('AUTO', translate(lang, "material_model_auto"), translate(lang, "material_model_auto_description")),
+               ('CLASSIC', translate(lang, "material_model_classic"), translate(lang, "material_model_classic_description")),
+               ('PHYSICAL', translate(lang, "material_model_physical"), translate(lang, "material_model_physical_description"))),
+        default='AUTO',
+        description=translate(lang, "export_material_model_description"),
+    )
     use_animation: BoolProperty(
         name="Animation",
-        description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes",
+        description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes. "
+                    "Off unless set, except for a scene imported from X3D with animation, which keeps it",
         default=False,
+        # the dialog sets it for a scene imported with animation (invoke); Blender would remember that value and put it
+        # on the next export's dialog, whatever the scene
+        options={'SKIP_SAVE'},
     )
     animation_step: IntProperty(
         name="Frame Step",
@@ -529,6 +548,11 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         update = _meta_license_custom_update,
     )
 
+    def invoke(self, context, event):
+        if not self.properties.is_property_set("use_animation") and _scene_imported_animation(context.scene):
+            self.use_animation = True   # the dialog shows what the export will do
+        return super().invoke(context, event)
+
     @property
     def check_extension(self):
         return self.batch_mode == 'OFF'
@@ -552,6 +576,9 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         keywords["global_matrix"] = global_matrix
         if self.meta_license == 'CUSTOM' and self.meta_license_custom:
             keywords["meta_license"] = self.meta_license_custom
+        if not self.properties.is_property_set("use_animation") and _scene_imported_animation(context.scene):
+            # a scene imported from X3D with interpolators keeps its animation, unless Animation was set (off) by hand
+            keywords["use_animation"] = True
 
         return export_x3d.save(context, **keywords)
 
@@ -572,6 +599,9 @@ def export_ui_include(layout, operator):
     if body:
         body.prop(operator, "x3d_version")
         body.prop(operator, "color_space")
+        sub = body.column()
+        sub.enabled = operator.x3d_version in {'X3D40', 'X3D41'}
+        sub.prop(operator, "material_model")
         row = body.row(align=True)
         row.prop(operator, "batch_mode")
         sub = row.row(align=True)

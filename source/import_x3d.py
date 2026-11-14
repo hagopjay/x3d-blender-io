@@ -19,10 +19,12 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
-                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, scene_head_meta)
+                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, record_inline_source, scene_head_meta,
+                      HEADLIGHT_LUX_PROPERTY, IMPORTED_OBJECT_PROPERTY, LIGHTING_MODEL_PROPERTY, clear_stale_scene_properties)
 from .viewpoint_fov import blender_camera_angle, render_size
 
 texture_cache = {}
@@ -451,7 +453,8 @@ class vrmlNode(object):
                  'ROUTE_IPO_NAMESPACE',
                  'PROTO_NAMESPACE',
                  'x3dNode',
-                 'parsed')
+                 'parsed',
+                 'parsed_vcol')
 
     def __init__(self, parent, node_type, lineno):
         self.id = None
@@ -461,6 +464,7 @@ class vrmlNode(object):
         self.blendData = None
         self.x3dNode = None  # for x3d import only
         self.parsed = None  # We try to reuse objects in a smart way
+        self.parsed_vcol = None  # for a classic material in parsed: whether it was built for a Shape with a Color node
         if parent:
             parent.children.append(self)
 
@@ -3349,6 +3353,7 @@ def finalize_light_units(scene, units=None):
     lit_by_node.clear()
     if scene is None:
         return
+    scene[HEADLIGHT_PROPERTY] = bool(headlight)   # the X3D 4.0 export writes the NavigationInfo headlight back as it was
     try:
         bpy.context.view_layer.update()   # world matrices of objects parented since they were made
     except (AttributeError, RuntimeError):
@@ -3469,8 +3474,8 @@ def finalize_light_units(scene, units=None):
         data[LIGHT_ENERGY_PER_INTENSITY_PROPERTY] = energy / unit
         data.energy = energy if intensity > 0.0 and not dark else 0.0
         hold_colour(data)
-    scene["x3d_lighting_model"] = 'classic' if classic else 'physical'
-    scene["x3d_headlight_lux"] = headlight_lux if classic else 1.0
+    scene[LIGHTING_MODEL_PROPERTY] = 'classic' if classic else 'physical'
+    scene[HEADLIGHT_LUX_PROPERTY] = headlight_lux if classic else 1.0
 
 
 def resolve_circle_divisions(value=None, default=16):
@@ -3517,6 +3522,15 @@ def smooth_primitive(bpymesh, spec):
 # geometry has one, else in the Material's emissiveColor (black when the Material does not set it), else white when
 # the Appearance has no material. The surface material a Shape shares with other Shapes stays as it is; lines and
 # points get their own unlit material, cached per import.
+# Geometry2D nodes whose solid field defaults to FALSE in X3D 4.0 (every other mesh geometry defaults to TRUE)
+SOLID_DEFAULT_FALSE_SPECS = frozenset({'Rectangle2D', 'Disk2D', 'ArcClose2D', 'TriangleSet2D'})
+
+
+def geometry_solid(geom, ancestry):
+    """The geometry's solid field with the default of its own node type."""
+    return geom.getFieldAsBool('solid', geom.getSpec() not in SOLID_DEFAULT_FALSE_SPECS, ancestry)
+
+
 LINE_POINT_SPECS = frozenset({'IndexedLineSet', 'LineSet', 'PointSet', 'Polyline2D', 'Polypoint2D', 'Arc2D', 'Circle2D'})
 LINE_COLOUR_ATTRIBUTE = "Color"     # a point or line set's X3D colours, one per vertex (POINT domain)
 line_material_cache = {}
@@ -3742,7 +3756,8 @@ def physical_colour_material(bpymat):
     vcol = tree.nodes.new('ShaderNodeVertexColor')
     vcol.layer_name = "ColorPerCorner"
     vcol.location = (bsdf.location[0] - 500, bsdf.location[1] + 260)
-    if base.links:
+    textured = bool(base.links)
+    if textured:
         texture = base.links[0].from_socket
         mix = tree.nodes.new('ShaderNodeMix')
         mix.data_type = 'RGBA'
@@ -3754,6 +3769,10 @@ def physical_colour_material(bpymat):
         tree.links.new(mix.outputs['Result'], base)
     else:
         tree.links.new(vcol.outputs['Color'], base)
+    # baseColor multiplies the colours (X_ITE 16.7.1 draws baseColor 0.06 0.5 0.48 under a white Color as 0.06 0.5 0.48,
+    # not white); with a texture it is already in the texture's Multiply node, and white needs none
+    if not textured:
+        _modulate_socket_by_color(tree, base, tuple(base.default_value))
     physical_colour_cache[key] = mat
     return mat
 
@@ -4382,6 +4401,8 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
     if mat_name:
         bpymat[X3D_DEF_PROPERTY] = mat_name
+    if mat:
+        bpymat[MATERIAL_MODEL_PROPERTY] = 'classic'   # a Material or TwoSidedMaterial: the 4.0 export writes one again
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
 
     bpymat_wrap.base_color = diff_color
@@ -4535,7 +4556,10 @@ def appearance_LoadTexture(tex_node, ancestry, node):
 
     # USE-based caching
     if tex_node.reference:
-        return tex_node.getRealNode().parsed
+        real = tex_node.getRealNode()
+        if real.parsed is not None:
+            return real.parsed
+        tex_node = real   # the DEF'd node was not loaded yet (a material met first through its USE)
 
     # Desc-based caching. It might misfire on multifile models, where the
     # same desc means different things in different files.
@@ -4675,6 +4699,15 @@ def appearance_Create(vrmlname, material, tex_node, ancestry, node, is_vcol):
         if tex_node.getSpec() == 'MovieTexture':
             bpymat_wrap = apply_video_texture_settings(bpymat_wrap, bpyima, tex_node, ancestry)
 
+        bsdf = bpymat_wrap.node_principled_bsdf
+        if material and bsdf is not None and not is_vcol:
+            # X_ITE draws diffuseColor x texture (getDiffuseColor: diffuseColor *= getDiffuseTexture()); linked straight
+            # into Base Color the texture would replace the diffuse colour. A Color node replaces it there instead, and
+            # a white diffuseColor needs no node; the socket keeps the colour as its value, where the export reads it.
+            # Last, since the wrapper looks for its image node behind the Base Color link.
+            _modulate_socket_by_color(bpymat_wrap.material.node_tree, bsdf.inputs["Base Color"],
+                                      tuple(bsdf.inputs["Base Color"].default_value))
+
     return (bpymat_wrap.material, bpyima, tex_has_alpha)
 
 
@@ -4693,7 +4726,10 @@ def _pbr_texture_children(mat_node):
     """Return {containerField: ImageTexture node} for a PhysicalMaterial/UnlitMaterial."""
     found = {}
     for child in mat_node.getRealNode().getChildrenBySpec(('ImageTexture', 'PixelTexture', 'MovieTexture')):
-        container = _attribute_raw(child, 'containerField', None)
+        # read from the child itself: a USE names its own field (a DEF'd baseTexture USE'd as emissiveTexture), and the
+        # DEF'd node it points at says baseTexture
+        element = getattr(child, "x3dNode", None)
+        container = element.getAttribute('containerField') if element is not None else None
         if not container:
             # X3D 4.0 default containerField for a texture inside a material is baseTexture
             container = 'baseTexture'
@@ -4830,7 +4866,7 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
             if bsdf:
                 _modulate_socket_by_color(node_tree, bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission"), emissive)
     else:
-        base_color = mat.getFieldAsFloatTuple('baseColor', [0.8, 0.8, 0.8], ancestry)
+        base_color = mat.getFieldAsFloatTuple('baseColor', [1.0, 1.0, 1.0], ancestry)
         emissive = mat.getFieldAsFloatTuple('emissiveColor', [0.0, 0.0, 0.0], ancestry)
         bpymat_wrap.base_color = base_color
         bpymat_wrap.metallic = mat.getFieldAsFloat('metallic', 1.0, ancestry)
@@ -4842,12 +4878,18 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
         bpyima = images.get('baseTexture')
         if bpyima is not None:
             bpymat_wrap.base_color_texture.image = bpyima
+            if bsdf:
+                # X_ITE and glTF multiply the texture by baseColor; linked straight into Base Color the texture would
+                # replace it (a white factor needs no node, and the socket keeps baseColor as its value for the export)
+                _modulate_socket_by_color(node_tree, bsdf.inputs["Base Color"], base_color)
 
         bpyima = images.get('emissiveTexture')
         if bpyima is not None:
             bpymat_wrap.emission_color_texture.image = bpyima
             if bsdf:
                 bsdf.inputs["Emission Strength"].default_value = 1.0
+                # X_ITE and glTF multiply emissiveTexture by emissiveColor (see baseTexture above)
+                _modulate_socket_by_color(node_tree, bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission"), emissive)
 
         bpyima = images.get('metallicRoughnessTexture')
         if bpyima is not None and bsdf:
@@ -4937,6 +4979,18 @@ def importShape_LoadPBRAppearance(vrmlname, appr, mat_node, ancestry, node):
     return (bpymat, None, False)
 
 
+def _parsed_for_vcol(node, is_vcol):
+    """The material a DEF'd Appearance or Material was built into, if it was built for a Shape with the same
+    colour-node state (a classic material depends on it); a material of the X3D 4.0 path does not."""
+    real = node.getRealNode()
+    return real.parsed if real.parsed and real.parsed_vcol in (None, bool(is_vcol)) else None
+
+
+def _set_parsed_for_vcol(node, bpymat, is_vcol):
+    node.parsed = bpymat
+    node.parsed_vcol = bool(is_vcol)
+
+
 def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     """
     Material creation takes nontrivial time on large models.
@@ -4955,12 +5009,11 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     Can't rely on USE alone. Repeating texture definitions
     are entirely possible, too.
 
-    Vertex coloring is not a part of appearance, but Blender
-    has a material flag for it. However, if a mesh has no vertex
-    color layer, setting use_vertex_color_paint to true has no
-    effect. So it's fine to reuse the same  material for meshes
-    with vertex colors and for ones without.
-    It's probably an abuse of Blender of some level.
+    Vertex coloring is not a part of appearance, but the material
+    depends on it: with a Color node the vertex colours feed Base
+    Color, without one a texture is multiplied by the diffuse colour
+    (appearance_Create). So every cache below is per is_vcol, and a
+    material is shared only by Shapes that agree on it.
 
     So here's the caching structure:
     For USE on appearance, we store the material object
@@ -4977,7 +5030,7 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     in material_cache.
     """
     # First, check entire-appearance cache
-    if appr.reference and appr.getRealNode().parsed:
+    if appr.reference and _parsed_for_vcol(appr, is_vcol):
         return appearance_ExpandCachedMaterial(appr.getRealNode().parsed)
 
     # X3D 4.0 physically based materials carry their textures as children
@@ -4997,19 +5050,21 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     # We're ignoring FillProperties, LineProperties, and shaders
 
     # Check the USE-based material cache for textureless materials
-    if material and material.reference and not tex_node and material.getRealNode().parsed:
+    if material and material.reference and not tex_node and _parsed_for_vcol(material, is_vcol):
         return appearance_ExpandCachedMaterial(material.getRealNode().parsed)
 
-    # Now the description-based caching
+    # Now the description-based caching: the same Material and texture, with and without a Color node, are two materials
     cache_key = appearance_MakeDescCacheKey(material, tex_node)
+    if cache_key:
+        cache_key = cache_key + (bool(is_vcol),)
 
     if cache_key and cache_key in material_cache:
         bpymat = material_cache[cache_key]
         # Still want to make the material available for USE-based reuse
         if appr.canHaveReferences():
-            appr.parsed = bpymat
+            _set_parsed_for_vcol(appr, bpymat, is_vcol)
         if material and material.canHaveReferences() and not tex_node:
-            material.parsed = bpymat
+            _set_parsed_for_vcol(material, bpymat, is_vcol)
         return appearance_ExpandCachedMaterial(bpymat)
 
     # Done checking full-material caches. Texture cache may still kick in.
@@ -5018,13 +5073,13 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
 
     # Update the caches
     if appr.canHaveReferences():
-        appr.parsed = bpymat
+        _set_parsed_for_vcol(appr, bpymat, is_vcol)
 
     if cache_key:
         material_cache[cache_key] = bpymat
 
     if material and material.canHaveReferences() and not tex_node:
-        material.parsed = bpymat
+        _set_parsed_for_vcol(material, bpymat, is_vcol)
 
     return (bpymat, bpyima, tex_has_alpha)
 
@@ -5538,7 +5593,7 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             texmtx = translateTexTransform(textx, ancestry)
         if bpymat is not None and appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
             # X3D 4.0 path: a solid surface is single sided in Blender terms
-            bpymat.use_backface_culling = geom.getFieldAsBool('solid', True, ancestry)
+            bpymat.use_backface_culling = geometry_solid(geom, ancestry)
             if colour_kind and geom.getSpec() not in LINE_POINT_SPECS \
                     and appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')).getSpec() == 'UnlitMaterial':
                 # the Color / ColorRGBA replaces emissiveColor (see unlit_colour_material)
@@ -5575,11 +5630,16 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if bpydata is None:
             logger.warning('ImportX3D warning: empty shape, skipping node "%s"' % vrmlname)
             return
+        if isinstance(bpydata, bpy.types.Mesh) and geom_spec not in LINE_POINT_SPECS:
+            # the file's solid for the export to write back (D14): a classic Material's surface stays two-sided in Blender
+            bpydata[SOLID_PROPERTY] = geometry_solid(geom, ancestry)
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
             name = bpymat.name if bpymat is not None else (vrmlname or geom_spec)
             bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata))
+            line_properties = appr.getChildBySpec('LineProperties') if appr is not None else None
+            line_width = line_properties.getFieldAsFloat('linewidthScaleFactor', None, ancestry) if line_properties else None
 
         # There are no geometry importers that can legally return
         # no object.  It's either a bpy object, or an exception
@@ -5601,6 +5661,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
                 lit_by_node[node.getRealNode()] = lit
                 lit_surfaces.append((node.blendObject,) + lit)
         tag_x3d_identity(node.blendObject, node, ancestry)
+        if geom_spec in LINE_POINT_SPECS and line_width is not None and node.blendObject is not None:
+            node.blendObject[LINE_WIDTH_PROPERTY] = line_width   # Blender draws no line width; the 4.0 export writes it back
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
@@ -5720,6 +5782,21 @@ def importLamp_SharedFields(bpylamp, node, ancestry):
             bpylamp[prop] = value
 
 
+def _light_scope_has_geometry(node, ancestry):
+    """True when a light that is not global has a Shape (or an Inline, which may hold one) among its parent's other
+    children, at any depth: X3D 4.0 lights those and nothing else. With no known parent it counts as lighting."""
+    parent = ancestry[-1] if ancestry else None
+    if parent is None:
+        return True
+    me = node.getRealNode()
+    for sibling in parent.getRealNode().children:
+        if sibling.getRealNode() is me:
+            continue
+        if sibling.findSpecRecursive('Shape') is not None or sibling.findSpecRecursive('Inline') is not None:
+            return True
+    return False
+
+
 def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     if spec == 'PointLight':
         bpylamp, mtx = importLamp_PointLight(node, ancestry)
@@ -5731,6 +5808,12 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
         logger.warning("Error, not a lamp")
         raise ValueError
     importLamp_SharedFields(bpylamp, node, ancestry)
+    # X3D 4.0 light scoping: Blender has none, so keep the file's `global` (point and spot lights default TRUE, directional
+    # ones FALSE) and whether a light that is not global had any geometry in its scope, for the export (D1)
+    given_global = node.getFieldAsBool('global', spec != 'DirectionalLight', ancestry)
+    bpylamp[LIGHT_GLOBAL_PROPERTY] = bool(given_global)
+    if not given_global:
+        bpylamp[LIGHT_SCOPE_LIT_PROPERTY] = _light_scope_has_geometry(node, ancestry)
 
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(bpylamp.name, bpylamp)
     bpycollection.objects.link(bpyob)
@@ -6316,7 +6399,7 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
         if bpymat is not None:
             mesh.materials.append(bpymat)
             if appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
-                bpymat.use_backface_culling = geom.getFieldAsBool('solid', True, ancestry)
+                bpymat.use_backface_culling = geometry_solid(geom, ancestry)
 
     obj = bpy.data.objects.new(mesh_name, mesh)
     bpycollection.objects.link(obj)
@@ -6452,7 +6535,13 @@ def _splat_import_target():
 def _build_splat_object(bpycollection, name, splats):
     if _splat_import_target() == "pointcloud":
         from .splat_native import build_native_splat_pointcloud
-        obj = bpy.data.objects.new(name, build_native_splat_pointcloud(name, splats))
+        pointcloud = build_native_splat_pointcloud(name, splats)
+        if "Color" in pointcloud.attributes:
+            # Blender's glTF exporter writes a PointCloud's COLOR_0 only when its material reads a named colour
+            # attribute: an unlit material on ``Color`` (the splats' base colours) puts the colours in the glb, as the
+            # mesh target's loose vertices carry them. Before, the glb held POSITION only.
+            pointcloud.materials.append(line_point_material(name, (1.0, 1.0, 1.0), 1.0, 'RGB'))
+        obj = bpy.data.objects.new(name, pointcloud)
         bpycollection.objects.link(obj)
         obj.select_set(True)
         return obj
@@ -6551,6 +6640,7 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
         logger.warning("Can't Inline a file that is already being loaded: %s", resolved)
         return empty
     empty["x3d_inline_resolved_path"] = mfstring.portable_path(resolved, os.path.dirname(current_file_path or ""))
+    record_inline_source(empty.session_uid, empty["x3d_inline_url"], resolved)   # session only; the export rebases the url from it (D3)
 
     before = set(bpy.data.objects)
     lower = resolved.lower()
@@ -7011,6 +7101,161 @@ def switch_hides(node, ancestry):
     return False
 
 
+X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
+X3D_LOD_PROPERTY = "x3d_lod"                  # on the same object: "<LOD name>:<level>"
+
+# LOD and GeoLOD nodes met by the import, and the objects made under them. Which level a viewer sees depends on the first
+# Viewpoint, which may come later in the file (or in the file that inlines this one), so the levels are settled by
+# finalize_lod() once every file is in.
+lod_records = {}   # id(node, ancestry) -> {"node", "ancestry", "global_matrix", "count"}
+lod_members = []   # (object, [(record key, level index), ...])
+
+
+def lod_key(node, ancestry):
+    return (id(node), tuple(id(a) for a in ancestry))
+
+
+def lod_chain(node, ancestry):
+    """The LOD / GeoLOD nodes above ``node`` as (record key, level index of the branch ``node`` sits on). A LOD's
+    ``children`` are its levels; a GeoLOD's ``rootNode`` children are its level 0 (the child URLs are not imported)."""
+    chain = tuple(ancestry) + (node,)
+    out = []
+    for i, anc in enumerate(ancestry):
+        spec = anc.getSpec()
+        if spec not in ('LOD', 'GeoLOD'):
+            continue
+        kids = [c for c in anc.getRealNode().children if _switch_child_counts(c)]
+        index = next((n for n, kid in enumerate(kids) if kid is chain[i + 1]), None)
+        if index is None:
+            continue
+        out.append((lod_key(anc, ancestry[:i]), 0 if spec == 'GeoLOD' else index))
+    return out
+
+
+# X_ITE 16.7.1 LOD.js: without a range the level follows the browser's frame rate, averaged over 180 frames from a start-up
+# value of 60 fps, between 20 fps (the coarsest level) and 55 fps (the finest)
+XITE_LOD_START_FRAME_RATE = 60.0
+XITE_LOD_FRAME_RATE_MIN = 20.0
+XITE_LOD_FRAME_RATE_MAX = 55.0
+
+
+def lod_level_without_range(count, frame_rate=XITE_LOD_START_FRAME_RATE):
+    """The level X_ITE 16.7.1's LOD.getLevel picks for an empty ``range`` at a given averaged frame rate: none for no
+    child, the only child, ``+(frame_rate > 55)`` for two, else the share of the way down from 55 to 20 fps (the first
+    child above 55 fps, the last at or below 20 fps)."""
+    if count <= 0:
+        return -1
+    if count == 1:
+        return 0
+    if count == 2:
+        return int(frame_rate > XITE_LOD_FRAME_RATE_MAX)
+    fraction = 1.0 - min(max((frame_rate - XITE_LOD_FRAME_RATE_MIN) / (XITE_LOD_FRAME_RATE_MAX - XITE_LOD_FRAME_RATE_MIN), 0.0), 1.0)
+    return min(int(fraction * count), count - 1)
+
+
+def lod_level(distance, ranges, count):
+    """The level X_ITE 16.7.1 draws: the first ``range`` entry above the viewer's distance from the node's centre (LOD.js
+    getLevel: upperBound over ``range``), at most the last child. No ``range`` leaves the choice to the browser's frame
+    rate (``lod_level_without_range``): the import takes X_ITE's start-up state, 60 fps, which is the first child of one
+    or of three and more, and the second of two. What X_ITE draws later depends on the frame rate it measures (two
+    children go back to the first once the average falls to 55 fps, three and more drift towards the last as it falls
+    towards 20), so a still import can match only that first frame."""
+    if count <= 0:
+        return -1
+    if not ranges:
+        return lod_level_without_range(count)
+    level = 0
+    for r in ranges:
+        if r > distance:
+            break
+        level += 1
+    return min(level, count - 1)
+
+
+def lod_centre_world(record):
+    """The LOD's ``center`` in Blender world coordinates (a GeoLOD's in its geoSystem, as geocentric metres)."""
+    node, ancestry, global_matrix = record["node"], record["ancestry"], record["global_matrix"]
+    if node.getSpec() == 'GeoLOD':
+        import numpy as np
+        gs = geo_system_of(node, ancestry)
+        origin, frame = geo_origin_of(node, gs, ancestry)
+        coords = node.getFieldAsFloatTuple('center', (0.0, 0.0, 0.0), ancestry)
+        local = geo_to_local(np.array(geospatial.to_geocentric(gs, *coords)), origin, frame)
+        centre = Vector(local * conversion_scale)
+    else:
+        centre = Vector(node.getFieldAsFloatTuple('center', (0.0, 0.0, 0.0), ancestry, conversion_scale))
+    return getFinalMatrix(node, Matrix.Translation(centre), ancestry, global_matrix).translation
+
+
+def finalize_lod():
+    """Show only the LOD level the first Viewpoint selects, as X_ITE does, and hide the rest.
+
+    X_ITE 16.7.1 draws a LOD's one level: the first ``range`` entry above the distance between the viewer and the centre,
+    both in the world, ``range`` unscaled by the Transforms above (a LOD of range 1000 under a scale of 0.001 and 10
+    units from the viewer still draws level 0). Every level is imported, as for a Switch, so nothing is lost when the scene
+    goes out again; the objects of the other levels are hidden in the viewport and the render and carry
+    ``x3d_lod_hidden`` (the level) and ``x3d_lod``. ``forceTransitions`` only paces the change from level to level in
+    X_ITE (one level per frame); the level a still viewer ends on is the one chosen here. A LOD without ``range`` takes
+    X_ITE's start-up level (``lod_level_without_range``). A GeoLOD's child URLs are
+    not imported, so its ``rootNode`` content stays shown whichever level the viewer is on (reported).
+    """
+    global lod_records, lod_members
+    records, members = lod_records, lod_members
+    lod_records, lod_members = {}, []
+    if not records:
+        return
+    try:
+        eye = bound_view.matrix_world.translation if bound_view is not None else default_view.translation
+    except (ReferenceError, AttributeError):
+        eye = default_view.translation if default_view is not None else Vector((0.0, 0.0, 10.0 * conversion_scale))
+    levels = {}
+    for key, rec in records.items():
+        node, ancestry = rec["node"], rec["ancestry"]
+        name = node.getDefName() or node.getSpec()
+        distance = (eye - lod_centre_world(rec)).length / (conversion_scale or 1.0)
+        if node.getSpec() == 'GeoLOD':
+            range_ = node.getFieldAsFloat('range', 10.0, ancestry)
+            level = 1 if distance < range_ else 0
+            levels[key] = 0
+            urls = [f for f in ('child1Url', 'child2Url', 'child3Url', 'child4Url') if node.getFieldAsMFStringArray(f, [], ancestry)]
+            if level == 1 and urls:
+                logger.warning("GeoLOD %s: the viewer is %.4g from its center, inside its range %.4g, so X_ITE draws the child "
+                               "URLs; they are not imported, its rootNode content stays shown", name, distance, range_)
+            else:
+                logger.info("GeoLOD %s: the viewer is %.4g from its center, range %.4g: level %d (rootNode)",
+                            name, distance, range_, level)
+            continue
+        ranges = list(node.getFieldAsArray('range', 0, ancestry, 1.0) or [])
+        level = lod_level(distance, ranges, rec["count"])
+        levels[key] = level
+        logger.info("LOD %s: the viewer is %.4g from its center, range %s (forceTransitions %s): level %d of %d shown",
+                    name, distance, ranges or "empty (X_ITE picks by frame rate; its 60 fps start-up level)",
+                    node.getFieldAsBool('forceTransitions', False, ancestry), level, rec["count"])
+    hidden = []
+    for ob, chain in members:
+        for key, index in chain:
+            if levels.get(key) not in (None, index):
+                hidden.append((ob, index, records[key]["node"].getDefName() or records[key]["node"].getSpec()))
+                break
+    done = set()
+    for ob, index, name in hidden:
+        try:
+            family = [ob, *ob.children_recursive]    # with an Inline's loaded content
+        except ReferenceError:
+            continue
+        for member in family:
+            if member.name in done:
+                continue
+            done.add(member.name)
+            member.hide_render = True
+            try:
+                member.hide_set(True)
+            except RuntimeError:  # not in the view layer
+                member.hide_viewport = True
+            member[X3D_LOD_HIDDEN_PROPERTY] = index
+            member[X3D_LOD_PROPERTY] = f"{name}:{index}"
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -7138,6 +7383,15 @@ def load_web3d(
         if node.blendObject is not None and node.blendObject is not made_before \
                 and any(anc.getSpec() == 'Switch' for anc in ancestry) and switch_hides(node, ancestry):
             switch_hidden.append(node.blendObject)
+        if spec in ('LOD', 'GeoLOD'):
+            lod_records[lod_key(node, ancestry)] = {
+                "node": node, "ancestry": list(ancestry), "global_matrix": global_matrix,
+                "count": len([c for c in node.getRealNode().children if _switch_child_counts(c)])}
+        if node.blendObject is not None and node.blendObject is not made_before \
+                and any(anc.getSpec() in ('LOD', 'GeoLOD') for anc in ancestry):
+            lod_path = lod_chain(node, ancestry)
+            if lod_path:
+                lod_members.append((node.blendObject, lod_path))
 
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
@@ -7155,7 +7409,7 @@ def load_web3d(
             bpyob.hide_set(True)
         except RuntimeError:  # not in the view layer
             bpyob.hide_viewport = True
-        bpyob["x3d_switch_hidden"] = True
+        bpyob[SWITCH_HIDDEN_PROPERTY] = True
 
     for node, ancestry in all_nodes:
         if node.isRoot():
@@ -7298,6 +7552,8 @@ def load(context,
     imported_lights.clear()
     lit_surfaces.clear()
     lit_by_node.clear()
+    lod_records.clear()
+    lod_members.clear()
     navigation_headlight = None
     bound_view = default_view = None
 
@@ -7315,7 +7571,12 @@ def load(context,
 
     paths = [os.path.join(directory, name.name) for name in files] if files else [filepath]
 
+    if getattr(context, "scene", None) is not None:
+        # a scene whose imported objects were deleted carries the last file's headlight, lighting model, Background and
+        # animation mark; the file coming in must not inherit the ones it does not set itself
+        clear_stale_scene_properties(context.scene)
     objects_before = {ob.name for ob in bpy.data.objects}
+    actions_before = {action.name for action in bpy.data.actions}
     for file in paths:
         # loadWithProfiler(operator, context, filepath, global_matrix)
         load_web3d(context, file,
@@ -7327,7 +7588,10 @@ def load(context,
                 solidify=solidify,
                 solidify_value=solidify_value
                 )
+    finalize_lod()
     new_objects = [ob for ob in bpy.data.objects if ob.name not in objects_before]
+    for ob in new_objects:
+        ob[IMPORTED_OBJECT_PROPERTY] = True     # what the scene-level flags (headlight, lighting model...) apply to
     # Blender inverts parent matrices in float32: an Inline under scale 1e-16 (one unit = one light-year) would
     # export to glTF about 1e8 too small. Move such scales onto the children; no world matrix changes.
     matrix_safety.push_scale_to_children(new_objects)
@@ -7336,5 +7600,9 @@ def load(context,
     finalize_light_units(context.scene if context is not None else None, lighting_units)
     if context is not None and getattr(context, "scene", None) is not None:
         context.scene[COLOUR_SPACE_PROPERTY] = colour_space
+        if any(action.name not in actions_before for action in bpy.data.actions):
+            # interpolators and TimeSensors came in as keyframes: the X3D 4.0/4.1 export keeps them unless Animation is
+            # set off by hand (ExportX3D.execute)
+            context.scene[IMPORTED_ANIMATION_PROPERTY] = True
 
     return {'FINISHED'}

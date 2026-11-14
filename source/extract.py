@@ -38,11 +38,47 @@ SPLAT_SCALE_ATTR = "splat_scale"
 SPLAT_ROTATION_ATTR = "splat_rotation"
 SPLAT_OPACITY_ATTR = "splat_opacity"
 SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
+# A mesh's X3D ``solid`` as the file gave it (the import leaves a classic Material's surface two-sided in Blender, so the
+# material's backface-culling flag cannot tell the export).
+SOLID_PROPERTY = "x3d_solid"
+# A line set's LineProperties linewidthScaleFactor, kept on the object by the importer (Blender draws no line width).
+LINE_WIDTH_PROPERTY = "x3d_line_width"
 INLINE_URL_PROPERTY = "x3d_inline_url"
 INLINE_SOURCE_PROPERTY = "x3d_inline_source"
+# Where each Inline asset was found at import: the placeholder empty's ``session_uid`` -> absolute path. Kept in this
+# session only (an absolute path in a custom property would travel into a glb's extras and .blend files and name the
+# importing machine's folders; the portable x3d_inline_resolved_path is relative to the importing file), so the
+# export can write the Inline's url relative to its own folder (export_pipeline.resolve_inline_urls). The value is the
+# url the empty got at import together with the path, so a url edited afterwards is not overridden by the old location.
+INLINE_SOURCE_PATHS: dict[int, tuple[str, str]] = {}
+# The same paths by the url they were found for: a duplicated placeholder has no entry of its own and takes the path its
+# url was imported with, when that is unambiguous.
+INLINE_SOURCE_BY_URL: dict[str, set[str]] = {}
+
+
+def record_inline_source(uid, url, path):
+    """Remember where the Inline ``url`` of the placeholder with session id ``uid`` was found at import."""
+    INLINE_SOURCE_PATHS[uid] = (url, path)
+    INLINE_SOURCE_BY_URL.setdefault(url, set()).add(path)
+
+
+def inline_source_path(uid, url):
+    """The absolute path the import found for ``url``: the placeholder's own record while its url is unchanged, for a
+    placeholder with no record (a duplicate) the single path any import found for that url, else None."""
+    record = INLINE_SOURCE_PATHS.get(uid)
+    if record is not None:
+        return record[1] if record[0] == url else None
+    paths = INLINE_SOURCE_BY_URL.get(url)
+    return next(iter(paths)) if paths and len(paths) == 1 else None
 # X3D light fields with no Blender setting, kept on the light data by the importer.
 LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
+# A light's X3D ``global`` field as the file gave it (X3D's default: TRUE for point and spot lights, FALSE for directional
+# ones), and, for a light that is not global, whether any geometry sat in its scope (its parent's other children). Blender
+# lights light the whole scene and the export puts each light in a Transform of its own, so a scoped light that lit
+# geometry in the file is written global, and one that lit nothing keeps global="false".
+LIGHT_GLOBAL_PROPERTY = "x3d_global"
+LIGHT_SCOPE_LIT_PROPERTY = "x3d_scope_lit"
 # The intensity a light had in the X3D file it was imported from; it also marks the light as imported.
 LIGHT_INTENSITY_PROPERTY = "x3d_intensity"
 # Blender energy per unit of X3D intensity, set by an import in X_ITE light units (see import_x3d.LIGHT_UNITS);
@@ -62,6 +98,14 @@ LIGHT_COLOR_PROPERTY = "x3d_color"
 # The import's colour space (AS_IS or SRGB) on the scene, so the export can write colours back the same way.
 COLOUR_SPACE_PROPERTY = "x3d_color_space"
 COLOUR_SPACES = ('AS_IS', 'SRGB')
+# How the import lit the scene (classic Phong Materials, or glTF-style PhysicalMaterials), kept on the scene; and the
+# first NavigationInfo's headlight (True when the file had no NavigationInfo), so the export writes them back.
+LIGHTING_MODEL_PROPERTY = "x3d_lighting_model"
+HEADLIGHT_PROPERTY = "x3d_headlight"
+MATERIAL_MODELS = ('classic', 'physical')
+# On a material the import made from a classic Material or TwoSidedMaterial, so the export can write one back in a scene
+# whose lights were fitted for PhysicalMaterials (a file that mixes both).
+MATERIAL_MODEL_PROPERTY = "x3d_material_model"
 
 
 def linear_to_srgb(value):
@@ -88,7 +132,7 @@ def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
     raw = aliases.get(raw, raw)
     if not raw and scene is not None:
         try:
-            recorded = scene.get(COLOUR_SPACE_PROPERTY)
+            recorded = imported_scene_property(scene, COLOUR_SPACE_PROPERTY)
         except (AttributeError, TypeError):
             recorded = None
         raw = aliases.get(str(recorded or "").strip().upper(), str(recorded or "").strip().upper())
@@ -99,6 +143,9 @@ def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
 # Viewpoint description read by the importer, kept on the camera object.
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
+IMPORTED_ANIMATION_PROPERTY = "x3d_imported_animation"   # set on the scene when an X3D import made animation (interpolators, TimeSensors)
+SWITCH_HIDDEN_PROPERTY = "x3d_switch_hidden"   # set by the importer on the objects of a Switch choice that is not shown (and on their descendants)
+LOD_HIDDEN_PROPERTY = "x3d_lod_hidden"   # set by the importer on the objects of an LOD level the first Viewpoint does not see
 HEAD_META_PROPERTY = "x3d_head_meta"
 # A Shape's Metadata* node read by the importer, kept on the object as nested {"node", "name", "reference", "value"}.
 METADATA_PROPERTY = "x3d_metadata"
@@ -107,6 +154,110 @@ METADATA_NODE_TYPES = frozenset(
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+# The headlight level an import in classic light units matched (a rig and diagnostics value; the export does not read it).
+HEADLIGHT_LUX_PROPERTY = "x3d_headlight_lux"
+# Set by the importer on every object it makes. The scene-level properties below describe what an import brought in, so
+# they stop applying when none of that content is left in the scene (scene_has_imported_content).
+IMPORTED_OBJECT_PROPERTY = "x3d_imported"
+SCENE_IMPORT_PROPERTIES = (COLOUR_SPACE_PROPERTY, LIGHTING_MODEL_PROPERTY, HEADLIGHT_PROPERTY, HEADLIGHT_LUX_PROPERTY,
+                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY)
+# What marks content of a file imported before IMPORTED_OBJECT_PROPERTY existed: a DEF, USE or Inline record on the
+# object, a primitive, solid, light or splat record on its data (the importer's own names; extract cannot import them).
+_IMPORTED_OBJECT_MARKS = (IMPORTED_OBJECT_PROPERTY, "x3d_def", "x3d_def_path", "x3d_use", INLINE_URL_PROPERTY)
+_IMPORTED_DATA_MARKS = ("x3d_def", SOLID_PROPERTY, "x3d_primitive", LIGHT_INTENSITY_PROPERTY, SPLAT_PROPERTY)
+
+
+def is_imported_object(obj) -> bool:
+    """True for an object the X3D import made (see IMPORTED_OBJECT_PROPERTY and the older marks above)."""
+    try:
+        if any(key in obj for key in _IMPORTED_OBJECT_MARKS):
+            return True
+        data = getattr(obj, "data", None)
+        return data is not None and any(key in data for key in _IMPORTED_DATA_MARKS)
+    except (TypeError, ReferenceError):
+        return False
+
+
+def scene_has_imported_content(scene) -> bool:
+    """True while ``scene`` still holds an object an X3D import made. A stand-in without ``objects`` (not a Blender
+    scene) counts as holding some: there is nothing to check, so its properties are trusted."""
+    objects = getattr(scene, "objects", None)
+    if objects is None:
+        return True
+    return any(is_imported_object(obj) for obj in objects)
+
+
+def imported_scene_property(scene, key):
+    """The value the import kept on ``scene`` under ``key``, or None when it was never set or the scene no longer holds
+    imported content: the flags are the file's (its headlight, its lighting model, its Background), and once the imported
+    objects are gone the scene is a Blender scene again, whatever it was imported from."""
+    try:
+        value = scene.get(key)
+    except (AttributeError, TypeError):
+        return None
+    if value is None or not scene_has_imported_content(scene):
+        return None
+    return value
+
+
+def clear_stale_scene_properties(scene) -> bool:
+    """Drop the scene-level import properties when the scene holds no imported content, so the next import starts from
+    a clean scene (a file without a Background or animation must not inherit an earlier file's). True if any were."""
+    if scene is None or scene_has_imported_content(scene):
+        return False
+    cleared = False
+    for key in SCENE_IMPORT_PROPERTIES:
+        try:
+            if key in scene:
+                del scene[key]
+                cleared = True
+        except (TypeError, KeyError, ReferenceError):
+            continue
+    return cleared
+
+
+def _line_width(obj):
+    """The LineProperties linewidthScaleFactor the import kept on a line object, else None."""
+    try:
+        width = float(obj.get(LINE_WIDTH_PROPERTY))
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return width if math.isfinite(width) and width >= 0.0 else None
+
+
+def _session_uid(obj):
+    try:
+        return int(obj.session_uid)
+    except (AttributeError, TypeError, ValueError, ReferenceError):
+        return None
+
+
+def resolve_material_model(value=None, scene=None, default='physical'):
+    """'classic' (write X3D Materials: Phong, diffuse, specular, shininess) or 'physical' (PhysicalMaterial, glTF style).
+
+    The export option when given (not AUTO); else the lighting model the scene was imported with
+    (LIGHTING_MODEL_PROPERTY): a file lit by Materials stays lit by Materials, which X_ITE shades in display space and
+    far brighter than a PhysicalMaterial of the same colour (measured: a 0.8 grey box lit by a point light draws 204
+    with a Material and 130 with the PhysicalMaterial the export used to write); else `default`, 'physical': a scene
+    made in Blender is a Principled BSDF scene, which is PBR."""
+    raw = str(value or "").strip().lower()
+    if raw in ("auto", "none"):
+        raw = ""
+    if not raw and scene is not None:
+        try:
+            raw = str(imported_scene_property(scene, LIGHTING_MODEL_PROPERTY) or "").strip().lower()
+        except (AttributeError, TypeError):
+            raw = ""
+    return raw if raw in MATERIAL_MODELS else default
+
+
+def scene_headlight(scene):
+    """The headlight the import recorded for the scene (True or False), None for a scene that was not imported or no
+    longer holds what was."""
+    recorded = imported_scene_property(scene, HEADLIGHT_PROPERTY)
+    if recorded is None:
+        return None
+    return bool(recorded)
 
 
 def is_splat_mesh(obj) -> bool:
@@ -346,8 +497,11 @@ def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None) -> list[IRMeshGe
     for line in lines:
         coord_index.extend(remap[v] for v in line)
         coord_index.append(-1)
+    # a line set's colours (the import's POINT colour attribute, one per vertex) go back as a Color / ColorRGBA node
+    color_at, color_domain = _color_values(mesh)
+    color = [color_at(old) for old in used] if color_at is not None and color_domain == "POINT" else []
     return [IRMeshGeometry(name=name, coord=coord, coord_index=coord_index, source_mesh=name,
-                           orig_vertex_index=used, is_lines=True)]
+                           orig_vertex_index=used, is_lines=True, color=color)]
 
 
 
@@ -398,6 +552,7 @@ def extract_mesh_geometries(
     use_triangulate: bool = False,
     use_normals: bool = False,
     vertex_matrix=None,
+    recorded_solid: bool | None = None,
 ) -> list[IRMeshGeometry]:
     """Split a Blender mesh into one IRMeshGeometry per used material slot.
 
@@ -499,6 +654,7 @@ def extract_mesh_geometries(
 
         material = material_for_slot(slot_index)
         solid = bool(getattr(material, "use_backface_culling", False)) if material else False
+        solid = solid or bool(recorded_solid)
         crease_angle = None
         if normal_at is None:
             crease_angle = _crease_from_sharp_edges(mesh) if any_smooth else 0.0
@@ -680,6 +836,12 @@ def _matrix_transform(matrix) -> IRTransform:
     )
 
 
+def is_lod_hidden(obj):
+    """An object of an LOD level the importer hid (and the user has not unhidden): written as geometry it would be
+    drawn on top of the level that is shown, so neither writer exports it."""
+    return obj.get(LOD_HIDDEN_PROPERTY) is not None and bool(obj.hide_render)
+
+
 def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_active_collection):
     if use_active_collection and view_layer is not None:
         objects = view_layer.active_layer_collection.collection.all_objects
@@ -689,6 +851,9 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
         if use_selection and not obj.select_get():
             continue
         if use_visible and not obj.visible_get():
+            continue
+        if is_lod_hidden(obj):
+            # the 4.0 writer has no LOD node; unhide the level (hide_render off) to export it
             continue
         yield obj
 
@@ -702,7 +867,7 @@ def _direction_neg_z(matrix):
 def scene_head_meta(scene) -> list[tuple[str, str]]:
     """The (name, content) pairs of the head meta the importer kept on ``scene``, in file order."""
     entries = []
-    for item in scene.get(HEAD_META_PROPERTY) or ():
+    for item in imported_scene_property(scene, HEAD_META_PROPERTY) or ():
         get = getattr(item, "get", None)
         if get is None:
             continue
@@ -737,7 +902,7 @@ def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
 
 def scene_background(scene) -> IRBackground | None:
     """The Background the importer kept on ``scene``, or None when there is none (or it has no sky colour)."""
-    stored = scene.get(BACKGROUND_PROPERTY)
+    stored = imported_scene_property(scene, BACKGROUND_PROPERTY)
     get = getattr(stored, "get", None)
     if get is None:
         return None
@@ -869,7 +1034,7 @@ def srgb_to_linear(value):
     return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
 
 
-def _extract_light(obj, local_matrix) -> IRLight:
+def _extract_light(obj, local_matrix, material_model='physical', colour_space='AS_IS') -> IRLight:
     """Mirror the legacy exporter's light mapping; values are local to the object's Transform.
 
     A light imported from X3D (it carries ``x3d_intensity``) is written without capping intensity at 1: the
@@ -888,9 +1053,13 @@ def _extract_light(obj, local_matrix) -> IRLight:
     light = IRLight(
         name=obj.name,
         light_type=light_type,
-        color=physical_light_colour(data),
+        # the light's colour is read the way the Materials it lights are: sRGB values next to Materials (classic), linear
+        # next to PhysicalMaterials (see light_colour and physical_light_colour)
+        color=light_colour(data, colour_space) if material_model == 'classic' else physical_light_colour(data),
         intensity=intensity,
         ambient_intensity=_unit_interval(data.get(LIGHT_AMBIENT_INTENSITY_PROPERTY), 0.0),
+        scoped=data.get(LIGHT_GLOBAL_PROPERTY) is not None and not data.get(LIGHT_GLOBAL_PROPERTY)
+        and not data.get(LIGHT_SCOPE_LIT_PROPERTY, True),
         location=tuple(float(value) for value in local_matrix.to_translation()[:3]),
         direction=_direction_neg_z(local_matrix),
         shadows=bool(getattr(data, "use_shadow", False)),
@@ -929,7 +1098,32 @@ def _world_color(world):
     return tuple(world.color[:3])
 
 
-def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
+# Blender's default camera clip range, which the export leaves out (a Viewpoint without nearDistance and farDistance).
+DEFAULT_CLIP_START = 0.1
+DEFAULT_CLIP_END = 1000.0
+
+
+def _clip_distances(data, distance_scale=1.0):
+    """(nearDistance, farDistance) of a camera for the X3D 4.0 Viewpoint, each None while it is Blender's default.
+
+    X_ITE 16.7.1 without a farDistance draws out to 1e5 (1e10 with a logarithmic depth buffer) at most from a
+    navigation near distance of 0.125: a GeoViewpoint 2.5e7 m above a 6.4e6 m globe imported with its clip range
+    (import_x3d.importGeoViewpoint_Matrix) came back from the export with none, and X_ITE drew a black frame."""
+    near = far = None
+    try:
+        start, end = float(data.clip_start) * distance_scale, float(data.clip_end) * distance_scale
+    except (AttributeError, TypeError, ValueError):
+        return None, None
+    if not math.isclose(start, DEFAULT_CLIP_START * distance_scale, rel_tol=1e-4) and start > 0.0:
+        near = start
+    if not math.isclose(end, DEFAULT_CLIP_END * distance_scale, rel_tol=1e-4) and end > 0.0:
+        far = end
+    if near is not None and far is not None and far <= near:
+        return None, None
+    return near, far
+
+
+def _extract_viewpoint(obj, local_matrix, scene=None, distance_scale=1.0) -> IRViewpoint:
     """The description is the one the importer kept, or the camera's name when there is none."""
     field_of_view = None
     if obj.data.type == "PERSP":
@@ -938,11 +1132,14 @@ def _extract_viewpoint(obj, local_matrix, scene=None) -> IRViewpoint:
             # X3D measures fieldOfView across the smaller side of the view, Blender across the fitted side.
             field_of_view = x3d_field_of_view(field_of_view, obj.data.sensor_fit, *render_size(scene))
     description = obj.get(VIEWPOINT_DESCRIPTION_PROPERTY)
+    near, far = _clip_distances(obj.data, distance_scale)
     return IRViewpoint(
         name=obj.name,
         description=description if isinstance(description, str) and description else obj.name,
         transform=_matrix_transform(local_matrix),
         field_of_view=field_of_view,
+        near_distance=near,
+        far_distance=far,
     )
 
 
@@ -1089,6 +1286,8 @@ def extract_scene(
     use_animation: bool = False,
     animation_step: int = 1,
     metadata: dict | None = None,
+    material_model: str | None = None,
+    colour_space: str = 'AS_IS',
 ) -> IRScene:
     """Build the scene IR used by the X3D 4.0 emitter.
 
@@ -1111,6 +1310,9 @@ def extract_scene(
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    ir_scene.material_model = resolve_material_model(material_model, scene)
+    ir_scene.material_model_forced = str(material_model or "").strip().lower() in MATERIAL_MODELS
+    ir_scene.headlight = scene_headlight(scene)
     # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
     ir_scene.background = scene_background(scene)
     world = getattr(scene, "world", None)
@@ -1184,7 +1386,9 @@ def extract_scene(
                 if analyzed:
                     ir_scene.materials.append(analyzed)
                     material_names.add(material.name)
-            primitive["fields"]["solid"] = bool(getattr(material, "use_backface_culling", False)) if material else False
+            # the file's own solid (kept with the primitive) or, as before, the material's culling
+            primitive["fields"]["solid"] = bool(primitive["fields"].get("solid", False)) or (
+                bool(getattr(material, "use_backface_culling", False)) if material else False)
             primitive["mesh"] = obj.data.name
             return source_key, [IRShape(material_name=material.name if material else None,
                                         geometry_hint=primitive["node"], primitive=primitive)]
@@ -1213,6 +1417,7 @@ def extract_scene(
                         material_slots=obj.material_slots,
                         use_triangulate=use_triangulate,
                         use_normals=use_normals,
+                        recorded_solid=obj.data.get(SOLID_PROPERTY) if obj.type == "MESH" else None,
                     )
                 else:
                     geometries = []
@@ -1238,6 +1443,10 @@ def extract_scene(
         return source_key, shapes
 
     content_frame = asset_frame(global_matrix)
+    try:
+        distance_scale = float(global_matrix.median_scale) if global_matrix is not None else 1.0
+    except (AttributeError, TypeError, ValueError):
+        distance_scale = 1.0
 
     def build_instance(obj, parent):
         if use_hierarchy and parent is not None:
@@ -1258,6 +1467,9 @@ def extract_scene(
             object_type=obj.type,
             transform=_matrix_transform(local_matrix),
         )
+        # only what the import hid for a Switch is written invisible; hide_render on any other object is a Blender-side
+        # choice that does not reach the children, while visible="false" would hide the whole subtree
+        instance.visible = not (bool(getattr(obj, "hide_render", False)) and obj.get(SWITCH_HIDDEN_PROPERTY) is not None)
         objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
 
         if obj.name in skinned_names:
@@ -1292,6 +1504,7 @@ def extract_scene(
             instance.shapes = shapes
             instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
             instance.metadata = object_metadata(obj.get(METADATA_PROPERTY))
+            instance.line_width = _line_width(obj)
             if shapes:
                 instance.geometry_name = shapes[0].geometry_name
                 instance.material_name = shapes[0].material_name
@@ -1301,15 +1514,24 @@ def extract_scene(
             ir_scene.object_names.append(obj.name)
         elif obj.type == "LIGHT":
             # Light values are local to the object's Transform, which carries the matrix.
-            instance.light = _extract_light(obj, local_matrix.__class__())
+            instance.light = _extract_light(obj, local_matrix.__class__(), ir_scene.material_model, colour_space)
+            if instance.light.scoped:
+                ir_scene.diagnostics.append(
+                    f"Light {obj.name!r} was not global and lit nothing in the imported file; it is written with "
+                    'global="false" again, so it still lights nothing.')
+            elif obj.data.get(LIGHT_GLOBAL_PROPERTY) is not None and not obj.data.get(LIGHT_GLOBAL_PROPERTY):
+                ir_scene.diagnostics.append(
+                    f"Light {obj.name!r} was scoped to its group in the imported file (global=false); it is written "
+                    'with global="true" because a Blender light lights the whole scene, so it now lights geometry '
+                    "outside that scope too.")
             ir_scene.object_names.append(obj.name)
         elif obj.type == "CAMERA":
-            instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene)
+            instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene, distance_scale)
             ir_scene.object_names.append(obj.name)
         elif obj.type == "EMPTY":
             inline_url = obj.get(INLINE_URL_PROPERTY)
             if inline_url:
-                instance.inline = IRInlineAsset(url=str(inline_url))
+                instance.inline = IRInlineAsset(url=str(inline_url), source_path=inline_source_path(_session_uid(obj), str(inline_url)))
             ir_scene.object_names.append(obj.name)
         else:
             skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1

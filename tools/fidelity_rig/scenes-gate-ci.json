@@ -1,0 +1,108 @@
+[
+ {
+  "name": "p1-point-physical",
+  "x3d": "probes/p1-point-physical.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p2-point-classic",
+  "x3d": "probes/p2-point-classic.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p3-directional-classic-i1",
+  "x3d": "probes/p3-directional-classic-i1.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p4-point-quadratic-physical",
+  "x3d": "probes/p4-point-quadratic-physical.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "p5-directional-physical-i03",
+  "x3d": "probes/p5-directional-physical-i03.x3d",
+  "patches": [
+   [
+    100,
+    256
+   ],
+   [
+    256,
+    256
+   ],
+   [
+    360,
+    256
+   ]
+  ]
+ },
+ {
+  "name": "lights-after",
+  "x3d": "../../docs/showcase/scenes/lights-after.x3d"
+ },
+ {
+  "name": "lod-control",
+  "x3d": "../../docs/showcase/scenes/lod-control.x3d"
+ },
+ {
+  "name": "stars-view-poc1",
+  "x3d": "../../docs/showcase/scenes/stars-view.x3d"
+ },
+ {
+  "name": "stilllife-x3d40",
+  "x3d": "../../docs/showcase/scenes/stilllife-x3d40.x3d"
+ }
+]

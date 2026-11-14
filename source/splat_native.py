@@ -28,8 +28,10 @@ from __future__ import annotations
 
 try:
     from .ir import IRGaussianSplats
+    from .splat_io import display_to_linear, sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRGaussianSplats
+    from splat_io import display_to_linear, sh0_to_rgb
 
 GAUSSIAN_SPLAT_TYPE = "GAUSSIAN_SPLAT"
 POSITION_ATTR = "position"
@@ -39,6 +41,7 @@ RADIANCE_BASE_ATTR = "radiance:base"
 RADIANCE_SH_ATTR = "radiance:sh_{index}"
 SPLAT_PROPERTY = "x3d_gaussian_splats"
 SPLAT_COLOR_SPACE_PROPERTY = "x3d_splat_color_space"
+DISPLAY_COLOR_ATTR = "Color"   # the base colour of each splat as a plain colour attribute, for exporters that know no splats
 MAX_SH_DEGREE = 3
 
 
@@ -134,6 +137,31 @@ def extract_native_splats(pointcloud, *, name: str) -> IRGaussianSplats:
     return splats
 
 
+def add_display_colours(pointcloud, splats: IRGaussianSplats) -> bool:
+    """Add each splat's base colour (SH degree 0) as the POINT colour attribute ``Color``.
+
+    Blender's native splat layout keeps colour only in ``radiance:base`` (an SH coefficient), which no glTF writer reads:
+    its glTF exporter (io_scene_gltf2 5.3, pointcloud.py) writes a PointCloud's POSITION and, only when the object's
+    material reads a *named* colour attribute through a Color Attribute node, COLOR_0; with ``radiance:base`` alone the
+    glb held positions and nothing else. ``Color`` is that attribute (the importer also gives the object an unlit
+    material that reads it). The values are linear, as glTF's COLOR_0 is: the splat's SH colour is display sRGB
+    unless ``colorSpace`` says linear. The splat renderer and the X3D export read the ``radiance:*`` attributes only.
+    Returns False when the splats have no SH degree 0 term."""
+    count = len(splats.positions)
+    dc = splats.sh.get((0, 0))
+    if not dc or len(dc) != count:
+        return False
+    linear = "LINEAR" in str(splats.color_space).upper()
+    flat = []
+    for coefficient in dc:
+        rgb = sh0_to_rgb(coefficient)
+        flat.extend(rgb if linear else display_to_linear(rgb))
+        flat.append(1.0)
+    attr = pointcloud.attributes.get(DISPLAY_COLOR_ATTR) or pointcloud.attributes.new(DISPLAY_COLOR_ATTR, "FLOAT_COLOR", "POINT")
+    attr.data.foreach_set("color", flat)
+    return True
+
+
 def build_native_splat_pointcloud(name: str, splats: IRGaussianSplats):
     """IRGaussianSplats -> new PointCloud datablock in Blender's native splat layout."""
     import bpy
@@ -164,6 +192,7 @@ def build_native_splat_pointcloud(name: str, splats: IRGaussianSplats):
     for (degree, coef), values in sorted(splats.sh.items()):
         if degree >= 1 and len(values) == count:
             put(RADIANCE_SH_ATTR.format(index=sh_index(degree, coef)), "FLOAT_VECTOR", "vector", values)
+    add_display_colours(pointcloud, splats)
     pointcloud[SPLAT_PROPERTY] = True
     pointcloud[SPLAT_COLOR_SPACE_PROPERTY] = splats.color_space
     if pointcloud_type_supported():

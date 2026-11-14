@@ -1,5 +1,13 @@
 // Render jobs: X_ITE on the X3D, Babylon.js on the glb, same 512x512 headless Chromium (SwiftShader).
-// Usage: node render.mjs jobs.json   (jobs: [{name, x3d, glb, clear:[r,g,b], headlight: lux|null, outdir}])
+// Usage: node render.mjs jobs.json   (jobs: [{name, x3d, glb, clear:[r,g,b], headlight: lux|null, outdir, legs?}])
+// A job with xiteOnly: true renders only X_ITE (no glb, no Babylon.js) and also writes xite_console.txt (X_ITE's console
+// errors and warnings): roundtrip.py renders the original and the re-export that way.
+// `legs` (optional, default both): ['xite'], ['babylon'] or both; the scorecard (tools/scorecard) renders one engine per call.
+// Each engine prints `TIME <engine> <job> <ms>`: the page load plus first frame, without the fixed settle wait.
+// A job that fails inside its try/catch (page crash, load timeout) prints `xite fail` / `babylon fail`. Without `--strict` the process
+// still exits 0 (compare.py, roundtrip.py and the scorecard read the images that exist); with `--strict` (the export gate) it prints
+// `FAILED ["job", ...]` and exits 1, so the caller can rerun just those jobs.
+// Loading a scene is bounded (LOAD_TIMEOUT_MS) so one stalled load cannot hang the process.
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url); const { chromium } = require('playwright');
@@ -14,25 +22,38 @@ const server = http.createServer((req, res) => {
 }).listen(0);
 const port = server.address().port; const base = `http://127.0.0.1:${port}`;
 const jobs = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const strict = process.argv.includes('--strict'); const failedJobs = new Set();
+const LOAD_TIMEOUT_MS = 90000;
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const ua = (await (await browser.newPage()).evaluate(() => navigator.userAgent)).match(/Chrome\/[\d.]+/)[0];
 console.log('BROWSER', ua);
 for (const job of jobs) {
   const out = job.outdir; fs.mkdirSync(out, { recursive: true });
+  const want = job.legs || ['xite', 'babylon'];
   // X_ITE
+  if (want.includes('xite')) {
+  const t0 = Date.now();
   const a = await browser.newPage({ viewport: { width: 512, height: 512 } });
   a.on('pageerror', e => console.log('xite pageerror', job.name, String(e).slice(0, 200)));
+  const consoleLog = []; a.on('console', m => { if (['error', 'warning'].includes(m.type())) consoleLog.push(`${m.type()}: ${m.text()}`); });
   await a.goto(`${base}/xite.html`, { waitUntil: 'load' });
   try {
-    await a.evaluate(async (url) => { const b = X3D.getBrowser('x3d-canvas');
+    await a.evaluate(async ([url, tmo]) => { const b = X3D.getBrowser('x3d-canvas');
       b.setBrowserOption('StraightenHorizon', false);   // X_ITE levels a rolled Viewpoint on bind by default; Babylon.js does not
-      await b.loadURL(new X3D.MFString(url)); window.__ver = b.version; }, `${base}/fs${job.x3d}`);
+      await Promise.race([b.loadURL(new X3D.MFString(url)), new Promise((_, rej) => setTimeout(() => rej(new Error('load timeout')), tmo))]);
+      window.__ver = b.version; }, [`${base}/fs${job.x3d}`, LOAD_TIMEOUT_MS]);
+    console.log('TIME xite', job.name, Date.now() - t0);
     await a.waitForTimeout(job.wait ?? 1500);
     await a.locator('x3d-canvas').screenshot({ path: `${out}/xite.png` });
     if (job === jobs[0]) console.log('X_ITE', await a.evaluate(() => window.__ver));
-  } catch (e) { console.log('xite fail', job.name, String(e).slice(0, 200)); }
+  } catch (e) { console.log('xite fail', job.name, String(e).slice(0, 200)); failedJobs.add(job.name); }
+  if (job.xiteOnly) fs.writeFileSync(`${out}/xite_console.txt`, consoleLog.join('\n').slice(0, 20000));
   await a.close();
+  }
+  if (job.xiteOnly) continue;
   // Babylon.js
+  if (want.includes('babylon')) {
+  const t1 = Date.now();
   const b = await browser.newPage({ viewport: { width: 512, height: 512 } });
   b.on('pageerror', e => console.log('babylon pageerror', job.name, String(e).slice(0, 200)));
   await b.goto(`${base}/babylon.html`, { waitUntil: 'load' });
@@ -41,7 +62,7 @@ for (const job of jobs) {
       BABYLON.SceneLoader.ShowLoadingScreen = false; const engine = new BABYLON.Engine(document.getElementById('c'), false, { preserveDrawingBuffer: true, antialias: true });
       const scene = new BABYLON.Scene(engine); scene.useRightHandedSystem = true;
       scene.clearColor = new BABYLON.Color4(...job.clear, 1);
-      await BABYLON.SceneLoader.AppendAsync('', job.glbUrl, scene);
+      await Promise.race([BABYLON.SceneLoader.AppendAsync('', job.glbUrl, scene), new Promise((_, rej) => setTimeout(() => rej(new Error('load timeout')), job.loadTimeout))]);
       scene.animationGroups.forEach(g => { g.stop(); g.goToFrame(0); });
       const v = job.view || { position: [0, 0, 10], forward: [0, 0, -1], up: [0, 1, 0], fov: Math.PI / 4 };
       const cam = new BABYLON.FreeCamera('x3d-viewpoint', new BABYLON.Vector3(...v.position), scene);
@@ -58,7 +79,8 @@ for (const job of jobs) {
       await Promise.race([scene.whenReadyAsync(), new Promise(r => setTimeout(r, 8000))]);
       for (let i = 0; i < 5; i++) scene.render();
       return { version: BABYLON.Engine.Version, lights: scene.lights.map(l => [l.name, l.getClassName(), +l.intensity.toFixed(4), l.range]) };
-    }, { ...job, glbUrl: `${base}/fs${job.glb}` });
+    }, { ...job, glbUrl: `${base}/fs${job.glb}`, loadTimeout: LOAD_TIMEOUT_MS });
+    console.log('TIME babylon', job.name, Date.now() - t1);
     await b.locator('#c').screenshot({ path: `${out}/babylon.png` });
     // geometry mask: two renders cleared to magenta and to green; a pixel is background only when it shows the clear
     // colour in both, so geometry that is itself magenta (or green) still counts
@@ -67,7 +89,9 @@ for (const job of jobs) {
     await b.evaluate(() => { const sc = BABYLON.Engine.LastCreatedScene; sc.clearColor = new BABYLON.Color4(0, 1, 0, 1); sc.render(); });
     await b.locator('#c').screenshot({ path: `${out}/babylon_mask_green.png` });
     console.log('BABYLON', job.name, JSON.stringify(info));
-  } catch (e) { console.log('babylon fail', job.name, String(e).slice(0, 300)); }
+  } catch (e) { console.log('babylon fail', job.name, String(e).slice(0, 300)); failedJobs.add(job.name); }
   await b.close();
+  }
 }
 await browser.close(); server.close();
+if (strict && failedJobs.size) { console.log('FAILED ' + JSON.stringify([...failedJobs])); process.exitCode = 1; }
