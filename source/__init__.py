@@ -281,6 +281,9 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
         description="X3D 4.0 and 4.1 only: sample object transforms over the scene frame range into TimeSensor and interpolator nodes. "
                     "Off unless set, except for a scene imported from X3D with animation, which keeps it",
         default=False,
+        # the dialog sets it for a scene imported with animation (invoke); Blender would remember that value and put it
+        # on the next export's dialog, whatever the scene
+        options={'SKIP_SAVE'},
     )
     animation_step: IntProperty(
         name="Frame Step",

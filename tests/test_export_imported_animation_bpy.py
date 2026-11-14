@@ -94,6 +94,15 @@ class ImportedAnimationExportTests(unittest.TestCase):
         self.assertNotIn("<TimeSensor", self._export("d_out.x3d"))
         self.assertIn("<TimeSensor", self._export("d_out2.x3d", use_animation=True))
 
+    def test_the_option_is_not_remembered_between_exports(self):
+        # review round 1 (importer F4): invoke turns Animation on for a scene imported with animation; a remembered value
+        # would come back ticked on the next export of any scene (the dialog cannot be driven in a background Blender,
+        # so this checks the flag Blender reads when it stores and restores an operator's last-used properties)
+        import bpy
+        prop = bpy.ops.export_scene.x3d.get_rna_type().properties["use_animation"]
+        self.assertTrue(prop.is_skip_save)
+        self.assertFalse(prop.default)
+
 
 if __name__ == "__main__":
     unittest.main()
