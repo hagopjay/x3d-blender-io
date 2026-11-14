@@ -33,8 +33,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Install test tools
-        # x3d is the Web3D Consortium's Python package; the semantic validator in tests uses it when present.
-        run: python -m pip install --quiet ruff x3d
+        # x3d is the Web3D Consortium's Python package; the semantic validator in tests uses it when present. Pinned (the same
+        # version as the export gate's rig, tools/fidelity_rig/gate-baseline.json): a new release can add field checks and turn runs red.
+        run: python -m pip install --quiet ruff x3d==4.0.65.8
       - name: Syntax errors (ruff, blocking)
         run: ruff check --select E9,F63,F7 --output-format github source tests
       - name: Undefined names (ruff, advisory until the legacy exporter is cleaned up)
@@ -62,7 +63,7 @@ jobs:
             libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1 libglx-mesa0
       - name: Install bpy and x3d
         # The bpy wheel pins Python 3.11; it imports with harmless cattrs and bl_pkg warnings on stderr.
-        run: python -m pip install --quiet bpy x3d
+        run: python -m pip install --quiet bpy x3d==4.0.65.8
       - name: Install the Khronos glTF Validator for the glb gate test
         # Node is preinstalled on ubuntu-latest. The version is the one pinned in tools/fidelity_rig/package.json;
         # tests/test_glb_validator_bpy.py fails when the two differ.
@@ -189,10 +190,13 @@ jobs:
     name: Export gate (glTF validator + render diff against X_ITE)
     runs-on: ubuntu-latest
     needs: unit
-    timeout-minutes: 30
+    # A normal run takes minutes. gate.py bounds every render.mjs process (60 s plus 200 s per job, so 1,660 s for a chunk of 8) and
+    # reruns a job that failed once, so a hung page costs at most that, not the whole job; 45 minutes leaves room for one such hang.
+    timeout-minutes: 45
     env:
-      # The baseline (tools/fidelity_rig/gate-baseline.json) was measured on this rig: bpy 5.3.0 on Python 3.13, X_ITE 16.7.1,
-      # Babylon.js 9.32.0, gltf-validator 2.0.0-dev.3.10 and Playwright's Chromium (SwiftShader), the last four pinned in package.json.
+      # The baseline (tools/fidelity_rig/gate-baseline.json) was measured on this rig: bpy 5.3.0 on Python 3.13, x3d (x3d.py) 4.0.65.8,
+      # numpy 2.5.3, Pillow 12.3.0, flip-evaluator 1.7, X_ITE 16.7.1, Babylon.js 9.32.0, gltf-validator 2.0.0-dev.3.10 and Playwright's
+      # Chromium (SwiftShader); the Node packages are pinned in package.json. gate.py --strict-fingerprint fails when any of them differs.
       BPY_PYTHON: python
     steps:
       - uses: actions/checkout@v7
@@ -206,8 +210,9 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends \
             libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1 libglx-mesa0
       - name: Install bpy and the Python libraries of the rig
-        # bpy exports both legs; x3d is the semantic X3D validator; numpy, pillow and flip-evaluator do the image deltas.
-        run: python -m pip install --quiet bpy==5.3.0 x3d numpy pillow flip-evaluator==1.7
+        # bpy exports both legs; x3d is the semantic X3D validator (its error count is a zero-tolerance check, so the version is pinned);
+        # numpy, pillow and flip-evaluator do the image deltas. The versions are the baseline header's rig.
+        run: python -m pip install --quiet bpy==5.3.0 x3d==4.0.65.8 numpy==2.5.3 pillow==12.3.0 flip-evaluator==1.7
       - name: Install the rig's Node packages (X_ITE, Babylon.js, Playwright, glTF Validator)
         working-directory: tools/fidelity_rig
         run: |
@@ -238,4 +243,4 @@ jobs:
             tools/fidelity_rig/out/ci/*/reexp/*.png
             tools/fidelity_rig/out/ci/*/reexp/roundtrip.x3d
             tools/fidelity_rig/out/ci/*/scene.glb.validation.json
-          if-no-files-found: ignore
+          if-no-files-found: warn   # a job killed before gate.py wrote gate_results.json must not look like a clean upload

@@ -10,7 +10,11 @@
    "rel": 0.05
   },
   "triangles": {
-   "rel": 0.05
+   "rel": 0.01
+  },
+  "geometry_share": {
+   "abs": 0.002,
+   "rel": 0.1
   }
  },
  "scenes": {
@@ -20,7 +24,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 4502
+    "triangles": 4502,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 14.78,
    "reexport": {
@@ -53,7 +59,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.313,
+   "geometry_missing_share": 0.023
   },
   "annotation-standard": {
    "validator": {
@@ -61,7 +69,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 4502
+    "triangles": 4502,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 14.63,
    "reexport": {
@@ -94,7 +104,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.311,
+   "geometry_missing_share": 0.019
   },
   "asterion": {
    "validator": {
@@ -102,7 +114,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 93682
+    "triangles": 93682,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 3.48,
    "reexport": {
@@ -111,7 +125,9 @@
    "roundtrip": {
     "mean_abs_delta": 0.01,
     "flip": 0.00103
-   }
+   },
+   "geometry_share": 1.0,
+   "geometry_missing_share": 0.0
   },
   "demo-cannonball": {
    "validator": {
@@ -119,7 +135,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1452
+    "triangles": 1452,
+    "lines": 7,
+    "points": 0
    },
    "geometry_delta": 17.77,
    "reexport": {
@@ -151,7 +169,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.071,
+   "geometry_missing_share": 0.414
   },
   "demo-chirp": {
    "validator": {
@@ -159,7 +179,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 960
+    "triangles": 960,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 1.48,
    "reexport": {
@@ -191,7 +213,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.003,
+   "geometry_missing_share": 0.0
   },
   "demo-double-pendulum": {
    "validator": {
@@ -199,7 +223,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 4320
+    "triangles": 4320,
+    "lines": 8,
+    "points": 0
    },
    "geometry_delta": 40.83,
    "reexport": {
@@ -231,7 +257,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.028,
+   "geometry_missing_share": 0.972
   },
   "demo-habsburg-unlit-color": {
    "validator": {
@@ -239,7 +267,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 240
+    "triangles": 240,
+    "lines": 18,
+    "points": 0
    },
    "geometry_delta": 27.41,
    "reexport": {
@@ -272,7 +302,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.214,
+   "geometry_missing_share": 0.031
   },
   "demo-living-heart": {
    "allow_empty": {
@@ -281,7 +313,9 @@
    "geometry_delta": null,
    "glb": {
     "class": "empty",
-    "triangles": 0
+    "triangles": 0,
+    "lines": 0,
+    "points": 0
    },
    "reexport": {
     "nodes_lost": 11
@@ -301,7 +335,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.0,
+   "geometry_missing_share": 0.0
   },
   "demo-material-odyssey": {
    "validator": {
@@ -309,7 +345,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 75314
+    "triangles": 75314,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": null,
    "reexport": {
@@ -345,7 +383,12 @@
    ],
    "skip": {
     "roundtrip_delta": "X_ITE renders this scene differently on every run (H1): noise 74.5 vs delta 44.4 in the audit"
-   }
+   },
+   "allow_blank": {
+    "reason": "Babylon.js 9.32.0 drew none of the 75,314 glb triangles within the rig timeout (geometry share 0.0, see known H1), so geometry_delta is null and the render check measures nothing; the round-trip check is skipped separately (H1). Cause not investigated (Confirmed 13 Nov 2026, Chromium 153 SwiftShader)."
+   },
+   "geometry_share": 0.0,
+   "geometry_missing_share": 0.456
   },
   "demo-materials-textures": {
    "validator": {
@@ -353,7 +396,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 13562
+    "triangles": 13562,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 15.64,
    "reexport": {
@@ -406,7 +451,18 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.638,
+   "geometry_missing_share": 0.36,
+   "tolerance": {
+    "geometry_delta": {
+     "abs": 3.0
+    },
+    "roundtrip_delta": {
+     "abs": 2.0
+    },
+    "reason": "Unstable scene: the first baseline run and the 14 Nov 2026 full run (same add-on revision 518c3cd, Chromium 153 SwiftShader, X_ITE 16.7.1) gave geometry_delta 15.64 then 16.91, roundtrip mean|delta| 4.59 then 3.15 and FLIP 0.07303 then 0.05403 (the first seed run measured the round trip at 10.52 then 10.73 on an older source). The override is about twice the spread seen so far, from two runs."
+   }
   },
   "demo-ode-integrators": {
    "validator": {
@@ -414,7 +470,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 3360
+    "triangles": 3360,
+    "lines": 12,
+    "points": 0
    },
    "geometry_delta": 33.82,
    "reexport": {
@@ -446,7 +504,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.011,
+   "geometry_missing_share": 0.989
   },
   "demo-ontology-constellation": {
    "validator": {
@@ -454,7 +514,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 219262
+    "triangles": 219262,
+    "lines": 5,
+    "points": 0
    },
    "geometry_delta": 25.29,
    "reexport": {
@@ -494,7 +556,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.121,
+   "geometry_missing_share": 0.053
   },
   "demo-wedgwood-unlit-textures": {
    "validator": {
@@ -502,7 +566,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 22348
+    "triangles": 22348,
+    "lines": 0,
+    "points": 0
    },
    "reexport": {
     "nodes_lost": 16
@@ -542,7 +608,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1296
+    "triangles": 1296,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 14.64,
    "reexport": {
@@ -575,7 +643,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.351,
+   "geometry_missing_share": 0.001
   },
   "ellipsoid-moon": {
    "validator": {
@@ -583,7 +653,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1296
+    "triangles": 1296,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 17.32,
    "reexport": {
@@ -616,7 +688,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.025,
+   "geometry_missing_share": 0.0
   },
   "geolod-no-origin": {
    "validator": {
@@ -624,7 +698,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 2422
+    "triangles": 2422,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 16.72,
    "reexport": {
@@ -665,7 +741,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.271,
+   "geometry_missing_share": 0.024
   },
   "geolod-origin": {
    "validator": {
@@ -673,7 +751,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 2216
+    "triangles": 2216,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 16.51,
    "reexport": {
@@ -714,7 +794,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.27,
+   "geometry_missing_share": 0.023
   },
   "lights-after": {
    "validator": {
@@ -722,7 +804,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 974
+    "triangles": 974,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 0.12,
    "reexport": {
@@ -731,7 +815,9 @@
    "roundtrip": {
     "mean_abs_delta": 0.0,
     "flip": 0.00013
-   }
+   },
+   "geometry_share": 0.882,
+   "geometry_missing_share": 0.118
   },
   "lights-before": {
    "validator": {
@@ -739,7 +825,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 974
+    "triangles": 974,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 70.17,
    "reexport": {
@@ -757,7 +845,9 @@
       "roundtrip_delta"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.882,
+   "geometry_missing_share": 0.0
   },
   "lod-control": {
    "validator": {
@@ -765,7 +855,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 12
+    "triangles": 12,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 0.86,
    "reexport": {
@@ -798,7 +890,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.073,
+   "geometry_missing_share": 0.0
   },
   "lod-scaled": {
    "validator": {
@@ -806,7 +900,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 12
+    "triangles": 12,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 0.81,
    "reexport": {
@@ -840,7 +936,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.073,
+   "geometry_missing_share": 0.0
   },
   "lumen": {
    "validator": {
@@ -848,7 +946,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 89568
+    "triangles": 89568,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 6.05,
    "reexport": {
@@ -866,7 +966,9 @@
       "geometry_delta"
      ]
     }
-   ]
+   ],
+   "geometry_share": 1.0,
+   "geometry_missing_share": 0.0
   },
   "nurbs-weights": {
    "validator": {
@@ -874,7 +976,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 8375
+    "triangles": 8375,
+    "lines": 1,
+    "points": 1
    },
    "geometry_delta": 15.67,
    "reexport": {
@@ -915,7 +1019,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.201,
+   "geometry_missing_share": 0.022
   },
   "nurbs-weights-premultiplied": {
    "validator": {
@@ -923,7 +1029,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 9012
+    "triangles": 9012,
+    "lines": 1,
+    "points": 1
    },
    "geometry_delta": 17.44,
    "reexport": {
@@ -964,7 +1072,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.202,
+   "geometry_missing_share": 0.026
   },
   "p1-point-physical": {
    "validator": {
@@ -972,7 +1082,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 36
+    "triangles": 36,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 0.24,
    "reexport": {
@@ -981,7 +1093,9 @@
    "roundtrip": {
     "mean_abs_delta": 0.0,
     "flip": 0.0
-   }
+   },
+   "geometry_share": 0.09,
+   "geometry_missing_share": 0.002
   },
   "p2-point-classic": {
    "validator": {
@@ -989,7 +1103,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 36
+    "triangles": 36,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 47.07,
    "reexport": {
@@ -1015,7 +1131,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.09,
+   "geometry_missing_share": 0.002
   },
   "p3-directional-classic-i1": {
    "validator": {
@@ -1023,7 +1141,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 36
+    "triangles": 36,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 1.5,
    "reexport": {
@@ -1049,7 +1169,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.09,
+   "geometry_missing_share": 0.002
   },
   "p4-point-quadratic-physical": {
    "validator": {
@@ -1057,7 +1179,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 36
+    "triangles": 36,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 3.37,
    "reexport": {
@@ -1066,7 +1190,9 @@
    "roundtrip": {
     "mean_abs_delta": 0.0,
     "flip": 0.0
-   }
+   },
+   "geometry_share": 0.09,
+   "geometry_missing_share": 0.001
   },
   "p5-directional-physical-i03": {
    "validator": {
@@ -1074,7 +1200,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 36
+    "triangles": 36,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 0.2,
    "reexport": {
@@ -1083,7 +1211,9 @@
    "roundtrip": {
     "mean_abs_delta": 0.0,
     "flip": 0.0
-   }
+   },
+   "geometry_share": 0.09,
+   "geometry_missing_share": 0.002
   },
   "prismatica-aurora-cathedral": {
    "validator": {
@@ -1091,7 +1221,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 27544
+    "triangles": 27544,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 2.52,
    "reexport": {
@@ -1100,7 +1232,9 @@
    "roundtrip": {
     "mean_abs_delta": 0.99,
     "flip": 0.02101
-   }
+   },
+   "geometry_share": 0.43,
+   "geometry_missing_share": 0.006
   },
   "profile-tables": {
    "validator": {
@@ -1108,7 +1242,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 2990
+    "triangles": 2990,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 14.25,
    "reexport": {
@@ -1141,7 +1277,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.309,
+   "geometry_missing_share": 0.015
   },
   "profile-tables-fixed": {
    "validator": {
@@ -1149,7 +1287,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 2990
+    "triangles": 2990,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 14.25,
    "reexport": {
@@ -1182,7 +1322,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.309,
+   "geometry_missing_share": 0.015
   },
   "quaternion-wxyz": {
    "validator": {
@@ -1190,7 +1332,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1499
+    "triangles": 1499,
+    "lines": 0,
+    "points": 1
    },
    "geometry_delta": 16.59,
    "reexport": {
@@ -1230,7 +1374,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.153,
+   "geometry_missing_share": 0.176
   },
   "quaternion-xyzw": {
    "validator": {
@@ -1238,7 +1384,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1499
+    "triangles": 1499,
+    "lines": 0,
+    "points": 1
    },
    "geometry_delta": 16.2,
    "reexport": {
@@ -1278,7 +1426,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.153,
+   "geometry_missing_share": 0.126
   },
   "repair-0-written": {
    "validator": {
@@ -1286,7 +1436,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1920
+    "triangles": 1920,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 42.58,
    "reexport": {
@@ -1333,8 +1485,13 @@
     "roundtrip_delta": {
      "abs": 1.0
     },
-    "reason": "Animated scene (a TimeSensor-driven rotation): X_ITE is captured at a run-dependent moment, so the numbers move between identical runs. Measured 13 Nov 2026 on this rig: repair-1-validator geometry_delta 42.57 then 24.67 and roundtrip mean|delta| 0.89 then 1.06; repair-0-written roundtrip 1.36 then 0.98."
-   }
+    "reason": "Animated scene (a TimeSensor-driven rotation): X_ITE is captured at a run-dependent moment, so the numbers move between identical runs. Measured 13 Nov 2026 on this rig: repair-1-validator geometry_delta 42.57 then 24.67 and roundtrip mean|delta| 0.89 then 1.06; repair-0-written roundtrip 1.36 then 0.98.",
+    "geometry_share": {
+     "abs": 0.02
+    }
+   },
+   "geometry_share": 0.016,
+   "geometry_missing_share": 0.004
   },
   "repair-1-validator": {
    "validator": {
@@ -1342,7 +1499,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1920
+    "triangles": 1920,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 42.57,
    "reexport": {
@@ -1389,8 +1548,13 @@
     "roundtrip_delta": {
      "abs": 1.0
     },
-    "reason": "Animated scene (a TimeSensor-driven rotation): X_ITE is captured at a run-dependent moment, so the numbers move between identical runs. Measured 13 Nov 2026 on this rig: repair-1-validator geometry_delta 42.57 then 24.67 and roundtrip mean|delta| 0.89 then 1.06; repair-0-written roundtrip 1.36 then 0.98; repair-2-render stable (17.15, 0.2)."
-   }
+    "reason": "Animated scene (a TimeSensor-driven rotation): X_ITE is captured at a run-dependent moment, so the numbers move between identical runs. Measured 13 Nov 2026 on this rig: repair-1-validator geometry_delta 42.57 then 24.67 and roundtrip mean|delta| 0.89 then 1.06; repair-0-written roundtrip 1.36 then 0.98; repair-2-render stable (17.15, 0.2).",
+    "geometry_share": {
+     "abs": 0.02
+    }
+   },
+   "geometry_share": 0.016,
+   "geometry_missing_share": 0.01
   },
   "repair-2-render": {
    "validator": {
@@ -1398,7 +1562,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 1920
+    "triangles": 1920,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 17.15,
    "reexport": {
@@ -1437,7 +1603,18 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.014,
+   "geometry_missing_share": 0.004,
+   "tolerance": {
+    "geometry_share": {
+     "abs": 0.02
+    },
+    "roundtrip_delta": {
+     "abs": 1.0
+    },
+    "reason": "X_ITE is captured at a run-dependent moment on this scene too (the two repair-0/1 scenes' TimeSensor rotation family): the first baseline run and the 14 Nov 2026 full run (same add-on revision 518c3cd, Chromium 153 SwiftShader, X_ITE 16.7.1) gave geometry_missing_share 0.004 then 0.008, roundtrip mean|delta| 0.27 then 0.59 and FLIP 0.00346 then 0.00816, while geometry_delta (17.15 baseline) and the other 36 scenes reproduced exactly."
+   }
   },
   "stars-splats": {
    "validator": {
@@ -1445,7 +1622,9 @@
    },
    "glb": {
     "class": "points",
-    "triangles": 0
+    "triangles": 0,
+    "lines": 0,
+    "points": 1
    },
    "geometry_delta": null,
    "reexport": {
@@ -1463,7 +1642,12 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "allow_blank": {
+    "reason": "Every render of this scene is pure background in this rig (X_ITE 16.7.1, Babylon.js 9.32.0 and the re-export, Chromium 153 SwiftShader: min = max = 0 over all 512 x 512 pixels), so geometry_delta and roundtrip_delta measure nothing here (Confirmed 13 Nov 2026). The scene is gated by the validator, glb_content (class points), reexport and the node-loss count only; stars-view and stars-view-poc1 cover splat points with real renders. Not investigated whether X_ITE draws no GaussianSplats under SwiftShader."
+   },
+   "geometry_share": 0.0,
+   "geometry_missing_share": 0.0
   },
   "stars-view": {
    "validator": {
@@ -1471,7 +1655,9 @@
    },
    "glb": {
     "class": "points",
-    "triangles": 0
+    "triangles": 0,
+    "lines": 0,
+    "points": 1
    },
    "geometry_delta": 15.47,
    "reexport": {
@@ -1496,7 +1682,9 @@
       "roundtrip_delta"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.001,
+   "geometry_missing_share": 0.008
   },
   "stars-view-poc1": {
    "validator": {
@@ -1504,7 +1692,9 @@
    },
    "glb": {
     "class": "points",
-    "triangles": 0
+    "triangles": 0,
+    "lines": 0,
+    "points": 1
    },
    "geometry_delta": 17.28,
    "reexport": {
@@ -1522,7 +1712,9 @@
       "roundtrip_delta"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.003,
+   "geometry_missing_share": 0.013
   },
   "stilllife-splats-24k": {
    "validator": {
@@ -1530,7 +1722,9 @@
    },
    "glb": {
     "class": "points",
-    "triangles": 0
+    "triangles": 0,
+    "lines": 0,
+    "points": 1
    },
    "geometry_delta": 25.9,
    "reexport": {
@@ -1549,7 +1743,9 @@
       "reexport"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.051,
+   "geometry_missing_share": 0.37
   },
   "stilllife-stage": {
    "validator": {
@@ -1557,7 +1753,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 27560
+    "triangles": 27560,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 0.46,
    "reexport": {
@@ -1575,7 +1773,9 @@
       "roundtrip_delta"
      ]
     }
-   ]
+   ],
+   "geometry_share": 0.68,
+   "geometry_missing_share": 0.001
   },
   "stilllife-x3d40": {
    "validator": {
@@ -1583,7 +1783,9 @@
    },
    "glb": {
     "class": "triangles",
-    "triangles": 27560
+    "triangles": 27560,
+    "lines": 0,
+    "points": 0
    },
    "geometry_delta": 0.47,
    "reexport": {
@@ -1592,7 +1794,9 @@
    "roundtrip": {
     "mean_abs_delta": 0.43,
     "flip": 0.00974
-   }
+   },
+   "geometry_share": 0.68,
+   "geometry_missing_share": 0.0
   }
  },
  "rig": {
@@ -1604,6 +1808,9 @@
   "validator": "2.0.0-dev.3.10",
   "flip_evaluator": "1.7",
   "addon_git_revision": "518c3cd6218c2734eb7bdbdda1c3144d9de33e93",
-  "addon_source_dirty": false
+  "addon_source_dirty": false,
+  "x3d_py": "4.0.65.8",
+  "numpy": "2.5.3",
+  "pillow": "12.3.0"
  }
 }

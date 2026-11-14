@@ -35,7 +35,7 @@ def measured(**over):
         validator=dict(ok_ran=True, errors=0, warnings=0, infos=0, hints=0, version="2.0.0-dev.3.10", not_validated=[]),
         glb={"class": "triangles", "triangles": 100, "points": 0, "lines": 0},
         x3d=dict(surface=True, lines=False, points=False, splats=False),
-        glb_render_ok=True, geometry_delta=2.0, geometry_share=0.3,
+        glb_render_ok=True, geometry_delta=2.0, geometry_share=0.3, geometry_missing_share=0.01, xite_foreground_share=0.4,
         reexport=dict(leg_ok=True, well_formed=True, x3d_py="ok", x3d_py_errors=0, nodes_lost=1, lost_types=["Material"]),
         roundtrip=dict(render_ok=True, mean_abs_delta=5.0, flip=0.05))
     m.update(over)
@@ -43,8 +43,8 @@ def measured(**over):
 
 
 def baseline_entry(**over):
-    e = dict(validator=dict(warnings=0), glb={"class": "triangles", "triangles": 100}, geometry_delta=2.0,
-             reexport=dict(nodes_lost=1), roundtrip=dict(mean_abs_delta=5.0, flip=0.05))
+    e = dict(validator=dict(warnings=0), glb={"class": "triangles", "triangles": 100, "points": 0, "lines": 0}, geometry_delta=2.0,
+             reexport=dict(nodes_lost=1), roundtrip=dict(mean_abs_delta=5.0, flip=0.05), geometry_share=0.3, geometry_missing_share=0.01)
     e.update(over)
     return e
 
@@ -166,11 +166,13 @@ class Thresholds(unittest.TestCase):
             self.assertTrue(gate.lint_baseline(dict(scenes=dict(s=baseline_entry(tolerance=bad)))), bad)
 
     def test_geometry_not_visible(self):
+        # Babylon.js drew nothing although the baseline has geometry: fail
         r = by_check(gate.evaluate_scene(measured(geometry_delta=None), baseline_entry(), TOL))["geometry_delta"]
         self.assertEqual(r["status"], "FAIL")
+        # ... and nothing in the baseline either: a render that measured nothing is VACUOUS, not a pass (F2)
         r = by_check(gate.evaluate_scene(measured(geometry_delta=None), baseline_entry(geometry_delta=None), TOL))["geometry_delta"]
-        self.assertEqual(r["status"], "PASS")
-        r = by_check(gate.evaluate_scene(measured(geometry_delta=None), baseline_entry(geometry_delta=None), TOL))["geometry_delta"]
+        self.assertEqual(r["status"], "FAIL")
+        self.assertIn("vacuous", r["detail"])
         self.assertIn("100 triangles that Babylon.js did not draw", r["detail"])
 
     def test_scene_without_baseline_fails(self):
@@ -242,7 +244,7 @@ class EmptyGlb(unittest.TestCase):
 
     def test_triangle_count_may_not_fall_below_baseline(self):
         e = baseline_entry(glb={"class": "triangles", "triangles": 1000})
-        for tris, want in [(1000, "PASS"), (950, "PASS"), (949, "FAIL"), (2000, "PASS")]:
+        for tris, want in [(1000, "PASS"), (990, "PASS"), (989, "FAIL"), (2000, "PASS")]:   # tolerance 1%
             m = measured(glb={"class": "triangles", "triangles": tris, "points": 0, "lines": 0})
             self.assertEqual(by_check(gate.evaluate_scene(m, e, TOL))["glb_content"]["status"], want, tris)
 
@@ -324,12 +326,12 @@ class BaselineUpdate(unittest.TestCase):
         self.assertTrue(ref)
 
     def test_triangles_are_a_floor(self):
-        old = dict(scenes=dict(s=baseline_entry(glb={"class": "triangles", "triangles": 1000})))
+        old = dict(scenes=dict(s=baseline_entry(glb={"class": "triangles", "triangles": 1000, "points": 0, "lines": 0})))
         m = lambda t: measured(glb={"class": "triangles", "triangles": t, "points": 0, "lines": 0})  # noqa: E731
         new, moves, ref = gate.merge_baseline(old, dict(s=m(900)))
         self.assertEqual(new["scenes"]["s"]["glb"]["triangles"], 1000)
         self.assertTrue(ref)
-        new, moves, ref = gate.merge_baseline(old, dict(s=m(980)))   # inside the tolerance: unchanged
+        new, moves, ref = gate.merge_baseline(old, dict(s=m(995)))   # inside the tolerance: unchanged
         self.assertEqual((new["scenes"]["s"]["glb"]["triangles"], ref, moves), (1000, [], []))
         new, moves, ref = gate.merge_baseline(old, dict(s=m(1500)))
         self.assertEqual(new["scenes"]["s"]["glb"]["triangles"], 1500)
@@ -380,6 +382,237 @@ class BaselineUpdate(unittest.TestCase):
             self.assertTrue(gate.lint_baseline(dict(scenes=dict(s=baseline_entry(**bad)))), bad)
 
 
+def blank_measurement(**over):
+    """stars-splats as it was measured: points-only glb, every render pure background (the F2 scene)."""
+    m = measured(xite_foreground_share=0.0, geometry_delta=None, geometry_share=0.0, geometry_missing_share=0.0,
+                 glb={"class": "points", "triangles": 0, "points": 1, "lines": 0},
+                 x3d=dict(surface=False, lines=False, points=True, splats=True),
+                 roundtrip=dict(render_ok=True, mean_abs_delta=0.0, flip=0.0))
+    m.update(over)
+    return m
+
+
+def blank_entry(**over):
+    e = baseline_entry(glb={"class": "points", "triangles": 0, "points": 1, "lines": 0}, geometry_delta=None,
+                       roundtrip=dict(mean_abs_delta=0.0, flip=0.0), geometry_share=0.0, geometry_missing_share=0.0)
+    e.update(over)
+    return e
+
+
+class VacuousRenders(unittest.TestCase):
+    """F2: a render check that passes because every render is background passes without measuring anything."""
+
+    def test_blank_renders_with_null_baseline_no_longer_pass(self):
+        res = by_check(gate.evaluate_scene(blank_measurement(), blank_entry(), TOL))
+        self.assertEqual(res["geometry_delta"]["status"], "FAIL")
+        self.assertIn("vacuous", res["geometry_delta"]["detail"])
+        self.assertIn("allow_blank", res["geometry_delta"]["detail"])
+        self.assertEqual(res["roundtrip_delta"]["status"], "FAIL")
+        self.assertIn("vacuous", res["roundtrip_delta"]["detail"])
+        self.assertEqual(gate.scene_verdict(list(res.values())), "FAIL")
+
+    def test_zero_deltas_do_not_pass_a_blank_reference(self):
+        m = measured(xite_foreground_share=0.0, roundtrip=dict(render_ok=True, mean_abs_delta=0.0, flip=0.0))
+        e = baseline_entry(roundtrip=dict(mean_abs_delta=0.0, flip=0.0))
+        self.assertEqual(by_check(gate.evaluate_scene(m, e, TOL))["roundtrip_delta"]["status"], "FAIL")
+        m["xite_foreground_share"] = 0.02   # the same numbers on a reference that shows something are a real zero
+        self.assertEqual(by_check(gate.evaluate_scene(m, e, TOL))["roundtrip_delta"]["status"], "PASS")
+
+    def test_x_ite_blank_while_babylon_draws_is_vacuous_too(self):
+        r = by_check(gate.evaluate_scene(measured(xite_foreground_share=0.0), baseline_entry(), TOL))["geometry_delta"]
+        self.assertEqual(r["status"], "FAIL")
+        self.assertIn("X_ITE renders only the background", r["detail"])
+
+    def test_allow_blank_with_a_written_reason_passes_and_says_so(self):
+        e = blank_entry(allow_blank=dict(reason="X_ITE draws no splats in SwiftShader (Confirmed 13 Nov 2026)"))
+        res = by_check(gate.evaluate_scene(blank_measurement(), e, TOL))
+        for chk in ("geometry_delta", "roundtrip_delta"):
+            self.assertEqual(res[chk]["status"], "PASS", chk)
+            self.assertIn("not measured", res[chk]["detail"])
+            self.assertIn("allowed: X_ITE draws no splats", res[chk]["detail"])
+        self.assertEqual(gate.lint_baseline(dict(scenes=dict(s=e))), [])
+        e["allow_blank"]["reason"] = " "
+        self.assertTrue(gate.lint_baseline(dict(scenes=dict(s=e))))
+        e["allow_blank"]["reason"] = "UNEXPLAINED: recorded by --allow-worse"
+        self.assertTrue(gate.lint_baseline(dict(scenes=dict(s=e))))
+
+    def test_allow_empty_covers_a_scene_with_nothing_to_draw(self):
+        m = blank_measurement(glb={"class": "empty", "triangles": 0, "points": 0, "lines": 0},
+                              x3d=dict(surface=False, lines=False, points=False, splats=False))
+        e = blank_entry(glb={"class": "empty", "triangles": 0, "points": 0, "lines": 0}, allow_empty=dict(reason="a placeholder Shape"))
+        res = by_check(gate.evaluate_scene(m, e, TOL))
+        self.assertEqual(res["geometry_delta"]["status"], "PASS")
+        self.assertEqual(res["roundtrip_delta"]["status"], "PASS")
+
+    def test_a_skip_entry_still_outranks(self):
+        e = blank_entry(skip=dict(geometry_delta="page crash", roundtrip_delta="page crash"))
+        res = by_check(gate.evaluate_scene(blank_measurement(), e, TOL))
+        self.assertEqual(res["geometry_delta"]["status"], "SKIP")
+        self.assertEqual(res["roundtrip_delta"]["status"], "SKIP")
+
+    def test_babylon_drawing_nothing_of_a_glb_with_triangles_is_vacuous(self):
+        # X_ITE shows the scene, Babylon.js draws no pixel of a glb that holds 100 triangles, and the baseline never saw geometry either
+        m = measured(geometry_delta=None, geometry_share=0.0)
+        r = by_check(gate.evaluate_scene(m, baseline_entry(geometry_delta=None, geometry_share=0.0), TOL))["geometry_delta"]
+        self.assertEqual(r["status"], "FAIL")
+        self.assertIn("100 triangles that Babylon.js did not draw", r["detail"])
+
+    def test_an_allow_blank_that_is_no_longer_needed_is_flagged(self):
+        e = baseline_entry(allow_blank=dict(reason="was blank"))
+        res = gate.evaluate_scene(measured(), e, TOL)
+        row = by_check(res)["baseline"]
+        self.assertEqual(row["status"], "IMPROVED")
+        self.assertIn("allow_blank", row["detail"])
+        self.assertEqual(gate.scene_verdict(res), "IMPROVED")
+
+    def test_update_does_not_record_a_vacuous_render_without_a_reason(self):
+        new, moves, ref = gate.merge_baseline(dict(scenes={}), dict(s=blank_measurement()))
+        self.assertNotIn("s", new["scenes"])
+        self.assertTrue(any("VACUOUS" in x for x in ref), ref)
+        # --allow-worse records it, with a reason a person must replace (the lint fails until then)
+        new, moves, ref = gate.merge_baseline(dict(scenes={}), dict(s=blank_measurement()), allow_worse=True)
+        self.assertTrue(new["scenes"]["s"]["allow_blank"]["reason"].startswith("UNEXPLAINED"))
+        self.assertTrue(any("UNEXPLAINED" in p for p in gate.lint_baseline(new)))
+        # with the written reason in place the update records the numbers and refuses nothing
+        old = dict(scenes=dict(s=blank_entry(allow_blank=dict(reason="X_ITE draws no splats"))))
+        new, moves, ref = gate.merge_baseline(old, dict(s=blank_measurement()))
+        self.assertEqual(ref, [])
+        self.assertEqual(new["scenes"]["s"]["allow_blank"], old["scenes"]["s"]["allow_blank"])   # hand-written, never touched
+
+    def test_update_does_not_record_a_scene_without_renders(self):
+        m = measured(glb_render_ok=False, roundtrip=dict(render_ok=False))
+        new, moves, ref = gate.merge_baseline(dict(scenes={}), dict(s=m))
+        self.assertNotIn("s", new["scenes"])
+        self.assertIn("render missing", "\n".join(ref))
+        new, _, ref = gate.merge_baseline(dict(scenes={}), dict(s=m), allow_worse=True)
+        self.assertTrue(new["scenes"]["s"]["skip"]["geometry_delta"].startswith("UNEXPLAINED"))
+        self.assertTrue(new["scenes"]["s"]["skip"]["roundtrip_delta"].startswith("UNEXPLAINED"))
+
+
+class GeometryTheDeltaCannotSee(unittest.TestCase):
+    """F3: geometry_delta is a mean over the pixels Babylon.js drew, so geometry the glb lost does not move it."""
+
+    def check(self, m=None, e=None):
+        return by_check(gate.evaluate_scene(m or measured(), e or baseline_entry(), TOL))["geometry_delta"]
+
+    def test_pixels_x_ite_draws_and_babylon_leaves_empty_fail_although_the_delta_is_unchanged(self):
+        r = self.check(measured(geometry_missing_share=0.08))   # delta still 2.0
+        self.assertEqual(r["status"], "FAIL")
+        self.assertIn("X_ITE draws 0.08 of the frame", r["detail"])
+        self.assertEqual(self.check(measured(geometry_missing_share=0.011))["status"], "PASS")   # inside max(0.002, 10%)
+        self.assertEqual(self.check(measured(geometry_missing_share=0.013))["status"], "FAIL")
+
+    def test_babylon_covering_less_of_the_frame_fails(self):
+        self.assertEqual(self.check(measured(geometry_share=0.28))["status"], "PASS")    # floor 0.3 - max(0.002, 10%) = 0.27
+        r = self.check(measured(geometry_share=0.26))
+        self.assertEqual(r["status"], "FAIL")
+        self.assertIn("covers 0.26 of the frame", r["detail"])
+
+    def test_animated_scene_override_widens_the_share_rules_only(self):
+        e = baseline_entry(tolerance=dict(geometry_share=dict(abs=0.02), reason="animated: sampled at run-dependent moments"))
+        self.assertEqual(self.check(measured(geometry_missing_share=0.025), e)["status"], "PASS")
+        self.assertEqual(self.check(measured(geometry_missing_share=0.05), e)["status"], "FAIL")
+        self.assertEqual(self.check(measured(geometry_delta=9.0), e)["status"], "FAIL")   # the delta keeps the header rule
+        self.assertEqual(gate.lint_baseline(dict(scenes=dict(s=e))), [])
+        e["tolerance"].pop("reason")
+        self.assertTrue(gate.lint_baseline(dict(scenes=dict(s=e))))
+
+    def test_a_baseline_without_the_shares_does_not_gate_them(self):
+        e = baseline_entry()
+        del e["geometry_share"], e["geometry_missing_share"]
+        self.assertEqual(self.check(measured(geometry_missing_share=0.9, geometry_share=0.0), e)["status"], "PASS")
+
+    def test_lost_lines_or_points_fail_even_when_the_triangles_are_all_there(self):
+        e = baseline_entry(glb={"class": "triangles", "triangles": 100, "points": 5, "lines": 3})
+        ok = measured(glb={"class": "triangles", "triangles": 100, "points": 5, "lines": 3})
+        self.assertEqual(by_check(gate.evaluate_scene(ok, e, TOL))["glb_content"]["status"], "PASS")
+        lost = measured(glb={"class": "triangles", "triangles": 100, "points": 5, "lines": 0})
+        r = by_check(gate.evaluate_scene(lost, e, TOL))["glb_content"]
+        self.assertEqual(r["status"], "FAIL")
+        self.assertIn("0 lines primitives < baseline 3", r["detail"])
+
+    def test_update_treats_the_shares_as_floor_and_ceiling(self):
+        old = dict(scenes=dict(s=baseline_entry()))
+        new, moves, ref = gate.merge_baseline(old, dict(s=measured(geometry_missing_share=0.2)))
+        self.assertEqual(new["scenes"]["s"]["geometry_missing_share"], 0.01)
+        self.assertTrue(any("geometry_missing_share" in x for x in ref))
+        new, moves, ref = gate.merge_baseline(old, dict(s=measured(geometry_share=0.1)))
+        self.assertEqual(new["scenes"]["s"]["geometry_share"], 0.3)
+        self.assertTrue(any("geometry_share" in x for x in ref))
+        new, moves, ref = gate.merge_baseline(old, dict(s=measured(geometry_missing_share=0.0, geometry_share=0.5)))
+        self.assertEqual((new["scenes"]["s"]["geometry_missing_share"], new["scenes"]["s"]["geometry_share"], ref), (0.0, 0.5, []))
+
+    def test_a_class_change_follows_the_triangle_decision(self):
+        # the glb dropped from 36 triangles to 18 lines: the triangles drop is refused, so the class must not be recorded as lines either
+        old = dict(scenes=dict(s=baseline_entry(glb={"class": "triangles", "triangles": 36, "points": 0, "lines": 0})))
+        m = measured(glb={"class": "lines", "triangles": 18, "points": 0, "lines": 1}, x3d=dict(surface=False, lines=True, points=False, splats=False))
+        new, moves, ref = gate.merge_baseline(old, dict(s=m))
+        self.assertEqual(new["scenes"]["s"]["glb"]["class"], "triangles")
+        self.assertEqual(new["scenes"]["s"]["glb"]["triangles"], 36)
+        self.assertTrue(any("glb.class" in x for x in ref) and any("glb.triangles" in x for x in ref), ref)
+        # a class that gains kinds of geometry is an improvement and is recorded
+        old = dict(scenes=dict(s=baseline_entry(glb={"class": "lines", "triangles": 0, "points": 0, "lines": 1})))
+        m = measured(glb={"class": "triangles", "triangles": 40, "points": 0, "lines": 1})
+        new, moves, ref = gate.merge_baseline(old, dict(s=m))
+        self.assertEqual((new["scenes"]["s"]["glb"]["class"], ref), ("triangles", []))
+
+
+class FlipFailure(unittest.TestCase):
+    """F5: a FLIP that could not be computed must not switch the FLIP gate off."""
+
+    def test_flip_none_fails_when_the_baseline_has_a_flip(self):
+        m = measured(roundtrip=dict(render_ok=True, mean_abs_delta=5.0, flip=None, flip_error="flip-evaluator is not installed"))
+        r = by_check(gate.evaluate_scene(m, baseline_entry(), TOL))["roundtrip_delta"]
+        self.assertEqual(r["status"], "FAIL")
+        self.assertIn("FLIP not measured", r["detail"])
+        self.assertIn("flip-evaluator is not installed", r["detail"])
+        self.assertIn("0.05", r["detail"])
+
+    def test_flip_none_without_a_baseline_flip_still_gates_the_delta(self):
+        e = baseline_entry(roundtrip=dict(mean_abs_delta=5.0))
+        m = measured(roundtrip=dict(render_ok=True, mean_abs_delta=5.0, flip=None))
+        self.assertEqual(by_check(gate.evaluate_scene(m, e, TOL))["roundtrip_delta"]["status"], "PASS")
+        m = measured(roundtrip=dict(render_ok=True, mean_abs_delta=9.0, flip=None))
+        self.assertEqual(by_check(gate.evaluate_scene(m, e, TOL))["roundtrip_delta"]["status"], "FAIL")
+
+    def test_a_tool_the_baseline_recorded_but_this_run_cannot_report_is_a_fingerprint_difference(self):
+        base = dict(x_ite="16.7.1", flip_evaluator="1.7", x3d_py="4.0.65.8", numpy="2.5.3", pillow="12.3.0")
+        self.assertEqual(gate.compare_fingerprint(base, dict(base)), {})
+        self.assertEqual(gate.compare_fingerprint(base, dict(base, flip_evaluator=None)), {"flip_evaluator": ("1.7", None)})
+        self.assertEqual(gate.compare_fingerprint(base, dict(base, x3d_py="4.0.66.0")), {"x3d_py": ("4.0.65.8", "4.0.66.0")})
+        self.assertEqual(set(gate.compare_fingerprint(base, dict(base, numpy="2.6.0", pillow="13.0.0"))), {"numpy", "pillow"})
+        self.assertEqual(gate.compare_fingerprint(dict(x_ite="16.7.1"), dict(x_ite="16.7.1", x3d_py="9")), {})   # a header without the key says nothing
+        self.assertEqual(gate.compare_fingerprint(base, dict(base, chromium="150")), {})   # baseline lacks chromium here
+
+    def test_the_fingerprint_names_the_python_libraries_the_checks_depend_on(self):
+        import importlib.metadata as md
+        fp = gate.fingerprint(str(RIG.parents[1] / "source"), {}, "153.0.1")
+        self.assertEqual(set(("x3d_py", "numpy", "pillow", "flip_evaluator")) - set(fp), set())
+        for key, pkg in (("x3d_py", "x3d"), ("numpy", "numpy"), ("pillow", "pillow"), ("flip_evaluator", "flip-evaluator")):
+            try:
+                want = md.version(pkg)
+            except md.PackageNotFoundError:
+                want = None
+            self.assertEqual(fp[key], want, key)
+
+
+class ToleranceHeader(unittest.TestCase):
+    """F10: the baseline header cannot loosen the rules; they live in the code."""
+
+    def test_header_must_equal_the_code_constant(self):
+        self.assertEqual(gate.lint_baseline(dict(tolerance=copy.deepcopy(TOL), scenes={})), [])
+        self.assertEqual(gate.lint_baseline(dict(scenes={})), [])
+        for key, loose in (("flip", {"abs": 1.0, "rel": 0}), ("triangles", {"rel": 0.9}), ("image_delta", {"abs": 50, "rel": 1}),
+                           ("geometry_share", {"abs": 1.0, "rel": 1})):
+            tol = copy.deepcopy(TOL)
+            tol[key] = loose
+            problems = gate.lint_baseline(dict(tolerance=tol, scenes={}))
+            self.assertTrue(any("tolerance header" in p for p in problems), key)
+        tol = copy.deepcopy(TOL)
+        del tol["flip"]
+        self.assertTrue(gate.lint_baseline(dict(tolerance=tol, scenes={})))
+
+
 class Report(unittest.TestCase):
     def test_report_lists_failures_improvements_known_and_the_summary(self):
         ok = gate.evaluate_scene(measured(), baseline_entry(), TOL)
@@ -419,12 +652,14 @@ class Flow(unittest.TestCase):
         self.scenes.write_text(json.dumps([dict(name="s", x3d="probes/p1-point-physical.x3d")]))
         self.baseline = self.dir / "baseline.json"
         self.label = "gate-unit-test-" + str(os.getpid())
-        self.meas = dict(s=measured())
+        self.meas = dict(s=measured(), t=measured())
         self.orig = gate.run_gate
-        gate.run_gate = lambda scenes, label, src, jobs=1, chunk=8, reuse=False: (copy.deepcopy(self.meas), "153.0.1")
+        gate.run_gate = lambda scenes, label, src, jobs=1, chunk=8, reuse=False: (
+            {sc["name"]: copy.deepcopy(self.meas[sc["name"]]) for sc in scenes}, "153.0.1")   # only the scenes asked for, like the real thing
+        self.fp = dict(x_ite="16.7.1", babylon="9.32.0", blender="5.3.0", validator="2.0.0-dev.3.10", flip_evaluator="1.7",
+                       x3d_py="4.0.65.8", numpy="2.5.3", pillow="12.3.0", addon_git_revision="abc", addon_source_dirty=False)
         self.orig_fp = gate.fingerprint
-        gate.fingerprint = lambda src, ms, chromium: dict(x_ite="16.7.1", babylon="9.32.0", chromium=chromium, blender="5.3.0",
-                                                          validator="2.0.0-dev.3.10", flip_evaluator="1.7", addon_git_revision="abc", addon_source_dirty=False)
+        gate.fingerprint = lambda src, ms, chromium: dict(self.fp, chromium=chromium)
         self.outdir = RIG / "out" / self.label
 
     def tearDown(self):
@@ -487,6 +722,104 @@ class Flow(unittest.TestCase):
         code, out = self.run_main()
         self.assertEqual(code, 1)
         self.assertIn("BASELINE LINT", out)
+
+    def write_scenes(self, *names):
+        self.scenes.write_text(json.dumps([dict(name=n, x3d="probes/p1-point-physical.x3d") for n in names]))
+
+    def test_zero_scenes_is_an_error_not_a_green_run(self):   # F11
+        self.scenes.write_text("[]")
+        with self.assertRaises(SystemExit) as cm, redirect_stdout(io.StringIO()):
+            gate.main(["--scenes", str(self.scenes), "--baseline", str(self.baseline), "--label", self.label])
+        self.assertIn("no scenes to run", str(cm.exception))
+        self.assertFalse((self.outdir / "gate_results.json").exists())   # nothing was "measured"
+        # one empty file next to a real one is fine
+        other = self.dir / "other.json"
+        other.write_text("[]")
+        self.write_scenes("s")
+        self.run_main("--update-baseline")
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = gate.main(["--scenes", str(other), str(self.scenes), "--baseline", str(self.baseline), "--label", self.label])
+        self.assertEqual(code, 0, buf.getvalue())
+
+    def test_a_loosened_tolerance_header_fails_the_run(self):   # F10
+        self.run_main("--update-baseline")
+        data = json.loads(self.baseline.read_text())
+        data["tolerance"]["flip"] = {"abs": 1.0, "rel": 0}
+        self.baseline.write_text(json.dumps(data))
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("BASELINE LINT: tolerance header differs", out)
+
+    def test_a_flip_that_cannot_be_computed_fails_the_run(self):   # F5
+        self.run_main("--update-baseline")
+        self.meas["s"]["roundtrip"] = dict(render_ok=True, mean_abs_delta=5.0, flip=None, flip_error="boom")
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("FLIP not measured (boom)", out)
+
+    def test_a_missing_python_library_is_a_strict_fingerprint_failure(self):   # F5, F6
+        self.run_main("--update-baseline")
+        self.assertEqual(json.loads(self.baseline.read_text())["rig"]["x3d_py"], "4.0.65.8")
+        self.fp["flip_evaluator"] = None
+        code, out = self.run_main()
+        self.assertEqual(code, 0)   # without --strict-fingerprint it only warns
+        self.assertIn("flip_evaluator 1.7 -> None", out)
+        code, out = self.run_main("--strict-fingerprint")
+        self.assertEqual(code, 1)
+        self.fp["flip_evaluator"], self.fp["x3d_py"] = "1.7", "4.0.66.0"
+        code, out = self.run_main("--strict-fingerprint")
+        self.assertEqual(code, 1)
+        self.assertIn("x3d_py 4.0.65.8 -> 4.0.66.0", out)
+
+    def test_a_partial_update_on_another_rig_does_not_restamp_the_header(self):   # F8a
+        self.write_scenes("s", "t")
+        self.run_main("--update-baseline")
+        before = self.baseline.read_text()
+        self.fp["blender"] = "5.4.0"
+        self.write_scenes("s")
+        self.meas["s"]["geometry_delta"] = 1.0   # a real improvement that would otherwise be recorded
+        code, out = self.run_main("--update-baseline")
+        self.assertEqual(code, 1)
+        self.assertIn("BASELINE UPDATE REFUSED", out)
+        self.assertIn("blender 5.3.0 -> 5.4.0", out)
+        self.assertEqual(self.baseline.read_text(), before)   # nothing was written
+        # a full run on the new rig re-baselines the header
+        self.write_scenes("s", "t")
+        code, out = self.run_main("--update-baseline")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(json.loads(self.baseline.read_text())["rig"]["blender"], "5.4.0")
+
+    def test_a_partial_update_on_the_same_rig_is_fine_and_keeps_the_other_scenes(self):   # F8a
+        self.write_scenes("s", "t")
+        self.run_main("--update-baseline")
+        self.write_scenes("s")
+        self.meas["s"]["geometry_delta"] = 1.0
+        code, out = self.run_main("--update-baseline")
+        self.assertEqual(code, 0, out)
+        data = json.loads(self.baseline.read_text())
+        self.assertEqual((data["scenes"]["s"]["geometry_delta"], data["scenes"]["t"]["geometry_delta"]), (1.0, 2.0))
+
+    def test_update_exits_1_when_it_leaves_a_scene_failing(self):   # F8b
+        self.run_main("--update-baseline")
+        # FLIP could not be computed: the update cannot record a value, and the scene fails against the baseline it just wrote
+        self.meas["s"]["roundtrip"] = dict(render_ok=True, mean_abs_delta=5.0, flip=None, flip_error="boom")
+        code, out = self.run_main("--update-baseline")
+        self.assertEqual(code, 1, out)
+        self.assertIn("update leaves 1 scene(s) failing", out)
+        self.assertIn("GATE FAIL", out)
+
+    def test_update_refuses_a_new_scene_whose_renders_crashed(self):   # F8b
+        self.write_scenes("s", "t")
+        self.run_main("--update-baseline")
+        data = json.loads(self.baseline.read_text())
+        del data["scenes"]["t"]
+        self.baseline.write_text(json.dumps(data))
+        self.meas["t"] = measured(glb_render_ok=False, geometry_delta=None, roundtrip=dict(render_ok=False))
+        code, out = self.run_main("--update-baseline")
+        self.assertEqual(code, 1)
+        self.assertIn("render missing", out)
+        self.assertNotIn("t", json.loads(self.baseline.read_text())["scenes"])
 
     def test_fingerprint_difference_warns_and_strict_fails(self):
         self.run_main("--update-baseline")

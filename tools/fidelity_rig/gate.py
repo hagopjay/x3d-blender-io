@@ -11,10 +11,16 @@ and prints PASS / FAIL per scene with the reasons. Five checks per scene:
   validator        glTF-Validator errors == 0 and warnings <= baseline (a scene with no glb fails)
   glb_content      the glb is not EMPTY: the validator accepts an empty glb, so triangles > 0 when the X3D has surfaces, points or
                    lines when it has only those; a points-only or lines-only glb is classified separately; a known empty glb needs
-                   an "allow_empty" entry with a written reason; triangles must not fall below the baseline by more than the tolerance
-  geometry_delta   Babylon.js-on-glb against X_ITE-on-X3D mean |delta| over the glb's geometry <= baseline + tolerance
+                   an "allow_empty" entry with a written reason; triangles, points and lines primitives must not fall below the baseline by more than the tolerance
+  geometry_delta   Babylon.js-on-glb against X_ITE-on-X3D mean |delta| over the pixels Babylon.js drew <= baseline + tolerance; what
+                   Babylon.js did NOT draw is gated too (the delta cannot see it): the share of the frame it covers must not fall below
+                   the baseline's, and the share where X_ITE shows foreground (a mask taken from X_ITE's own render) while Babylon.js
+                   shows only its clear colour must not rise above the baseline's; a VACUOUS render (X_ITE's render of the original
+                   shows only background, or Babylon.js draws nothing of the glb) fails unless the baseline entry has an "allow_blank" entry
+                   with a written reason
   reexport         the re-export is well-formed, x3d.py reports 0 errors, the number of node types lost <= baseline
-  roundtrip_delta  X_ITE on the original against X_ITE on the re-export: mean |delta| (0-255) and FLIP <= baseline + tolerance
+  roundtrip_delta  X_ITE on the original against X_ITE on the re-export: mean |delta| (0-255) and FLIP <= baseline + tolerance (a FLIP
+                   that could not be computed fails when the baseline has one; an all-background render is vacuous, as above)
 Tolerance rule (written in the baseline header): allowed = baseline + max(abs, rel * baseline). A measurement better than the
 baseline by more than the same margin is reported as IMPROVED so the baseline can be tightened.
 
@@ -46,7 +52,10 @@ DEFAULT_BASELINE = os.path.join(RIG, "gate-baseline.json")
 DEFAULT_TOLERANCE = {
     "image_delta": {"abs": 0.5, "rel": 0.05},   # mean |delta| of two renders, 0-255
     "flip": {"abs": 0.01, "rel": 0.05},         # mean FLIP, 0-1
-    "triangles": {"rel": 0.05},                  # the glb may lose at most this share of the baseline's triangles
+    "triangles": {"rel": 0.01},                  # the glb may lose at most this share of the baseline's triangles (and points / lines
+                                                 # primitives): the counts are deterministic for one Blender, so this only absorbs noise
+    "geometry_share": {"abs": 0.002, "rel": 0.10},   # the share of the frame Babylon.js covers with the glb may fall by at most this, and the
+                                                     # share where X_ITE draws and Babylon.js shows only its clear colour may rise by at most this
 }
 CHECKS = ("validator", "glb_content", "geometry_delta", "reexport", "roundtrip_delta")
 STATUS_FAIL, STATUS_PASS, STATUS_IMPROVED, STATUS_SKIP = "FAIL", "PASS", "IMPROVED", "SKIP"
@@ -163,6 +172,14 @@ def rule_for(entry, tol, check, kind):
     return rule
 
 
+def share_rule(entry, tol):
+    """The tolerance rule for the frame-share checks of geometry_delta (what Babylon.js covers, what it leaves empty where X_ITE draws):
+    the baseline header's, overridden per scene by entry["tolerance"]["geometry_share"] (animated scenes cover a run-dependent share)."""
+    rule = dict(tol["geometry_share"])
+    rule.update(((entry or {}).get("tolerance") or {}).get("geometry_share") or {})
+    return rule
+
+
 def _known_for(entry, check):
     return [k["defect"] for k in (entry or {}).get("known", []) if check in k.get("checks", [])]
 
@@ -173,6 +190,32 @@ def _result(check, status, detail, entry):
 
 def _skip_reason(entry, check):
     return ((entry or {}).get("skip") or {}).get(check)
+
+
+def _allow_blank(entry):
+    """The written reason that lets the render checks of a scene measure nothing (all-background X_ITE render, or Babylon.js
+    drawing nothing of the glb): an allow_blank entry, or an allow_empty one (an empty glb has nothing to draw)."""
+    e = entry or {}
+    return ((e.get("allow_blank") or {}).get("reason") or (e.get("allow_empty") or {}).get("reason"))
+
+
+def vacuous_renders(m):
+    """{"geometry_delta": why, "roundtrip_delta": why} for the render checks that cannot measure anything in this measurement:
+    X_ITE's render of the original shows only its background (xite_foreground_share == 0), or Babylon.js drew no pixel of the glb
+    (geometry_delta None). A check that passes on such a render passes without looking at anything."""
+    out = {}
+    xblank = m.get("xite_foreground_share") == 0
+    if m.get("glb_leg", {}).get("ok") and m.get("glb_render_ok"):
+        nt = (m.get("glb") or {}).get("triangles", 0)
+        if xblank and m.get("geometry_delta") is None:
+            out["geometry_delta"] = "X_ITE and Babylon.js both render only the background"
+        elif xblank:
+            out["geometry_delta"] = "X_ITE renders only the background"
+        elif m.get("geometry_delta") is None:
+            out["geometry_delta"] = "Babylon.js draws no geometry" + (f" (the glb holds {nt} triangles that Babylon.js did not draw)" if nt else "")
+    if m.get("reexport", {}).get("leg_ok") and (m.get("roundtrip") or {}).get("render_ok") and xblank:
+        out["roundtrip_delta"] = "X_ITE renders only the background, so both renders are identical by construction"
+    return out
 
 
 def evaluate_scene(m, entry, tol):
@@ -236,6 +279,11 @@ def evaluate_scene(m, entry, tol):
                 st, detail = STATUS_IMPROVED, detail + "; the allow_empty entry is no longer needed"
             elif cls == "triangles" and btris and tris < btris * (1 - tol["triangles"]["rel"]):
                 st, detail = STATUS_FAIL, f"{tris} triangles < baseline {btris} by more than {tol['triangles']['rel']:.0%}"
+            else:   # a glb that loses its points or lines but keeps its triangles is still the same class
+                lost = [f"{g.get(k, 0)} {k} primitives < baseline {(base.get('glb') or {}).get(k)}" for k in ("points", "lines")
+                        if (base.get("glb") or {}).get(k) and g.get(k, 0) < (base.get("glb") or {})[k] * (1 - tol["triangles"]["rel"])]
+                if lost:
+                    st, detail = STATUS_FAIL, "; ".join(lost)
             out.append(_result(chk, st, detail, entry))
 
     # 3. geometry delta (Babylon on the glb against X_ITE on the X3D)
@@ -251,20 +299,33 @@ def evaluate_scene(m, entry, tol):
     elif entry is None:
         out.append(_result(chk, STATUS_SKIP, f"measured {gd}, no baseline", entry))
     else:
-        bg = base.get("geometry_delta") if entry is not None else None
-        if gd is None:
-            if bg is None:
-                nt = (m.get("glb") or {}).get("triangles", 0)
-                out.append(_result(chk, STATUS_PASS, "no geometry visible in Babylon.js (baseline too)"
-                                   + (f"; the glb holds {nt} triangles that Babylon.js did not draw" if nt else ""), entry))
-            else:
-                out.append(_result(chk, STATUS_FAIL, f"no geometry visible in Babylon.js (baseline {bg})", entry))
+        bg = base.get("geometry_delta")
+        vac = vacuous_renders(m).get(chk)
+        allow_blank = _allow_blank(entry)
+        if gd is None and bg is not None:
+            out.append(_result(chk, STATUS_FAIL, f"no geometry visible in Babylon.js (baseline {bg})", entry))
+        elif vac and allow_blank:
+            out.append(_result(chk, STATUS_PASS, f"not measured: {vac}; allowed: {allow_blank}", entry))
+        elif vac:
+            out.append(_result(chk, STATUS_FAIL, f"vacuous render, nothing was measured: {vac}. Fix the render, or record an "
+                               "allow_blank entry with a written reason in the baseline", entry))
         else:
             b = bg if bg is not None else 0.0
             rule = rule_for(entry, tol, chk, "image_delta")
             lim = allowed_max(b, rule)
+            srule = share_rule(entry, tol)
+            bs, gs = base.get("geometry_share"), m.get("geometry_share")
+            share_floor = improved_below(bs, srule) if bs is not None else None
+            bm, gm = base.get("geometry_missing_share"), m.get("geometry_missing_share")
+            missing_ceiling = allowed_max(bm, srule) if bm is not None else None
             if gd > lim:
                 out.append(_result(chk, STATUS_FAIL, f"{gd} > baseline {bg} + tolerance (limit {lim:.2f})", entry))
+            elif share_floor is not None and gs is not None and gs < share_floor:
+                out.append(_result(chk, STATUS_FAIL, f"Babylon.js covers {gs} of the frame < baseline {bs} (floor {share_floor:.3f}): "
+                                   "geometry of the glb is missing, which the delta over the drawn pixels cannot see", entry))
+            elif missing_ceiling is not None and gm is not None and gm > missing_ceiling:
+                out.append(_result(chk, STATUS_FAIL, f"X_ITE draws {gm} of the frame where Babylon.js shows only its clear colour > baseline {bm} "
+                                   f"(limit {missing_ceiling:.3f}): geometry of the glb is missing, which the delta over the drawn pixels cannot see", entry))
             elif gd < improved_below(b, rule):
                 out.append(_result(chk, STATUS_IMPROVED, f"{gd} < baseline {bg}", entry))
             else:
@@ -314,6 +375,11 @@ def evaluate_scene(m, entry, tol):
         out.append(_result(chk, STATUS_FAIL, "X_ITE render of the original or the re-export missing", entry))
     elif entry is None:
         out.append(_result(chk, STATUS_SKIP, f"measured mean|delta| {rt['mean_abs_delta']}, FLIP {rt.get('flip')}, no baseline", entry))
+    elif vacuous_renders(m).get(chk) and _allow_blank(entry):
+        out.append(_result(chk, STATUS_PASS, f"not measured: {vacuous_renders(m)[chk]}; allowed: {_allow_blank(entry)}", entry))
+    elif vacuous_renders(m).get(chk):
+        out.append(_result(chk, STATUS_FAIL, f"vacuous render, nothing was measured: {vacuous_renders(m)[chk]}. Fix the render, or record "
+                           "an allow_blank entry with a written reason in the baseline", entry))
     else:
         bd = (base.get("roundtrip") or {}).get("mean_abs_delta")
         bf = (base.get("roundtrip") or {}).get("flip")
@@ -325,6 +391,8 @@ def evaluate_scene(m, entry, tol):
             why.append(f"mean|delta| {d} > baseline {bd} + tolerance (limit {allowed_max(b0, rule):.2f})")
         elif bd is not None and d < improved_below(bd, rule):
             better.append(f"mean|delta| {d} < baseline {bd}")
+        if f is None and bf is not None:   # a FLIP that could not be computed must not switch its gate off
+            why.append(f"FLIP not measured ({rt.get('flip_error') or 'no value'}) but the baseline has FLIP {bf}")
         if f is not None:
             f0 = bf if bf is not None else 0.0
             if f > allowed_max(f0, tol["flip"]):
@@ -340,6 +408,9 @@ def evaluate_scene(m, entry, tol):
 
     if entry is None:
         out.append(dict(check="baseline", status=STATUS_FAIL, detail="no baseline entry for this scene (run with --update-baseline)", known=[]))
+    elif (entry.get("allow_blank") and glb_ok and re_ok and m.get("glb_render_ok") and rt.get("render_ok") and not vacuous_renders(m)):
+        out.append(dict(check="baseline", status=STATUS_IMPROVED, known=[],
+                        detail="the allow_blank entry is no longer needed: both renders show geometry now"))
     return out
 
 
@@ -350,11 +421,15 @@ def scene_verdict(results):
 
 
 def lint_baseline(baseline):
-    """Problems with the baseline file itself: an allow_empty / skip / known entry needs a written reason (an
+    """Problems with the baseline file itself: the tolerance header must be the code's rules (a loosened header is a loosened gate,
+    and a PR that edits it must edit the code constant too); an allow_empty / allow_blank / skip / known entry needs a written reason (an
     update that had to invent one writes UNEXPLAINED, which fails here until a person replaces it)."""
     problems = []
+    if baseline.get("tolerance") not in (None, DEFAULT_TOLERANCE):
+        problems.append("tolerance header differs from gate.DEFAULT_TOLERANCE (a baseline cannot loosen the rules; change the code constant in review)")
     for name, e in sorted((baseline.get("scenes") or {}).items()):
         reasons = ([("allow_empty", (e.get("allow_empty") or {}).get("reason"))] if "allow_empty" in e else []) + \
+            ([("allow_blank", (e.get("allow_blank") or {}).get("reason"))] if "allow_blank" in e else []) + \
             [(f"skip.{k}", v) for k, v in (e.get("skip") or {}).items()] + \
             [(f"known {k.get('defect')}", k.get("reason")) for k in e.get("known", [])]
         for what, reason in reasons:
@@ -378,8 +453,8 @@ def lint_baseline(baseline):
             elif str(over["reason"]).upper().startswith("UNEXPLAINED"):
                 problems.append(f"{name}: tolerance override reason is still UNEXPLAINED, write one")
             for c in over:
-                if c != "reason" and c not in ("geometry_delta", "roundtrip_delta"):
-                    problems.append(f"{name}: tolerance override names {c!r}; only geometry_delta and roundtrip_delta can be overridden")
+                if c != "reason" and c not in ("geometry_delta", "roundtrip_delta", "geometry_share"):
+                    problems.append(f"{name}: tolerance override names {c!r}; only geometry_delta, roundtrip_delta and geometry_share can be overridden")
     return problems
 
 
@@ -388,9 +463,13 @@ def baseline_entry_from(m):
     e = {}
     if m.get("glb_leg", {}).get("ok") and m.get("validator", {}).get("ok_ran", True):
         e["validator"] = dict(warnings=m["validator"]["warnings"])
-        e["glb"] = dict(**{"class": m["glb"]["class"]}, triangles=m["glb"]["triangles"])
+        e["glb"] = dict(**{"class": m["glb"]["class"]}, triangles=m["glb"]["triangles"],
+                        **{k: m["glb"][k] for k in ("points", "lines") if m["glb"].get(k) is not None})
         if m.get("glb_render_ok"):
             e["geometry_delta"] = m.get("geometry_delta")
+            for k in ("geometry_share", "geometry_missing_share"):
+                if m.get(k) is not None:
+                    e[k] = m[k]
     r = m.get("reexport") or {}
     if r.get("leg_ok"):
         e["reexport"] = dict(nodes_lost=r["nodes_lost"])
@@ -400,9 +479,11 @@ def baseline_entry_from(m):
     return e
 
 
-def hard_failures(m):
-    """Things a baseline must never absorb: the update refuses to record them (the check mode fails them whatever the baseline says)."""
+def hard_failures(m, entry=None):
+    """Things a baseline must never absorb: the update refuses to record them (the check mode fails them whatever the baseline says).
+    `entry` (the scene's current baseline entry, if any) supplies the written exceptions: skip and allow_blank / allow_empty."""
     why = []
+    skip = (entry or {}).get("skip") or {}
     if m.get("glb_leg", {}).get("ok"):
         v = m.get("validator") or {}
         if not v.get("ok_ran", True):
@@ -410,10 +491,18 @@ def hard_failures(m):
         elif v.get("errors", 0) > 0:
             why.append(f"{v['errors']} glTF validator errors")
         g, kinds = m.get("glb") or {}, m.get("x3d") or {}
-        if g.get("class") == "empty" and any(kinds.get(k) for k in ("surface", "lines", "points", "splats")):
+        allowed_empty = bool(((entry or {}).get("allow_empty") or {}).get("reason"))   # written down by a person: the gate passes it too
+        if allowed_empty:
+            pass
+        elif g.get("class") == "empty" and any(kinds.get(k) for k in ("surface", "lines", "points", "splats")):
             why.append(f"EMPTY glb (X3D has {describe_kinds(kinds)})")
         elif g.get("class") in ("points", "lines", "points+lines") and kinds.get("surface"):
             why.append(f"{g['class']}-only glb (X3D has surfaces)")
+        if "geometry_delta" not in skip:
+            if not m.get("glb_render_ok"):
+                why.append("render missing (X_ITE or Babylon.js)")
+            elif "geometry_delta" in vacuous_renders(m) and not _allow_blank(entry):
+                why.append("VACUOUS geometry render: " + vacuous_renders(m)["geometry_delta"])
     else:
         why.append("no glb: " + (m.get("glb_leg", {}).get("error") or "")[:120])
     r = m.get("reexport") or {}
@@ -426,6 +515,11 @@ def hard_failures(m):
             why.append("x3d.py not installed")
         elif r.get("x3d_py_errors", 0) > 0:
             why.append(f"x3d.py reports {r['x3d_py_errors']} errors")
+        if "roundtrip_delta" not in skip:
+            if not (m.get("roundtrip") or {}).get("render_ok"):
+                why.append("render missing (X_ITE on the original or the re-export)")
+            elif "roundtrip_delta" in vacuous_renders(m) and not _allow_blank(entry):
+                why.append("VACUOUS round-trip render: " + vacuous_renders(m)["roundtrip_delta"])
     return why
 
 
@@ -441,11 +535,18 @@ def _worse(path, old, new):
         old = 0.0 if old is None else old
     if old is None or new is None:
         return False, old != new
+    if key == "class":   # fewer kinds of geometry is worse, so the class follows the decision on the counts beside it
+        rank = {"triangles": 3, "points+lines": 2, "points": 1, "lines": 1, "empty": 0}
+        return rank.get(new, 0) < rank.get(old, 0), old != new
     if isinstance(old, str):
         return False, old != new
-    if key == "triangles":
+    if key in ("triangles", "points", "lines"):   # floors: fewer is worse
         rel = DEFAULT_TOLERANCE["triangles"]["rel"]
         return new < old * (1 - rel), abs(new - old) > old * rel if old else new != old
+    if key in ("geometry_share", "geometry_missing_share"):   # a floor (Babylon.js covering less of the frame is worse) and a ceiling
+        rule = DEFAULT_TOLERANCE["geometry_share"]
+        margin = max(rule["abs"], rule["rel"] * abs(old))
+        return (new < old - margin if key == "geometry_share" else new > old + margin), abs(new - old) > margin
     if isinstance(old, int) and isinstance(new, int):
         return new > old, new != old
     return new > old + MOVE_EPS, abs(new - old) > MOVE_EPS
@@ -453,9 +554,9 @@ def _worse(path, old, new):
 
 def _flatten(e, prefix=()):
     for k, v in sorted(e.items()):
-        if isinstance(v, dict) and k not in ("allow_empty", "skip"):
+        if isinstance(v, dict) and k not in ("allow_empty", "allow_blank", "skip"):
             yield from _flatten(v, prefix + (k,))
-        elif k not in ("allow_empty", "skip", "known"):
+        elif k not in ("allow_empty", "allow_blank", "skip", "known"):
             yield prefix + (k,), v
 
 
@@ -480,15 +581,15 @@ def merge_baseline(old, measurements, allow_worse=False, scenes_run=None):
     """Update `old` (a baseline dict) with `measurements` {scene: m}. Returns (new_baseline, moves, refusals):
     moves are lines describing what changed (new scene, tightened, or loosened with allow_worse); refusals are lines for
     values that got worse and were NOT recorded (the old value stays), and for measurements a baseline must never absorb.
-    Floats that moved by less than MOVE_EPS are left alone. known / skip / allow_empty entries are never touched, except that
-    allow_worse lets a leg that failed, or an EMPTY glb, be recorded with an UNEXPLAINED reason the person must then replace."""
+    Floats that moved by less than MOVE_EPS are left alone. known / skip / allow_empty / allow_blank entries are never touched, except that
+    allow_worse lets a leg or render that failed, a vacuous render, or an EMPTY glb, be recorded with an UNEXPLAINED reason the person must then replace."""
     new = json.loads(json.dumps(old))
     scenes = new.setdefault("scenes", {})
     moves, refusals = [], []
     for name, m in measurements.items():
         entry = scenes.get(name)
         fresh = baseline_entry_from(m)
-        bad = hard_failures(m)
+        bad = hard_failures(m, entry)
         if bad:
             tag = "; ".join(bad)
             if not allow_worse:
@@ -502,6 +603,13 @@ def merge_baseline(old, measurements, allow_worse=False, scenes_run=None):
             if ("EMPTY" in tag or "-only glb" in tag) and "allow_empty" not in entry:
                 entry["allow_empty"] = dict(reason="UNEXPLAINED: " + tag)
                 moves.append(f"{name}: allow_empty recorded (UNEXPLAINED) because {tag}")
+            if "VACUOUS" in tag and "allow_blank" not in entry:
+                entry["allow_blank"] = dict(reason="UNEXPLAINED: " + tag)
+                moves.append(f"{name}: allow_blank recorded (UNEXPLAINED) because {tag}")
+            for chk_, what in (("geometry_delta", "render missing (X_ITE or Babylon.js)"), ("roundtrip_delta", "render missing (X_ITE on the original")):
+                if what in tag and chk_ not in (entry.get("skip") or {}):
+                    entry.setdefault("skip", {})[chk_] = "UNEXPLAINED: " + tag
+                    moves.append(f"{name}: skip.{chk_} recorded (UNEXPLAINED) because {tag}")
             if not (m.get("reexport") or {}).get("leg_ok") and "reexport" not in (entry.get("skip") or {}):
                 entry.setdefault("skip", {})["reexport"] = "UNEXPLAINED: " + tag
                 moves.append(f"{name}: skip.reexport recorded (UNEXPLAINED) because {tag}")
@@ -553,13 +661,14 @@ def format_report(rows, fingerprint_note=None, elapsed=None):
 
 
 def compare_fingerprint(base_fp, now_fp):
-    """Keys whose value differs (chromium compared on the major version, add-on revision never): {key: (baseline, now)}."""
+    """Keys whose value differs (chromium compared on the major version, add-on revision never): {key: (baseline, now)}. A key the
+    baseline header lacks is not compared; one it has but this run reports as None (a missing flip-evaluator) is a difference."""
     diff = {}
-    for k in ("x_ite", "babylon", "chromium", "blender", "validator", "flip_evaluator"):
+    for k in ("x_ite", "babylon", "chromium", "blender", "validator", "flip_evaluator", "x3d_py", "numpy", "pillow"):
         a, b = (base_fp or {}).get(k), (now_fp or {}).get(k)
         if k == "chromium":
             a, b = (str(a).split(".")[0] if a else a), (str(b).split(".")[0] if b else b)
-        if a and b and a != b:
+        if a and a != b:   # a tool the baseline recorded but this run could not report (None) is a difference too
             diff[k] = (a, b)
     return diff
 
@@ -699,34 +808,68 @@ def _render_params(x3d, sc, m, src):
     return clear, head, first_viewpoint(x3d, src)
 
 
+RENDER_JOB_BUDGET_S = 200   # render.mjs gives X_ITE and Babylon.js 90 s each to load a scene, plus the settle wait and the screenshots
+
+
 def run_renders(todo, label, chunk=8):
-    """One render.mjs process per chunk of jobs (a page crash in SwiftShader must not cost the other scenes: a chunk that
-    exits non-zero is rerun job by job). Returns the Chromium version string."""
+    """One render.mjs process per chunk of jobs (a page crash in SwiftShader must not cost the other scenes). render.mjs --strict
+    exits 1 and prints `FAILED <json list of job names>` when a job failed inside its own try/catch (a crashed page, a load timeout):
+    only those jobs are rerun once, each alone. A chunk that died without that line is rerun job by job. Each process gets a timeout
+    of 60 s plus RENDER_JOB_BUDGET_S per job, so a hang cannot outlast the CI job. Returns the Chromium version string."""
     chromium = None
+
     def run(jobs, tag):
+        """True when every job rendered; else the list of names that did not (None when the whole process failed)."""
         nonlocal chromium
         jf = f"{RIG}/out/{label}/gate_jobs_{tag}.json"
         _write_json(jf, jobs)
         try:
-            r = subprocess.run(["node", f"{RIG}/render.mjs", jf], capture_output=True, text=True, timeout=3600)
+            r = subprocess.run(["node", f"{RIG}/render.mjs", jf, "--strict"], capture_output=True, text=True,
+                               timeout=60 + RENDER_JOB_BUDGET_S * len(jobs))
         except subprocess.TimeoutExpired:
             log(f"   render.mjs timed out on {len(jobs)} jobs ({tag})")
-            return False
+            return None
         mt = re.search(r"BROWSER (Chrome/[\d.]+)", r.stdout)
         if mt:
             chromium = mt.group(1).split("/")[1]
         for ln in r.stdout.splitlines():
             if "fail" in ln or "pageerror" in ln:
                 log("   render:", ln[:240])
-        if r.returncode != 0:
-            log(f"   render.mjs exit {r.returncode} ({tag}): {_short_err(r.stderr, 300)}")
-        return r.returncode == 0
+        if r.returncode == 0:
+            return True
+        log(f"   render.mjs exit {r.returncode} ({tag}): {_short_err(r.stderr, 300)}")
+        mf = re.search(r"^FAILED (\[.*\])\s*$", r.stdout, re.M)
+        return json.loads(mf.group(1)) if mf else None
+
     for i in range(0, len(todo), chunk):
         part = todo[i:i + chunk]
-        if not run(part, f"c{i // chunk}"):
-            for j, job in enumerate(part):
-                run([job], f"c{i // chunk}_{j}")
+        res = run(part, f"c{i // chunk}")
+        if res is True:
+            continue
+        redo = part if res is None else [j for j in part if j["name"] in set(res)]
+        for j, job in enumerate(redo):
+            log(f"   rerunning {job['name']} alone")
+            run([job], f"c{i // chunk}_{j}")
     return chromium
+
+
+FOREGROUND_DELTA = 16   # a pixel is foreground when it differs from the render's background by more than this (0-255)
+
+
+def foreground_mask(img, thr=0):
+    """Boolean H x W mask of the pixels of an H x W x 3 render that differ from the median colour of its border (the background)
+    by more than `thr`. With thr 0 an empty mask means the render shows nothing but background: a check that compares such a
+    render with anything compares nothing. A gradient or sky background is counted as foreground (the border is one colour)."""
+    import numpy as np
+    a = np.asarray(img, dtype=np.float64)
+    border = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
+    bg = np.median(border, axis=0)
+    return np.abs(a - bg).max(axis=-1) > thr
+
+
+def foreground_share(img, thr=0):
+    """Share of the frame foreground_mask() marks."""
+    return float(foreground_mask(img, thr).mean())
 
 
 def finish_scene(m, job_out):
@@ -737,6 +880,9 @@ def finish_scene(m, job_out):
     rd = lambda p: np.asarray(Image.open(p).convert("RGB"), dtype=np.float64)   # noqa: E731
     a, b = f"{job_out}/xite.png", f"{job_out}/babylon.png"
     m["glb_render_ok"] = False
+    m.pop("xite_foreground_share", None)
+    if os.path.exists(a):
+        m["xite_foreground_share"] = round(foreground_share(rd(a)), 6)   # 0.0: an all-background reference render (vacuous checks)
     if m["glb_leg"].get("ok") and os.path.exists(a) and os.path.exists(b):
         A, B = rd(a), rd(b)
         d = np.abs(A - B)
@@ -744,13 +890,16 @@ def finish_scene(m, job_out):
         m["glb_render_ok"] = True
         m["mean_abs_delta_glb"] = round(float(d.mean()), 2)
         mk, mg = f"{job_out}/babylon_mask.png", f"{job_out}/babylon_mask_green.png"
-        m["geometry_delta"], m["geometry_share"] = None, None
+        m["geometry_delta"], m["geometry_share"], m["geometry_missing_share"] = None, None, None
         if os.path.exists(mk) and os.path.exists(mg):
             Mk, Mg = np.asarray(Image.open(mk).convert("RGB"), dtype=np.int32), np.asarray(Image.open(mg).convert("RGB"), dtype=np.int32)
             clear = ((Mk[..., 0] == 255) & (Mk[..., 1] == 0) & (Mk[..., 2] == 255)) & ((Mg[..., 0] == 0) & (Mg[..., 1] == 255) & (Mg[..., 2] == 0))
             geo = ~clear
             m["geometry_share"] = round(float(geo.mean()), 3)
             m["geometry_delta"] = round(float(d[geo].mean()), 2) if geo.any() else None
+            # What Babylon.js failed to draw: X_ITE shows foreground where Babylon.js shows its clear colour. The delta above is taken over
+            # the pixels Babylon.js drew, so a glb that lost an object would not move it; this share does.
+            m["geometry_missing_share"] = round(float((foreground_mask(A, FOREGROUND_DELTA) & clear).mean()), 3)
     m["roundtrip"] = dict(render_ok=False)
     c = f"{job_out}/reexp/xite.png"
     if m["reexport"].get("leg_ok") and os.path.exists(a) and os.path.exists(c):
@@ -759,7 +908,7 @@ def finish_scene(m, job_out):
         Image.fromarray(np.clip(np.abs(A - C) * 4, 0, 255).astype(np.uint8)).save(f"{job_out}/diff_roundtrip_x4.png")
         try:
             flip = ra.flip_mean(A, C)
-        except Exception as e:   # flip-evaluator missing: the delta still gates
+        except Exception as e:   # flip-evaluator missing or failing on this render: the check then fails when the baseline has a FLIP
             flip = None
             m["roundtrip"]["flip_error"] = str(e)[:120]
         m["roundtrip"].update(render_ok=True, mean_abs_delta=round(di["mean_abs_delta"], 2), share_gt16=di["share_gt16"], flip=flip)
@@ -768,16 +917,20 @@ def finish_scene(m, job_out):
 
 def fingerprint(src, measurements, chromium):
     import manifest
-    try:
-        import importlib.metadata as md
-        flip = md.version("flip-evaluator")
-    except Exception:
-        flip = None
+    import importlib.metadata as md
+
+    def ver(pkg):
+        try:
+            return md.version(pkg)
+        except Exception:
+            return None
+    flip = ver("flip-evaluator")
     blender = next((m["glb_leg"].get("blender") for m in measurements.values() if m["glb_leg"].get("blender")), None)
     validator = next(((m.get("validator") or {}).get("version") for m in measurements.values() if (m.get("validator") or {}).get("version")), None)
     rev, dirty = manifest.git_revision(src)
     return dict(x_ite=_pkg_version("x_ite"), babylon=_pkg_version("babylonjs"), chromium=chromium,
                 renderer="SwiftShader (--use-angle=swiftshader)", blender=blender, validator=validator, flip_evaluator=flip,
+                x3d_py=ver("x3d"), numpy=ver("numpy"), pillow=ver("pillow"),
                 addon_git_revision=rev, addon_source_dirty=dirty)
 
 
@@ -878,6 +1031,8 @@ def main(argv=None):
     ns = ap.parse_args(argv)
     src = os.path.abspath(ns.src)
     scenes = load_scenes(ns.scenes, ns.only)
+    if not scenes:   # an emptied or truncated scenes file must not turn the gate green having tested nothing
+        sys.exit("gate: no scenes to run: " + ", ".join(ns.scenes) + (f" with --only {ns.only}" if ns.only else "") + " resolve to an empty list")
     baseline = load_baseline(ns.baseline)
     tol = {**DEFAULT_TOLERANCE, **(baseline.get("tolerance") or {})}
     problems = lint_baseline(baseline)
@@ -920,6 +1075,14 @@ def main(argv=None):
 
 
 def update(baseline, ns, measurements, fp, tol, scenes):
+    # The header says which rig every threshold of the file was measured on. A run that covers only some of the baseline's scenes
+    # on a different rig must not restamp it: the other scenes' thresholds would then claim the new rig.
+    drift = compare_fingerprint(baseline.get("rig"), fp)
+    partial = {sc["name"] for sc in scenes} != set((baseline.get("scenes") or {}))
+    if drift and partial:
+        log("\nBASELINE UPDATE REFUSED: the rig differs from the baseline header (" + "; ".join(f"{k} {a} -> {b}" for k, (a, b) in drift.items())
+            + ") and this run does not cover every baseline scene. Re-baseline from a full run on the new rig; nothing was written.")
+        return 1
     new, moves, refusals = merge_baseline(baseline, measurements, ns.allow_worse)
     new["schema"] = BASELINE_SCHEMA
     new["tolerance"] = tol
@@ -944,7 +1107,10 @@ def update(baseline, ns, measurements, fp, tol, scenes):
         checks = evaluate_scene(measurements[sc["name"]], new["scenes"].get(sc["name"]), tol)
         rows.append(dict(scene=sc["name"], verdict=scene_verdict(checks), checks=checks))
     log("\nAgainst the updated baseline:\n" + format_report(rows))
-    return 1 if (refusals or problems) else 0
+    failing = [r["scene"] for r in rows if r["verdict"] == "FAIL"]
+    if failing:
+        log(f"update leaves {len(failing)} scene(s) failing against the baseline just written: {', '.join(failing)}")
+    return 1 if (refusals or problems or failing) else 0
 
 
 if __name__ == "__main__":

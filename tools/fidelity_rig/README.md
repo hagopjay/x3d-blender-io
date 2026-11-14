@@ -116,7 +116,7 @@ command runs, per scene of one or more scenes JSONs, both exports and compares t
 ```
 BPY_PYTHON=$(which python3) python3 gate.py                                   # the 5 probes (probes.json), exit 1 on any FAIL
 python3 gate.py --scenes probes.json scenes-repo.json scenes-demo.json        # the 43 scenes the baseline was seeded from
-python3 gate.py --scenes scenes-gate-ci.json --jobs 2                         # the CI subset: 5 probes + lights-after, lod-control, stars-splats, stilllife-x3d40
+python3 gate.py --scenes scenes-gate-ci.json --jobs 2                         # the CI subset: 5 probes + lights-after, lod-control, stars-view-poc1, stilllife-x3d40
 python3 gate.py --only p2-point-classic --json one.json                       # one scene, results copied to one.json
 python3 gate.py --scenes ... --reuse                                          # re-evaluate the last run's measurements (no Blender, no browser)
 python3 gate.py --scenes ... --update-baseline [--allow-worse]                # rewrite measured values (see below)
@@ -134,57 +134,84 @@ first-Viewpoint helpers moved to `viewpoint.py`, which `gate.py` shares.
 | # | Check | Fails when |
 |---|---|---|
 | 1 | `validator` | the glb is missing, the validator did not run, errors > 0 (always, whatever the baseline says), or warnings > the baseline's |
-| 2 | `glb_content` | the glb is EMPTY (the validator accepts an empty glb) while the X3D has geometry; or it has no triangles while the X3D has surfaces (a points-only or lines-only glb); or its triangles fall below the baseline by more than 5%. A points-only / lines-only glb of an X3D that is only points / lines / splats passes and is reported as `points` / `lines` / `points+lines` |
-| 3 | `geometry_delta` | Babylon.js-on-glb against X_ITE-on-X3D mean \|delta\| over the glb's geometry exceeds baseline + tolerance (or the geometry is no longer visible) |
+| 2 | `glb_content` | the glb is EMPTY (the validator accepts an empty glb) while the X3D has geometry; or it has no triangles while the X3D has surfaces (a points-only or lines-only glb); or its triangles, points or lines primitives fall below the baseline by more than 1% (the counts are deterministic for one Blender). A points-only / lines-only glb of an X3D that is only points / lines / splats passes and is reported as `points` / `lines` / `points+lines` |
+| 3 | `geometry_delta` | Babylon.js-on-glb against X_ITE-on-X3D mean \|delta\| over the pixels Babylon.js drew exceeds baseline + tolerance, or no geometry is visible. That delta cannot see geometry the glb lost (Babylon.js draws background there), so two frame shares are gated beside it: the share Babylon.js covers (`geometry_share`) may not fall below the baseline's, and the share where X_ITE shows foreground (a mask from X_ITE's own render: more than 16 of 255 away from the median colour of its border) while Babylon.js shows only its clear colour (`geometry_missing_share`) may not rise above it. A **vacuous** render also fails: X_ITE's render of the original shows only its background, or Babylon.js draws no pixel of the glb, so the numbers would pass without measuring anything. A scene may carry `allow_blank` (or `allow_empty`) with a written reason to pass such a render, and the report then says `not measured` |
 | 4 | `reexport` | the re-export is not well-formed X3D, `x3d` (x3d.py) reports an error or is not installed, or more node types were lost than the baseline's count |
-| 5 | `roundtrip_delta` | X_ITE original against X_ITE re-export: mean \|delta\| (0-255) or FLIP (flip-evaluator 1.7, LDR) exceeds baseline + tolerance |
+| 5 | `roundtrip_delta` | X_ITE original against X_ITE re-export: mean \|delta\| (0-255) or FLIP (flip-evaluator 1.7, LDR) exceeds baseline + tolerance; a FLIP that could not be computed (flip-evaluator missing or raising) fails when the baseline has one; a vacuous render (X_ITE shows only background, so both renders are identical by construction) fails as in 3 |
 
 **Tolerance** (written in the baseline header and used by the code): allowed = baseline + max(abs, rel x baseline), with
-abs 0.5 and rel 5% for mean \|delta\|, abs 0.01 and rel 5% for FLIP, and 5% for the triangle floor. A value better than the
-baseline by more than the same margin is flagged IMPROVED (the scene still passes; `--fail-on-improvement` makes it exit 1) so
-the baseline gets tightened with `--update-baseline`.
+abs 0.5 and rel 5% for mean \|delta\|, abs 0.01 and rel 5% for FLIP, 1% for the triangle (and points / lines primitive) floor, and
+abs 0.002 and rel 10% for the two frame shares. A value better than the baseline by more than the same margin is flagged IMPROVED
+(the scene still passes; `--fail-on-improvement` makes it exit 1) so the baseline gets tightened with `--update-baseline`. The header
+must equal `gate.DEFAULT_TOLERANCE`: a baseline cannot loosen a rule (a different header prints `BASELINE LINT` and fails the run, and
+`tests/test_gate_baseline.py` pins every rule), so loosening one is a code change that gets reviewed as code.
 
 **`gate-baseline.json`** holds the header (`rig`: X_ITE, Babylon.js, Chromium, the renderer, Blender, the validator, flip-evaluator,
-the add-on git revision of the seeding run; X_ITE, Babylon.js, the Chromium major version, Blender, the validator and flip-evaluator are compared on every run and a difference
-prints `FINGERPRINT differs` and fails under `--strict-fingerprint`, which CI uses), the `tolerance` rule and per scene:
-`validator.warnings`, `glb.class` and `glb.triangles`, `geometry_delta`, `reexport.nodes_lost`, `roundtrip.mean_abs_delta` and
-`flip`, plus the entries a person writes, every one with a reason (an entry whose reason is empty or still starts with
-`UNEXPLAINED` fails the run):
+the add-on git revision of the baseline run, and the Python libraries x3d.py, numpy and Pillow; X_ITE, Babylon.js, the Chromium major
+version, Blender, the validator, flip-evaluator, x3d.py, numpy and Pillow are compared on every run, and a difference, or a tool the
+baseline records that this run cannot report, prints `FINGERPRINT differs` and fails under `--strict-fingerprint`, which CI uses),
+the `tolerance` rule and per scene: `validator.warnings`, `glb.class`, `glb.triangles`, `glb.points` and `glb.lines`,
+`geometry_delta`, `geometry_share`, `geometry_missing_share`, `reexport.nodes_lost`, `roundtrip.mean_abs_delta` and `flip`, plus the
+entries a person writes, every one with a reason (an entry whose reason is empty or still starts with `UNEXPLAINED` fails the run):
 
 - `known`: `{defect, reason, checks}` names the round-trip audit's defect id (D1-D14, H1: the defects the round-trip audit at commit acd6882 found; see
   the "Round-trip audit" section above) that explains why the baseline value is high. It annotates the report line (`[known D4]`) and
   excuses nothing: the baseline value is still the limit, so a known defect cannot get worse unnoticed and its fix shows as IMPROVED.
-- `allow_empty`: the only way a glb with no triangles passes while the X3D has geometry.
+- `allow_empty`: the only way a glb with no triangles passes while the X3D has geometry. It also covers the vacuous render of a scene with
+  nothing to draw.
+- `allow_blank`: the only way a render that measured nothing (all-background X_ITE render, or Babylon.js drawing none of the glb) passes
+  `geometry_delta` and `roundtrip_delta`. It goes stale when both renders show geometry again, and the gate then says so (IMPROVED).
 - `skip`: a check that cannot be gated (a page crash, a scene that renders differently on every run).
-- `tolerance`: a per-scene override for `geometry_delta` / `roundtrip_delta` for animated scenes that X_ITE samples at a run-dependent moment.
+- `tolerance`: a per-scene override for `geometry_delta` / `roundtrip_delta` / `geometry_share` for animated scenes that X_ITE samples at a run-dependent moment.
 
 **`--update-baseline`** runs the scenes and records what it measured. It never loosens a threshold silently: a new value that is
-worse than the baseline (higher delta, FLIP, warnings or nodes lost; fewer triangles) is printed as `REFUSED` and the old value
-stays, unless `--allow-worse` is given (printed as `LOOSENED`). Float moves under 0.01 are ignored so a rerun does not churn the
-file. Measurements a baseline must never absorb (validator errors, an EMPTY glb, no re-export, x3d.py errors) are not recorded;
-with `--allow-worse` they are recorded as `skip` / `allow_empty` entries whose reason is `UNEXPLAINED` and which fail the next
-check until a person writes the real reason. Scenes not run are left alone, and the update ends by printing the verdict of the run
-against the baseline it just wrote. Seed or re-baseline from a full run, then commit the diff.
+worse than the baseline (higher delta, FLIP, warnings, nodes lost or missing share; fewer triangles, points, lines, covered share or
+kinds of geometry) is printed as `REFUSED` and the old value stays, unless `--allow-worse` is given (printed as `LOOSENED`). Float
+moves under 0.01 are ignored so a rerun does not churn the file. Measurements a baseline must never absorb (validator errors, an EMPTY
+glb, a vacuous or missing render, no re-export, x3d.py errors) are not recorded; with `--allow-worse` they are recorded as `skip` /
+`allow_empty` / `allow_blank` entries whose reason is `UNEXPLAINED` and which fail the next check until a person writes the real
+reason. Scenes not run are left alone. A run that covers only some of the baseline's scenes does not restamp the `rig` header when the
+rig differs from it (the other scenes' thresholds were measured on the old rig): the update is refused and nothing is written, so
+re-baseline from a full run on the new rig. The update ends by printing the verdict of the run against the baseline it just wrote and
+exits 1 when it refused something, the baseline lints badly, or a scene still fails against what was written. Seed or re-baseline from
+a full run, then commit the diff.
 
-### Seed run (13 Nov 2026, add-on at 54e85e4, no source change since the audit commit acd6882)
+**Render failures.** `render.mjs --strict` (what the gate runs) prints `FAILED ["scene", ...]` and exits 1 when a job failed inside
+its own try/catch (a crashed page, or a load that did not finish in 90 s: X_ITE `loadURL` and Babylon.js `AppendAsync` are bounded);
+the gate then reruns just those jobs, each alone, once. A chunk that died without that line is rerun job by job. Every process is
+bounded (60 s plus 200 s per job), so a hang cannot outlast the CI job. Without `--strict` (compare.py, roundtrip.py, the
+scorecard) a failed job still exits 0 and the images that exist are read. A scenes list that resolves to no scene exits with an error
+instead of passing `0/0`.
 
-Rig: Khronos glTF-Validator 2.0.0-dev.3.10, X_ITE 16.7.1, Babylon.js 9.32.0, Chromium 153.0.8010.12 (SwiftShader), Blender 5.3.0 (bpy
-5.3.0), FLIP flip-evaluator 1.7 (LDR, 67 ppd), Python 3.13, 4 shared vCPUs, no GPU. Scenes: `probes.json`, `scenes-repo.json` (33 with
-the probes) and `scenes-demo.json` (10 public x3d.demo scenes): 43 scenes, `--jobs 2`, 638 s (a second identical run) to 663 s (the seed run).
+### Baseline run (13 Nov 2026, add-on at 518c3cd; first seeded at 54e85e4, re-baselined at 4133a3a after the importer fixes)
+
+`gate-baseline.json` holds the numbers of the run below. Rig: Khronos glTF-Validator 2.0.0-dev.3.10, X_ITE 16.7.1, Babylon.js 9.32.0,
+Chromium 153.0.8010.12 (SwiftShader), Blender 5.3.0 (bpy 5.3.0), x3d.py 4.0.65.8, numpy 2.5.3, Pillow 12.3.0, FLIP flip-evaluator 1.7
+(LDR, 67 ppd), Python 3.13, 4 shared vCPUs, no GPU. Scenes: `probes.json`, `scenes-repo.json` (33 with the probes) and `scenes-demo.json`
+(10 public x3d.demo scenes): 43 scenes, `--jobs 2`, 640 s. The two shares per scene (`geometry_share`, `geometry_missing_share`) were added
+on 14 Nov 2026 from the renders of that same run (no new render).
 
 - Validator: 43 of 43 glbs have 0 errors; 41 have 0 warnings, `demo-materials-textures` 11 and `demo-material-odyssey` 203, all
   `MESH_PRIMITIVE_GENERATED_TANGENT_SPACE` (a normal map without tangents; the first 10 are kept in the results).
 - Content: 38 glbs hold triangles, 4 are `points` only (`stars-view`, `stars-splats`, `stars-view-poc1`, `stilllife-splats-24k`: splats
-  become points with POSITION only), and 1 is `empty`: `demo-living-heart`, whose only Shape is an empty placeholder (allowed with
-  that reason in the baseline). The gate fails an empty glb of a scene that has geometry; before the baseline entry it failed
-  `demo-living-heart`.
-- Re-export: 43 of 43 well-formed, x3d.py 0 errors, node types lost between 0 and 20 per scene (baseline).
-- Determinism: a second full run against the seeded baseline passed 43 of 43. 36 scenes reproduced every number to within 0.01 (mean
-  |delta|) and 0.0001 (FLIP); the 7 that moved are all animated or unstable, and all but two stayed inside the tolerance: `demo-cannonball`
-  (geometry 17.83, then 17.60), `demo-double-pendulum` (39.31, then 40.85; round trip 0.47, then 0.76), `demo-ode-integrators`,
-  `demo-materials-textures` (round trip 10.52, then 10.73), `repair-0-written` (round trip 1.36, then 0.98), `repair-1-validator`
-  (geometry 42.57, then 24.67) and `demo-material-odyssey` (round trip 29.05, then 39.49; the audit measured 44.36). The last three carry a
-  `tolerance` (the two `repair-*`) or `skip` entry with those numbers as the reason.
+  become points with POSITION and COLOR_0; the first seed, before the importer fix, had POSITION only), and 1 is `empty`:
+  `demo-living-heart`, whose only Shape is an empty placeholder (allowed with that reason in the baseline). The gate fails an empty
+  glb of a scene that has geometry; before the baseline entry it failed `demo-living-heart`. `lod-control` and `lod-scaled` draw one
+  level now: 12 triangles (the first seed had 24).
+- Re-export: 43 of 43 well-formed, x3d.py 0 errors, 0 to 17 node types lost per scene.
+- Renders that measure nothing, written down: `stars-splats` (every render of it is pure background in this rig: min = max = 0 over all
+  512 x 512 pixels of X_ITE, Babylon.js and the re-export; not investigated whether X_ITE draws no GaussianSplats under SwiftShader)
+  and `demo-material-odyssey` (Babylon.js drew none of its 75,314 triangles from the 28.8 MB glb) carry an `allow_blank` entry, and
+  `demo-living-heart` is covered by its `allow_empty` reason. `stars-splats` is therefore not in the CI subset (`stars-view-poc1`, whose
+  renders show splats, is).
+- Determinism. A second full run of the 43 scenes on 14 Nov 2026 (same add-on revision, `--jobs 2`, 639 s, Chromium 153 SwiftShader)
+  reproduced 35 scenes to within 0.01 mean |delta|, 0.0002 FLIP and 0.0005 on the two shares (the glb triangle counts were identical in
+  all 43). The 8 that moved are the animated or unstable ones: `repair-0-written`, `repair-1-validator`, `repair-2-render`,
+  `demo-cannonball`, `demo-ode-integrators`, `demo-double-pendulum`, `demo-materials-textures` (geometry 15.64, then 16.91) and
+  `demo-material-odyssey`, whose X_ITE render differs on every run. Against the baseline as first re-baselined that run failed 2 scenes,
+  `repair-2-render` (missing share 0.004, then 0.008) and `demo-materials-textures`; both now carry a `tolerance` override that names
+  these numbers, and the run re-evaluated against the file gives 43 of 43 (`--reuse`; a third run has not been made). The first seed
+  (add-on at 54e85e4, before the importer fixes) had the same picture: 36 scenes reproduced, 7 moved (its own count).
   `demo-wedgwood-unlit-textures` has no X_ITE render (page crash, H1), so its two render checks are skipped with that reason.
 - Known defects annotated: D1 1 scene, D2 2, D3 3, D4 4, D5 25, D6 7, D7 4, D8 11, D9 1, D10 2, D11 14, D12 3, D13 25, H1 2 (check
   lines carry `[known Dn]`).
@@ -197,13 +224,18 @@ does). A baseline measured on this rig applies to this rig: another Blender, Chr
 
 ### CI (`fidelity-gate` job in `.github/workflows/ci.yml`)
 
-Runs after `unit` on ubuntu-latest (Python 3.13, `bpy==5.3.0 x3d numpy pillow flip-evaluator==1.7`, `npm install` in this folder, `npx
-playwright install --with-deps chromium`) on `scenes-gate-ci.json`: the 5 probes plus `lights-after`, `lod-control`, `stars-splats`
-and `stilllife-x3d40`, with `--strict-fingerprint`. A manual run (`workflow_dispatch`, input `gate_full`) takes the 33 scenes of
-`scenes-repo.json`. The artifact `fidelity-gate-results` holds `gate_results.json`, each scene's `measured.json`, manifest, validator
-report, renders, `diff_x4.png`, `diff_roundtrip_x4.png` and the re-export. `tests/test_gate_logic.py` (thresholds, EMPTY
-classification, baseline update refusals, report formatting, exit codes; synthetic measurements, no browser) and
-`tests/test_gate_baseline.py` (the committed baseline lints clean, matches the pins and covers every scene list) run in the `unit` job.
+Runs after `unit` on ubuntu-latest (Python 3.13, `bpy==5.3.0 x3d==4.0.65.8 numpy==2.5.3 pillow==12.3.0 flip-evaluator==1.7`, `npm
+install` in this folder, `npx playwright install --with-deps chromium`) on `scenes-gate-ci.json`: the 5 probes plus `lights-after`,
+`lod-control`, `stars-view-poc1` and `stilllife-x3d40`, with `--strict-fingerprint`. The Python pins are the baseline header's rig
+(x3d.py's error count is a zero-tolerance check, so a new release must not turn the run red unannounced; the `unit` and `bpy-wheel`
+jobs pin x3d the same way). The job limit is 45 minutes; a normal run takes minutes. The Node packages named in `package.json` are
+exact, their dependencies are not locked (`package-lock.json` is git-ignored): not done here, a candidate for `npm ci`. A manual run
+(`workflow_dispatch`, input `gate_full`) takes the 33 scenes of `scenes-repo.json`. The artifact `fidelity-gate-results` holds
+`gate_results.json`, each scene's `measured.json`, manifest, validator report, renders, `diff_x4.png`, `diff_roundtrip_x4.png` and the
+re-export; the upload warns when `gate_results.json` is missing. `tests/test_gate_logic.py` (thresholds, EMPTY classification, vacuous
+renders, baseline update refusals, report formatting, exit codes; synthetic measurements, no browser), `tests/test_gate_render.py`
+(image measurements on synthetic renders, the render retry, the `render.mjs` failure exit) and `tests/test_gate_baseline.py` (the
+committed baseline lints clean, matches the pins and covers every scene list; every CI scene really renders) run in the `unit` job.
 
 ## Cross-engine scorecard
 
