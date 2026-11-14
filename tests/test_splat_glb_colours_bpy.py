@@ -9,7 +9,8 @@ material reads a named colour attribute, COLOR_0. The native splat layout keeps 
 glb held POSITION only (stilllife-splats-24k, stars-view). The importer adds the ``Color`` attribute and an unlit
 material on it.
 
-Skipped when ``bpy`` is not importable or cannot size a PointCloud (Blender 5.1+)::
+Skipped when ``bpy`` is not importable or cannot size a PointCloud (Blender 5.1+); the native point-cloud glb test also
+skips before Blender 5.3, whose glTF exporter writes no PointCloud (CI 5.1.2 and 5.2.2)::
 
     cd tests && python -m unittest test_splat_glb_colours_bpy
 """
@@ -74,7 +75,13 @@ class SplatGlbColourTests(unittest.TestCase):
         return _glb(out)
 
     def test_native_splat_pointcloud_glb_has_colours(self):
+        import bpy
         doc, blob = self._import_export("pointcloud")
+        if "meshes" not in doc and bpy.app.version < (5, 3, 0):
+            # CI Blender 5.1.2 and 5.2.2: "Mesh 'GaussianSplats' has no primitives and will be omitted". Their glTF exporter
+            # (io_scene_gltf2) does not write point clouds; the PointCloud exists since 5.1, its glb export since 5.3.
+            self.skipTest("this Blender's glTF exporter does not write PointCloud objects (5.3+ does)")
+        self.assertIn("meshes", doc, "Blender 5.3+ must write the splat point cloud")
         primitive = doc["meshes"][0]["primitives"][0]
         self.assertEqual(primitive.get("mode"), 0)                  # POINTS
         self.assertIn("COLOR_0", primitive["attributes"])
