@@ -438,8 +438,8 @@ def lint_baseline(baseline):
             elif str(reason).upper().startswith("UNEXPLAINED"):
                 problems.append(f"{name}: {what} reason is still UNEXPLAINED, write one")
         for k in e.get("known", []):
-            if not re.fullmatch(r"[DH]\d+", str(k.get("defect", ""))):
-                problems.append(f"{name}: known entry has no defect id like D4 ({k.get('defect')!r})")
+            if not re.fullmatch(r"[DHGR]\d+", str(k.get("defect", ""))):
+                problems.append(f"{name}: known entry has no id like D4, H1, G2 or R1 ({k.get('defect')!r})")
             for c in k.get("checks", []):
                 if c not in CHECKS:
                     problems.append(f"{name}: known {k.get('defect')} names an unknown check {c!r}")
