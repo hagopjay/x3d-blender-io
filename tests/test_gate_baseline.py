@@ -37,10 +37,12 @@ class CommittedBaseline(unittest.TestCase):
         self.assertEqual(gate.lint_baseline(BASELINE), [])   # every known / skip / allow_empty has a written reason
 
     def test_tolerance_rule_is_written_down(self):
-        tol = BASELINE["tolerance"]
-        self.assertEqual(tol["image_delta"], {"abs": 0.5, "rel": 0.05})
-        self.assertIn("flip", tol)
-        self.assertIn("triangles", tol)
+        # every rule, not one: a baseline PR that loosens flip or triangles must change the code constant (and so be reviewed as code)
+        self.assertEqual(BASELINE["tolerance"], gate.DEFAULT_TOLERANCE)
+        self.assertEqual(gate.DEFAULT_TOLERANCE["image_delta"], {"abs": 0.5, "rel": 0.05})
+        self.assertEqual(gate.DEFAULT_TOLERANCE["flip"], {"abs": 0.01, "rel": 0.05})
+        self.assertEqual(gate.DEFAULT_TOLERANCE["triangles"], {"rel": 0.01})
+        self.assertEqual(gate.DEFAULT_TOLERANCE["geometry_share"], {"abs": 0.002, "rel": 0.10})
 
     def test_rig_fingerprint_matches_the_pins(self):
         pins = json.loads((RIG / "package.json").read_text())["dependencies"]
@@ -48,7 +50,7 @@ class CommittedBaseline(unittest.TestCase):
         self.assertEqual(rig["x_ite"], pins["x_ite"])
         self.assertEqual(rig["babylon"], pins["babylonjs"])
         self.assertEqual(rig["validator"], pins["gltf-validator"])
-        for key in ("chromium", "blender", "flip_evaluator", "renderer", "addon_git_revision"):
+        for key in ("chromium", "blender", "flip_evaluator", "renderer", "addon_git_revision", "x3d_py", "numpy", "pillow"):
             self.assertTrue(rig.get(key), key)
         self.assertTrue(rig["blender"].startswith("5.3"))
 
@@ -60,6 +62,10 @@ class CommittedBaseline(unittest.TestCase):
             self.assertIn("nodes_lost", e["reexport"], name)
             if "geometry_delta" not in skip:
                 self.assertIn("geometry_delta", e, name)
+                self.assertIn("geometry_share", e, name)
+                self.assertIn("geometry_missing_share", e, name)
+                if e["geometry_delta"] is None:   # a render that measured nothing needs the written reason, or it is a vacuous check
+                    self.assertTrue((e.get("allow_blank") or e.get("allow_empty") or {}).get("reason"), f"{name}: geometry_delta null without allow_blank")
             if "roundtrip_delta" not in skip:
                 self.assertIn("mean_abs_delta", e["roundtrip"], name)
             if e["glb"]["class"] == "empty":
@@ -109,12 +115,44 @@ class CiJob(unittest.TestCase):
         probes = scene_names("probes.json")
         self.assertEqual(names[:5], probes)
         self.assertTrue(4 <= len(names) - 5 <= 5, names)
+        self.assertEqual(len(names), len(set(names)))
+
+    def test_every_ci_scene_really_renders(self):
+        """A scene whose renders are all background passes the render checks without measuring (stars-splats did). The CI subset
+        may hold only scenes whose baseline measured something: a number, a coverage, no allow_blank / allow_empty, nothing skipped."""
+        for n in scene_names("scenes-gate-ci.json"):
+            e = BASELINE["scenes"][n]
+            self.assertNotIn("allow_blank", e, n)
+            self.assertNotIn("allow_empty", e, n)
+            self.assertFalse({"geometry_delta", "roundtrip_delta"} & set(e.get("skip", {})), n)
+            self.assertIsNotNone(e["geometry_delta"], n)
+            self.assertGreater(e["geometry_share"], 0, n)
+            self.assertNotEqual(e["glb"]["class"], "empty", n)
+
+    def test_zero_scene_lists_are_caught(self):
+        self.assertGreaterEqual(len(scene_names("scenes-gate-ci.json")), 9)
+        self.assertGreaterEqual(len(scene_names("probes.json", "scenes-repo.json")), 33)
 
     def test_ci_pins_match_the_baseline_rig(self):
         m = re.search(r"bpy==([\d.]+)", self.text)
         self.assertTrue(m)
         self.assertEqual(m.group(1), BASELINE["rig"]["blender"])
         self.assertIn(f"flip-evaluator=={BASELINE['rig']['flip_evaluator']}", self.text)
+        for pkg, key in (("x3d", "x3d_py"), ("numpy", "numpy"), ("pillow", "pillow")):
+            self.assertIn(f"{pkg}=={BASELINE['rig'][key]}", self.text, pkg)
+
+    def test_no_job_installs_x3d_unpinned(self):
+        installs = [ln for ln in self.text.splitlines() if "pip install" in ln]
+        self.assertTrue(installs)
+        for ln in installs:
+            for pkg in re.findall(r"(?<![\w-])(x3d|numpy|pillow|flip-evaluator|bpy)(?![\w-])(==[\w.]+)?", ln):
+                if pkg[0] in ("x3d", "numpy", "pillow", "flip-evaluator"):
+                    self.assertTrue(pkg[1], f"{pkg[0]} is not pinned in: {ln.strip()}")
+
+    def test_the_gate_job_warns_about_a_missing_report_and_has_room_for_one_hung_chunk(self):
+        job = self.text[self.text.index("  fidelity-gate:"):]
+        self.assertIn("if-no-files-found: warn", job)
+        self.assertGreaterEqual(int(re.search(r"timeout-minutes:\s*(\d+)", job).group(1)), 45)
 
 
 if __name__ == "__main__":
