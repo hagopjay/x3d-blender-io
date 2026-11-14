@@ -35,7 +35,8 @@ jobs:
       - name: Install test tools
         # x3d is the Web3D Consortium's Python package; the semantic validator in tests uses it when present. Pinned (the same
         # version as the export gate's rig, tools/fidelity_rig/gate-baseline.json): a new release can add field checks and turn runs red.
-        run: python -m pip install --quiet ruff x3d==4.0.65.8
+        # pyyaml lets tests/test_gate_baseline.py parse this file (it skips that check without it).
+        run: python -m pip install --quiet ruff x3d==4.0.65.8 pyyaml==6.0.3
       - name: Syntax errors (ruff, blocking)
         run: ruff check --select E9,F63,F7 --output-format github source tests
       - name: Undefined names (ruff, advisory until the legacy exporter is cleaned up)
@@ -66,7 +67,10 @@ jobs:
         run: python -m pip install --quiet bpy x3d==4.0.65.8
       - name: Install the Khronos glTF Validator for the glb gate test
         # Node is preinstalled on ubuntu-latest. The version is the one pinned in tools/fidelity_rig/package.json;
-        # tests/test_glb_validator_bpy.py fails when the two differ.
+        # tests/test_glb_validator_bpy.py fails when the two differ. This install stays apart from the rig's npm ci: gltf-validator
+        # has no dependencies, so the exact version is already the whole tree; the lock would add only the tarball's integrity
+        # check, and using it means either the rig's whole tree (X_ITE, Babylon.js, Playwright) in a job that runs no browser
+        # or a second, stripped package.json written here that could drift from the rig's.
         run: |
           node --version
           npm install --prefix "$RUNNER_TEMP/gltf-validator" --no-audit --no-fund gltf-validator@2.0.0-dev.3.10
@@ -196,7 +200,8 @@ jobs:
     env:
       # The baseline (tools/fidelity_rig/gate-baseline.json) was measured on this rig: bpy 5.3.0 on Python 3.13, x3d (x3d.py) 4.0.65.8,
       # numpy 2.5.3, Pillow 12.3.0, flip-evaluator 1.7, X_ITE 16.7.1, Babylon.js 9.32.0, gltf-validator 2.0.0-dev.3.10 and Playwright's
-      # Chromium (SwiftShader); the Node packages are pinned in package.json. gate.py --strict-fingerprint fails when any of them differs.
+      # Chromium (SwiftShader); the Node packages are pinned in package.json and locked in package-lock.json (npm ci).
+      # gate.py --strict-fingerprint fails when any of them differs.
       BPY_PYTHON: python
     steps:
       - uses: actions/checkout@v7
@@ -215,9 +220,12 @@ jobs:
         run: python -m pip install --quiet bpy==5.3.0 x3d==4.0.65.8 numpy==2.5.3 pillow==12.3.0 flip-evaluator==1.7
       - name: Install the rig's Node packages (X_ITE, Babylon.js, Playwright, glTF Validator)
         working-directory: tools/fidelity_rig
+        # npm ci, not npm install: it installs exactly what the committed package-lock.json records (the version and sha512
+        # integrity of every package, Playwright's and Babylon.js's own dependencies included) and fails when package.json and the
+        # lock disagree, where npm install may re-resolve and rewrite the lock. The baseline was measured on these versions.
         run: |
           node --version
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
       - name: Install Chromium for Playwright
         working-directory: tools/fidelity_rig
         run: npx playwright install --with-deps chromium

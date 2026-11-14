@@ -105,7 +105,7 @@ class CiJob(unittest.TestCase):
         doc = yaml.safe_load(self.text)
         job = doc["jobs"]["fidelity-gate"]
         steps = " ".join(str(s.get("run", "")) + str(s.get("uses", "")) for s in job["steps"])
-        for needle in ("bpy==", "npm install", "playwright install --with-deps chromium", "gate.py", "upload-artifact"):
+        for needle in ("bpy==", "npm ci", "playwright install --with-deps chromium", "gate.py", "upload-artifact"):
             self.assertIn(needle, steps)
         trigger = doc.get("on", doc.get(True))
         self.assertIn("gate_full", trigger["workflow_dispatch"]["inputs"])
