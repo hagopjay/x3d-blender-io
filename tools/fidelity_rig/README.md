@@ -10,11 +10,16 @@ Chromium, 512 x 512, from the X3D's first Viewpoint, and reports the mean |delta
 - `patches`: 5 x 5 means at listed pixels, for the probe scenes.
 
 ```
-npm install                       # x_ite 16.7.1, babylonjs 9.32.0, playwright 1.63.0, gltf-validator 2.0.0-dev.3.10 (pinned)
+npm ci                            # exactly the locked tree: x_ite 16.7.1, babylonjs 9.32.0, playwright 1.63.0, gltf-validator 2.0.0-dev.3.10
 npx playwright install chromium   # Chromium 153, the browser the numbers below were measured in
 pip install bpy==5.3.0 pillow numpy   # or point BPY_PYTHON at a Python that has bpy
 python3 compare.py after ../../source probes.json   # sRGB colours and X_ITE light units are the add-on's default
 ```
+
+`npm ci` installs what the committed `package-lock.json` records (7 packages: the five pins plus `playwright-core` and
+`babylonjs-gltf2interface`, each with its sha512 integrity hash) and stops with an error when `package.json` and the lock disagree;
+`npm install` can re-resolve and rewrite the lock. To change a pin, edit `package.json`, run `npm install --package-lock-only`, and commit
+both files together with the new baseline (`tests/test_npm_lock.py` checks that the pins are exact and the lock matches them).
 
 X_ITE renders with StraightenHorizon off, so a rolled Viewpoint is drawn as authored in both legs; an
 OrthoViewpoint becomes an orthographic Babylon.js camera with the same extents, and a GeoViewpoint is placed in the
@@ -225,17 +230,19 @@ does). A baseline measured on this rig applies to this rig: another Blender, Chr
 ### CI (`fidelity-gate` job in `.github/workflows/ci.yml`)
 
 Runs after `unit` on ubuntu-latest (Python 3.13, `bpy==5.3.0 x3d==4.0.65.8 numpy==2.5.3 pillow==12.3.0 flip-evaluator==1.7`, `npm
-install` in this folder, `npx playwright install --with-deps chromium`) on `scenes-gate-ci.json`: the 5 probes plus `lights-after`,
+ci` in this folder, `npx playwright install --with-deps chromium`) on `scenes-gate-ci.json`: the 5 probes plus `lights-after`,
 `lod-control`, `stars-view-poc1` and `stilllife-x3d40`, with `--strict-fingerprint`. The Python pins are the baseline header's rig
 (x3d.py's error count is a zero-tolerance check, so a new release must not turn the run red unannounced; the `unit` and `bpy-wheel`
 jobs pin x3d the same way). The job limit is 45 minutes; a normal run takes minutes. The Node packages named in `package.json` are
-exact, their dependencies are not locked (`package-lock.json` is git-ignored): not done here, a candidate for `npm ci`. A manual run
+exact and `package-lock.json` (committed) locks the whole tree, so the job runs `npm ci`; the `bpy-wheel` job installs
+`gltf-validator` alone, which has no dependencies, and stays apart. A manual run
 (`workflow_dispatch`, input `gate_full`) takes the 33 scenes of `scenes-repo.json`. The artifact `fidelity-gate-results` holds
 `gate_results.json`, each scene's `measured.json`, manifest, validator report, renders, `diff_x4.png`, `diff_roundtrip_x4.png` and the
 re-export; the upload warns when `gate_results.json` is missing. `tests/test_gate_logic.py` (thresholds, EMPTY classification, vacuous
 renders, baseline update refusals, report formatting, exit codes; synthetic measurements, no browser), `tests/test_gate_render.py`
 (image measurements on synthetic renders, the render retry, the `render.mjs` failure exit) and `tests/test_gate_baseline.py` (the
-committed baseline lints clean, matches the pins and covers every scene list; every CI scene really renders) run in the `unit` job.
+committed baseline lints clean, matches the pins and covers every scene list; every CI scene really renders) and `tests/test_npm_lock.py`
+(exact pins, a lock that matches them with an integrity hash on every entry, and a lock that is not git-ignored) run in the `unit` job.
 
 ## Cross-engine scorecard
 

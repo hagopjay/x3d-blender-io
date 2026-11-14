@@ -30,5 +30,5 @@ __pycache__/
 
 # Fidelity rig outputs and npm packages
 tools/fidelity_rig/node_modules/
+tools/fidelity_rig/node_modules
 tools/fidelity_rig/out/
-tools/fidelity_rig/package-lock.json
