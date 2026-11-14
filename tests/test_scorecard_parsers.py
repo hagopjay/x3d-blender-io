@@ -5,6 +5,7 @@
 the Castle command line, image metrics. No browser, no Blender."""
 import json
 import tempfile
+import importlib.util
 import unittest
 from pathlib import Path
 
@@ -88,6 +89,7 @@ class SceneFactTests(unittest.TestCase):
         f = common.scene_facts(self.write("<X3D><Scene/></X3D>"))
         self.assertEqual((f["clear"], f["headlight_on"]), ([0.0, 0.0, 0.0], True))
 
+    @unittest.skipUnless(importlib.util.find_spec("numpy"), "viewpoint.py needs numpy (the CI unit job installs only ruff and x3d)")
     def test_rig_viewpoint_is_the_rigs_function(self):
         """first_viewpoint comes from tools/fidelity_rig/viewpoint.py itself (not a copy): the probe's Viewpoint is at 0 0 10 looking down -Z."""
         v = common.rig_viewpoint()(str(PROBE), str(ROOT / "source"))
