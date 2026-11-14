@@ -3519,6 +3519,15 @@ def smooth_primitive(bpymesh, spec):
 # geometry has one, else in the Material's emissiveColor (black when the Material does not set it), else white when
 # the Appearance has no material. The surface material a Shape shares with other Shapes stays as it is; lines and
 # points get their own unlit material, cached per import.
+# Geometry2D nodes whose solid field defaults to FALSE in X3D 4.0 (every other mesh geometry defaults to TRUE)
+SOLID_DEFAULT_FALSE_SPECS = frozenset({'Rectangle2D', 'Disk2D', 'ArcClose2D', 'TriangleSet2D'})
+
+
+def geometry_solid(geom, ancestry):
+    """The geometry's solid field with the default of its own node type."""
+    return geom.getFieldAsBool('solid', geom.getSpec() not in SOLID_DEFAULT_FALSE_SPECS, ancestry)
+
+
 LINE_POINT_SPECS = frozenset({'IndexedLineSet', 'LineSet', 'PointSet', 'Polyline2D', 'Polypoint2D', 'Arc2D', 'Circle2D'})
 LINE_COLOUR_ATTRIBUTE = "Color"     # a point or line set's X3D colours, one per vertex (POINT domain)
 line_material_cache = {}
@@ -5568,7 +5577,7 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             texmtx = translateTexTransform(textx, ancestry)
         if bpymat is not None and appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
             # X3D 4.0 path: a solid surface is single sided in Blender terms
-            bpymat.use_backface_culling = geom.getFieldAsBool('solid', True, ancestry)
+            bpymat.use_backface_culling = geometry_solid(geom, ancestry)
             if colour_kind and geom.getSpec() not in LINE_POINT_SPECS \
                     and appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')).getSpec() == 'UnlitMaterial':
                 # the Color / ColorRGBA replaces emissiveColor (see unlit_colour_material)
@@ -5607,7 +5616,7 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             return
         if isinstance(bpydata, bpy.types.Mesh) and geom_spec not in LINE_POINT_SPECS:
             # the file's solid for the export to write back (D14): a classic Material's surface stays two-sided in Blender
-            bpydata[SOLID_PROPERTY] = geom.getFieldAsBool('solid', True, ancestry)
+            bpydata[SOLID_PROPERTY] = geometry_solid(geom, ancestry)
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
@@ -6374,7 +6383,7 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
         if bpymat is not None:
             mesh.materials.append(bpymat)
             if appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
-                bpymat.use_backface_culling = geom.getFieldAsBool('solid', True, ancestry)
+                bpymat.use_backface_culling = geometry_solid(geom, ancestry)
 
     obj = bpy.data.objects.new(mesh_name, mesh)
     bpycollection.objects.link(obj)
