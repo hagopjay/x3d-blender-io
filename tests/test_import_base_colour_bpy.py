@@ -242,6 +242,40 @@ class ImportBaseColourTests(unittest.TestCase):
         # X3D's 0.8 diffuseColor default is a display (sRGB) colour on the classic path: 0.8 sRGB is 0.6038 linear
         self.assertEqual([round(c, 4) for c in socket.default_value[:3]], [0.6038, 0.6038, 0.6038])
 
+    # review round 1 (importer F2): the multiply depends on whether the Shape has a Color node, so a material two Shapes
+    # share by description must not be shared across that difference
+
+    CLASSIC = "<Material diffuseColor='0.5 0.2 0.1'/><ImageTexture url='\"tex.png\"'/>"
+    COLOUR = QUAD.format(colour="<Color color='1 1 1 1 1 1 1 1 1 1 1 1'/>")
+
+    def _material_of(self, shape):
+        import bpy
+        obj = next(o for o in bpy.data.objects if o.type == 'MESH' and o.get("x3d_def") == shape)
+        return obj.data.materials[0]
+
+    def _kinds(self, mat):
+        return sorted(n.bl_idname for n in mat.node_tree.nodes if n.bl_idname in {"ShaderNodeMix", "ShaderNodeVertexColor"})
+
+    def test_a_shared_textured_material_is_multiplied_whichever_shape_builds_it_first(self):
+        for order in ("coloured first", "plain first"):
+            body = [_shape("PLAIN", self.CLASSIC), _shape("COLOURED", self.CLASSIC, self.COLOUR)]
+            self._import("shared_%s.x3d" % order.replace(" ", "_"), "\n".join(body if order == "plain first" else body[::-1]),
+                         color_space='AS_IS')
+            plain, coloured = self._material_of("PLAIN"), self._material_of("COLOURED")
+            self.assertIsNot(plain, coloured, order)
+            self.assertIsNotNone(_multiplied_by(_principled(plain).inputs["Base Color"]), order)
+            self.assertEqual(self._kinds(plain), ["ShaderNodeMix"], order)       # diffuse x texture, no vertex colours
+            self.assertEqual(self._kinds(coloured), ["ShaderNodeVertexColor"], order)
+
+    def test_a_used_appearance_is_not_shared_across_a_colour_node_either(self):
+        self._import("used.x3d", "\n".join([
+            f"<Shape DEF='COLOURED'><Appearance DEF='AP'>{self.CLASSIC}</Appearance>{self.COLOUR}</Shape>",
+            f"<Shape DEF='PLAIN'><Appearance USE='AP'/>{QUAD.format(colour='')}</Shape>"]), color_space='AS_IS')
+        plain, coloured = self._material_of("PLAIN"), self._material_of("COLOURED")
+        self.assertIsNot(plain, coloured)
+        self.assertEqual(self._kinds(plain), ["ShaderNodeMix"])
+        self.assertEqual(self._kinds(coloured), ["ShaderNodeVertexColor"])
+
 
 if __name__ == "__main__":
     unittest.main()

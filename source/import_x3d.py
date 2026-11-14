@@ -452,7 +452,8 @@ class vrmlNode(object):
                  'ROUTE_IPO_NAMESPACE',
                  'PROTO_NAMESPACE',
                  'x3dNode',
-                 'parsed')
+                 'parsed',
+                 'parsed_vcol')
 
     def __init__(self, parent, node_type, lineno):
         self.id = None
@@ -462,6 +463,7 @@ class vrmlNode(object):
         self.blendData = None
         self.x3dNode = None  # for x3d import only
         self.parsed = None  # We try to reuse objects in a smart way
+        self.parsed_vcol = None  # for a classic material in parsed: whether it was built for a Shape with a Color node
         if parent:
             parent.children.append(self)
 
@@ -4976,6 +4978,18 @@ def importShape_LoadPBRAppearance(vrmlname, appr, mat_node, ancestry, node):
     return (bpymat, None, False)
 
 
+def _parsed_for_vcol(node, is_vcol):
+    """The material a DEF'd Appearance or Material was built into, if it was built for a Shape with the same
+    colour-node state (a classic material depends on it); a material of the X3D 4.0 path does not."""
+    real = node.getRealNode()
+    return real.parsed if real.parsed and real.parsed_vcol in (None, bool(is_vcol)) else None
+
+
+def _set_parsed_for_vcol(node, bpymat, is_vcol):
+    node.parsed = bpymat
+    node.parsed_vcol = bool(is_vcol)
+
+
 def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     """
     Material creation takes nontrivial time on large models.
@@ -4994,12 +5008,11 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     Can't rely on USE alone. Repeating texture definitions
     are entirely possible, too.
 
-    Vertex coloring is not a part of appearance, but Blender
-    has a material flag for it. However, if a mesh has no vertex
-    color layer, setting use_vertex_color_paint to true has no
-    effect. So it's fine to reuse the same  material for meshes
-    with vertex colors and for ones without.
-    It's probably an abuse of Blender of some level.
+    Vertex coloring is not a part of appearance, but the material
+    depends on it: with a Color node the vertex colours feed Base
+    Color, without one a texture is multiplied by the diffuse colour
+    (appearance_Create). So every cache below is per is_vcol, and a
+    material is shared only by Shapes that agree on it.
 
     So here's the caching structure:
     For USE on appearance, we store the material object
@@ -5016,7 +5029,7 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     in material_cache.
     """
     # First, check entire-appearance cache
-    if appr.reference and appr.getRealNode().parsed:
+    if appr.reference and _parsed_for_vcol(appr, is_vcol):
         return appearance_ExpandCachedMaterial(appr.getRealNode().parsed)
 
     # X3D 4.0 physically based materials carry their textures as children
@@ -5036,19 +5049,21 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     # We're ignoring FillProperties, LineProperties, and shaders
 
     # Check the USE-based material cache for textureless materials
-    if material and material.reference and not tex_node and material.getRealNode().parsed:
+    if material and material.reference and not tex_node and _parsed_for_vcol(material, is_vcol):
         return appearance_ExpandCachedMaterial(material.getRealNode().parsed)
 
-    # Now the description-based caching
+    # Now the description-based caching: the same Material and texture, with and without a Color node, are two materials
     cache_key = appearance_MakeDescCacheKey(material, tex_node)
+    if cache_key:
+        cache_key = cache_key + (bool(is_vcol),)
 
     if cache_key and cache_key in material_cache:
         bpymat = material_cache[cache_key]
         # Still want to make the material available for USE-based reuse
         if appr.canHaveReferences():
-            appr.parsed = bpymat
+            _set_parsed_for_vcol(appr, bpymat, is_vcol)
         if material and material.canHaveReferences() and not tex_node:
-            material.parsed = bpymat
+            _set_parsed_for_vcol(material, bpymat, is_vcol)
         return appearance_ExpandCachedMaterial(bpymat)
 
     # Done checking full-material caches. Texture cache may still kick in.
@@ -5057,13 +5072,13 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
 
     # Update the caches
     if appr.canHaveReferences():
-        appr.parsed = bpymat
+        _set_parsed_for_vcol(appr, bpymat, is_vcol)
 
     if cache_key:
         material_cache[cache_key] = bpymat
 
     if material and material.canHaveReferences() and not tex_node:
-        material.parsed = bpymat
+        _set_parsed_for_vcol(material, bpymat, is_vcol)
 
     return (bpymat, bpyima, tex_has_alpha)
 
