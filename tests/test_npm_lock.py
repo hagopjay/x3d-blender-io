@@ -164,6 +164,8 @@ class LockIsCommitted(unittest.TestCase):
     def test_node_modules_stay_ignored(self):
         root_text = (ROOT / ".gitignore").read_text(encoding="utf-8")
         self.assertTrue(_ignored_by(root_text, "tools/fidelity_rig/node_modules/x_ite/package.json"), "tools/fidelity_rig/node_modules must stay ignored")
+        self.assertTrue(_ignored_by(root_text, "tools/fidelity_rig/node_modules"), "a node_modules symlink (the sibling worktrees use one) must stay ignored")
+        self.assertTrue(_ignored_by(root_text, "tools/fidelity_rig/out/ci/gate_results.json"), "tools/fidelity_rig/out must stay ignored")
 
 
 if __name__ == "__main__":

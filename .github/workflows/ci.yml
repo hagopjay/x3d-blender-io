@@ -35,7 +35,8 @@ jobs:
       - name: Install test tools
         # x3d is the Web3D Consortium's Python package; the semantic validator in tests uses it when present. Pinned (the same
         # version as the export gate's rig, tools/fidelity_rig/gate-baseline.json): a new release can add field checks and turn runs red.
-        run: python -m pip install --quiet ruff x3d==4.0.65.8
+        # pyyaml lets tests/test_gate_baseline.py parse this file (it skips that check without it).
+        run: python -m pip install --quiet ruff x3d==4.0.65.8 pyyaml==6.0.3
       - name: Syntax errors (ruff, blocking)
         run: ruff check --select E9,F63,F7 --output-format github source tests
       - name: Undefined names (ruff, advisory until the legacy exporter is cleaned up)
