@@ -7131,18 +7131,44 @@ def lod_chain(node, ancestry):
     return out
 
 
+# X_ITE 16.7.1 LOD.js: without a range the level follows the browser's frame rate, averaged over 180 frames from a start-up
+# value of 60 fps, between 20 fps (the coarsest level) and 55 fps (the finest)
+XITE_LOD_START_FRAME_RATE = 60.0
+XITE_LOD_FRAME_RATE_MIN = 20.0
+XITE_LOD_FRAME_RATE_MAX = 55.0
+
+
+def lod_level_without_range(count, frame_rate=XITE_LOD_START_FRAME_RATE):
+    """The level X_ITE 16.7.1's LOD.getLevel picks for an empty ``range`` at a given averaged frame rate: none for no
+    child, the only child, ``+(frame_rate > 55)`` for two, else the share of the way down from 55 to 20 fps (the first
+    child above 55 fps, the last at or below 20 fps)."""
+    if count <= 0:
+        return -1
+    if count == 1:
+        return 0
+    if count == 2:
+        return int(frame_rate > XITE_LOD_FRAME_RATE_MAX)
+    fraction = 1.0 - min(max((frame_rate - XITE_LOD_FRAME_RATE_MIN) / (XITE_LOD_FRAME_RATE_MAX - XITE_LOD_FRAME_RATE_MIN), 0.0), 1.0)
+    return min(int(fraction * count), count - 1)
+
+
 def lod_level(distance, ranges, count):
     """The level X_ITE 16.7.1 draws: the first ``range`` entry above the viewer's distance from the node's centre (LOD.js
     getLevel: upperBound over ``range``), at most the last child. No ``range`` leaves the choice to the browser's frame
-    rate, which X_ITE starts at 60 fps and averages over 180 frames; the finest level (the first child) is taken then."""
+    rate (``lod_level_without_range``): the import takes X_ITE's start-up state, 60 fps, which is the first child of one
+    or of three and more, and the second of two. What X_ITE draws later depends on the frame rate it measures (two
+    children go back to the first once the average falls to 55 fps, three and more drift towards the last as it falls
+    towards 20), so a still import can match only that first frame."""
     if count <= 0:
         return -1
+    if not ranges:
+        return lod_level_without_range(count)
     level = 0
     for r in ranges:
         if r > distance:
             break
         level += 1
-    return min(level, count - 1) if ranges else 0
+    return min(level, count - 1)
 
 
 def lod_centre_world(record):
@@ -7168,7 +7194,8 @@ def finalize_lod():
     units from the viewer still draws level 0). Every level is imported, as for a Switch, so nothing is lost when the scene
     goes out again; the objects of the other levels are hidden in the viewport and the render and carry
     ``x3d_lod_hidden`` (the level) and ``x3d_lod``. ``forceTransitions`` only paces the change from level to level in
-    X_ITE (one level per frame); the level a still viewer ends on is the one chosen here. A GeoLOD's child URLs are
+    X_ITE (one level per frame); the level a still viewer ends on is the one chosen here. A LOD without ``range`` takes
+    X_ITE's start-up level (``lod_level_without_range``). A GeoLOD's child URLs are
     not imported, so its ``rootNode`` content stays shown whichever level the viewer is on (reported).
     """
     global lod_records, lod_members
@@ -7201,7 +7228,7 @@ def finalize_lod():
         level = lod_level(distance, ranges, rec["count"])
         levels[key] = level
         logger.info("LOD %s: the viewer is %.4g from its center, range %s (forceTransitions %s): level %d of %d shown",
-                    name, distance, ranges or "empty (the browser picks; finest level)",
+                    name, distance, ranges or "empty (X_ITE picks by frame rate; its 60 fps start-up level)",
                     node.getFieldAsBool('forceTransitions', False, ancestry), level, rec["count"])
     hidden = []
     for ob, chain in members:
