@@ -67,6 +67,18 @@ class ExportSolidTests(unittest.TestCase):
                 node = self._round_trip(appearance, geometry).find(f".//{tag}")
                 self.assertEqual(node.attrib.get("solid"), "false", (appearance, tag))
 
+    def test_geometry2d_nodes_default_to_two_sided_and_follow_an_explicit_solid(self):
+        # X3D 4.0: Rectangle2D, Disk2D, ArcClose2D and TriangleSet2D default to solid FALSE (review round 1, F1)
+        shapes = {"Rectangle2D": "{tag}", "Disk2D": "{tag}", "ArcClose2D": "{tag} endAngle='1.5'",
+                  "TriangleSet2D": "{tag} vertices='0 0, 1 0, 0 1'"}
+        for appearance in (CLASSIC, PHYSICAL):
+            for tag, template in shapes.items():
+                node = self._round_trip(appearance, "<" + template.format(tag=tag) + "/>").find(".//IndexedFaceSet")
+                self.assertIsNotNone(node, (appearance, tag))
+                self.assertEqual(node.attrib.get("solid"), "false", (appearance, tag))
+                node = self._round_trip(appearance, "<" + template.format(tag=tag) + " solid='true'/>").find(".//IndexedFaceSet")
+                self.assertNotEqual(node.attrib.get("solid"), "false", (appearance, tag, "explicit solid"))
+
     def test_a_mesh_made_in_blender_keeps_following_the_material(self):
         bpy.ops.mesh.primitive_plane_add()
         material = bpy.data.materials.new("Cull")

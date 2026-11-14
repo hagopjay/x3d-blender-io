@@ -97,6 +97,33 @@ class ExportNavigationTests(unittest.TestCase):
                  if t.attrib.get("DEF") in ("OB_Shown", "OB_Hidden")}
         self.assertEqual(flags, {"OB_Shown": "true", "OB_Hidden": "false"})
 
+    def test_hide_render_on_a_plain_blender_object_is_not_written_and_does_not_hide_its_children(self):
+        # review round 1 (emitter F2, importer F3): a hidden parent of a rendering child exported visible="false" on the
+        # parent Transform, which hides the child as well; objects the import did not hide keep exporting visible
+        parent = bpy.data.objects.new("Holder", None)
+        bpy.context.scene.collection.objects.link(parent)
+        bpy.ops.mesh.primitive_cube_add()
+        cube = bpy.context.object
+        cube.parent = parent
+        parent.hide_render = True
+        root = self._export()
+        flags = {t.attrib["DEF"]: t.attrib.get("visible", "true") for t in root.iter("Transform")
+                 if t.attrib.get("DEF") in ("OB_Holder", "OB_Cube")}
+        self.assertEqual(flags, {"OB_Holder": "true", "OB_Cube": "true"})
+
+    def test_a_hidden_switch_choice_keeps_a_visible_child_visible(self):
+        self._import("<Switch whichChoice='0'><Shape DEF='Shown'><Box/></Shape><Shape DEF='Hidden'><Box/></Shape></Switch>")
+        hidden = bpy.data.objects["Hidden"]
+        child = bpy.data.objects.new("Added", None)
+        bpy.context.scene.collection.objects.link(child)
+        child.parent = hidden            # modelled later: not hidden, not marked by the import
+        root = self._export()
+        transforms = {t.attrib["DEF"]: t for t in root.iter("Transform") if t.attrib.get("DEF", "").startswith("OB_")}
+        self.assertNotIn("visible", transforms["OB_Added"].attrib)
+        self.assertNotIn("visible", transforms["OB_Hidden"].attrib)           # the subtree is not all hidden
+        self.assertEqual([s.attrib.get("visible") for s in transforms["OB_Hidden"].findall("Shape")], ["false"])
+        self.assertEqual(transforms["OB_Shown"].attrib.get("visible", "true"), "true")
+
 
 if __name__ == "__main__":
     unittest.main()

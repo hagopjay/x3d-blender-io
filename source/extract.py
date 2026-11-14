@@ -48,8 +48,28 @@ INLINE_SOURCE_PROPERTY = "x3d_inline_source"
 # Where each Inline asset was found at import: the placeholder empty's ``session_uid`` -> absolute path. Kept in this
 # session only (an absolute path in a custom property would travel into a glb's extras and .blend files and name the
 # importing machine's folders; the portable x3d_inline_resolved_path is relative to the importing file), so the
-# export can write the Inline's url relative to its own folder (export_pipeline.resolve_inline_urls).
-INLINE_SOURCE_PATHS: dict[int, str] = {}
+# export can write the Inline's url relative to its own folder (export_pipeline.resolve_inline_urls). The value is the
+# url the empty got at import together with the path, so a url edited afterwards is not overridden by the old location.
+INLINE_SOURCE_PATHS: dict[int, tuple[str, str]] = {}
+# The same paths by the url they were found for: a duplicated placeholder has no entry of its own and takes the path its
+# url was imported with, when that is unambiguous.
+INLINE_SOURCE_BY_URL: dict[str, set[str]] = {}
+
+
+def record_inline_source(uid, url, path):
+    """Remember where the Inline ``url`` of the placeholder with session id ``uid`` was found at import."""
+    INLINE_SOURCE_PATHS[uid] = (url, path)
+    INLINE_SOURCE_BY_URL.setdefault(url, set()).add(path)
+
+
+def inline_source_path(uid, url):
+    """The absolute path the import found for ``url``: the placeholder's own record while its url is unchanged, for a
+    placeholder with no record (a duplicate) the single path any import found for that url, else None."""
+    record = INLINE_SOURCE_PATHS.get(uid)
+    if record is not None:
+        return record[1] if record[0] == url else None
+    paths = INLINE_SOURCE_BY_URL.get(url)
+    return next(iter(paths)) if paths and len(paths) == 1 else None
 # X3D light fields with no Blender setting, kept on the light data by the importer.
 LIGHT_AMBIENT_INTENSITY_PROPERTY = "x3d_ambient_intensity"
 LIGHT_SHADOW_INTENSITY_PROPERTY = "x3d_shadow_intensity"
@@ -112,7 +132,7 @@ def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
     raw = aliases.get(raw, raw)
     if not raw and scene is not None:
         try:
-            recorded = scene.get(COLOUR_SPACE_PROPERTY)
+            recorded = imported_scene_property(scene, COLOUR_SPACE_PROPERTY)
         except (AttributeError, TypeError):
             recorded = None
         raw = aliases.get(str(recorded or "").strip().upper(), str(recorded or "").strip().upper())
@@ -124,6 +144,7 @@ def resolve_export_colour_space(value=None, scene=None, default='SRGB'):
 VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
 IMPORTED_ANIMATION_PROPERTY = "x3d_imported_animation"   # set on the scene when an X3D import made animation (interpolators, TimeSensors)
+SWITCH_HIDDEN_PROPERTY = "x3d_switch_hidden"   # set by the importer on the objects of a Switch choice that is not shown (and on their descendants)
 LOD_HIDDEN_PROPERTY = "x3d_lod_hidden"   # set by the importer on the objects of an LOD level the first Viewpoint does not see
 HEAD_META_PROPERTY = "x3d_head_meta"
 # A Shape's Metadata* node read by the importer, kept on the object as nested {"node", "name", "reference", "value"}.
@@ -133,6 +154,66 @@ METADATA_NODE_TYPES = frozenset(
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+# The headlight level an import in classic light units matched (a rig and diagnostics value; the export does not read it).
+HEADLIGHT_LUX_PROPERTY = "x3d_headlight_lux"
+# Set by the importer on every object it makes. The scene-level properties below describe what an import brought in, so
+# they stop applying when none of that content is left in the scene (scene_has_imported_content).
+IMPORTED_OBJECT_PROPERTY = "x3d_imported"
+SCENE_IMPORT_PROPERTIES = (COLOUR_SPACE_PROPERTY, LIGHTING_MODEL_PROPERTY, HEADLIGHT_PROPERTY, HEADLIGHT_LUX_PROPERTY,
+                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY)
+# What marks content of a file imported before IMPORTED_OBJECT_PROPERTY existed: a DEF, USE or Inline record on the
+# object, a primitive, solid, light or splat record on its data (the importer's own names; extract cannot import them).
+_IMPORTED_OBJECT_MARKS = (IMPORTED_OBJECT_PROPERTY, "x3d_def", "x3d_def_path", "x3d_use", INLINE_URL_PROPERTY)
+_IMPORTED_DATA_MARKS = ("x3d_def", SOLID_PROPERTY, "x3d_primitive", LIGHT_INTENSITY_PROPERTY, SPLAT_PROPERTY)
+
+
+def is_imported_object(obj) -> bool:
+    """True for an object the X3D import made (see IMPORTED_OBJECT_PROPERTY and the older marks above)."""
+    try:
+        if any(key in obj for key in _IMPORTED_OBJECT_MARKS):
+            return True
+        data = getattr(obj, "data", None)
+        return data is not None and any(key in data for key in _IMPORTED_DATA_MARKS)
+    except (TypeError, ReferenceError):
+        return False
+
+
+def scene_has_imported_content(scene) -> bool:
+    """True while ``scene`` still holds an object an X3D import made. A stand-in without ``objects`` (not a Blender
+    scene) counts as holding some: there is nothing to check, so its properties are trusted."""
+    objects = getattr(scene, "objects", None)
+    if objects is None:
+        return True
+    return any(is_imported_object(obj) for obj in objects)
+
+
+def imported_scene_property(scene, key):
+    """The value the import kept on ``scene`` under ``key``, or None when it was never set or the scene no longer holds
+    imported content: the flags are the file's (its headlight, its lighting model, its Background), and once the imported
+    objects are gone the scene is a Blender scene again, whatever it was imported from."""
+    try:
+        value = scene.get(key)
+    except (AttributeError, TypeError):
+        return None
+    if value is None or not scene_has_imported_content(scene):
+        return None
+    return value
+
+
+def clear_stale_scene_properties(scene) -> bool:
+    """Drop the scene-level import properties when the scene holds no imported content, so the next import starts from
+    a clean scene (a file without a Background or animation must not inherit an earlier file's). True if any were."""
+    if scene is None or scene_has_imported_content(scene):
+        return False
+    cleared = False
+    for key in SCENE_IMPORT_PROPERTIES:
+        try:
+            if key in scene:
+                del scene[key]
+                cleared = True
+        except (TypeError, KeyError, ReferenceError):
+            continue
+    return cleared
 
 
 def _line_width(obj):
@@ -164,18 +245,16 @@ def resolve_material_model(value=None, scene=None, default='physical'):
         raw = ""
     if not raw and scene is not None:
         try:
-            raw = str(scene.get(LIGHTING_MODEL_PROPERTY) or "").strip().lower()
+            raw = str(imported_scene_property(scene, LIGHTING_MODEL_PROPERTY) or "").strip().lower()
         except (AttributeError, TypeError):
             raw = ""
     return raw if raw in MATERIAL_MODELS else default
 
 
 def scene_headlight(scene):
-    """The headlight the import recorded for the scene (True or False), None for a scene that was not imported."""
-    try:
-        recorded = scene.get(HEADLIGHT_PROPERTY)
-    except (AttributeError, TypeError):
-        return None
+    """The headlight the import recorded for the scene (True or False), None for a scene that was not imported or no
+    longer holds what was."""
+    recorded = imported_scene_property(scene, HEADLIGHT_PROPERTY)
     if recorded is None:
         return None
     return bool(recorded)
@@ -757,6 +836,12 @@ def _matrix_transform(matrix) -> IRTransform:
     )
 
 
+def is_lod_hidden(obj):
+    """An object of an LOD level the importer hid (and the user has not unhidden): written as geometry it would be
+    drawn on top of the level that is shown, so neither writer exports it."""
+    return obj.get(LOD_HIDDEN_PROPERTY) is not None and bool(obj.hide_render)
+
+
 def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_active_collection):
     if use_active_collection and view_layer is not None:
         objects = view_layer.active_layer_collection.collection.all_objects
@@ -767,9 +852,8 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
             continue
         if use_visible and not obj.visible_get():
             continue
-        if obj.get(LOD_HIDDEN_PROPERTY) is not None and obj.hide_render:
-            # an LOD level the importer hid: written as geometry it would be drawn on top of the level that is shown
-            # (the 4.0 writer has no LOD node); unhide it (hide_render off) to export it
+        if is_lod_hidden(obj):
+            # the 4.0 writer has no LOD node; unhide the level (hide_render off) to export it
             continue
         yield obj
 
@@ -783,7 +867,7 @@ def _direction_neg_z(matrix):
 def scene_head_meta(scene) -> list[tuple[str, str]]:
     """The (name, content) pairs of the head meta the importer kept on ``scene``, in file order."""
     entries = []
-    for item in scene.get(HEAD_META_PROPERTY) or ():
+    for item in imported_scene_property(scene, HEAD_META_PROPERTY) or ():
         get = getattr(item, "get", None)
         if get is None:
             continue
@@ -818,7 +902,7 @@ def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
 
 def scene_background(scene) -> IRBackground | None:
     """The Background the importer kept on ``scene``, or None when there is none (or it has no sky colour)."""
-    stored = scene.get(BACKGROUND_PROPERTY)
+    stored = imported_scene_property(scene, BACKGROUND_PROPERTY)
     get = getattr(stored, "get", None)
     if get is None:
         return None
@@ -1383,7 +1467,9 @@ def extract_scene(
             object_type=obj.type,
             transform=_matrix_transform(local_matrix),
         )
-        instance.visible = not bool(getattr(obj, "hide_render", False))
+        # only what the import hid for a Switch is written invisible; hide_render on any other object is a Blender-side
+        # choice that does not reach the children, while visible="false" would hide the whole subtree
+        instance.visible = not (bool(getattr(obj, "hide_render", False)) and obj.get(SWITCH_HIDDEN_PROPERTY) is not None)
         objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
 
         if obj.name in skinned_names:
@@ -1445,7 +1531,7 @@ def extract_scene(
         elif obj.type == "EMPTY":
             inline_url = obj.get(INLINE_URL_PROPERTY)
             if inline_url:
-                instance.inline = IRInlineAsset(url=str(inline_url), source_path=INLINE_SOURCE_PATHS.get(_session_uid(obj)))
+                instance.inline = IRInlineAsset(url=str(inline_url), source_path=inline_source_path(_session_uid(obj), str(inline_url)))
             ir_scene.object_names.append(obj.name)
         else:
             skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1

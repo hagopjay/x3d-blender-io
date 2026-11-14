@@ -25,8 +25,8 @@ from .material_node_search import (analyze_material, imageTexture_in_material, g
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
 from .matrix_safety import inverted64
-from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, light_attenuation, light_colour,
-                      light_intensity, light_radius, resolve_export_colour_space)
+from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, is_lod_hidden, light_attenuation,
+                      light_colour, light_intensity, light_radius, resolve_export_colour_space)
 
 # h3d defines
 H3D_TOP_LEVEL = 'TOP_LEVEL_TI'
@@ -1787,6 +1787,9 @@ def export(file,
 
         if use_visible:
             objects = tuple(obj for obj in objects if obj.visible_get())
+
+        # an LOD level the importer hid is not written, as in the X3D 4.0 export
+        objects = [obj for obj in objects if not is_lod_hidden(obj)]
 
         light_space['value'] = color_space if any(
             obj.type in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'} and any(slot.material for slot in obj.material_slots)

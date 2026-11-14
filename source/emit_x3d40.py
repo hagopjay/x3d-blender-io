@@ -557,6 +557,10 @@ def _metadata_xml(node, indent, container_field=None):
     return f"{indent}<MetadataSet {' '.join(attrs)}>\n{members}{indent}</MetadataSet>\n"
 
 
+def _subtree_hidden(instance):
+    return not instance.visible and all(_subtree_hidden(child) for child in instance.children)
+
+
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
                   splats=None, version="4.0", look: _Look = _PLAIN_LOOK):
     humanoids = humanoids or {}
@@ -565,7 +569,10 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
     sx, sy, sz = instance.transform.scale
     transform_def = defs.get("transform", instance.object_name, "OB_")
-    visible_attr = "" if instance.visible else ' visible="false"'
+    # visible="false" on a Transform hides its whole subtree: only write it there when every descendant is hidden too,
+    # else hide just this object's own Shapes
+    subtree_hidden = _subtree_hidden(instance)
+    visible_attr = ' visible="false"' if subtree_hidden else ""
     xml = [
         f'{indent}<Transform DEF="{transform_def}" '
         f'translation="{_fmt3_length((tx, ty, tz))}" '
@@ -573,6 +580,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         f'scale="{_fmt3_length((sx, sy, sz))}"{visible_attr}>\n'
     ]
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
+    if not instance.visible and not subtree_hidden:
+        shape_attrs += ' visible="false"'
     for index, shape in enumerate(instance.iter_shapes()):
         xml.append(f"{indent}  <Shape{shape_attrs}>\n")
         if index == 0 and instance.metadata is not None:

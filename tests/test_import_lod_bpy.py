@@ -6,7 +6,8 @@
 
 Every level is still imported (so the file round-trips), but the levels not chosen are hidden in the viewport and the
 render and tagged ``x3d_lod_hidden``. X_ITE's LOD.js getLevel: the distance between the viewer and the centre in the world
-(``range`` is not scaled by the Transforms above), then the first ``range`` entry above it.
+(``range`` is not scaled by the Transforms above), then the first ``range`` entry above it; without a ``range`` the level
+X_ITE starts on (60 fps).
 
 Skipped when ``bpy`` is not importable::
 
@@ -110,9 +111,28 @@ class ImportLodTests(unittest.TestCase):
         # centre at z = 7, viewer at z = 10: distance 3 < 5
         self.assertShown(objs["A"]); self.assertHidden(objs["B"], 1)
 
-    def test_no_range_shows_the_first_level(self):
+    def test_no_range_starts_where_x_ite_starts(self):
+        # X_ITE 16.7.1 LOD.js getLevel without a range picks by the browser's frame rate, which it starts at 60 fps:
+        # one child is level 0, three or more start on the first (floor ((1 - clamp ((60 - 20) / 35)) * size) = 0)
         objs = self._import("norange.x3d", f"<LOD>{_shape('A')}{_shape('B')}{_shape('C')}</LOD>")
         self.assertShown(objs["A"]); self.assertHidden(objs["B"], 1); self.assertHidden(objs["C"], 2)
+        objs = self._import("norange1.x3d", f"<LOD>{_shape('A')}</LOD>")
+        self.assertShown(objs["A"])
+
+    def test_no_range_with_two_children_starts_on_the_second(self):
+        # review round 1 (importer F5): two children are +(frameRate > 55), which is 1 at X_ITE's start-up 60 fps
+        objs = self._import("norange2.x3d", f"<LOD>{_shape('A')}{_shape('B')}</LOD>")
+        self.assertHidden(objs["A"], 0); self.assertShown(objs["B"])
+
+    def test_the_level_without_a_range_follows_the_frame_rate_as_x_ite_does(self):
+        # the importer's start-up pick is X_ITE's formula at 60 fps; the same formula at lower rates (what a slow browser
+        # averages down to)
+        mod = __import__("io_scene_x3d.import_x3d", fromlist=["lod_level"])
+        picks = lambda fps, n: mod.lod_level_without_range(n, fps)
+        self.assertEqual([picks(60, n) for n in (0, 1, 2, 3, 4, 10)], [-1, 0, 1, 0, 0, 0])
+        self.assertEqual([picks(55, n) for n in (2, 3)], [0, 0])                  # not above 55: the first of two
+        self.assertEqual([picks(20, n) for n in (3, 10)], [2, 9])                 # at 20 fps and below: the last
+        self.assertEqual(picks(37.5, 4), 2)                                        # floor ((1 - 0.5) * 4)
 
     def test_nested_groups_and_transforms_hide_with_their_level(self):
         objs = self._import("nested.x3d", f"""
@@ -146,6 +166,21 @@ class ImportLodTests(unittest.TestCase):
         # unhiding a level brings it back into the export
         bpy.data.objects["A"].hide_render = False
         self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        self.assertEqual(open(out, encoding="utf-8").read().count("<Shape"), 2)
+
+    def test_the_x3d_33_export_does_not_draw_the_hidden_levels_either(self):
+        # review round 1 (emitter F5): only the 4.0 writer skipped them
+        import bpy
+        self._import("rt33.x3d", f"""
+<Viewpoint position='0 0 10'/>
+<LOD range='5'>{_shape('A')}{_shape('B')}</LOD>
+""")
+        out = os.path.join(self.tmpdir, "rt33_out.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D33", use_selection=False), {"FINISHED"})
+        text = open(out, encoding="utf-8").read()
+        self.assertEqual(text.count("<Shape"), 1, text)
+        bpy.data.objects["A"].hide_render = False
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D33", use_selection=False), {"FINISHED"})
         self.assertEqual(open(out, encoding="utf-8").read().count("<Shape"), 2)
 
     def test_geolod_root_node_content_stays_shown(self):

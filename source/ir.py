@@ -292,8 +292,9 @@ class IRInstance:
     # Set by the extractor when a mesh-like object evaluated to no faces (edge-only mesh, zero vertices, Geometry
     # Nodes output that is only instances). Such an object keeps its Transform but must not get a placeholder Shape.
     no_faces: bool = False
-    # False for an object hidden for render (a Switch's other choices after an import): the Transform gets visible="false"
-    # (X3D 4.0), so the content survives the export without being drawn.
+    # False for an object the import hid for a Switch (its other choices): the Transform gets visible="false" (X3D 4.0)
+    # when the whole subtree is hidden, otherwise only the object's own Shapes do, so the content survives the export
+    # without being drawn and a visible child is not hidden with its parent.
     visible: bool = True
     # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
     line_width: float | None = None
