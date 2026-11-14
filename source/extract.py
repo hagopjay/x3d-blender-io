@@ -778,6 +778,12 @@ def _matrix_transform(matrix) -> IRTransform:
     )
 
 
+def is_lod_hidden(obj):
+    """An object of an LOD level the importer hid (and the user has not unhidden): written as geometry it would be
+    drawn on top of the level that is shown, so neither writer exports it."""
+    return obj.get(LOD_HIDDEN_PROPERTY) is not None and bool(obj.hide_render)
+
+
 def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_active_collection):
     if use_active_collection and view_layer is not None:
         objects = view_layer.active_layer_collection.collection.all_objects
@@ -788,9 +794,8 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
             continue
         if use_visible and not obj.visible_get():
             continue
-        if obj.get(LOD_HIDDEN_PROPERTY) is not None and obj.hide_render:
-            # an LOD level the importer hid: written as geometry it would be drawn on top of the level that is shown
-            # (the 4.0 writer has no LOD node); unhide it (hide_render off) to export it
+        if is_lod_hidden(obj):
+            # the 4.0 writer has no LOD node; unhide the level (hide_render off) to export it
             continue
         yield obj
 

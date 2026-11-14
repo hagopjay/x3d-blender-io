@@ -148,6 +148,21 @@ class ImportLodTests(unittest.TestCase):
         self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D40", use_selection=False), {"FINISHED"})
         self.assertEqual(open(out, encoding="utf-8").read().count("<Shape"), 2)
 
+    def test_the_x3d_33_export_does_not_draw_the_hidden_levels_either(self):
+        # review round 1 (emitter F5): only the 4.0 writer skipped them
+        import bpy
+        self._import("rt33.x3d", f"""
+<Viewpoint position='0 0 10'/>
+<LOD range='5'>{_shape('A')}{_shape('B')}</LOD>
+""")
+        out = os.path.join(self.tmpdir, "rt33_out.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D33", use_selection=False), {"FINISHED"})
+        text = open(out, encoding="utf-8").read()
+        self.assertEqual(text.count("<Shape"), 1, text)
+        bpy.data.objects["A"].hide_render = False
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D33", use_selection=False), {"FINISHED"})
+        self.assertEqual(open(out, encoding="utf-8").read().count("<Shape"), 2)
+
     def test_geolod_root_node_content_stays_shown(self):
         # the child URLs are not imported, so a GeoLOD's rootNode is the only content: shown near and far
         for name, position in (("geo_far.x3d", "0 0 100"), ("geo_near.x3d", "0 0 0")):
