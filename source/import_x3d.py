@@ -4863,7 +4863,7 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
             if bsdf:
                 _modulate_socket_by_color(node_tree, bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission"), emissive)
     else:
-        base_color = mat.getFieldAsFloatTuple('baseColor', [0.8, 0.8, 0.8], ancestry)
+        base_color = mat.getFieldAsFloatTuple('baseColor', [1.0, 1.0, 1.0], ancestry)
         emissive = mat.getFieldAsFloatTuple('emissiveColor', [0.0, 0.0, 0.0], ancestry)
         bpymat_wrap.base_color = base_color
         bpymat_wrap.metallic = mat.getFieldAsFloat('metallic', 1.0, ancestry)

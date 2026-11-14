@@ -207,6 +207,41 @@ class ImportBaseColourTests(unittest.TestCase):
                 self.assertAlmostEqual(got, want, places=4, msg=name)
         self.assertEqual([round(c, 4) for c in factors["MJ"][:3]], [1.0, 1.0, 1.0])
 
+    def test_a_physical_material_without_base_colour_is_white_not_grey(self):
+        # review round 1 (importer F1): X3D 4.0 and X_ITE 16.7.1 default PhysicalMaterial baseColor to 1 1 1; the
+        # importer's 0.8 became a 0.8 factor on the texture and on the vertex colours
+        import bpy
+        self._import("default_white.x3d", "\n".join([
+            _shape("Textured", "<PhysicalMaterial DEF='MP'><ImageTexture containerField='baseTexture' url='\"tex.png\"'/></PhysicalMaterial>"),
+            _shape("Coloured", "<PhysicalMaterial DEF='MQ'/>", QUAD.format(colour="<Color color='1 1 1 1 1 1 1 1 1 1 1 1'/>")),
+            _shape("Bare", "<PhysicalMaterial DEF='MR'/>"),
+        ]))
+        textured = self._mat("MP")
+        self.assertEqual(_principled(textured).inputs["Base Color"].links[0].from_node.type, 'TEX_IMAGE')
+        self.assertFalse(any(n.bl_idname == "ShaderNodeMix" for n in textured.node_tree.nodes))
+        coloured = next(m for m in bpy.data.materials if m.name.startswith("MQ") and m.name.endswith("_colour"))
+        socket = _principled(coloured).inputs["Base Color"]
+        self.assertFalse(any(n.bl_idname == "ShaderNodeMix" and not all(
+            round(c, 4) == 1.0 for s in n.inputs if s.type == 'RGBA' and not s.is_linked for c in s.default_value[:3])
+            for n in coloured.node_tree.nodes), "a grey factor was multiplied into the vertex colours")
+        self.assertEqual([round(c, 4) for c in _principled(self._mat("MR")).inputs["Base Color"].default_value[:3]],
+                         [1.0, 1.0, 1.0])
+        out = os.path.join(self.tmpdir, "default_white.glb")
+        bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', export_vertex_color='MATERIAL')
+        with open(out, "rb") as f:
+            f.read(12)
+            length, kind = struct.unpack("<II", f.read(8))
+            doc = json.loads(f.read(length))
+        for material in doc["materials"]:
+            factor = material.get("pbrMetallicRoughness", {}).get("baseColorFactor", [1, 1, 1, 1])
+            self.assertEqual([round(c, 4) for c in factor[:3]], [1.0, 1.0, 1.0], material["name"])
+
+    def test_a_classic_material_without_diffuse_colour_keeps_x3d_default_grey(self):
+        self._import("default_classic.x3d", _shape("S", "<Material DEF='MS'/>"))
+        socket = _principled(self._mat("MS")).inputs["Base Color"]
+        # X3D's 0.8 diffuseColor default is a display (sRGB) colour on the classic path: 0.8 sRGB is 0.6038 linear
+        self.assertEqual([round(c, 4) for c in socket.default_value[:3]], [0.6038, 0.6038, 0.6038])
+
 
 if __name__ == "__main__":
     unittest.main()
