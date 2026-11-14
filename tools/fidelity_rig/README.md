@@ -159,8 +159,11 @@ the `tolerance` rule and per scene: `validator.warnings`, `glb.class`, `glb.tria
 `geometry_delta`, `geometry_share`, `geometry_missing_share`, `reexport.nodes_lost`, `roundtrip.mean_abs_delta` and `flip`, plus the
 entries a person writes, every one with a reason (an entry whose reason is empty or still starts with `UNEXPLAINED` fails the run):
 
-- `known`: `{defect, reason, checks}` names the round-trip audit's defect id (D1-D14, H1: the defects the round-trip audit at commit acd6882 found; see
-  the "Round-trip audit" section above) that explains why the baseline value is high. It annotates the report line (`[known D4]`) and
+- `known`: `{defect, reason, checks}` names the id that explains why the baseline value is high: D1-D14 (the defects the round-trip audit at commit acd6882 found; see
+  the "Round-trip audit" section above), H (a harness limit, not an add-on defect), G (behaviour by design that the check still counts, for
+  example the node type Material counted as lost when a line-only Material is written as UnlitMaterial) and R (a delta left after a fix
+  whose cause has not been attributed, graded Suspected). An entry whose defect is fixed is removed: run the gate with `--scenes probes.json
+  scenes-repo.json scenes-demo.json`, and a `known` entry whose check measures clean (0 node types lost, round-trip delta near 0) is stale. It annotates the report line (`[known D4]`) and
   excuses nothing: the baseline value is still the limit, so a known defect cannot get worse unnoticed and its fix shows as IMPROVED.
 - `allow_empty`: the only way a glb with no triangles passes while the X3D has geometry. It also covers the vacuous render of a scene with
   nothing to draw.

@@ -86,7 +86,19 @@ class CommittedBaseline(unittest.TestCase):
         ids = {k["defect"] for e in BASELINE["scenes"].values() for k in e.get("known", [])}
         self.assertTrue(ids)
         for i in ids:
-            self.assertRegex(i, r"^[DH]\d+$")
+            self.assertRegex(i, r"^[DHGR]\d+$")
+
+    def test_no_known_entry_names_a_defect_fixed_in_the_round_trip_audit_pass(self):
+        # D1-D3, D5-D7, D9, D10 and D13 were fixed (PR #40); the full gate of 14 Nov 2026 measured their checks clean or at the scene's own
+        # level, so the baseline names no scene with them (D8 and D12 stay, rewritten, for what the importer still drops; D10's leftover is R1).
+        fixed = {"D1", "D2", "D3", "D5", "D6", "D7", "D9", "D10", "D13"}
+        for name, e in BASELINE["scenes"].items():
+            for k in e.get("known", []):
+                if k["defect"] == "D7":
+                    self.assertTrue(name.startswith("geolod"), f"{name}: D7 stays only on the GeoLOD scenes, as Suspected")
+                    self.assertIn("Suspected", k["reason"])
+                else:
+                    self.assertNotIn(k["defect"], fixed, f"{name}: {k['defect']} was fixed; remove the entry or give the leftover its own id")
 
     def test_no_scratch_paths_in_the_baseline(self):
         text = (RIG / "gate-baseline.json").read_text()
