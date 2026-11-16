@@ -214,6 +214,44 @@ browser does: the others are hidden in the viewport and the render and tagged `x
 shows none). The export does not write a Switch back yet: by default it writes every child as a sibling, and with
 *Visible Only* only the chosen one.
 
+### Lineage report: where each written value came from
+
+`source/lineage.py` (pure Python, no `bpy`, like `ir.py` and `emit_x3d40.py`) answers one question about an X3D 4.0 export: for
+a number the file holds, which Blender datablock did it come from, and which conversions did it go through? It reads the IR the
+extractor built and the text the emitter wrote, and for each value it does three things, borrowed from the FIND / COMPARE /
+LOCATE check of source tracing:
+
+| Step | Question | Result in the record |
+|---|---|---|
+| FIND | does the DEF'd element and the attribute exist in the file? | `status`: `found` or `not_found` |
+| COMPARE | does the written number equal what the IR value gives when the emitter's conversions are applied again, by a second, independent implementation of each (sRGB encoding, SFColor clipping, number format; tolerance 5e-7)? | `value_status`: `match`, `mismatch`, `unchecked` |
+| LOCATE | line, column and character span of the attribute | `locus` |
+
+The verdict names are those of the x3d.ML trace engine: `verified` (found, recomputed, no lossy step), `check` (a mismatch, a
+step with no independent recompute such as the Blinn-Phong fit `phong_from_principled`, or a channel that was really clipped:
+the value is where the record says and a person should look) and `unchecked` (not found, or nothing to compare). The first hop,
+Blender property to IR, happens in `extract.py` and needs `bpy`; a caller that holds a snapshot of the Blender numbers passes
+`source_values` and the hops that are plain arithmetic (energy / 1.75, the field of view of the smaller side) are compared too.
+
+```python
+import lineage
+report = lineage.build_report(ir_scene, x3d_text, colour_space="SRGB")
+report["summary"]               # total, verified, check, unchecked, attributes_in_scene, attributes_with_lineage, coverage
+lineage.report_sha256(report)   # a hash of the canonical report; keep it beside the file (a manifest, a sidecar), never inside it
+lineage.reverify(report, x3d_text)   # [] when the file is the one the report describes, else one line per changed value
+```
+
+Nothing here changes how a file is written, and no sidecar is written by default. `coverage` is the share of numeric attributes in
+the scene that have a record; coordinate point lists have none, and the Viewpoint's position and orientation are left out on
+purpose (the camera's Transform carries the matrix, so a record on the Viewpoint would be wrong). Tests: `tests/test_lineage.py`
+(pure Python, includes a mutation test that an emitter which skips the sRGB step is caught) and `tests/test_lineage_bpy.py`.
+
+**Carried `x3dprov.*` head meta is stale after a round trip.** The importer keeps every `<head>` `meta` pair in `x3d_head_meta`,
+and the X3D 4.0 and 4.1 writer writes them back after its own `generator` and `filename`, so a provenance record such as
+`x3dprov.sha256` survives an import and export, but it describes the *old* file. The report lists such pairs under
+`carried_head_meta` with that note. The X3D 3.3 writer drops them (it writes only `filename`, `created`, `generator`, `translator`).
+Measured with `bpy` 5.3.0, Python 3.13.18: the 4.0 writer kept `x3dprov.step`, `x3dprov.sha256` and `x3dprov.chain`; the 3.3 writer kept none.
+
 ### Tests
 
 ```
