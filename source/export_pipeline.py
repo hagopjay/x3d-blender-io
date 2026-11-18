@@ -168,6 +168,10 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
     """
 
     filepath = bpy.path.ensure_ext(settings.filepath, ".x3dz" if settings.use_compress else ".x3d")
+    if os.path.islink(filepath):
+        # Write through a symlink: the document, its copied textures and sidecars go beside the file it points to,
+        # and the link stays a link (os.replace on the link itself would swap it for a regular file).
+        filepath = os.path.realpath(filepath)
 
     if bpy.ops.object.mode_set.poll():
         bpy.ops.object.mode_set(mode="OBJECT")
