@@ -1924,7 +1924,7 @@ def save(context,
          color_space='AUTO',
          material_model='AUTO',
          ):
-    from .export_pipeline import ExportSettings, save as pipeline_save
+    from .export_pipeline import ExportSettings, export_filepath, save as pipeline_save
 
     logger.info("save: context %r to filepath %r" % (context, filepath))
 
@@ -1933,7 +1933,7 @@ def save(context,
     export_target = os.environ.get("BLENDER_X3D_EXPORT_TARGET", "AUTO").upper()
 
     settings = ExportSettings(
-        filepath=filepath,
+        filepath=export_filepath(filepath, use_compress),
         use_selection=use_selection,
         use_active_collection=use_active_collection,
         use_visible=use_visible,

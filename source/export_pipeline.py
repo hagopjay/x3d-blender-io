@@ -160,6 +160,16 @@ def _scene_metadata(settings: ExportSettings, export_file: str) -> dict[str, str
     }
 
 
+def export_filepath(path: str, use_compress: bool) -> str:
+    """``path`` with the extension the compression option asks for: a trailing .x3d or .x3dz (any case) is replaced,
+    anything else gets the extension appended. The export dialog always offers "<name>.x3d" (the operator's
+    filename_ext), so appending gave "scene.x3d.x3dz" for every compressed export."""
+    stem, extension = os.path.splitext(path)
+    if extension.lower() in (".x3d", ".x3dz"):
+        path = stem
+    return path + (".x3dz" if use_compress else ".x3d")
+
+
 def save(context, settings: ExportSettings, writer: Callable[..., None]):
     """Shared orchestration for export workflows.
 
