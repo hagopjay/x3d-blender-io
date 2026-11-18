@@ -51,6 +51,7 @@ from bpy_extras.io_utils import (
 
 from .translations import get_language, translate
 from .prefs import X3D_Preferences
+from . import interaction_ui
 
 blender_version = bpy.app.version
 blender_version_higher_279 = blender_version[0] > 2 or (blender_version[0] == 2 and blender_version[1] >= 79)
@@ -718,7 +719,8 @@ classes = (
     ExportX3D,
     ImportX3D,
     IO_FH_X3D,
-    X3D_Preferences
+    X3D_Preferences,
+    *interaction_ui.classes,
 )
 
 

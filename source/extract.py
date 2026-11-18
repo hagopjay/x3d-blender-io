@@ -15,6 +15,7 @@ import os
 
 try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .interaction import check_interactions, read_interaction, read_tour
     from .material import analyze_material
     from .matrix_safety import inverted64, scale_to_children_matrix
     from .splat_io import rgb_to_sh0
@@ -22,6 +23,7 @@ try:
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from interaction import check_interactions, read_interaction, read_tour
     from material import analyze_material
     from matrix_safety import inverted64, scale_to_children_matrix
     from splat_io import rgb_to_sh0
@@ -1471,6 +1473,7 @@ def extract_scene(
         # choice that does not reach the children, while visible="false" would hide the whole subtree
         instance.visible = not (bool(getattr(obj, "hide_render", False)) and obj.get(SWITCH_HIDDEN_PROPERTY) is not None)
         objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
+        instance.interaction = read_interaction(obj, ir_scene.diagnostics)
 
         if obj.name in skinned_names:
             # Written as HAnim skin under its armature instead of a plain Shape.
@@ -1567,6 +1570,20 @@ def extract_scene(
             frame_step=animation_step,
             armatures=armatures,
         )
+
+    # The viewpoint tour: cameras that carry x3d_tour_order, as Viewpoint poses in the exported frame.
+    def tour_transform(camera):
+        matrix = (global_matrix @ camera.matrix_world) if global_matrix is not None else camera.matrix_world
+        return _matrix_transform(matrix.normalized())
+
+    cameras = [obj for obj in exported if obj.type == "CAMERA"]
+    ir_scene.tour = read_tour(cameras, scene, tour_transform)
+    if ir_scene.tour is not None:
+        fields = {camera.name: _extract_viewpoint(camera, camera.matrix_world.__class__(), scene, distance_scale).field_of_view
+                  for camera in cameras}
+        for stop in ir_scene.tour.stops:
+            stop.field_of_view = fields.get(stop.name)
+    check_interactions(ir_scene, ir_scene.diagnostics)
 
     if use_animation and morph_sources:
         morph_cycle = _sample_shape_key_morphs(scene, depsgraph, morph_sources, geometries_by_key, frame_step=animation_step)

@@ -21,10 +21,12 @@ from xml.sax.saxutils import escape, quoteattr
 
 try:
     from .extract import display_colour
+    from .interaction import tour_timeline
     from .ir import IRMetadata, IRScene
     from .splat_io import sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import display_colour
+    from interaction import tour_timeline
     from ir import IRMetadata, IRScene
     from splat_io import sh0_to_rgb
 
@@ -579,6 +581,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         f'rotation="{_fmt4((rx, ry, rz, ra))}" '
         f'scale="{_fmt3_length((sx, sy, sz))}"{visible_attr}>\n'
     ]
+    if instance.interaction is not None:
+        xml.append(_sensor_xml(instance, defs, indent + "  "))
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
     if not instance.visible and not subtree_hidden:
         shape_attrs += ' visible="false"'
@@ -679,13 +683,32 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
     return "".join(xml)
 
 
+def _triggered_targets(ir_scene):
+    """Objects whose animation an authored trigger plays: they get a timer of their own instead of the scene's."""
+    return {instance.interaction.target for instance in ir_scene.iter_instances()
+            if instance.interaction is not None and instance.interaction.action == "animate"}
+
+
+def _trigger_timer_def(defs: _DefNames, target):
+    return defs.get("trigtimer", target, "TT_")
+
+
 def _animation_xml(ir_scene, defs: _DefNames, indent):
     morphs = [g for g in ir_scene.geometries if g.morph_keys and ("geometry", g.name) in defs.emitted]
     if not ir_scene.animations and not morphs:
         return ""
     cycle = ir_scene.cycle_interval or 1.0
+    triggered = _triggered_targets(ir_scene)
     timer_def = defs.get("timer", "SceneTimer", "")
-    xml = [f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(cycle)}" loop="true" />\n']
+    xml = []
+    free_running = bool(morphs) or any(
+        a.target_kind != "transform" or a.target not in triggered for a in ir_scene.animations)
+    if free_running:
+        xml.append(f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(cycle)}" loop="true" />\n')
+    for target in sorted(triggered):
+        if any(a.target == target and a.target_kind == "transform" for a in ir_scene.animations):
+            xml.append(f'{indent}<TimeSensor DEF="{_trigger_timer_def(defs, target)}" cycleInterval="{_fmt(cycle)}" '
+                       f'loop="false" />\n')
     routes = []
     shared: dict[tuple, list] = {}  # geometries with the same keys and states share one CoordinateInterpolator
     for geometry in morphs:
@@ -711,6 +734,8 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
             target_def = defs.get("transform", animation.target, "OB_")
         keys = " ".join(_fmt(key) for key in animation.keys)
         safe_target = _safe_name(animation.target)
+        timer_def = (_trigger_timer_def(defs, animation.target)
+                     if animation.target_kind == "transform" and animation.target in triggered else defs.get("timer", "SceneTimer", ""))
         if animation.translations:
             node_def = f"PI_{safe_target}"
             xml.append(
@@ -740,6 +765,89 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
             f'{indent}<ROUTE fromNode="{from_node}" fromField="{from_field}" '
             f'toNode="{to_node}" toField="{to_field}" />\n'
         )
+    return "".join(xml)
+
+
+def _sensor_def(defs: _DefNames, instance):
+    prefix = "TS_" if instance.interaction.trigger == "click" else "PS_"
+    return defs.get("sensor", instance.object_name, prefix)
+
+
+def _sensor_xml(instance, defs: _DefNames, indent):
+    """The TouchSensor or ProximitySensor an object's x3d_trigger asks for, written inside its Transform."""
+    interaction = instance.interaction
+    description = quoteattr(f"{interaction.action} {interaction.target}".strip())
+    if interaction.trigger == "click":
+        return f'{indent}<TouchSensor DEF="{_sensor_def(defs, instance)}" description={description} />\n'
+    size = _fmt_short(2.0 * interaction.radius)
+    return (f'{indent}<ProximitySensor DEF="{_sensor_def(defs, instance)}" center="0 0 0" '
+            f'size="{size} {size} {size}" />\n')
+
+
+def _tour_xml(tour, defs: _DefNames, indent):
+    """The tour rig (a Transform carrying one Viewpoint), its timer and interpolators, and their ROUTEs."""
+    keys, total = tour_timeline(tour)
+    rig_def = defs.get("transform", "TourRig", "")
+    view_def = defs.get("viewpoint", "TourView", "")
+    timer_def = defs.get("timer", "TourTimer", "")
+    first = tour.stops[0]
+    fov = f' fieldOfView="{_fmt(first.field_of_view)}"' if first.field_of_view is not None else ""
+    positions, rotations, key_text = [], [], " ".join(_fmt(key) for key in keys)
+    for stop in tour.stops:
+        positions += [_fmt3_length(stop.transform.translation)] * 2
+        rotations += [_fmt4(stop.transform.rotation_axis_angle)] * 2
+    loop = tour.loop or tour.autostart
+    xml = [
+        f'{indent}<Transform DEF="{rig_def}" translation="{positions[0]}" rotation="{rotations[0]}">\n',
+        f'{indent}  <Viewpoint DEF="{view_def}" description="Tour"{fov} />\n',
+        f"{indent}</Transform>\n",
+        f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(max(total, 1e-3))}" loop="{"true" if loop else "false"}" />\n',
+        f'{indent}<PositionInterpolator DEF="PI_TourRig" key="{key_text}" keyValue="{" ".join(positions)}" />\n',
+        f'{indent}<OrientationInterpolator DEF="OI_TourRig" key="{key_text}" keyValue="{" ".join(rotations)}" />\n',
+    ]
+    routes = [
+        (timer_def, "fraction_changed", "PI_TourRig", "set_fraction"),
+        (timer_def, "fraction_changed", "OI_TourRig", "set_fraction"),
+        ("PI_TourRig", "value_changed", rig_def, "set_translation"),
+        ("OI_TourRig", "value_changed", rig_def, "set_rotation"),
+        (timer_def, "isActive", view_def, "set_bind"),
+    ]
+    return "".join(xml), routes
+
+
+def _interaction_xml(ir_scene, defs: _DefNames, indent):
+    """The tour and the ROUTEs from every authored sensor to what it fires (timers come from _animation_xml)."""
+    xml, routes = [], []
+    if ir_scene.tour is not None and ir_scene.tour.stops:
+        tour_text, tour_routes = _tour_xml(ir_scene.tour, defs, indent)
+        xml.append(tour_text)
+        routes += tour_routes
+    animated = {a.target for a in ir_scene.animations if a.target_kind == "transform"}
+    for instance in ir_scene.iter_instances():
+        interaction = instance.interaction
+        if interaction is None:
+            continue
+        sensor = _sensor_def(defs, instance)
+        click = interaction.trigger == "click"
+        if interaction.action == "animate" and interaction.target in animated:
+            routes.append((sensor, "touchTime" if click else "enterTime",
+                           _trigger_timer_def(defs, interaction.target), "set_startTime"))
+        elif interaction.action == "tour":
+            routes.append((sensor, "touchTime" if click else "enterTime",
+                           defs.get("timer", "TourTimer", ""), "set_startTime"))
+        elif interaction.action == "viewpoint":
+            view_def = defs.get("viewpoint", interaction.target, "CA_")
+            if click:
+                # a press binds the camera; the release must not unbind it, so only the true edge goes on
+                filter_def = defs.get("filter", instance.object_name, "BF_")
+                xml.append(f'{indent}<BooleanFilter DEF="{filter_def}" />\n')
+                routes.append((sensor, "isActive", filter_def, "set_boolean"))
+                routes.append((filter_def, "inputTrue", view_def, "set_bind"))
+            else:
+                routes.append((sensor, "isActive", view_def, "set_bind"))
+    for from_node, from_field, to_node, to_field in routes:
+        xml.append(f'{indent}<ROUTE fromNode="{from_node}" fromField="{from_field}" '
+                   f'toNode="{to_node}" toField="{to_field}" />\n')
     return "".join(xml)
 
 
@@ -1020,6 +1128,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids,
                             splats=splats, version=version, look=look))
     write(_animation_xml(ir_scene, defs, "    "))
+    write(_interaction_xml(ir_scene, defs, "    "))
 
     write("  </Scene>\n")
     write("</X3D>\n")

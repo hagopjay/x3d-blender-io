@@ -256,6 +256,45 @@ class IRAnimation:
 
 
 @dataclass
+class IRInteraction:
+    """One authored ROUTE interaction: a sensor on ``source`` that fires an ``action``.
+
+    ``trigger`` is ``click`` (TouchSensor) or ``proximity`` (ProximitySensor around the object's origin, ``radius`` m).
+    ``action`` is ``animate`` (play ``target``'s sampled animation once), ``viewpoint`` (bind the camera ``target``) or
+    ``tour`` (start the camera tour). Authored from the ``x3d_trigger`` / ``x3d_action`` / ``x3d_target`` /
+    ``x3d_radius`` custom properties (source/interaction.py).
+    """
+
+    source: str
+    trigger: str = "click"
+    action: str = "animate"
+    target: str = ""
+    radius: float = 3.0
+
+
+@dataclass
+class IRTourStop:
+    """One camera of a viewpoint tour, in the exported frame: where the tour rig rests and for how long."""
+
+    name: str
+    transform: IRTransform = field(default_factory=IRTransform)
+    dwell: float = 2.0
+    field_of_view: float | None = None
+
+
+@dataclass
+class IRTour:
+    """A viewpoint tour: a Viewpoint carried by a Transform that PositionInterpolator / OrientationInterpolator fly
+    through ``stops`` (``dwell`` seconds at each, ``travel`` seconds between). Started by a click or proximity
+    interaction with action ``tour``, or by itself when ``autostart``."""
+
+    stops: list[IRTourStop] = field(default_factory=list)
+    travel: float = 3.0
+    loop: bool = False
+    autostart: bool = False
+
+
+@dataclass
 class IRShape:
     """One Shape inside an instance: a geometry paired with a material."""
 
@@ -298,6 +337,8 @@ class IRInstance:
     visible: bool = True
     # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
     line_width: float | None = None
+    # The ROUTE interaction authored on this object (a sensor inside its Transform), if any.
+    interaction: IRInteraction | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -366,6 +407,7 @@ class IRScene:
     humanoids: list[IRHumanoid] = field(default_factory=list)
     splats: list[IRGaussianSplats] = field(default_factory=list)
     cycle_interval: float | None = None
+    tour: IRTour | None = None
     background_color: tuple[float, float, float] | None = None
     # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
     background: IRBackground | None = None
