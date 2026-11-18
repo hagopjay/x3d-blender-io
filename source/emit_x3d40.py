@@ -11,6 +11,7 @@ duplicated.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
 import os
@@ -24,13 +25,13 @@ try:
     from .extract import display_colour
     from .interaction import tour_timeline
     from .ir import IRMetadata, IRScene
-    from .splat_gltf import write_splat_glb
+    from .splat_gltf import splat_glb_bytes
     from .splat_io import sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import display_colour
     from interaction import tour_timeline
     from ir import IRMetadata, IRScene
-    from splat_gltf import write_splat_glb
+    from splat_gltf import splat_glb_bytes
     from splat_io import sh0_to_rgb
 
 
@@ -53,6 +54,7 @@ class _DefNames:
         self._by_key: dict[tuple[str, str], str] = {}
         self._used: set[str] = set()
         self.emitted: set[tuple[str, str]] = set()
+        self._sidecars: dict[str, str] = {}      # sidecar file name -> sha256 of its bytes
 
     def get(self, kind: str, key: str, prefix: str) -> str:
         lookup = (kind, key)
@@ -66,6 +68,18 @@ class _DefNames:
                 name = f"{base}_{counter}"
             self._used.add(name)
             self._by_key[lookup] = name
+        return name
+
+    def sidecar(self, wanted: str, digest: str) -> str:
+        """The file name for sidecar bytes with this ``digest``: ``wanted`` when it is free or already holds the same
+        bytes, else ``wanted`` with the digest's first characters before the extension. Two different contents never get
+        one name (mesh names ``A B`` and ``A_B`` both sanitise to ``A_B``)."""
+        stem, dot, extension = wanted.partition(".")
+        name, length = wanted, 8
+        while self._sidecars.get(name, digest) != digest:
+            name = f"{stem}_{digest[:length]}{dot}{extension}"
+            length += 4
+        self._sidecars[name] = digest
         return name
 
     def first_use(self, kind: str, key: str) -> bool:
@@ -952,8 +966,11 @@ def _splats_xml(splats, defs: _DefNames, indent, *, version="4.0", output_dir=No
     if splats.glb_name and output_dir:
         if not defs.first_use("splatsglb", splats.name):
             return f'{indent}<Inline USE="{splats_def}" />\n'
-        write_splat_glb(os.path.join(output_dir, splats.glb_name), splats)
-        return f"{indent}<Inline DEF=\"{splats_def}\" url='\"{escape(splats.glb_name)}\"' />\n"
+        payload = splat_glb_bytes(splats)
+        glb_name = defs.sidecar(splats.glb_name, hashlib.sha256(payload).hexdigest())
+        with open(os.path.join(output_dir, glb_name), "wb") as handle:
+            handle.write(payload)
+        return f"{indent}<Inline DEF=\"{splats_def}\" url='\"{escape(glb_name)}\"' />\n"
     if version == "4.1":
         if not defs.first_use("splats", splats.name):
             return f'{indent}<GaussianSplats USE="{splats_def}" />\n'
