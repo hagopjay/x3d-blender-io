@@ -66,8 +66,24 @@ def validate_xml_tree(tree: ET.ElementTree) -> ValidationResult:
     if root.find("Scene") is None:
         warnings.append("No Scene element found.")
 
-    errors = unknown_element_errors(root)
+    errors = unknown_element_errors(root) + nonfinite_number_errors(root)
     return ValidationResult(valid=not errors, errors=errors, warnings=warnings)
+
+
+_NONFINITE_TOKENS = {"nan", "inf", "-inf", "+inf", "infinity", "-infinity", "+nan", "-nan"}
+
+
+def nonfinite_number_errors(root) -> list[str]:
+    """One error per element name carrying a NaN or infinity token in an attribute: X3D has no such literal."""
+    seen: dict[str, int] = {}
+    for element in root.iter():
+        if not isinstance(element.tag, str):
+            continue
+        for value in element.attrib.values():
+            if any(token.lower() in _NONFINITE_TOKENS for token in value.replace(",", " ").split()):
+                seen[element.tag] = seen.get(element.tag, 0) + 1
+                break
+    return [f"Non-finite number (NaN or infinity) in <{tag}> ({count}x)" for tag, count in sorted(seen.items())]
 
 
 def unknown_element_errors(root) -> list[str]:

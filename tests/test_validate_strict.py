@@ -33,6 +33,13 @@ class StrictValidatorTests(unittest.TestCase):
     def test_comments_and_text_are_ignored(self):
         self.assertTrue(validate_xml_text(GOOD.replace("<Scene>", "<Scene><!-- note -->")).valid)
 
+    def test_nan_and_infinity_tokens_are_errors(self):
+        for token in ("nan", "inf", "-inf", "NaN", "Infinity"):
+            doc = GOOD.replace("<Shape>", f'<Transform translation="1 {token} 0"><Shape>').replace("</Shape>", "</Shape></Transform>")
+            result = validate_xml_text(doc)
+            self.assertFalse(result.valid, token)
+            self.assertIn("Non-finite number", result.errors[0])
+
     def test_compressed_file_is_validated_not_skipped(self):
         with tempfile.TemporaryDirectory() as folder:
             for name, text, expected in (("good.x3dz", GOOD, True), ("bad.x3dz", BAD, False)):
@@ -51,6 +58,26 @@ class StrictValidatorTests(unittest.TestCase):
 
     def test_missing_file_fails_closed(self):
         self.assertFalse(validate_xml_file("/nonexistent/none.x3d").valid)
+
+
+class FiniteFormatterTests(unittest.TestCase):
+    def test_formatters_write_zero_for_non_finite_values(self):
+        from emit_x3d40 import _fmt, _fmt3, _fmt3_length, _fmt4, _fmt_float32, _fmt_short, nonfinite_count
+        before = nonfinite_count()
+        nan, inf = float("nan"), float("inf")
+        self.assertEqual(_fmt(nan), "0.000000")
+        self.assertEqual(_fmt3((nan, inf, -inf)), "0.000000 0.000000 0.000000")
+        self.assertEqual(_fmt4((nan, 1, 2, 3)), "0.000000 1.000000 2.000000 3.000000")
+        self.assertEqual(_fmt3_length((nan, 1, inf)), "0.000000 1.000000 0.000000")
+        self.assertEqual(_fmt_short(inf), "0")
+        self.assertEqual(float(_fmt_float32(nan)), 0.0)
+        self.assertEqual(nonfinite_count() - before, 9)
+
+    def test_finite_values_unchanged(self):
+        from emit_x3d40 import _fmt3, nonfinite_count
+        before = nonfinite_count()
+        self.assertEqual(_fmt3((1, 2.5, -3)), "1.000000 2.500000 -3.000000")
+        self.assertEqual(nonfinite_count(), before)
 
 
 if __name__ == "__main__":
