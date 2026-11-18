@@ -75,6 +75,18 @@ with no animation, a missing camera or a bad value is dropped with a line in `<m
 builds a demo scene and `tools/route_demo_verify.cjs` drives it with real mouse events in headless X_ITE; the page is
 [Demo: Blender ROUTE interaction](https://hagopjay.github.io/x3d.demo/demos/blender-route/v1/).
 
+### Splats as a glTF file, referenced by Inline (`KHR_gaussian_splatting`)
+
+Khronos lists `KHR_gaussian_splatting` as ratified in the glTF extension registry (README on `main`, read 18 Nov 2026; the
+spec text says "complete and ratified"). Setting the custom property `x3d_splat_glb` on a splat mesh makes the 4.0 **or**
+4.1 export write the splats as `<name>.splats.glb` beside the X3D file (one POINTS primitive; `KHR_gaussian_splatting:ROTATION`
+x y z w, `:SCALE` and `:OPACITY` linear, `:SH_DEGREE_0_COEF_0`, colour space `srgb_rec709_display`) and an `Inline` in the
+object's Transform instead of the PointSet fallback or the draft node. Positions and orientations are rotated into glTF's
+Y-up frame and the Inline's Transform carries the way back, as for an imported Inline. Degree 0 only: higher
+spherical-harmonic degrees depend on the view direction and are dropped with a line in `<meta name="info">`. Same data
+through the 4.1 `GaussianSplats` node and through this Inline path draw the same picture in X_ITE 16.7.1 (Chromium 157,
+SwiftShader, 960×600, 400 splats: max difference 2/255, mean 0.003, numpy on RGB). Writer: `source/splat_gltf.py`.
+
 ### HAnim joint names
 
 With the armature custom property `x3d_hanim_names` = `standard`, a bone that follows Mixamo (`mixamorig:LeftArm`), Rigify

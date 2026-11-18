@@ -6,7 +6,7 @@
 
 The extension (Khronos glTF registry, listed under Ratified; checked 18 Nov 2026): one POINTS primitive whose
 ``POSITION`` holds the centres and whose ``KHR_gaussian_splatting:ROTATION`` (unit quaternion x y z w), ``:SCALE`` (linear),
-``:OPACITY`` (linear 0..1) and ``SH_DEGREE_0_COEF_0`` (the DC spherical-harmonic term) describe each splat. This writer
+``:OPACITY`` (linear 0..1) and ``KHR_gaussian_splatting:SH_DEGREE_0_COEF_0`` (the DC spherical-harmonic term) describe each splat. This writer
 takes data already in glTF's Y-up frame (``extract.splats_to_gltf_frame``) and writes degree 0 only: higher degrees
 depend on the view direction and would have to be rotated with the data.
 """
@@ -34,7 +34,7 @@ def splat_glb_bytes(splats) -> bytes:
         ("KHR_gaussian_splatting:ROTATION", "VEC4", 4, [q[:4] for q in orientations]),
         ("KHR_gaussian_splatting:SCALE", "VEC3", 3, [s[:3] for s in scales]),
         ("KHR_gaussian_splatting:OPACITY", "SCALAR", 1, [(o,) for o in opacities]),
-        ("SH_DEGREE_0_COEF_0", "VEC3", 3, [c[:3] for c in dc]),
+        ("KHR_gaussian_splatting:SH_DEGREE_0_COEF_0", "VEC3", 3, [c[:3] for c in dc]),
     ]
     blob, views, accessors, attributes = bytearray(), [], [], {}
     for index, (name, kind, width, rows) in enumerate(columns):

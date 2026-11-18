@@ -48,7 +48,7 @@ class SplatGlbTests(unittest.TestCase):
                          {"kernel": "ellipse", "colorSpace": "srgb_rec709_display"})
         self.assertEqual(sorted(primitive["attributes"]), sorted([
             "POSITION", "KHR_gaussian_splatting:ROTATION", "KHR_gaussian_splatting:SCALE",
-            "KHR_gaussian_splatting:OPACITY", "SH_DEGREE_0_COEF_0"]))
+            "KHR_gaussian_splatting:OPACITY", "KHR_gaussian_splatting:SH_DEGREE_0_COEF_0"]))
         self.assertEqual(document["buffers"][0]["byteLength"], len(blob))
         self.assertEqual(len(blob) % 4, 0)
 

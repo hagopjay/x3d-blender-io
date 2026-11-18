@@ -14,9 +14,9 @@ const page = `<!doctype html><meta charset=utf-8><link rel=stylesheet href=/xite
 const srv = http.createServer((q, r) => {
   const u = decodeURIComponent(q.url.split('?')[0]);
   if (u === '/') { r.writeHead(200, { 'content-type': 'text/html' }); return r.end(page); }
-  const f = u === '/scene.x3d' ? current : path.join(xiteDir, u.replace(/^\/xite\//, ''));
+  const f = u === '/scene.x3d' ? current : u.startsWith('/xite/') ? path.join(xiteDir, u.slice(6)) : path.join(path.dirname(current), u);   // Inline files sit beside the scene
   fs.readFile(f, (e, d) => { if (e) { r.writeHead(404); return r.end(); }
-    const t = { '.js': 'text/javascript', '.css': 'text/css', '.x3d': 'model/x3d+xml' }[path.extname(f)] || 'application/octet-stream';
+    const t = { '.js': 'text/javascript', '.css': 'text/css', '.x3d': 'model/x3d+xml', '.glb': 'model/gltf-binary' }[path.extname(f)] || 'application/octet-stream';
     r.writeHead(200, { 'content-type': t }); r.end(d); });
 }).listen(0);
 (async () => {
