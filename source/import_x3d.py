@@ -6793,8 +6793,9 @@ def _route_tuple(attrs):
     return (attrs["fromNode"], attrs["fromField"], attrs["toNode"], attrs["toField"])
 
 
-def _timer_problems(timer):
-    """Why a TimeSensor is not the exporter's trigger-only timer (play once, never started at load, enabled)."""
+def _timer_problems(timer, tour=False):
+    """Why a TimeSensor is not the exporter's timer: a triggered chain is play-once, never started at load and enabled;
+    a tour timer may autostart or loop (``loop``/``startTime`` are read as tour settings) but must still be enabled."""
     real = timer.getRealNode()
     names = {attr.name: attr.value for attr in real.x3dNode.attributes.values()} if hasattr(real.x3dNode, "attributes") else {}
     problems = []
@@ -6802,7 +6803,7 @@ def _timer_problems(timer):
         if name in ("DEF", "cycleInterval", "containerField"):
             continue
         if name == "loop":
-            if str(value).strip().lower() == "true":
+            if not tour and str(value).strip().lower() == "true":
                 problems.append("loop=true")
         elif name == "enabled":
             if str(value).strip().lower() != "true":
@@ -6811,7 +6812,7 @@ def _timer_problems(timer):
             continue
         else:
             problems.append(f"{name}={value}")
-    if timer.getFieldAsFloat("startTime", 0.0, ()) < _NEVER_STARTED:
+    if not tour and timer.getFieldAsFloat("startTime", 0.0, ()) < _NEVER_STARTED:
         problems.append("starts at load (startTime below 1e+29)")
     return problems
 
@@ -6870,7 +6871,8 @@ def _action_from_routes(sensor_def, route_attrs, defs, all_nodes):
             return ["viewpoint", attrs["toNode"][3:]]
         if attrs["toField"] == "set_boolean" and attrs["fromField"] == "isActive":   # click: sensor -> BooleanFilter -> set_bind
             for second in route_attrs:
-                if second["fromNode"] == attrs["toNode"] and second["toField"] == "set_bind" and second["toNode"].startswith("CA_"):
+                if second["fromNode"] == attrs["toNode"] and second["fromField"] == "inputTrue" \
+                        and second["toField"] == "set_bind" and second["toNode"].startswith("CA_"):
                     return ["viewpoint", second["toNode"][3:]]
         if attrs["toField"] == "set_startTime" and attrs["fromField"] in ("touchTime", "enterTime"):
             _edges, targets = _timer_chain(attrs["toNode"], route_attrs, defs)
@@ -6914,6 +6916,11 @@ def _rebuild_tour(all_nodes, route_attrs, defs, rebuilt):
         timer_def = next((r["fromNode"] for r in route_attrs if r["toNode"] == attrs["fromNode"] and r["toField"] == "set_fraction"), None)
         timer = defs.get(timer_def)
         if not views or timer is None or timer.getSpec() != "TimeSensor":
+            continue
+        timer_problems = _timer_problems(timer, tour=True)
+        if timer_problems:
+            rebuilt.unpreserved.append({"kind": "tour", "node": f"TimeSensor {timer_def}",
+                                        "detail": "not preserved: " + "; ".join(timer_problems)})
             continue
         orient_attrs = next((r for r in route_attrs if r["toNode"] == attrs["toNode"] and r["toField"] == "set_rotation"
                              and r["fromField"] == "value_changed"
@@ -7062,7 +7069,8 @@ def rebuild_interaction(all_nodes):
                     edges = {_route_tuple(attrs)}
                 elif spec == "TouchSensor" and attrs["toField"] == "set_boolean":
                     for second in route_attrs:
-                        if second["fromNode"] == attrs["toNode"] and second["toField"] == "set_bind" and second["toNode"] in target_defs:
+                        if second["fromNode"] == attrs["toNode"] and second["fromField"] == "inputTrue" \
+                                and second["toField"] == "set_bind" and second["toNode"] in target_defs:
                             edges = {_route_tuple(attrs), _route_tuple(second)}
                             rebuilt.nodes.add(attrs["toNode"])
             if not edges:
