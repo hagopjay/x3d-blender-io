@@ -6763,9 +6763,7 @@ _CONSUMED_ROUTES = {("fraction", "fraction"), ("value", "translation"), ("value"
                     ("value", "scale"), ("value", "point")}
 _EVENT_NODES = {"TouchSensor", "ProximitySensor", "VisibilitySensor", "PlaneSensor", "CylinderSensor", "SphereSensor",
                 "KeySensor", "StringSensor", "BooleanFilter", "BooleanToggle", "BooleanTrigger", "BooleanSequencer",
-                "IntegerTrigger", "IntegerSequencer", "TimeTrigger", "Script", "Switch"}
-
-
+                "IntegerTrigger", "IntegerSequencer", "TimeTrigger", "Script"}
 _NEVER_STARTED = 1e29      # the exporter writes startTime 1e+30 for a timer only a trigger may start
 
 
@@ -6782,6 +6780,57 @@ def _static_triple(transform, field, default):
     return tuple(values[:3]) if values and len(values) >= 3 else default
 
 
+class _Rebuilt:
+    """What ``rebuild_interaction`` turned back into custom properties: node DEFs and exact ROUTE edges."""
+
+    def __init__(self):
+        self.nodes: set[str] = set()
+        self.edges: set[tuple[str, str, str, str]] = set()
+        self.unpreserved: list[dict] = []      # field-level losses on a sensor that was therefore not rebuilt
+
+
+def _route_tuple(attrs):
+    return (attrs["fromNode"], attrs["fromField"], attrs["toNode"], attrs["toField"])
+
+
+def _timer_chain(timer_def, route_attrs, defs):
+    """Edges and target Transform DEFs of the interpolator chain a timer drives: timer -> interpolators -> Transforms."""
+    edges, targets = set(), set()
+    for first in route_attrs:
+        if first["fromNode"] != timer_def or first["fromField"] != "fraction_changed" or first["toField"] != "set_fraction":
+            continue
+        edges.add(_route_tuple(first))
+        for second in route_attrs:
+            if second["fromNode"] == first["toNode"] and second["fromField"] == "value_changed" \
+                    and second["toField"] in ("set_translation", "set_rotation", "set_scale"):
+                edges.add(_route_tuple(second))
+                targets.add(second["toNode"])
+    return edges, targets
+
+
+def _sensor_field_problems(node, spec, parent):
+    """Attributes of a sensor the exporter does not write and the custom properties cannot hold."""
+    real = node.getRealNode()
+    names = {attr.name: attr.value for attr in real.x3dNode.attributes.values()} if hasattr(real.x3dNode, "attributes") else {}
+    problems = []
+    for name, value in names.items():
+        if name in ("DEF", "description", "containerField"):
+            continue
+        if name == "enabled":
+            if str(value).strip().lower() != "true":
+                problems.append(f"enabled={value}")
+        elif spec == "ProximitySensor" and name == "center":
+            if any(abs(float(v)) > 1e-9 for v in str(value).replace(",", " ").split()):
+                problems.append(f"center={value} (a centred box is all the properties hold)")
+        elif spec == "ProximitySensor" and name == "size":
+            sizes = [float(v) for v in str(value).replace(",", " ").split()]
+            if len(sizes) != 3 or max(sizes) - min(sizes) > 1e-6 * max(1.0, max(sizes)) or min(sizes) <= 0:
+                problems.append(f"size={value} (only a cube, 2 x radius, is kept)")
+        else:
+            problems.append(f"{name}={value}")
+    return problems
+
+
 def _action_from_routes(sensor_def, route_attrs, defs, all_nodes):
     """``[action, target]`` read off the ROUTEs a sensor starts, for a sensor that carries no description."""
     for attrs in route_attrs:
@@ -6794,76 +6843,36 @@ def _action_from_routes(sensor_def, route_attrs, defs, all_nodes):
                 if second["fromNode"] == attrs["toNode"] and second["toField"] == "set_bind" and second["toNode"].startswith("CA_"):
                     return ["viewpoint", second["toNode"][3:]]
         if attrs["toField"] == "set_startTime":
-            timer = attrs["toNode"]
-            for first in route_attrs:                              # timer -> interpolator -> Transform
-                if first["fromNode"] != timer:
+            _edges, targets = _timer_chain(attrs["toNode"], route_attrs, defs)
+            for name in sorted(targets):
+                target = defs.get(name)
+                if target is None:
                     continue
-                for second in route_attrs:
-                    if second["fromNode"] == first["toNode"] and second["toField"] in ("set_translation", "set_rotation", "set_scale"):
-                        target = defs.get(second["toNode"])
-                        if target is None:
-                            continue
-                        has_view = any(getattr(n, "x3dNode", None) is not None and n.getSpec() == "Viewpoint" and a and a[-1] is target
-                                       for n, a in all_nodes)
-                        if has_view:
-                            return ["tour"]
-                        name = second["toNode"]
-                        return ["animate", name[3:] if name.startswith("OB_") else name]
+                if any(getattr(n, "x3dNode", None) is not None and n.getSpec() == "Viewpoint" and a and a[-1] is target
+                       for n, a in all_nodes):
+                    return ["tour"]
+                return ["animate", name[3:] if name.startswith("OB_") else name]
     return None
 
 
-def rebuild_interaction(all_nodes):
-    """Turn the exporter's sensor, timer and tour patterns back into the custom properties that author them.
+def _quaternion(axis_angle):
+    from math import cos, sin, sqrt
+    x, y, z, angle = axis_angle
+    length = sqrt(x * x + y * y + z * z) or 1.0
+    half = angle / 2.0
+    return (cos(half), sin(half) * x / length, sin(half) * y / length, sin(half) * z / length)
 
-    Reads sensors by their parent Transform (``OB_<name>`` finds the object whose ``x3d_def`` it is), the action and
-    target from the sensor ``description`` ("animate Door", "viewpoint Overview", "tour"), the proximity radius from the
-    box size and the parent's scale, and the tour from the rig's interpolator keys. Returns the set of DEF names it
-    rebuilt so ``import_loss_records`` does not call them lost. A sensor without a parsable description is left alone and
-    recorded as a loss.
-    """
+
+def _same_pose(position_a, rotation_a, position_b, rotation_b):
     from math import dist
-    rebuilt = set()
-    routes = [n for n, _a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getSpec() == "ROUTE"]
-    route_attrs = [{k: _attribute_raw(r, k, "") for k in ("fromNode", "fromField", "toNode", "toField")} for r in routes]
-    defs = {n.getDefName(): n for n, _a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getDefName()}
+    if dist(position_a, position_b) > 1e-3:
+        return False
+    qa, qb = _quaternion(rotation_a), _quaternion(rotation_b)
+    return abs(sum(u * v for u, v in zip(qa, qb))) > 1.0 - 1e-6
 
-    for node, ancestry in all_nodes:
-        if getattr(node, "x3dNode", None) is None or node.getSpec() not in ("TouchSensor", "ProximitySensor"):
-            continue
-        spec, name = node.getSpec(), node.getDefName()
-        parent = ancestry[-1] if ancestry else None
-        if parent is None or parent.getSpec() != "Transform" or not parent.getDefName():
-            continue
-        parts = (_attribute_raw(node, "description", "") or "").split(None, 1)
-        if not parts or parts[0] not in ("animate", "viewpoint", "tour"):
-            parts = _action_from_routes(name, route_attrs, defs, all_nodes)   # a file written before the description
-        if not parts:
-            continue
-        obj = _object_by_def(parent.getDefName())
-        if obj is None:
-            continue
-        action, target = parts[0], (parts[1].strip() if len(parts) > 1 else "")
-        if action == "animate" and target:
-            found = _object_by_def("OB_" + target)
-            target = found.name if found is not None else target
-        elif action == "viewpoint" and target:
-            found = _object_by_def("CA_" + target)
-            target = found.name if found is not None else target
-        obj["x3d_trigger"] = "click" if spec == "TouchSensor" else "proximity"
-        obj["x3d_action"] = action
-        if target:
-            obj["x3d_target"] = target
-        if spec == "ProximitySensor":
-            size = node.getFieldAsFloatTuple("size", None, ())
-            if size and len(size) >= 3:
-                scale = _static_triple(parent, "scale", (1.0, 1.0, 1.0))
-                obj["x3d_radius"] = round(float(size[0]) * abs(scale[0]) / 2.0, 6)
-        rebuilt.add(name)
-        for attrs in route_attrs:                       # what this sensor fires: timers, filters, viewpoint binds
-            if attrs["fromNode"] == name:
-                rebuilt.add(attrs["toNode"])
 
-    # the tour: a Transform holding a Viewpoint, moved by a PositionInterpolator that a timer drives
+def _rebuild_tour(all_nodes, route_attrs, defs, rebuilt):
+    import bpy
     for attrs in route_attrs:
         if attrs["toField"] != "set_translation" or attrs["fromField"] != "value_changed":
             continue
@@ -6876,35 +6885,52 @@ def rebuild_interaction(all_nodes):
         timer = defs.get(timer_def)
         if not views or timer is None or timer.getSpec() != "TimeSensor":
             continue
+        orient_attrs = next((r for r in route_attrs if r["toNode"] == attrs["toNode"] and r["toField"] == "set_rotation"
+                             and r["fromField"] == "value_changed"
+                             and defs.get(r["fromNode"]) is not None and defs[r["fromNode"]].getSpec() == "OrientationInterpolator"), None)
         keys = [float(k) for k in interp.getFieldAsArray("key", 0, ())]
         values = [tuple(float(v) for v in value) for value in interp.getFieldAsArray("keyValue", 3, ())]
-        if len(keys) < 2 or len(keys) % 2 or len(values) < len(keys):
+        if orient_attrs is None or len(keys) < 2 or len(keys) % 2 or len(values) < len(keys):
+            continue
+        orient = defs[orient_attrs["fromNode"]]
+        rotations = [tuple(float(v) for v in value) for value in orient.getFieldAsArray("keyValue", 4, ())]
+        if len(rotations) < len(keys):
             continue
         total = timer.getFieldAsFloat("cycleInterval", 1.0, ())
-        stops = []
+        candidates = [(vnode, vanc[-1]) for vnode, vanc in
+                      ((n, a) for n, a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getSpec() == "Viewpoint")
+                      if vanc and vanc[-1] is not rig]
+        used, stops = set(), []
         for index in range(len(keys) // 2):
-            arrive, depart = keys[2 * index], keys[2 * index + 1]
-            best = None
-            for vnode, vanc in all_nodes:
-                if getattr(vnode, "x3dNode", None) is None or vnode.getSpec() != "Viewpoint" or not vanc or vanc[-1] is rig:
+            match = None
+            for vnode, vparent in candidates:
+                if id(vnode) in used:
                     continue
-                spot = _static_triple(vanc[-1], "translation", (0.0, 0.0, 0.0))
-                distance = dist(spot, values[2 * index])
-                if distance < 1e-3 and (best is None or distance < best[0]):
-                    best = (distance, vnode)
-            if best is None:
+                pos = _static_triple(vparent, "translation", (0.0, 0.0, 0.0))
+                rot = vparent.getFieldAsFloatTuple("rotation", None, ())
+                rot = tuple(rot[:4]) if rot and len(rot) >= 4 else (0.0, 0.0, 1.0, 0.0)
+                if _same_pose(pos, rot, values[2 * index], rotations[2 * index]):
+                    match = vnode
+                    break
+            if match is None:
                 stops = []
                 break
-            stops.append((best[1], (depart - arrive) * total, arrive))
+            used.add(id(match))
+            stops.append((match, (keys[2 * index + 1] - keys[2 * index]) * total, keys[2 * index]))
         if not stops:
+            rebuilt.unpreserved.append({"kind": "tour", "node": f"Transform {attrs['toNode']}",
+                                        "detail": "tour stops could not each be matched to one camera by position and orientation"})
             continue
-        import bpy
+        gaps = [(stops[i + 1][2] - keys[2 * i + 1]) * total for i in range(len(stops) - 1)]
+        if gaps and max(gaps) - min(gaps) > 1e-3:
+            rebuilt.unpreserved.append({"kind": "tour", "node": f"Transform {attrs['toNode']}",
+                                        "detail": "flight times between stops differ; one x3d_tour_travel cannot hold them"})
+            continue
         for order, (vnode, dwell, _arrive) in enumerate(stops, start=1):
             camera = _object_by_def(vnode.getDefName())
             if camera is not None:
                 camera["x3d_tour_order"] = order
                 camera["x3d_tour_dwell"] = round(dwell, 6)
-        gaps = [(stops[i + 1][2] - keys[2 * i + 1]) * total for i in range(len(stops) - 1)]
         scene = bpy.context.scene
         if gaps:
             scene["x3d_tour_travel"] = round(sum(gaps) / len(gaps), 6)
@@ -6918,44 +6944,151 @@ def rebuild_interaction(all_nodes):
                 bpy.data.objects.remove(rig_camera, do_unlink=True)
                 if action is not None and action.users == 0:
                     bpy.data.actions.remove(action)
-        rebuilt.update({attrs["toNode"], attrs["fromNode"], timer_def})
-        rebuilt.update(r["toNode"] for r in route_attrs if r["fromNode"] == timer_def)
-        rebuilt.update(r["toNode"] for r in route_attrs if r["fromNode"] in rebuilt and r["toField"] in ("set_translation", "set_rotation", "set_bind"))
+        rebuilt.nodes.add(timer_def)
+        rebuilt.edges.add(_route_tuple(next(r for r in route_attrs if r["fromNode"] == attrs["fromNode"] and r["toNode"] == attrs["toNode"]
+                                           and r["toField"] == "set_translation")))
+        rebuilt.edges.add(_route_tuple(orient_attrs))
+        for r in route_attrs:
+            if r["fromNode"] == timer_def and r["toNode"] in (attrs["fromNode"], orient_attrs["fromNode"]) and r["toField"] == "set_fraction":
+                rebuilt.edges.add(_route_tuple(r))
+            if r["fromNode"] == timer_def and r["fromField"] == "isActive" and r["toField"] == "set_bind" \
+                    and defs.get(r["toNode"]) in views:
+                rebuilt.edges.add(_route_tuple(r))
+        rebuilt.nodes.add(timer_def)
+        return True
+    return False
+
+
+def rebuild_interaction(all_nodes):
+    """Turn the exporter's sensor, timer and tour patterns back into the custom properties that author them.
+
+    A sensor is rebuilt only when everything it says is something the properties hold: its parent Transform maps to an
+    object (``OB_<name>`` finds the object whose ``x3d_def`` it is), ``enabled`` is true, a proximity box is a centred
+    cube, there are no other attributes, and the action and target read from its ``description`` (or, for a file written
+    before the description existed, from its ROUTE chain) are consistent with the chain it starts. Only the ROUTE edges
+    of that one chain count as rebuilt, so a second edge (a fan-out to another timer) stays a loss. A tour is rebuilt
+    only when every stop matches exactly one camera by position *and* orientation. Returns a ``_Rebuilt``.
+    """
+    rebuilt = _Rebuilt()
+    routes = [n for n, _a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getSpec() == "ROUTE"]
+    route_attrs = [{k: _attribute_raw(r, k, "") for k in ("fromNode", "fromField", "toNode", "toField")} for r in routes]
+    defs = {n.getDefName(): n for n, _a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getDefName()}
+    tour_edges_pending = []        # sensor -> timer edges that become consumed only if the tour itself is rebuilt
+
+    for node, ancestry in all_nodes:
+        if getattr(node, "x3dNode", None) is None or node.getSpec() not in ("TouchSensor", "ProximitySensor"):
+            continue
+        spec, name = node.getSpec(), node.getDefName()
+        parent = ancestry[-1] if ancestry else None
+        if parent is None or parent.getSpec() != "Transform" or not parent.getDefName():
+            continue
+        obj = _object_by_def(parent.getDefName())
+        if obj is None:
+            continue
+        problems = _sensor_field_problems(node, spec, parent)
+        if problems:
+            rebuilt.unpreserved.append({"kind": "field", "node": f"{spec} {name}".strip(),
+                                        "detail": "not preserved: " + "; ".join(problems)})
+            continue
+        parts = (_attribute_raw(node, "description", "") or "").split(None, 1)
+        if not parts or parts[0] not in ("animate", "viewpoint", "tour"):
+            parts = _action_from_routes(name, route_attrs, defs, all_nodes)   # a file written before the description
+        if not parts:
+            continue
+        action, target = parts[0], (parts[1].strip() if len(parts) > 1 else "")
+        target_defs = set()
+        if action == "animate" and target:
+            found = _object_by_def("OB_" + target)
+            target_defs = {"OB_" + target, target}
+            target = found.name if found is not None else target
+        elif action == "viewpoint" and target:
+            found = _object_by_def("CA_" + target)
+            target_defs = {"CA_" + target, target}
+            target = found.name if found is not None else target
+
+        edges = set()
+        outgoing = [r for r in route_attrs if r["fromNode"] == name]
+        if action == "animate":
+            chosen = None
+            for attrs in outgoing:
+                if attrs["toField"] != "set_startTime":
+                    continue
+                chain_edges, targets = _timer_chain(attrs["toNode"], route_attrs, defs)
+                if (target_defs & targets) or (not target_defs and chain_edges):
+                    chosen = (attrs, chain_edges)
+                    break
+            if chosen is None:
+                continue
+            edges = {_route_tuple(chosen[0])} | chosen[1]
+            rebuilt.nodes.add(chosen[0]["toNode"])
+        elif action == "viewpoint":
+            for attrs in outgoing:
+                if attrs["toField"] == "set_bind" and attrs["toNode"] in target_defs:
+                    edges = {_route_tuple(attrs)}
+                elif attrs["toField"] == "set_boolean":
+                    for second in route_attrs:
+                        if second["fromNode"] == attrs["toNode"] and second["toField"] == "set_bind" and second["toNode"] in target_defs:
+                            edges = {_route_tuple(attrs), _route_tuple(second)}
+                            rebuilt.nodes.add(attrs["toNode"])
+            if not edges:
+                continue
+        elif action == "tour":
+            for attrs in outgoing:
+                if attrs["toField"] == "set_startTime":
+                    tour_edges_pending.append((_route_tuple(attrs), attrs["toNode"]))
+            if not tour_edges_pending:
+                continue
+
+        obj["x3d_trigger"] = "click" if spec == "TouchSensor" else "proximity"
+        obj["x3d_action"] = action
+        if target:
+            obj["x3d_target"] = target
+        if spec == "ProximitySensor":
+            size = node.getFieldAsFloatTuple("size", None, ())
+            if size and len(size) >= 3:
+                scale = _static_triple(parent, "scale", (1.0, 1.0, 1.0))
+                obj["x3d_radius"] = round(float(size[0]) * abs(scale[0]) / 2.0, 6)
+        rebuilt.nodes.add(name)
+        rebuilt.edges |= edges
+
+    if _rebuild_tour(all_nodes, route_attrs, defs, rebuilt):
+        for edge, timer_def in tour_edges_pending:
+            if timer_def in rebuilt.nodes:
+                rebuilt.edges.add(edge)
     return rebuilt
 
 
-def import_loss_records(all_nodes, rebuilt=frozenset()):
+def import_loss_records(all_nodes, rebuilt=None):
     """What a file says that the importer cannot keep, as ``[{kind, node, detail}]``.
 
     The importer turns interpolator chains into keyframes and discards the rest of the event graph. Dropping it
     silently let export, import, export turn a click-to-open door into a different scene that still validated, so every
-    sensor, event utility, unconsumed ROUTE and timer whose start or loop intent is not kept is listed here.
+    sensor, event utility, ROUTE edge and timer whose behaviour is not kept is listed here, and so is every sensor field
+    (``enabled``, an offset or non-cubic proximity box) the custom properties cannot hold.
     """
-    losses = []
+    rebuilt = rebuilt or _Rebuilt()
+    losses = list(rebuilt.unpreserved)
     timers = {}
     for node, _ancestry in all_nodes:
         if getattr(node, "x3dNode", None) is None:
             continue
         spec = node.getSpec()
         name = node.getDefName() or ""
-        if name in rebuilt:
+        if name in rebuilt.nodes:
             continue
-        if spec in _EVENT_NODES and spec != "Switch":
+        if spec in _EVENT_NODES:
             losses.append({"kind": "node", "node": f"{spec} {name}".strip(), "detail": "event node not imported"})
         elif spec == "TimeSensor":
             timers[name] = node
         elif spec == "ROUTE":
-            if _attribute_raw(node, "fromNode", "") in rebuilt or _attribute_raw(node, "toNode", "") in rebuilt:
+            attrs = {k: _attribute_raw(node, k, "") for k in ("fromNode", "fromField", "toNode", "toField")}
+            if _route_tuple(attrs) in rebuilt.edges:
                 continue
-            pair = (_attribute_raw(node, "fromField", "").replace("_changed", ""),
-                    _attribute_raw(node, "toField", "").replace("set_", ""))
+            pair = (attrs["fromField"].replace("_changed", ""), attrs["toField"].replace("set_", ""))
             if pair not in _CONSUMED_ROUTES:
-                losses.append({"kind": "route", "node": f"{_attribute_raw(node, 'fromNode', '')}.{_attribute_raw(node, 'fromField', '')}"
-                                                        f" -> {_attribute_raw(node, 'toNode', '')}.{_attribute_raw(node, 'toField', '')}",
+                losses.append({"kind": "route", "node": f"{attrs['fromNode']}.{attrs['fromField']} -> {attrs['toNode']}.{attrs['toField']}",
                                "detail": "ROUTE not imported"})
     for name, node in timers.items():
-        if name in rebuilt:
-            continue
         loop = node.getFieldAsBool("loop", False, ())
         start = node.getFieldAsFloat("startTime", 0.0, ())
         if not loop or start != 0.0:

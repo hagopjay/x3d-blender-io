@@ -1857,6 +1857,44 @@ def gzip_open_utf8(filepath, mode):
     return file
 
 
+def _publish_staged(stage, staged, target):
+    """Move a staged export (sidecars first, the document last) into place as one transaction.
+
+    Every file the export replaces is first moved into a backup folder inside ``stage``. If any step fails, the files
+    already published are removed and the backups restored, so a failed export leaves the previous document *and* the
+    sidecars it references byte-identical. A target path that is a directory is refused before anything is touched.
+    """
+    folder = os.path.dirname(target)
+    names = [name for name in sorted(os.listdir(stage)) if os.path.join(stage, name) != staged]
+    plan = [(os.path.join(stage, name), os.path.join(folder, name)) for name in names] + [(staged, target)]
+    for _source, destination in plan:
+        if os.path.isdir(destination):
+            raise IsADirectoryError(f"cannot publish {destination!r}: a directory is in the way (nothing was changed)")
+    backup = os.path.join(stage, ".backup")
+    os.makedirs(backup)
+    published, backed_up = [], []
+    try:
+        for source, destination in plan:
+            if os.path.exists(destination):
+                saved = os.path.join(backup, str(len(backed_up)))
+                os.replace(destination, saved)
+                backed_up.append((destination, saved))
+            os.replace(source, destination)
+            published.append(destination)
+    except BaseException:
+        for destination in published:
+            try:
+                os.remove(destination)
+            except OSError:
+                pass
+        for destination, saved in backed_up:
+            try:
+                os.replace(saved, destination)
+            except OSError:  # pragma: no cover - restoring is best effort; the backup stays in the stage folder
+                logger.error("could not restore %r from %r", destination, saved)
+        raise
+
+
 def save(context,
          filepath,
          *,
@@ -1992,10 +2030,7 @@ def save(context,
                 if semantic.errors and os.environ.get("X3D_EXPORT_VALIDATION", "strict").lower() != "warn":
                     raise ValueError(f"X3D semantic validation failed for {export_file}: {'; '.join(semantic.errors[:5])}"
                                      " (set X3D_EXPORT_VALIDATION=warn to export anyway)")
-            for name in sorted(os.listdir(stage)):          # sidecars first, the document last
-                if os.path.join(stage, name) != staged:
-                    os.replace(os.path.join(stage, name), os.path.join(os.path.dirname(target), name))
-            os.replace(staged, target)
+            _publish_staged(stage, staged, target)
         finally:
             shutil.rmtree(stage, ignore_errors=True)
 
