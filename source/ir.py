@@ -162,6 +162,9 @@ class IRGaussianSplats:
     opacities: list[float] = field(default_factory=list)
     sh: dict[tuple[int, int], list[tuple[float, float, float]]] = field(default_factory=dict)
     color_space: str = "SRGB_REC709_DISPLAY"
+    # Set by the extractor when the object asks (x3d_splat_glb) to be written as a KHR_gaussian_splatting glb beside the
+    # X3D file and referenced by Inline: the file name, and the data is then already in glTF's Y-up frame, degree 0 only.
+    glb_name: str | None = None
 
     def sh_degree(self) -> int:
         """Highest spherical-harmonic degree present in full, with every lower degree.

@@ -77,14 +77,14 @@ builds a demo scene and `tools/route_demo_verify.cjs` drives it with real mouse 
 
 ### HAnim joint names
 
-A bone that follows Mixamo (`mixamorig:LeftArm`), Rigify (`upper_arm.L`) or plain (`l_upper_arm`, `LeftForeArm`) naming is
-written as an `HAnimJoint` with the H-Anim 2.0 standard `name` (`l_shoulder`, `l_elbow`, `l_wrist`, `l_hip`, `l_knee`,
+With the armature custom property `x3d_hanim_names` = `standard`, a bone that follows Mixamo (`mixamorig:LeftArm`), Rigify
+(`upper_arm.L`) or plain (`l_upper_arm`, `LeftForeArm`) naming is written as an `HAnimJoint` with the H-Anim 2.0 standard `name` (`l_shoulder`, `l_elbow`, `l_wrist`, `l_hip`, `l_knee`,
 `l_ankle`, `l_metatarsal`, `l_acromioclavicular`, the finger joints `l_index1` to `l_pinky3`, `humanoid_root`,
-`skullbase`, and the right-hand twins); a bone's `x3d_hanim_joint` custom property sets any joint name explicitly (spine
+`skullbase`, and the right-hand twins); a bone's `x3d_hanim_joint` custom property sets any joint name explicitly, with or without that switch (spine
 bones and the neck have no one-to-one joint in those rigs, so they keep their own name unless you set it). The `DEF` stays
 built from the Blender bone name, the `HAnimHumanoid` `info` says how many of its joints carry standard names, and two bones
 that claim one standard name are reported in `<meta name="info">`. Mapping table and rules: `source/hanim_names.py`.
-Importing such a file names the bones after the standard joints. Not claimed: LOA conformance (`loa` is not written).
+Without the switch joints keep their bone names, as before. Importing a file with standard names names the bones after them. Not claimed: LOA conformance (`loa` is not written).
 
 ### Collection instances: one `Group DEF`, then `Group USE`
 

@@ -15,7 +15,7 @@ import os
 
 try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
-    from .hanim_names import HANIM_JOINT_PROPERTY, map_bones
+    from .hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from .interaction import check_interactions, read_interaction, read_tour
     from .material import analyze_material
     from .matrix_safety import inverted64, scale_to_children_matrix
@@ -24,7 +24,7 @@ try:
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
-    from hanim_names import HANIM_JOINT_PROPERTY, map_bones
+    from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from interaction import check_interactions, read_interaction, read_tour
     from material import analyze_material
     from matrix_safety import inverted64, scale_to_children_matrix
@@ -295,6 +295,34 @@ def asset_frame(global_matrix):
     rotation = global_matrix.to_3x3()
     rotation.normalize()
     return rotation.inverted().to_4x4()
+
+
+SPLAT_GLB_PROPERTY = "x3d_splat_glb"
+
+
+def splats_to_gltf_frame(splats, global_matrix):
+    """Turn a splat set into glTF's Y-up frame in place (what ``Inline`` of a glb expects), degree 0 only.
+
+    Centres and orientations are rotated by the export's axis conversion; scales stay (they are per local axis); spherical
+    harmonics above degree 0 are dropped, since they depend on the view direction and would have to be rotated too.
+    Returns True when higher degrees were dropped.
+    """
+    from mathutils import Quaternion, Vector
+
+    rotation = global_matrix.to_3x3() if global_matrix is not None else None
+    if rotation is not None:
+        rotation = rotation.copy()
+        rotation.normalize()
+        turn = rotation.to_quaternion()
+        splats.positions = [tuple(rotation @ Vector(point)) for point in splats.positions]
+        turned = []
+        for x, y, z, w in splats.orientations:
+            q = turn @ Quaternion((w, x, y, z))
+            turned.append((q.x, q.y, q.z, q.w))
+        splats.orientations = turned
+    dropped = any(degree > 0 for degree, _coef in splats.sh)
+    splats.sh = {key: value for key, value in splats.sh.items() if key == (0, 0)}
+    return dropped
 
 
 def extract_splats(mesh, *, name: str) -> IRGaussianSplats:
@@ -708,7 +736,8 @@ def _build_joint_tree(armature, diagnostics=None):
     for bone in armature.data.bones:
         head = bone.head_local
         joints[bone.name] = IRJoint(name=bone.name, center=(float(head[0]), float(head[1]), float(head[2])))
-    mapping, problems = map_bones((bone.name, bone.get(HANIM_JOINT_PROPERTY)) for bone in armature.data.bones)
+    mapping, problems = map_bones(((bone.name, bone.get(HANIM_JOINT_PROPERTY)) for bone in armature.data.bones),
+                                convention=str(armature.get(HANIM_NAMES_PROPERTY) or "").lower() == "standard")
     for bone_name, joint_name in mapping.items():
         joints[bone_name].hanim_name = joint_name
     if diagnostics is not None:
@@ -1471,6 +1500,7 @@ def extract_scene(
         return source_key, shapes
 
     content_frame = asset_frame(global_matrix)
+    glb_objects: set[str] = set()
     try:
         distance_scale = float(global_matrix.median_scale) if global_matrix is not None else 1.0
     except (AttributeError, TypeError, ValueError):
@@ -1544,7 +1574,19 @@ def extract_scene(
             splats_name = obj.data.name
             if splats_name not in {splats.name for splats in ir_scene.splats}:
                 reader = extract_native_splats if obj.type == "POINTCLOUD" else extract_splats
-                ir_scene.splats.append(reader(obj.data, name=splats_name))
+                new_splats = reader(obj.data, name=splats_name)
+                if obj.get(SPLAT_GLB_PROPERTY) or obj.data.get(SPLAT_GLB_PROPERTY):
+                    # written as a KHR_gaussian_splatting glb beside the file and referenced by Inline: the Inline's
+                    # Transform carries the asset frame, like an imported Inline's does
+                    if splats_to_gltf_frame(new_splats, global_matrix):
+                        ir_scene.diagnostics.append(
+                            f"Splats {splats_name!r}: spherical harmonics above degree 0 are not written to the glb "
+                            "(view-dependent colour is lost; the X3D 4.1 GaussianSplats node keeps it).")
+                    new_splats.glb_name = f"{_safe_key(splats_name)}.splats.glb"
+                    glb_objects.add(splats_name)
+                ir_scene.splats.append(new_splats)
+            if splats_name in glb_objects:
+                instance.transform = _matrix_transform(local_matrix @ content_frame)
             instance.source_key = f"SPLATS:{splats_name}"
             instance.splats_name = splats_name
             ir_scene.object_names.append(obj.name)

@@ -34,11 +34,13 @@ class ExportHAnimNamesTests(unittest.TestCase):
         _register_extension(self.tmpdir)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    def _rig(self, bones):
+    def _rig(self, bones, standard=True):
         """bones: list of (name, parent name or None, head z). One chain of 0.5 m bones."""
         bpy.ops.object.armature_add(enter_editmode=True)
         armature = bpy.context.active_object
         armature.name = "Rig"
+        if standard:
+            armature["x3d_hanim_names"] = "standard"
         edit = armature.data.edit_bones
         edit.remove(edit[0])
         for name, parent, z in bones:
@@ -66,6 +68,12 @@ class ExportHAnimNamesTests(unittest.TestCase):
         self.assertEqual(joints["hanim_Rig_mixamorig_Spine"], "mixamorig:Spine")      # ambiguous: left alone
         info = root.find(".//HAnimHumanoid").get("info")
         self.assertIn("3 of 4 joints carry standard H-Anim 2.0 names", info)
+
+    def test_default_keeps_the_bone_names(self):
+        self._rig([("mixamorig:Hips", None, 1.0), ("mixamorig:LeftArm", "mixamorig:Hips", 1.5)], standard=False)
+        root, _path = self._export()
+        self.assertEqual([j.get("name") for j in root.iter("HAnimJoint") if j.get("DEF")],
+                         ["mixamorig:Hips", "mixamorig:LeftArm"])
 
     def test_override_property_and_conflict_diagnostic(self):
         rig = self._rig([("Hips", None, 1.0), ("pelvis", "Hips", 1.2), ("Chest", "pelvis", 1.6)])

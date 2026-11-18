@@ -8,7 +8,9 @@ An HAnimJoint whose ``name`` is a standard joint name tells every H-Anim player 
 libraries, LOA conformance); a custom name only makes it a joint of an unrecognised skeleton. This maps the bone naming
 of the three rigs people actually bring (Mixamo ``mixamorig:LeftArm``, Rigify ``upper_arm.L``, and plain
 ``LeftUpperArm`` / ``l_upper_arm`` style) onto the joints they unambiguously mean, and takes an explicit override from
-the bone's ``x3d_hanim_joint`` custom property. Anything it is not sure of is left alone: spine bones and the neck have no
+the bone's ``x3d_hanim_joint`` custom property. The convention mapping is opt-in (armature custom property
+``x3d_hanim_names`` = ``standard``), because it renames joints away from the bone names a file was authored with.
+Anything it is not sure of is left alone: spine bones and the neck have no
 one-to-one standard joint in these rigs, so they keep their own names unless the property says otherwise.
 """
 
@@ -17,6 +19,7 @@ from __future__ import annotations
 import re
 
 HANIM_JOINT_PROPERTY = "x3d_hanim_joint"
+HANIM_NAMES_PROPERTY = "x3d_hanim_names"      # on the armature object: "standard" turns the convention mapping on
 
 _FINGERS = ("thumb", "index", "middle", "ring", "pinky")
 
@@ -77,14 +80,16 @@ def standard_joint_name(bone_name: str, override=None):
     return f"{side}_{joint}" if joint else None
 
 
-def map_bones(bones):
+def map_bones(bones, *, convention=True):
     """``bones``: iterable of (bone name, override or None). Returns ({bone: joint name}, [problems]).
+
+    With ``convention`` False only an explicit override names a joint.
 
     The first bone to claim a standard name keeps it; a later claimant keeps its own name and is reported.
     """
     mapping, taken, problems = {}, {}, []
     for bone_name, override in bones:
-        joint = standard_joint_name(bone_name, override)
+        joint = standard_joint_name(bone_name, override) if (convention or override) else None
         if joint is None:
             continue
         if joint in taken:
