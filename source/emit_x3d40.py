@@ -835,7 +835,8 @@ def _sensor_xml(instance, defs: _DefNames, indent):
     # the sensor sits inside the object's Transform, so the object's scale would scale the box: divide it back out so
     # the box is 2 x radius in world units (rotation still turns it with the object)
     size = " ".join(_fmt_short(2.0 * interaction.radius / max(abs(axis), 1e-6)) for axis in instance.transform.scale)
-    return f'{indent}<ProximitySensor DEF="{_sensor_def(defs, instance)}" center="0 0 0" size="{size}" />\n'
+    return (f'{indent}<ProximitySensor DEF="{_sensor_def(defs, instance)}" description={description} '
+            f'center="0 0 0" size="{size}" />\n')
 
 
 def _tour_xml(tour, defs: _DefNames, indent):

@@ -6,14 +6,16 @@ from __future__ import annotations
 
 import gzip
 import keyword
+import math
+import re
 from dataclasses import dataclass, field
 from xml.etree.ElementTree import ParseError
 from xml.etree import ElementTree as ET
 
 try:
-    from .x3d_nodes import KNOWN_ELEMENTS
+    from .x3d_nodes import FIELD_TYPES, KNOWN_ELEMENTS
 except ImportError:  # tests and tools import the source folder as top-level modules
-    from x3d_nodes import KNOWN_ELEMENTS
+    from x3d_nodes import FIELD_TYPES, KNOWN_ELEMENTS
 
 _GZIP_MAGIC = b"\x1f\x8b"
 
@@ -66,24 +68,64 @@ def validate_xml_tree(tree: ET.ElementTree) -> ValidationResult:
     if root.find("Scene") is None:
         warnings.append("No Scene element found.")
 
-    errors = unknown_element_errors(root) + nonfinite_number_errors(root)
+    errors = unknown_element_errors(root) + field_value_errors(root)
     return ValidationResult(valid=not errors, errors=errors, warnings=warnings)
 
 
-_NONFINITE_TOKENS = {"nan", "inf", "-inf", "+inf", "infinity", "-infinity", "+nan", "-nan"}
+_REAL = re.compile(r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?\Z")
+_INTEGER = re.compile(r"[+-]?(?:\d+|0[xX][0-9a-fA-F]+)\Z")
+_BOOLEAN = {"true", "false", "TRUE", "FALSE"}
 
 
-def nonfinite_number_errors(root) -> list[str]:
-    """One error per element name carrying a NaN or infinity token in an attribute: X3D has no such literal."""
-    seen: dict[str, int] = {}
+def _bad_tokens(value: str, kind: str) -> list[str]:
+    bad = []
+    for token in value.replace(",", " ").split():
+        if kind == "b":
+            ok = token in _BOOLEAN
+        elif kind == "i":
+            ok = _INTEGER.match(token) is not None
+        else:
+            ok = _REAL.match(token) is not None and math.isfinite(float(token))
+        if not ok:
+            bad.append(token)
+    return bad
+
+
+def field_value_errors(root) -> list[str]:
+    """Check the attributes whose X3D type is boolean, integer or real, by node and field name.
+
+    Strings are left alone, so ``title="Infinity"``, ``<meta content="NaN">`` and ``DEF="inf"`` stay legal; a real field
+    must hold finite decimal numbers (``1e999`` overflows and is refused, as are ``nan`` and ``inf``), an integer field
+    whole numbers, a boolean field ``true`` or ``false``. One error per node and field, with the first bad token.
+    """
+    errors = []
     for element in root.iter():
-        if not isinstance(element.tag, str):
+        tag = element.tag
+        if not isinstance(tag, str) or "USE" in element.attrib:
             continue
-        for value in element.attrib.values():
-            if any(token.lower() in _NONFINITE_TOKENS for token in value.replace(",", " ").split()):
-                seen[element.tag] = seen.get(element.tag, 0) + 1
-                break
-    return [f"Non-finite number (NaN or infinity) in <{tag}> ({count}x)" for tag, count in sorted(seen.items())]
+        declared = _field_kinds(tag)
+        for name, value in element.attrib.items():
+            kind = declared.get(name)
+            if kind is None:
+                continue
+            bad = _bad_tokens(value, kind)
+            if bad:
+                what = {"b": "boolean", "i": "integer", "f": "finite real"}[kind]
+                label = "Non-finite number" if kind == "f" and bad[0].lstrip("+-").lower() in ("nan", "inf", "infinity") \
+                    else "Invalid value"
+                errors.append(f"{label} {bad[0]!r} in <{tag} {name}> (expected {what})")
+    return errors
+
+
+_KIND_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _field_kinds(tag: str) -> dict[str, str]:
+    kinds = _KIND_CACHE.get(tag)
+    if kinds is None:
+        kinds = dict(item.split(":") for item in FIELD_TYPES.get(tag, "").split(",") if item)
+        _KIND_CACHE[tag] = kinds
+    return kinds
 
 
 def unknown_element_errors(root) -> list[str]:

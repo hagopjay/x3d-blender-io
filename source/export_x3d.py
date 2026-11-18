@@ -1960,28 +1960,44 @@ def save(context,
         from .validate import validate_xml_file, validate_with_x3d_py
 
         logger.info("Writing X3D %s to %r", settings.document_version, export_file)
-        with (gzip_open_utf8(export_file, 'w') if settings.use_compress else open(export_file, 'w', encoding='utf-8')) as file:
-            export_ir_scene(file, ir_scene, generator=f"{bl_info_copy['name']} v{'.'.join(map(str, bl_info_copy['version']))}",
-                            version=settings.document_version, colour_space=settings.color_space)
-        for message in ir_scene.diagnostics:
-            logger.info("X3D 4.0 export note: %s", message)
-        validation = validate_xml_file(export_file)   # reads a compressed export too
-        if validation.valid:
-            for warning in validation.warnings:
-                logger.warning("X3D 4.0 validation warning for %r: %s", export_file, warning)
-        else:
-            for error in validation.errors:
-                logger.error("X3D 4.0 validation error for %r: %s", export_file, error)
-            raise ValueError(f"X3D 4.0 export validation failed for {export_file}: {'; '.join(validation.errors)}")
-        semantic = validate_with_x3d_py(export_file)
-        if semantic is not None:
-            for warning in semantic.warnings:
-                logger.warning("x3d.py: %s", warning)
-            for error in semantic.errors:
-                logger.error("x3d.py: %s", error)
-            if semantic.errors and os.environ.get("X3D_EXPORT_VALIDATION", "strict").lower() != "warn":
-                raise ValueError(f"X3D semantic validation failed for {export_file}: {'; '.join(semantic.errors[:5])}"
-                                 " (set X3D_EXPORT_VALIDATION=warn to export anyway)")
+        # Stage the document and its sidecars (splat glb) in a scratch folder beside the target, validate the staged
+        # bytes, and only then move them into place, so a failed export leaves the previous valid file untouched.
+        import shutil
+        import tempfile
+
+        target = os.path.abspath(export_file)
+        stage = tempfile.mkdtemp(prefix=".x3d-stage-", dir=os.path.dirname(target))
+        try:
+            staged = os.path.join(stage, os.path.basename(target))
+            with (gzip_open_utf8(staged, 'w') if settings.use_compress else open(staged, 'w', encoding='utf-8')) as file:
+                export_ir_scene(file, ir_scene, generator=f"{bl_info_copy['name']} v{'.'.join(map(str, bl_info_copy['version']))}",
+                                version=settings.document_version, colour_space=settings.color_space)
+            for message in ir_scene.diagnostics:
+                logger.info("X3D 4.0 export note: %s", message)
+
+            validation = validate_xml_file(staged)   # reads a compressed export too
+            if validation.valid:
+                for warning in validation.warnings:
+                    logger.warning("X3D 4.0 validation warning for %r: %s", export_file, warning)
+            else:
+                for error in validation.errors:
+                    logger.error("X3D 4.0 validation error for %r: %s", export_file, error)
+                raise ValueError(f"X3D 4.0 export validation failed for {export_file}: {'; '.join(validation.errors)}")
+            semantic = validate_with_x3d_py(staged)
+            if semantic is not None:
+                for warning in semantic.warnings:
+                    logger.warning("x3d.py: %s", warning)
+                for error in semantic.errors:
+                    logger.error("x3d.py: %s", error)
+                if semantic.errors and os.environ.get("X3D_EXPORT_VALIDATION", "strict").lower() != "warn":
+                    raise ValueError(f"X3D semantic validation failed for {export_file}: {'; '.join(semantic.errors[:5])}"
+                                     " (set X3D_EXPORT_VALIDATION=warn to export anyway)")
+            for name in sorted(os.listdir(stage)):          # sidecars first, the document last
+                if os.path.join(stage, name) != staged:
+                    os.replace(os.path.join(stage, name), os.path.join(os.path.dirname(target), name))
+            os.replace(staged, target)
+        finally:
+            shutil.rmtree(stage, ignore_errors=True)
 
     writer = _modern_writer if settings.use_modern_path else _legacy_writer
     result = pipeline_save(context, settings, writer)
