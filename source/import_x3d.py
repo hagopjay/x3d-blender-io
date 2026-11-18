@@ -5134,6 +5134,34 @@ def appearance_LoadPixelTexture(pixelTexture, ancestry):
 
 # Called from importShape to insert a data object (typically a mesh)
 # into the scene
+# object pointer -> its mesh/curve before _set_world_matrix baked shear into a copy; a USE of that Shape starts from it
+_UNBAKED_DATA = {}
+
+
+def _set_world_matrix(bpyob, matrix):
+    """Give ``bpyob`` the world ``matrix``, keeping any shear.
+
+    Nested X3D Transforms multiply to a matrix with shear when a rotated Transform sits inside a non-uniformly
+    scaled one. An object's location/rotation/scale cannot hold shear, so assigning ``matrix_world`` dropped it and
+    the geometry came in skewed. The object gets the nearest location/rotation/scale and the rest is baked into its
+    mesh or curve, copied first when other objects share it (a USE elsewhere keeps the original)."""
+    import numpy as np
+    loc, rot, scale = matrix.decompose()
+    nearest = Matrix.LocRotScale(loc, rot, scale)
+    target = np.array(matrix, dtype=np.float64)
+    size = max(np.abs(target).max(), 1e-30)
+    data = bpyob.data
+    if (np.abs(np.array(nearest, dtype=np.float64) - target).max() <= 1e-6 * size
+            or not hasattr(data, "transform") or not all(s != 0.0 for s in scale)):
+        bpyob.matrix_world = matrix
+        return
+    rest = Matrix((np.linalg.inv(np.array(nearest, dtype=np.float64)) @ target).tolist())
+    _UNBAKED_DATA[bpyob.as_pointer()] = data
+    data = bpyob.data = data.copy()
+    data.transform(rest)
+    bpyob.matrix_world = nearest
+
+
 def importShape_ProcessObject(
         bpycollection, vrmlname, bpydata, geom, geom_spec, node,
         bpymat, has_alpha, texmtx, ancestry,
@@ -5191,7 +5219,7 @@ def importShape_ProcessObject(
     # the data
     # bpymesh.transform(getFinalMatrix(node))
     bpyob = node.blendObject = bpy.data.objects.new(vrmlname, bpydata)
-    bpyob.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
+    _set_world_matrix(bpyob, getFinalMatrix(node, None, ancestry, global_matrix))
     # solidify modifier
     if solidify and bpyob.type == 'MESH':
         solidify_modifier = bpyob.modifiers.new(name="Solidify", type='SOLIDIFY')
@@ -5544,9 +5572,12 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
     bpyob = node.getRealNode().blendObject
 
     if bpyob is not None:
+        unbaked = _UNBAKED_DATA.get(bpyob.as_pointer())
         bpyob = node.blendData = node.blendObject = bpyob.copy()
-        # Could transform data, but better the object so we can instance the data
-        bpyob.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
+        if unbaked is not None:  # the DEF copy carries its own shear in its data: start from the shared original
+            bpyob.data = unbaked
+        # Could transform data, but better the object so we can instance the data (unless the matrix has shear)
+        _set_world_matrix(bpyob, getFinalMatrix(node, None, ancestry, global_matrix))
         bpycollection.objects.link(bpyob)
         bpyob.select_set(True)
         tag_x3d_identity(bpyob, node, ancestry)
@@ -7675,6 +7706,7 @@ def load_web3d(
 
     global current_file_path
     current_file_path = filepath
+    _UNBAKED_DATA.clear()
     # Used when adding blender primitives
     GLOBALS['CIRCLE_DETAIL'] = PREF_CIRCLE_DIV
 
