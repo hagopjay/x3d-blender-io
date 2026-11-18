@@ -1965,24 +1965,23 @@ def save(context,
                             version=settings.document_version, colour_space=settings.color_space)
         for message in ir_scene.diagnostics:
             logger.info("X3D 4.0 export note: %s", message)
-        if settings.use_compress:
-            logger.warning("Skipping XML validation for compressed export: %r", export_file)
-            return
-
-        validation = validate_xml_file(export_file)
+        validation = validate_xml_file(export_file)   # reads a compressed export too
         if validation.valid:
             for warning in validation.warnings:
                 logger.warning("X3D 4.0 validation warning for %r: %s", export_file, warning)
         else:
             for error in validation.errors:
                 logger.error("X3D 4.0 validation error for %r: %s", export_file, error)
-            raise ValueError(f"X3D 4.0 export validation failed for {export_file}")
+            raise ValueError(f"X3D 4.0 export validation failed for {export_file}: {'; '.join(validation.errors)}")
         semantic = validate_with_x3d_py(export_file)
         if semantic is not None:
             for warning in semantic.warnings:
                 logger.warning("x3d.py: %s", warning)
             for error in semantic.errors:
                 logger.error("x3d.py: %s", error)
+            if semantic.errors and os.environ.get("X3D_EXPORT_VALIDATION", "strict").lower() != "warn":
+                raise ValueError(f"X3D semantic validation failed for {export_file}: {'; '.join(semantic.errors[:5])}"
+                                 " (set X3D_EXPORT_VALIDATION=warn to export anyway)")
 
     writer = _modern_writer if settings.use_modern_path else _legacy_writer
     result = pipeline_save(context, settings, writer)
