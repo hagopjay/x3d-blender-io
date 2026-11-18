@@ -162,6 +162,9 @@ class IRGaussianSplats:
     opacities: list[float] = field(default_factory=list)
     sh: dict[tuple[int, int], list[tuple[float, float, float]]] = field(default_factory=dict)
     color_space: str = "SRGB_REC709_DISPLAY"
+    # Set by the extractor when the object asks (x3d_splat_glb) to be written as a KHR_gaussian_splatting glb beside the
+    # X3D file and referenced by Inline: the file name, and the data is then already in glTF's Y-up frame, degree 0 only.
+    glb_name: str | None = None
 
     def sh_degree(self) -> int:
         """Highest spherical-harmonic degree present in full, with every lower degree.
@@ -256,6 +259,45 @@ class IRAnimation:
 
 
 @dataclass
+class IRInteraction:
+    """One authored ROUTE interaction: a sensor on ``source`` that fires an ``action``.
+
+    ``trigger`` is ``click`` (TouchSensor) or ``proximity`` (ProximitySensor around the object's origin, ``radius`` m).
+    ``action`` is ``animate`` (play ``target``'s sampled animation once), ``viewpoint`` (bind the camera ``target``) or
+    ``tour`` (start the camera tour). Authored from the ``x3d_trigger`` / ``x3d_action`` / ``x3d_target`` /
+    ``x3d_radius`` custom properties (source/interaction.py).
+    """
+
+    source: str
+    trigger: str = "click"
+    action: str = "animate"
+    target: str = ""
+    radius: float = 3.0
+
+
+@dataclass
+class IRTourStop:
+    """One camera of a viewpoint tour, in the exported frame: where the tour rig rests and for how long."""
+
+    name: str
+    transform: IRTransform = field(default_factory=IRTransform)
+    dwell: float = 2.0
+    field_of_view: float | None = None
+
+
+@dataclass
+class IRTour:
+    """A viewpoint tour: a Viewpoint carried by a Transform that PositionInterpolator / OrientationInterpolator fly
+    through ``stops`` (``dwell`` seconds at each, ``travel`` seconds between). Started by a click or proximity
+    interaction with action ``tour``, or by itself when ``autostart``."""
+
+    stops: list[IRTourStop] = field(default_factory=list)
+    travel: float = 3.0
+    loop: bool = False
+    autostart: bool = False
+
+
+@dataclass
 class IRShape:
     """One Shape inside an instance: a geometry paired with a material."""
 
@@ -298,6 +340,11 @@ class IRInstance:
     visible: bool = True
     # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
     line_width: float | None = None
+    # Name of an IRScene.collections entry this Empty instances (Blender "Collection" instance); written as a Group that
+    # is DEF'd at its first use and USE'd after, so N linked copies cost N Transforms, not N copies of the content.
+    collection_name: str | None = None
+    # The ROUTE interaction authored on this object (a sensor inside its Transform), if any.
+    interaction: IRInteraction | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -323,6 +370,9 @@ class IRJoint:
 
     name: str
     center: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    # The H-Anim 2.0 standard joint name this bone is written under (hanim_names.py), else None: ``name`` is then written.
+    # ``name`` stays the Blender bone name: it keys the DEF, the vertex group and the animation target.
+    hanim_name: str | None = None
     children: list["IRJoint"] = field(default_factory=list)
     skin_coord_index: list[int] = field(default_factory=list)
     skin_coord_weight: list[float] = field(default_factory=list)
@@ -342,6 +392,8 @@ class IRHumanoid:
     root_joints: list[IRJoint] = field(default_factory=list)
     skin_coord: list[tuple[float, float, float]] = field(default_factory=list)
     skin_shapes: list[IRShape] = field(default_factory=list)
+    # Joints written under a standard H-Anim name, and the total (the HAnimHumanoid ``info`` says so).
+    standard_joint_count: int = 0
 
     def iter_joints(self):
         for root in self.root_joints:
@@ -366,6 +418,9 @@ class IRScene:
     humanoids: list[IRHumanoid] = field(default_factory=list)
     splats: list[IRGaussianSplats] = field(default_factory=list)
     cycle_interval: float | None = None
+    tour: IRTour | None = None
+    # Collection name -> its member instances in the collection's own frame (instance_offset at the origin).
+    collections: dict[str, list[IRInstance]] = field(default_factory=dict)
     background_color: tuple[float, float, float] | None = None
     # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
     background: IRBackground | None = None
@@ -378,8 +433,11 @@ class IRScene:
     headlight: bool | None = None
 
     def iter_instances(self):
-        """Depth-first walk over every instance, nested children included."""
+        """Depth-first walk over every instance, nested children included (the members of each instanced collection
+        included, once, however many times it is instanced)."""
         stack = list(reversed(self.instances))
+        for members in reversed(list(self.collections.values())):
+            stack = list(reversed(members)) + stack
         while stack:
             instance = stack.pop()
             yield instance

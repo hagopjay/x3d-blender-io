@@ -15,6 +15,8 @@ import os
 
 try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
+    from .interaction import check_interactions, read_interaction, read_tour
     from .material import analyze_material
     from .matrix_safety import inverted64, scale_to_children_matrix
     from .splat_io import rgb_to_sh0
@@ -22,6 +24,8 @@ try:
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
+    from interaction import check_interactions, read_interaction, read_tour
     from material import analyze_material
     from matrix_safety import inverted64, scale_to_children_matrix
     from splat_io import rgb_to_sh0
@@ -291,6 +295,34 @@ def asset_frame(global_matrix):
     rotation = global_matrix.to_3x3()
     rotation.normalize()
     return rotation.inverted().to_4x4()
+
+
+SPLAT_GLB_PROPERTY = "x3d_splat_glb"
+
+
+def splats_to_gltf_frame(splats, global_matrix):
+    """Turn a splat set into glTF's Y-up frame in place (what ``Inline`` of a glb expects), degree 0 only.
+
+    Centres and orientations are rotated by the export's axis conversion; scales stay (they are per local axis); spherical
+    harmonics above degree 0 are dropped, since they depend on the view direction and would have to be rotated too.
+    Returns True when higher degrees were dropped.
+    """
+    from mathutils import Quaternion, Vector
+
+    rotation = global_matrix.to_3x3() if global_matrix is not None else None
+    if rotation is not None:
+        rotation = rotation.copy()
+        rotation.normalize()
+        turn = rotation.to_quaternion()
+        splats.positions = [tuple(rotation @ Vector(point)) for point in splats.positions]
+        turned = []
+        for x, y, z, w in splats.orientations:
+            q = turn @ Quaternion((w, x, y, z))
+            turned.append((q.x, q.y, q.z, q.w))
+        splats.orientations = turned
+    dropped = any(degree > 0 for degree, _coef in splats.sh)
+    splats.sh = {key: value for key, value in splats.sh.items() if key == (0, 0)}
+    return dropped
 
 
 def extract_splats(mesh, *, name: str) -> IRGaussianSplats:
@@ -694,12 +726,22 @@ def _skinned_meshes(armature, candidates):
     return skinned
 
 
-def _build_joint_tree(armature):
-    """Return (root IRJoints, {bone name: IRJoint}) from the armature's rest bones."""
+def _build_joint_tree(armature, diagnostics=None):
+    """Return (root IRJoints, {bone name: IRJoint}) from the armature's rest bones.
+
+    Bones that follow a known naming convention (or carry ``x3d_hanim_joint``) get their H-Anim 2.0 joint name in
+    ``hanim_name``.
+    """
     joints = {}
     for bone in armature.data.bones:
         head = bone.head_local
         joints[bone.name] = IRJoint(name=bone.name, center=(float(head[0]), float(head[1]), float(head[2])))
+    mapping, problems = map_bones(((bone.name, bone.get(HANIM_JOINT_PROPERTY)) for bone in armature.data.bones),
+                                convention=str(armature.get(HANIM_NAMES_PROPERTY) or "").lower() == "standard")
+    for bone_name, joint_name in mapping.items():
+        joints[bone_name].hanim_name = joint_name
+    if diagnostics is not None:
+        diagnostics.extend(f"Armature {armature.name!r}: {problem}." for problem in problems)
     roots = []
     for bone in armature.data.bones:
         joint = joints[bone.name]
@@ -710,7 +752,7 @@ def _build_joint_tree(armature):
     return roots, joints
 
 
-def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_triangulate=False):
+def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_triangulate=False, diagnostics=None):
     """Build an HAnimHumanoid for ``armature`` with ``skinned`` meshes as skin.
 
     Skin vertices are expressed in armature space and pooled into one
@@ -718,9 +760,10 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
     its vertex group. ``material_sink(material)`` registers a material and
     returns its name. Returns (humanoid, skin geometries).
     """
-    roots, joints = _build_joint_tree(armature)
+    roots, joints = _build_joint_tree(armature, diagnostics)
     skin_geometries: list[IRMeshGeometry] = []
-    humanoid = IRHumanoid(name=armature.name, transform=_matrix_transform(local_matrix), root_joints=roots)
+    humanoid = IRHumanoid(name=armature.name, transform=_matrix_transform(local_matrix), root_joints=roots,
+                          standard_joint_count=sum(1 for joint in joints.values() if joint.hanim_name))
     skin_def = f"hanim_{_safe_key(armature.name)}_skinCoord"
     armature_inverse = inverted64(armature.matrix_world, armature.name)
 
@@ -821,6 +864,20 @@ def _sample_joint_animation(scene, armatures, frames, keys):
             )
         )
     return animations
+
+
+def static_world_matrix(obj):
+    """An object's world matrix from its own transform channels and its parents', not from ``matrix_world``.
+
+    ``matrix_world`` is only refreshed for objects in a view layer; a collection kept out of the scene as an asset
+    library holds whatever was last evaluated (identity for one built by script), so its members are placed from
+    ``matrix_basis`` and ``matrix_parent_inverse`` instead.
+    """
+    matrix = obj.matrix_basis.copy()
+    parent = obj.parent
+    if parent is None:
+        return matrix
+    return static_world_matrix(parent) @ obj.matrix_parent_inverse @ matrix
 
 
 def _matrix_transform(matrix) -> IRTransform:
@@ -1443,13 +1500,33 @@ def extract_scene(
         return source_key, shapes
 
     content_frame = asset_frame(global_matrix)
+    glb_objects: set[str] = set()
     try:
         distance_scale = float(global_matrix.median_scale) if global_matrix is not None else 1.0
     except (AttributeError, TypeError, ValueError):
         distance_scale = 1.0
 
-    def build_instance(obj, parent):
-        if use_hierarchy and parent is not None:
+    def collection_instance(collection):
+        """Extract a collection's mesh-like objects once, in the collection's frame; return its name."""
+        from mathutils import Matrix
+        name = collection.name
+        if name in ir_scene.collections:
+            return name
+        ir_scene.collections[name] = members = []        # registered first: a collection that instances itself ends
+        offset = Matrix.Translation(-collection.instance_offset)
+        for member in collection.all_objects:
+            if member.type not in MESH_LIKE_TYPES or member.name in skinned_names or is_lod_hidden(member):
+                continue
+            built = build_instance(member, None, local_override=offset @ static_world_matrix(member),
+                                   name_prefix=f"{name}.")
+            if built is not None:
+                members.append(built)
+        return name
+
+    def build_instance(obj, parent, local_override=None, name_prefix=""):
+        if local_override is not None:
+            local_matrix = local_override
+        elif use_hierarchy and parent is not None:
             local_matrix = inverted64(parent.matrix_world, parent.name) @ obj.matrix_world
             if parent.get(INLINE_URL_PROPERTY):
                 # the parent's Transform includes the asset frame; take it back out
@@ -1463,14 +1540,16 @@ def extract_scene(
 
         instance = IRInstance(
             source_key=f"{obj.type}:{obj.name}",
-            object_name=obj.name,
+            object_name=name_prefix + obj.name,
             object_type=obj.type,
             transform=_matrix_transform(local_matrix),
         )
         # only what the import hid for a Switch is written invisible; hide_render on any other object is a Blender-side
         # choice that does not reach the children, while visible="false" would hide the whole subtree
         instance.visible = not (bool(getattr(obj, "hide_render", False)) and obj.get(SWITCH_HIDDEN_PROPERTY) is not None)
-        objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
+        if not name_prefix:
+            objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
+            instance.interaction = read_interaction(obj, ir_scene.diagnostics)
 
         if obj.name in skinned_names:
             # Written as HAnim skin under its armature instead of a plain Shape.
@@ -1484,6 +1563,7 @@ def extract_scene(
                 local_matrix=local_matrix,
                 material_sink=register_material,
                 use_triangulate=use_triangulate,
+                diagnostics=ir_scene.diagnostics,
             )
             ir_scene.geometries.extend(skin_geometries)
             ir_scene.humanoids.append(humanoid)
@@ -1494,7 +1574,19 @@ def extract_scene(
             splats_name = obj.data.name
             if splats_name not in {splats.name for splats in ir_scene.splats}:
                 reader = extract_native_splats if obj.type == "POINTCLOUD" else extract_splats
-                ir_scene.splats.append(reader(obj.data, name=splats_name))
+                new_splats = reader(obj.data, name=splats_name)
+                if obj.get(SPLAT_GLB_PROPERTY) or obj.data.get(SPLAT_GLB_PROPERTY):
+                    # written as a KHR_gaussian_splatting glb beside the file and referenced by Inline: the Inline's
+                    # Transform carries the asset frame, like an imported Inline's does
+                    if splats_to_gltf_frame(new_splats, global_matrix):
+                        ir_scene.diagnostics.append(
+                            f"Splats {splats_name!r}: spherical harmonics above degree 0 are not written to the glb "
+                            "(view-dependent colour is lost; the X3D 4.1 GaussianSplats node keeps it).")
+                    new_splats.glb_name = f"{_safe_key(splats_name)}.splats.glb"
+                    glb_objects.add(splats_name)
+                ir_scene.splats.append(new_splats)
+            if splats_name in glb_objects:
+                instance.transform = _matrix_transform(local_matrix @ content_frame)
             instance.source_key = f"SPLATS:{splats_name}"
             instance.splats_name = splats_name
             ir_scene.object_names.append(obj.name)
@@ -1527,6 +1619,9 @@ def extract_scene(
             ir_scene.object_names.append(obj.name)
         elif obj.type == "CAMERA":
             instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene, distance_scale)
+            ir_scene.object_names.append(obj.name)
+        elif obj.type == "EMPTY" and getattr(obj, "instance_type", "NONE") == "COLLECTION" and obj.instance_collection is not None:
+            instance.collection_name = collection_instance(obj.instance_collection)
             ir_scene.object_names.append(obj.name)
         elif obj.type == "EMPTY":
             inline_url = obj.get(INLINE_URL_PROPERTY)
@@ -1567,6 +1662,20 @@ def extract_scene(
             frame_step=animation_step,
             armatures=armatures,
         )
+
+    # The viewpoint tour: cameras that carry x3d_tour_order, as Viewpoint poses in the exported frame.
+    def tour_transform(camera):
+        matrix = (global_matrix @ camera.matrix_world) if global_matrix is not None else camera.matrix_world
+        return _matrix_transform(matrix.normalized())
+
+    cameras = [obj for obj in exported if obj.type == "CAMERA"]
+    ir_scene.tour = read_tour(cameras, scene, tour_transform)
+    if ir_scene.tour is not None:
+        fields = {camera.name: _extract_viewpoint(camera, camera.matrix_world.__class__(), scene, distance_scale).field_of_view
+                  for camera in cameras}
+        for stop in ir_scene.tour.stops:
+            stop.field_of_view = fields.get(stop.name)
+    check_interactions(ir_scene, ir_scene.diagnostics)
 
     if use_animation and morph_sources:
         morph_cycle = _sample_shape_key_morphs(scene, depsgraph, morph_sources, geometries_by_key, frame_step=animation_step)

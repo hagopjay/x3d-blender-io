@@ -21,11 +21,15 @@ from xml.sax.saxutils import escape, quoteattr
 
 try:
     from .extract import display_colour
+    from .interaction import tour_timeline
     from .ir import IRMetadata, IRScene
+    from .splat_gltf import write_splat_glb
     from .splat_io import sh0_to_rgb
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import display_colour
+    from interaction import tour_timeline
     from ir import IRMetadata, IRScene
+    from splat_gltf import write_splat_glb
     from splat_io import sh0_to_rgb
 
 
@@ -562,8 +566,9 @@ def _subtree_hidden(instance):
 
 
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
-                  splats=None, version="4.0", look: _Look = _PLAIN_LOOK):
+                  splats=None, version="4.0", look: _Look = _PLAIN_LOOK, collections=None):
     humanoids = humanoids or {}
+    collections = collections or {}
     splats = splats or {}
     tx, ty, tz = instance.transform.translation
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
@@ -579,6 +584,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         f'rotation="{_fmt4((rx, ry, rz, ra))}" '
         f'scale="{_fmt3_length((sx, sy, sz))}"{visible_attr}>\n'
     ]
+    if instance.interaction is not None:
+        xml.append(_sensor_xml(instance, defs, indent + "  "))
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
     if not instance.visible and not subtree_hidden:
         shape_attrs += ' visible="false"'
@@ -604,20 +611,33 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     if instance.humanoid_name and instance.humanoid_name in humanoids:
         humanoid = humanoids[instance.humanoid_name]
         placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
+                                standard_joint_count=humanoid.standard_joint_count,
                                 skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes)
         xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir, look=look))
     if instance.inline is not None:
         inline_def = defs.get("inline", instance.object_name, "IN_")
         xml.append(f"{indent}  <Inline DEF=\"{inline_def}\" url='{_mfstring([instance.inline.url])}' />\n")
     if instance.splats_name and instance.splats_name in splats:
-        xml.append(_splats_xml(splats[instance.splats_name], defs, indent + "  ", version=version))
+        xml.append(_splats_xml(splats[instance.splats_name], defs, indent + "  ", version=version,
+                               output_dir=output_dir))
+    if instance.collection_name and instance.collection_name in collections:
+        group_def = defs.get("collection", instance.collection_name, "CO_")
+        if defs.first_use("collection", instance.collection_name):
+            xml.append(f'{indent}  <Group DEF="{group_def}">\n')
+            for member in collections[instance.collection_name]:
+                xml.append(_instance_xml(member, geometries, materials, defs, indent + "    ", output_dir=output_dir,
+                                         humanoids=humanoids, splats=splats, version=version, look=look,
+                                         collections=collections))
+            xml.append(f"{indent}  </Group>\n")
+        else:
+            xml.append(f'{indent}  <Group USE="{group_def}" />\n')
     if instance.light is not None:
         xml.append(_light_xml(instance.light, defs, indent + "  "))
     if instance.viewpoint is not None:
         xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
     for child in instance.children:
         xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids,
-                                 splats=splats, version=version, look=look))
+                                 splats=splats, version=version, look=look, collections=collections))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
 
@@ -628,7 +648,7 @@ def _joint_def(defs: _DefNames, humanoid_name, joint_name):
 
 def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children"):
     joint_def = _joint_def(defs, humanoid_name, joint.name)
-    attrs = [f'DEF="{joint_def}"', f"name={quoteattr(joint.name)}", f'center="{_fmt3(joint.center)}"']
+    attrs = [f'DEF="{joint_def}"', f"name={quoteattr(joint.hanim_name or joint.name)}", f'center="{_fmt3(joint.center)}"']
     if container_field != "children":
         attrs.append(f'containerField="{container_field}"')
     if joint.skin_coord_index:
@@ -643,11 +663,22 @@ def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field
     return "".join(xml)
 
 
+def _humanoid_info_attr(humanoid):
+    return f"info='{_humanoid_info(humanoid)}' " if humanoid.standard_joint_count else ""
+
+
+def _humanoid_info(humanoid):
+    total = sum(1 for _ in humanoid.iter_joints())
+    return _mfstring([f"{humanoid.standard_joint_count} of {total} joints carry standard H-Anim 2.0 names; the rest keep "
+                      "their Blender bone names", "exported by X3D Blender I/O"])
+
+
 def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK):
     humanoid_def = defs.get("humanoid", humanoid.name, "hanim_")
     tx = humanoid.transform
     xml = [
         f'{indent}<HAnimHumanoid DEF="{humanoid_def}" name={quoteattr(humanoid.name)} version="2.0" '
+        f"{_humanoid_info_attr(humanoid)}"
         f'skeletalConfiguration="BLENDER" '
         f'translation="{_fmt3_length(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
         f'scale="{_fmt3_length(tx.scale)}">\n'
@@ -679,13 +710,38 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
     return "".join(xml)
 
 
+# A TimeSensor that only a trigger should start: with the default startTime 0 and loop false, a browser sees a cycle that
+# ended long ago and sends fraction_changed 1 at load, which parks every targeted object (and the tour rig) at the END of
+# its animation (X_ITE 16.7.1 did exactly that). A startTime far in the future keeps it silent until a ROUTE sets it.
+_NEVER_STARTED = "1e+30"
+
+
+def _triggered_targets(ir_scene):
+    """Objects whose animation an authored trigger plays: they get a timer of their own instead of the scene's."""
+    return {instance.interaction.target for instance in ir_scene.iter_instances()
+            if instance.interaction is not None and instance.interaction.action == "animate"}
+
+
+def _trigger_timer_def(defs: _DefNames, target):
+    return defs.get("trigtimer", target, "TT_")
+
+
 def _animation_xml(ir_scene, defs: _DefNames, indent):
     morphs = [g for g in ir_scene.geometries if g.morph_keys and ("geometry", g.name) in defs.emitted]
     if not ir_scene.animations and not morphs:
         return ""
     cycle = ir_scene.cycle_interval or 1.0
+    triggered = _triggered_targets(ir_scene)
     timer_def = defs.get("timer", "SceneTimer", "")
-    xml = [f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(cycle)}" loop="true" />\n']
+    xml = []
+    free_running = bool(morphs) or any(
+        a.target_kind != "transform" or a.target not in triggered for a in ir_scene.animations)
+    if free_running:
+        xml.append(f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(cycle)}" loop="true" />\n')
+    for target in sorted(triggered):
+        if any(a.target == target and a.target_kind == "transform" for a in ir_scene.animations):
+            xml.append(f'{indent}<TimeSensor DEF="{_trigger_timer_def(defs, target)}" cycleInterval="{_fmt(cycle)}" '
+                       f'loop="false" startTime="{_NEVER_STARTED}" />\n')
     routes = []
     shared: dict[tuple, list] = {}  # geometries with the same keys and states share one CoordinateInterpolator
     for geometry in morphs:
@@ -711,6 +767,8 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
             target_def = defs.get("transform", animation.target, "OB_")
         keys = " ".join(_fmt(key) for key in animation.keys)
         safe_target = _safe_name(animation.target)
+        timer_def = (_trigger_timer_def(defs, animation.target)
+                     if animation.target_kind == "transform" and animation.target in triggered else defs.get("timer", "SceneTimer", ""))
         if animation.translations:
             node_def = f"PI_{safe_target}"
             xml.append(
@@ -740,6 +798,92 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
             f'{indent}<ROUTE fromNode="{from_node}" fromField="{from_field}" '
             f'toNode="{to_node}" toField="{to_field}" />\n'
         )
+    return "".join(xml)
+
+
+def _sensor_def(defs: _DefNames, instance):
+    prefix = "TS_" if instance.interaction.trigger == "click" else "PS_"
+    return defs.get("sensor", instance.object_name, prefix)
+
+
+def _sensor_xml(instance, defs: _DefNames, indent):
+    """The TouchSensor or ProximitySensor an object's x3d_trigger asks for, written inside its Transform."""
+    interaction = instance.interaction
+    description = quoteattr(f"{interaction.action} {interaction.target}".strip())
+    if interaction.trigger == "click":
+        return f'{indent}<TouchSensor DEF="{_sensor_def(defs, instance)}" description={description} />\n'
+    # the sensor sits inside the object's Transform, so the object's scale would scale the box: divide it back out so
+    # the box is 2 x radius in world units (rotation still turns it with the object)
+    size = " ".join(_fmt_short(2.0 * interaction.radius / max(abs(axis), 1e-6)) for axis in instance.transform.scale)
+    return f'{indent}<ProximitySensor DEF="{_sensor_def(defs, instance)}" center="0 0 0" size="{size}" />\n'
+
+
+def _tour_xml(tour, defs: _DefNames, indent):
+    """The tour rig (a Transform carrying one Viewpoint), its timer and interpolators, and their ROUTEs."""
+    keys, total = tour_timeline(tour)
+    rig_def = defs.get("transform", "TourRig", "")
+    view_def = defs.get("viewpoint", "TourView", "")
+    timer_def = defs.get("timer", "TourTimer", "")
+    first = tour.stops[0]
+    fov = f' fieldOfView="{_fmt(first.field_of_view)}"' if first.field_of_view is not None else ""
+    positions, rotations, key_text = [], [], " ".join(_fmt(key) for key in keys)
+    for stop in tour.stops:
+        positions += [_fmt3_length(stop.transform.translation)] * 2
+        rotations += [_fmt4(stop.transform.rotation_axis_angle)] * 2
+    loop = tour.loop or tour.autostart
+    start_attr = "" if tour.autostart else ' startTime="%s"' % _NEVER_STARTED
+    xml = [
+        f'{indent}<Transform DEF="{rig_def}" translation="{positions[0]}" rotation="{rotations[0]}">\n',
+        f'{indent}  <Viewpoint DEF="{view_def}" description="Tour"{fov} />\n',
+        f"{indent}</Transform>\n",
+        f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(max(total, 1e-3))}" loop="{"true" if loop else "false"}"'
+        f'{start_attr} />\n',
+        f'{indent}<PositionInterpolator DEF="PI_TourRig" key="{key_text}" keyValue="{" ".join(positions)}" />\n',
+        f'{indent}<OrientationInterpolator DEF="OI_TourRig" key="{key_text}" keyValue="{" ".join(rotations)}" />\n',
+    ]
+    routes = [
+        (timer_def, "fraction_changed", "PI_TourRig", "set_fraction"),
+        (timer_def, "fraction_changed", "OI_TourRig", "set_fraction"),
+        ("PI_TourRig", "value_changed", rig_def, "set_translation"),
+        ("OI_TourRig", "value_changed", rig_def, "set_rotation"),
+        (timer_def, "isActive", view_def, "set_bind"),
+    ]
+    return "".join(xml), routes
+
+
+def _interaction_xml(ir_scene, defs: _DefNames, indent):
+    """The tour and the ROUTEs from every authored sensor to what it fires (timers come from _animation_xml)."""
+    xml, routes = [], []
+    if ir_scene.tour is not None and ir_scene.tour.stops:
+        tour_text, tour_routes = _tour_xml(ir_scene.tour, defs, indent)
+        xml.append(tour_text)
+        routes += tour_routes
+    animated = {a.target for a in ir_scene.animations if a.target_kind == "transform"}
+    for instance in ir_scene.iter_instances():
+        interaction = instance.interaction
+        if interaction is None:
+            continue
+        sensor = _sensor_def(defs, instance)
+        click = interaction.trigger == "click"
+        if interaction.action == "animate" and interaction.target in animated:
+            routes.append((sensor, "touchTime" if click else "enterTime",
+                           _trigger_timer_def(defs, interaction.target), "set_startTime"))
+        elif interaction.action == "tour":
+            routes.append((sensor, "touchTime" if click else "enterTime",
+                           defs.get("timer", "TourTimer", ""), "set_startTime"))
+        elif interaction.action == "viewpoint":
+            view_def = defs.get("viewpoint", interaction.target, "CA_")
+            if click:
+                # a press binds the camera; the release must not unbind it, so only the true edge goes on
+                filter_def = defs.get("filter", instance.object_name, "BF_")
+                xml.append(f'{indent}<BooleanFilter DEF="{filter_def}" />\n')
+                routes.append((sensor, "isActive", filter_def, "set_boolean"))
+                routes.append((filter_def, "inputTrue", view_def, "set_bind"))
+            else:
+                routes.append((sensor, "isActive", view_def, "set_bind"))
+    for from_node, from_field, to_node, to_field in routes:
+        xml.append(f'{indent}<ROUTE fromNode="{from_node}" fromField="{from_field}" '
+                   f'toNode="{to_node}" toField="{to_field}" />\n')
     return "".join(xml)
 
 
@@ -780,9 +924,15 @@ def _fmt_exact(values, field: str, node: str) -> str:
     return " ".join(_fmt_float32(value) for value in flat)
 
 
-def _splats_xml(splats, defs: _DefNames, indent, *, version="4.0"):
-    """GaussianSplats node for X3D 4.1; a coloured PointSet for earlier versions."""
+def _splats_xml(splats, defs: _DefNames, indent, *, version="4.0", output_dir=None):
+    """GaussianSplats node for X3D 4.1; a coloured PointSet for earlier versions; an Inline of a
+    KHR_gaussian_splatting glb written beside the file when the object asked for one (any version)."""
     splats_def = defs.get("splats", splats.name, "GS_")
+    if splats.glb_name and output_dir:
+        if not defs.first_use("splatsglb", splats.name):
+            return f'{indent}<Inline USE="{splats_def}" />\n'
+        write_splat_glb(os.path.join(output_dir, splats.glb_name), splats)
+        return f"{indent}<Inline DEF=\"{splats_def}\" url='\"{escape(splats.glb_name)}\"' />\n"
     if version == "4.1":
         if not defs.first_use("splats", splats.name):
             return f'{indent}<GaussianSplats USE="{splats_def}" />\n'
@@ -898,6 +1048,12 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
             components["Shape"] = 2
         if any(shape.geometry_name not in geometries and shape.geometry_hint == "Circle2D" for shape in shapes):
             components["Geometry2D"] = 2
+        interaction = instance.interaction
+        if interaction is not None:
+            # X_ITE 16.7.1 ignores a TouchSensor in a file that does not declare its component
+            components["PointingDeviceSensor" if interaction.trigger == "click" else "EnvironmentalSensor"] = 1
+            if interaction.trigger == "click" and interaction.action == "viewpoint":
+                components["EventUtilities"] = 1
     return sorted(components.items())
 
 
@@ -1018,8 +1174,9 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     splats = ir_scene.splats_by_name()
     for instance in ir_scene.instances:
         write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids,
-                            splats=splats, version=version, look=look))
+                            splats=splats, version=version, look=look, collections=ir_scene.collections))
     write(_animation_xml(ir_scene, defs, "    "))
+    write(_interaction_xml(ir_scene, defs, "    "))
 
     write("  </Scene>\n")
     write("</X3D>\n")

@@ -55,6 +55,59 @@ viewport. `source/splat_io.py` reads and writes the reference 3DGS PLY layout an
 draft node mirrors. The draft text does not state the order; X_ITE 16.4.3 reads `x y z w`, and the same data written
 `w x y z` renders as streaks. Blender 5.3's native splat objects are not read yet (that API is still in alpha).
 
+### Interaction from Blender: click, proximity and camera tours (pure X3D, no Script)
+
+Custom properties on objects, cameras and the scene (or the **Properties → Object → X3D Interaction** panel, which sets them
+from presets) become sensors, timers and ROUTEs in the 4.0 export (turn **Animation** on):
+
+| Property | On | Effect |
+| --- | --- | --- |
+| `x3d_trigger` = `click` / `proximity` | object | a `TouchSensor` / `ProximitySensor` inside the object's Transform |
+| `x3d_action` = `animate` / `viewpoint` / `tour` | object | play the target's animation once; bind a camera (a `BooleanFilter` keeps the release from unbinding it); start the tour |
+| `x3d_target` | object | whose animation plays (default: itself), or which camera to bind |
+| `x3d_radius` | object | proximity box 2 × radius per side, in world units (default 3) |
+| `x3d_tour_order`, `x3d_tour_dwell` | camera | the camera is a tour stop, visited in order, resting `dwell` seconds (default 2) |
+| `x3d_tour_travel`, `x3d_tour_loop`, `x3d_tour_autostart` | scene | seconds between stops (default 3); repeat; start at load (implies repeat) |
+
+An object some trigger targets gets its own `TimeSensor` (loop false, `startTime="1e+30"` so a browser does not play it at
+load: X_ITE 16.7.1 parked such objects at the end of their animation) instead of the always-looping scene timer. A target
+with no animation, a missing camera or a bad value is dropped with a line in `<meta name="info">`. `tools/route_demo.py`
+builds a demo scene and `tools/route_demo_verify.cjs` drives it with real mouse events in headless X_ITE; the page is
+[Demo: Blender ROUTE interaction](https://hagopjay.github.io/x3d.demo/demos/blender-route/v1/).
+
+### Splats as a glTF file, referenced by Inline (`KHR_gaussian_splatting`)
+
+Khronos lists `KHR_gaussian_splatting` as ratified in the glTF extension registry (README on `main`, read 18 Nov 2026; the
+spec text says "complete and ratified"). Setting the custom property `x3d_splat_glb` on a splat mesh makes the 4.0 **or**
+4.1 export write the splats as `<name>.splats.glb` beside the X3D file (one POINTS primitive; `KHR_gaussian_splatting:ROTATION`
+x y z w, `:SCALE` and `:OPACITY` linear, `:SH_DEGREE_0_COEF_0`, colour space `srgb_rec709_display`) and an `Inline` in the
+object's Transform instead of the PointSet fallback or the draft node. Positions and orientations are rotated into glTF's
+Y-up frame and the Inline's Transform carries the way back, as for an imported Inline. Degree 0 only: higher
+spherical-harmonic degrees depend on the view direction and are dropped with a line in `<meta name="info">`. Same data
+through the 4.1 `GaussianSplats` node and through this Inline path draw the same picture in X_ITE 16.7.1 (Chromium 157,
+SwiftShader, 960×600, 400 splats: max difference 2/255, mean 0.003, numpy on RGB). Writer: `source/splat_gltf.py`.
+
+### HAnim joint names
+
+With the armature custom property `x3d_hanim_names` = `standard`, a bone that follows Mixamo (`mixamorig:LeftArm`), Rigify
+(`upper_arm.L`) or plain (`l_upper_arm`, `LeftForeArm`) naming is written as an `HAnimJoint` with the H-Anim 2.0 standard `name` (`l_shoulder`, `l_elbow`, `l_wrist`, `l_hip`, `l_knee`,
+`l_ankle`, `l_metatarsal`, `l_acromioclavicular`, the finger joints `l_index1` to `l_pinky3`, `humanoid_root`,
+`skullbase`, and the right-hand twins); a bone's `x3d_hanim_joint` custom property sets any joint name explicitly, with or without that switch (spine
+bones and the neck have no one-to-one joint in those rigs, so they keep their own name unless you set it). The `DEF` stays
+built from the Blender bone name, the `HAnimHumanoid` `info` says how many of its joints carry standard names, and two bones
+that claim one standard name are reported in `<meta name="info">`. Mapping table and rules: `source/hanim_names.py`.
+Without the switch joints keep their bone names, as before. Importing a file with standard names names the bones after them. Not claimed: LOA conformance (`loa` is not written).
+
+### Collection instances: one `Group DEF`, then `Group USE`
+
+An Empty that instances a collection exports as its Transform plus the collection's mesh-like objects, written once as
+`<Group DEF="CO_name">` in the collection's frame (its instance offset at the origin) and `<Group USE="CO_name"/>` for
+every further placement. Before this the content was dropped (72 placements: 14,877 bytes and no trees). Measured on
+`tools/instancing_demo.py`'s grove (60 trees, 12 huts, Blender 5.2.4): 134,377 bytes as collection instances, 180,036 as
+realised copies that share mesh data, 6,755,470 as realised single-user copies; gzip -9 33,127 / 36,138 / 1,701,044.
+Members are placed from their own transform channels, not `matrix_world`, which is stale for a collection kept out of the
+scene. Only mesh-like members (mesh, curve, surface, text) are written.
+
 ### X3D fields kept as custom properties
 
 Some X3D fields have no Blender setting. The importer keeps them as custom properties, and the X3D 4.0 and 4.1 export
