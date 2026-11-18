@@ -564,8 +564,9 @@ def _subtree_hidden(instance):
 
 
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
-                  splats=None, version="4.0", look: _Look = _PLAIN_LOOK):
+                  splats=None, version="4.0", look: _Look = _PLAIN_LOOK, collections=None):
     humanoids = humanoids or {}
+    collections = collections or {}
     splats = splats or {}
     tx, ty, tz = instance.transform.translation
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
@@ -615,13 +616,24 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(f"{indent}  <Inline DEF=\"{inline_def}\" url='{_mfstring([instance.inline.url])}' />\n")
     if instance.splats_name and instance.splats_name in splats:
         xml.append(_splats_xml(splats[instance.splats_name], defs, indent + "  ", version=version))
+    if instance.collection_name and instance.collection_name in collections:
+        group_def = defs.get("collection", instance.collection_name, "CO_")
+        if defs.first_use("collection", instance.collection_name):
+            xml.append(f'{indent}  <Group DEF="{group_def}">\n')
+            for member in collections[instance.collection_name]:
+                xml.append(_instance_xml(member, geometries, materials, defs, indent + "    ", output_dir=output_dir,
+                                         humanoids=humanoids, splats=splats, version=version, look=look,
+                                         collections=collections))
+            xml.append(f"{indent}  </Group>\n")
+        else:
+            xml.append(f'{indent}  <Group USE="{group_def}" />\n')
     if instance.light is not None:
         xml.append(_light_xml(instance.light, defs, indent + "  "))
     if instance.viewpoint is not None:
         xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
     for child in instance.children:
         xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids,
-                                 splats=splats, version=version, look=look))
+                                 splats=splats, version=version, look=look, collections=collections))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
 
@@ -1141,7 +1153,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     splats = ir_scene.splats_by_name()
     for instance in ir_scene.instances:
         write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids,
-                            splats=splats, version=version, look=look))
+                            splats=splats, version=version, look=look, collections=ir_scene.collections))
     write(_animation_xml(ir_scene, defs, "    "))
     write(_interaction_xml(ir_scene, defs, "    "))
 

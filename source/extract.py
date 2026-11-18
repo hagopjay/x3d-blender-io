@@ -825,6 +825,20 @@ def _sample_joint_animation(scene, armatures, frames, keys):
     return animations
 
 
+def static_world_matrix(obj):
+    """An object's world matrix from its own transform channels and its parents', not from ``matrix_world``.
+
+    ``matrix_world`` is only refreshed for objects in a view layer; a collection kept out of the scene as an asset
+    library holds whatever was last evaluated (identity for one built by script), so its members are placed from
+    ``matrix_basis`` and ``matrix_parent_inverse`` instead.
+    """
+    matrix = obj.matrix_basis.copy()
+    parent = obj.parent
+    if parent is None:
+        return matrix
+    return static_world_matrix(parent) @ obj.matrix_parent_inverse @ matrix
+
+
 def _matrix_transform(matrix) -> IRTransform:
     loc, rot, scale = matrix.decompose()
     axis, angle = rot.to_axis_angle()
@@ -1450,8 +1464,27 @@ def extract_scene(
     except (AttributeError, TypeError, ValueError):
         distance_scale = 1.0
 
-    def build_instance(obj, parent):
-        if use_hierarchy and parent is not None:
+    def collection_instance(collection):
+        """Extract a collection's mesh-like objects once, in the collection's frame; return its name."""
+        from mathutils import Matrix
+        name = collection.name
+        if name in ir_scene.collections:
+            return name
+        ir_scene.collections[name] = members = []        # registered first: a collection that instances itself ends
+        offset = Matrix.Translation(-collection.instance_offset)
+        for member in collection.all_objects:
+            if member.type not in MESH_LIKE_TYPES or member.name in skinned_names or is_lod_hidden(member):
+                continue
+            built = build_instance(member, None, local_override=offset @ static_world_matrix(member),
+                                   name_prefix=f"{name}.")
+            if built is not None:
+                members.append(built)
+        return name
+
+    def build_instance(obj, parent, local_override=None, name_prefix=""):
+        if local_override is not None:
+            local_matrix = local_override
+        elif use_hierarchy and parent is not None:
             local_matrix = inverted64(parent.matrix_world, parent.name) @ obj.matrix_world
             if parent.get(INLINE_URL_PROPERTY):
                 # the parent's Transform includes the asset frame; take it back out
@@ -1465,15 +1498,16 @@ def extract_scene(
 
         instance = IRInstance(
             source_key=f"{obj.type}:{obj.name}",
-            object_name=obj.name,
+            object_name=name_prefix + obj.name,
             object_type=obj.type,
             transform=_matrix_transform(local_matrix),
         )
         # only what the import hid for a Switch is written invisible; hide_render on any other object is a Blender-side
         # choice that does not reach the children, while visible="false" would hide the whole subtree
         instance.visible = not (bool(getattr(obj, "hide_render", False)) and obj.get(SWITCH_HIDDEN_PROPERTY) is not None)
-        objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
-        instance.interaction = read_interaction(obj, ir_scene.diagnostics)
+        if not name_prefix:
+            objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
+            instance.interaction = read_interaction(obj, ir_scene.diagnostics)
 
         if obj.name in skinned_names:
             # Written as HAnim skin under its armature instead of a plain Shape.
@@ -1530,6 +1564,9 @@ def extract_scene(
             ir_scene.object_names.append(obj.name)
         elif obj.type == "CAMERA":
             instance.viewpoint = _extract_viewpoint(obj, local_matrix.__class__(), scene, distance_scale)
+            ir_scene.object_names.append(obj.name)
+        elif obj.type == "EMPTY" and getattr(obj, "instance_type", "NONE") == "COLLECTION" and obj.instance_collection is not None:
+            instance.collection_name = collection_instance(obj.instance_collection)
             ir_scene.object_names.append(obj.name)
         elif obj.type == "EMPTY":
             inline_url = obj.get(INLINE_URL_PROPERTY)

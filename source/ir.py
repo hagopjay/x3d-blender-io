@@ -337,6 +337,9 @@ class IRInstance:
     visible: bool = True
     # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
     line_width: float | None = None
+    # Name of an IRScene.collections entry this Empty instances (Blender "Collection" instance); written as a Group that
+    # is DEF'd at its first use and USE'd after, so N linked copies cost N Transforms, not N copies of the content.
+    collection_name: str | None = None
     # The ROUTE interaction authored on this object (a sensor inside its Transform), if any.
     interaction: IRInteraction | None = None
 
@@ -408,6 +411,8 @@ class IRScene:
     splats: list[IRGaussianSplats] = field(default_factory=list)
     cycle_interval: float | None = None
     tour: IRTour | None = None
+    # Collection name -> its member instances in the collection's own frame (instance_offset at the origin).
+    collections: dict[str, list[IRInstance]] = field(default_factory=dict)
     background_color: tuple[float, float, float] | None = None
     # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
     background: IRBackground | None = None
@@ -420,8 +425,11 @@ class IRScene:
     headlight: bool | None = None
 
     def iter_instances(self):
-        """Depth-first walk over every instance, nested children included."""
+        """Depth-first walk over every instance, nested children included (the members of each instanced collection
+        included, once, however many times it is instanced)."""
         stack = list(reversed(self.instances))
+        for members in reversed(list(self.collections.values())):
+            stack = list(reversed(members)) + stack
         while stack:
             instance = stack.pop()
             yield instance
