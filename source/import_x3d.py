@@ -6766,7 +6766,165 @@ _EVENT_NODES = {"TouchSensor", "ProximitySensor", "VisibilitySensor", "PlaneSens
                 "IntegerTrigger", "IntegerSequencer", "TimeTrigger", "Script", "Switch"}
 
 
-def import_loss_records(all_nodes):
+_NEVER_STARTED = 1e29      # the exporter writes startTime 1e+30 for a timer only a trigger may start
+
+
+def _object_by_def(def_name):
+    import bpy
+    for obj in bpy.data.objects:
+        if obj.get("x3d_def") == def_name or obj.get("x3d_def_path") == def_name:
+            return obj
+    return None
+
+
+def _static_triple(transform, field, default):
+    values = transform.getFieldAsFloatTuple(field, None, ()) if transform is not None else None
+    return tuple(values[:3]) if values and len(values) >= 3 else default
+
+
+def _action_from_routes(sensor_def, route_attrs, defs, all_nodes):
+    """``[action, target]`` read off the ROUTEs a sensor starts, for a sensor that carries no description."""
+    for attrs in route_attrs:
+        if attrs["fromNode"] != sensor_def:
+            continue
+        if attrs["toField"] == "set_bind" and attrs["toNode"].startswith("CA_"):
+            return ["viewpoint", attrs["toNode"][3:]]
+        if attrs["toField"] == "set_boolean":                      # click: sensor -> BooleanFilter -> set_bind
+            for second in route_attrs:
+                if second["fromNode"] == attrs["toNode"] and second["toField"] == "set_bind" and second["toNode"].startswith("CA_"):
+                    return ["viewpoint", second["toNode"][3:]]
+        if attrs["toField"] == "set_startTime":
+            timer = attrs["toNode"]
+            for first in route_attrs:                              # timer -> interpolator -> Transform
+                if first["fromNode"] != timer:
+                    continue
+                for second in route_attrs:
+                    if second["fromNode"] == first["toNode"] and second["toField"] in ("set_translation", "set_rotation", "set_scale"):
+                        target = defs.get(second["toNode"])
+                        if target is None:
+                            continue
+                        has_view = any(getattr(n, "x3dNode", None) is not None and n.getSpec() == "Viewpoint" and a and a[-1] is target
+                                       for n, a in all_nodes)
+                        if has_view:
+                            return ["tour"]
+                        name = second["toNode"]
+                        return ["animate", name[3:] if name.startswith("OB_") else name]
+    return None
+
+
+def rebuild_interaction(all_nodes):
+    """Turn the exporter's sensor, timer and tour patterns back into the custom properties that author them.
+
+    Reads sensors by their parent Transform (``OB_<name>`` finds the object whose ``x3d_def`` it is), the action and
+    target from the sensor ``description`` ("animate Door", "viewpoint Overview", "tour"), the proximity radius from the
+    box size and the parent's scale, and the tour from the rig's interpolator keys. Returns the set of DEF names it
+    rebuilt so ``import_loss_records`` does not call them lost. A sensor without a parsable description is left alone and
+    recorded as a loss.
+    """
+    from math import dist
+    rebuilt = set()
+    routes = [n for n, _a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getSpec() == "ROUTE"]
+    route_attrs = [{k: _attribute_raw(r, k, "") for k in ("fromNode", "fromField", "toNode", "toField")} for r in routes]
+    defs = {n.getDefName(): n for n, _a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getDefName()}
+
+    for node, ancestry in all_nodes:
+        if getattr(node, "x3dNode", None) is None or node.getSpec() not in ("TouchSensor", "ProximitySensor"):
+            continue
+        spec, name = node.getSpec(), node.getDefName()
+        parent = ancestry[-1] if ancestry else None
+        if parent is None or parent.getSpec() != "Transform" or not parent.getDefName():
+            continue
+        parts = (_attribute_raw(node, "description", "") or "").split(None, 1)
+        if not parts or parts[0] not in ("animate", "viewpoint", "tour"):
+            parts = _action_from_routes(name, route_attrs, defs, all_nodes)   # a file written before the description
+        if not parts:
+            continue
+        obj = _object_by_def(parent.getDefName())
+        if obj is None:
+            continue
+        action, target = parts[0], (parts[1].strip() if len(parts) > 1 else "")
+        if action == "animate" and target:
+            found = _object_by_def("OB_" + target)
+            target = found.name if found is not None else target
+        elif action == "viewpoint" and target:
+            found = _object_by_def("CA_" + target)
+            target = found.name if found is not None else target
+        obj["x3d_trigger"] = "click" if spec == "TouchSensor" else "proximity"
+        obj["x3d_action"] = action
+        if target:
+            obj["x3d_target"] = target
+        if spec == "ProximitySensor":
+            size = node.getFieldAsFloatTuple("size", None, ())
+            if size and len(size) >= 3:
+                scale = _static_triple(parent, "scale", (1.0, 1.0, 1.0))
+                obj["x3d_radius"] = round(float(size[0]) * abs(scale[0]) / 2.0, 6)
+        rebuilt.add(name)
+        for attrs in route_attrs:                       # what this sensor fires: timers, filters, viewpoint binds
+            if attrs["fromNode"] == name:
+                rebuilt.add(attrs["toNode"])
+
+    # the tour: a Transform holding a Viewpoint, moved by a PositionInterpolator that a timer drives
+    for attrs in route_attrs:
+        if attrs["toField"] != "set_translation" or attrs["fromField"] != "value_changed":
+            continue
+        interp, rig = defs.get(attrs["fromNode"]), defs.get(attrs["toNode"])
+        if interp is None or rig is None or interp.getSpec() != "PositionInterpolator" or rig.getSpec() != "Transform":
+            continue
+        views = [n for n, a in all_nodes if getattr(n, "x3dNode", None) is not None and n.getSpec() == "Viewpoint"
+                 and a and a[-1] is rig]
+        timer_def = next((r["fromNode"] for r in route_attrs if r["toNode"] == attrs["fromNode"] and r["toField"] == "set_fraction"), None)
+        timer = defs.get(timer_def)
+        if not views or timer is None or timer.getSpec() != "TimeSensor":
+            continue
+        keys = [float(k) for k in interp.getFieldAsArray("key", 0, ())]
+        values = [tuple(float(v) for v in value) for value in interp.getFieldAsArray("keyValue", 3, ())]
+        if len(keys) < 2 or len(keys) % 2 or len(values) < len(keys):
+            continue
+        total = timer.getFieldAsFloat("cycleInterval", 1.0, ())
+        stops = []
+        for index in range(len(keys) // 2):
+            arrive, depart = keys[2 * index], keys[2 * index + 1]
+            best = None
+            for vnode, vanc in all_nodes:
+                if getattr(vnode, "x3dNode", None) is None or vnode.getSpec() != "Viewpoint" or not vanc or vanc[-1] is rig:
+                    continue
+                spot = _static_triple(vanc[-1], "translation", (0.0, 0.0, 0.0))
+                distance = dist(spot, values[2 * index])
+                if distance < 1e-3 and (best is None or distance < best[0]):
+                    best = (distance, vnode)
+            if best is None:
+                stops = []
+                break
+            stops.append((best[1], (depart - arrive) * total, arrive))
+        if not stops:
+            continue
+        import bpy
+        for order, (vnode, dwell, _arrive) in enumerate(stops, start=1):
+            camera = _object_by_def(vnode.getDefName())
+            if camera is not None:
+                camera["x3d_tour_order"] = order
+                camera["x3d_tour_dwell"] = round(dwell, 6)
+        gaps = [(stops[i + 1][2] - keys[2 * i + 1]) * total for i in range(len(stops) - 1)]
+        scene = bpy.context.scene
+        if gaps:
+            scene["x3d_tour_travel"] = round(sum(gaps) / len(gaps), 6)
+        autostart = timer.getFieldAsFloat("startTime", 0.0, ()) < _NEVER_STARTED
+        scene["x3d_tour_autostart"] = bool(autostart)
+        scene["x3d_tour_loop"] = bool(timer.getFieldAsBool("loop", False, ())) and not autostart
+        for view in views:                               # the rig's own camera is rebuilt from the tour, not kept as an object
+            rig_camera = _object_by_def(view.getDefName())
+            if rig_camera is not None:
+                action = rig_camera.animation_data.action if rig_camera.animation_data else None
+                bpy.data.objects.remove(rig_camera, do_unlink=True)
+                if action is not None and action.users == 0:
+                    bpy.data.actions.remove(action)
+        rebuilt.update({attrs["toNode"], attrs["fromNode"], timer_def})
+        rebuilt.update(r["toNode"] for r in route_attrs if r["fromNode"] == timer_def)
+        rebuilt.update(r["toNode"] for r in route_attrs if r["fromNode"] in rebuilt and r["toField"] in ("set_translation", "set_rotation", "set_bind"))
+    return rebuilt
+
+
+def import_loss_records(all_nodes, rebuilt=frozenset()):
     """What a file says that the importer cannot keep, as ``[{kind, node, detail}]``.
 
     The importer turns interpolator chains into keyframes and discards the rest of the event graph. Dropping it
@@ -6780,11 +6938,15 @@ def import_loss_records(all_nodes):
             continue
         spec = node.getSpec()
         name = node.getDefName() or ""
+        if name in rebuilt:
+            continue
         if spec in _EVENT_NODES and spec != "Switch":
             losses.append({"kind": "node", "node": f"{spec} {name}".strip(), "detail": "event node not imported"})
         elif spec == "TimeSensor":
             timers[name] = node
         elif spec == "ROUTE":
+            if _attribute_raw(node, "fromNode", "") in rebuilt or _attribute_raw(node, "toNode", "") in rebuilt:
+                continue
             pair = (_attribute_raw(node, "fromField", "").replace("_changed", ""),
                     _attribute_raw(node, "toField", "").replace("set_", ""))
             if pair not in _CONSUMED_ROUTES:
@@ -6792,6 +6954,8 @@ def import_loss_records(all_nodes):
                                                         f" -> {_attribute_raw(node, 'toNode', '')}.{_attribute_raw(node, 'toField', '')}",
                                "detail": "ROUTE not imported"})
     for name, node in timers.items():
+        if name in rebuilt:
+            continue
         loop = node.getFieldAsBool("loop", False, ())
         start = node.getFieldAsFloat("startTime", 0.0, ())
         if not loop or start != 0.0:
@@ -6804,7 +6968,7 @@ def import_loss_records(all_nodes):
 def report_import_losses(all_nodes, bpycontext):
     """Log the loss records, store them on the scene, and raise under ``X3D_IMPORT_STRICT=1``."""
     import json
-    losses = import_loss_records(all_nodes)
+    losses = import_loss_records(all_nodes, rebuild_interaction(all_nodes))
     if not losses:
         return losses
     for record in losses:

@@ -335,6 +335,10 @@ Every modern-path export is read back before it is called finished:
 * Any `nan` or `inf` token in an attribute is an error. The writers never produce one: NaN and infinite numbers in the scene are written as 0 and a warning says how many.
 * When the `x3d` Python package is installed, its field and range errors fail the export too. Set `X3D_EXPORT_VALIDATION=warn` to log them and export anyway.
 
+### Import keeps authored interaction
+
+Importing a file the exporter wrote rebuilds its click and proximity triggers (`x3d_trigger`, `x3d_action`, `x3d_target`, `x3d_radius` from the sensor `description` and box) and its camera tour (`x3d_tour_*` from the rig's keys), so export, import, export keeps the sensors, trigger ROUTEs and play-once timers. Anything else the importer cannot keep (other sensors, event utilities, unrelated ROUTEs, play-once timers it did not create) is logged, stored as JSON in `scene["x3d_import_losses"]`, and fails the import under `X3D_IMPORT_STRICT=1`. Known: imported cameras re-export with a doubled `CA_` prefix, and sampled constant channels re-export as extra interpolators.
+
 A failed check raises `ValueError` with the reasons, so a headless export exits non-zero. Tests: `tests/test_validate_strict.py`, `tests/test_export_hardening_bpy.py`.
 
 ## Upstream README

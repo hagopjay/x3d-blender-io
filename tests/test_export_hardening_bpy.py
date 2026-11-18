@@ -126,20 +126,68 @@ class ExportHardeningTests(unittest.TestCase):
         bpy.ops.wm.read_factory_settings(use_empty=True)
         return bpy.ops.import_scene.x3d(filepath=path)
 
+    def test_import_rebuilds_a_click_trigger_and_loses_nothing(self):
+        self.assertEqual(self._import_door(), {"FINISHED"})
+        handle = bpy.data.objects["Handle"]
+        self.assertEqual((handle["x3d_trigger"], handle["x3d_action"], handle["x3d_target"]), ("click", "animate", "Door"))
+        self.assertNotIn("x3d_import_losses", bpy.context.scene)
+        from xml.etree import ElementTree as ET
+        out = os.path.join(self.tmpdir, "again.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        root = ET.parse(out).getroot()
+        self.assertEqual(len(root.findall(".//TouchSensor")), 1)
+        routes = {(r.get("fromField"), r.get("toField")) for r in root.iter("ROUTE")}
+        self.assertIn(("touchTime", "set_startTime"), routes)
+        timers = [t for t in root.iter("TimeSensor") if t.get("loop") == "false"]
+        self.assertEqual([t.get("startTime") for t in timers], ["1e+30"])      # play-once, never started at load
+
+    def test_route_demo_round_trip_keeps_every_trigger_and_timer(self):
+        """export -> import -> export of the whole ROUTE demo: same sensors, same trigger routes, same timer intent."""
+        sys.path.insert(0, os.path.join(str(SOURCE_DIR.parent), "tools"))
+        import route_demo
+        from xml.etree import ElementTree as ET
+        route_demo.build()
+        first = os.path.join(self.tmpdir, "first.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=first, x3d_version="X3D40", use_selection=False, use_animation=True), {"FINISHED"})
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=first), {"FINISHED"})
+        self.assertNotIn("x3d_import_losses", bpy.context.scene)
+        second = os.path.join(self.tmpdir, "second.x3d")
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=second, x3d_version="X3D40", use_selection=False, use_animation=True), {"FINISHED"})
+
+        def summary(path):
+            root = ET.parse(path).getroot()
+            sensors = sorted(e.tag for e in root.iter() if e.tag in ("TouchSensor", "ProximitySensor"))
+            trigger_routes = sorted(r.get("fromField") for r in root.iter("ROUTE")
+                                    if r.get("fromField") in ("touchTime", "enterTime", "isActive"))
+            timers = sorted((t.get("loop"), t.get("startTime")) for t in root.iter("TimeSensor"))
+            return sensors, trigger_routes, timers, len(root.findall(".//BooleanFilter"))
+        self.assertEqual(summary(first)[0], ["ProximitySensor", "TouchSensor", "TouchSensor", "TouchSensor"])   # not vacuous
+        self.assertEqual(summary(second), summary(first))
+
     def test_import_records_what_it_cannot_keep(self):
         import json
-        self.assertEqual(self._import_door(), {"FINISHED"})
+        path = os.path.join(self.tmpdir, "keys.x3d")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(self.DOOR.replace("<TouchSensor DEF=\"Touch\"/>", "<KeySensor DEF=\"Keys\"/>")
+                         .replace('fromNode="Touch" fromField="touchTime"', 'fromNode="Keys" fromField="keyPress"'))
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
         losses = json.loads(bpy.context.scene["x3d_import_losses"])
         kinds = sorted((r["kind"], r["node"].split()[0]) for r in losses)
-        self.assertIn(("node", "TouchSensor"), kinds)
-        self.assertIn(("route", "Touch.touchTime"), kinds)
-        self.assertIn(("timer", "TimeSensor"), kinds)
+        self.assertIn(("node", "KeySensor"), kinds)
+        self.assertTrue(any(r["kind"] == "route" and r["node"].startswith("Keys.") for r in losses))
 
     def test_strict_import_fails_on_lost_behaviour(self):
+        path = os.path.join(self.tmpdir, "keys2.x3d")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(self.DOOR.replace("<TouchSensor DEF=\"Touch\"/>", "<KeySensor DEF=\"Keys\"/>")
+                         .replace('fromNode="Touch" fromField="touchTime"', 'fromNode="Keys" fromField="keyPress"'))
+        bpy.ops.wm.read_factory_settings(use_empty=True)
         os.environ["X3D_IMPORT_STRICT"] = "1"
         try:
             with self.assertRaises(Exception):
-                self._import_door()
+                bpy.ops.import_scene.x3d(filepath=path)
         finally:
             del os.environ["X3D_IMPORT_STRICT"]
 
