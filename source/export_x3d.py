@@ -736,7 +736,10 @@ def export(file,
             # and still get consistent reproducible outputs.
 
             is_col = mesh.vertex_colors.active
-            mesh_loops_col = mesh.vertex_colors.active.data if is_col else None
+            # Corner layers read once, in bulk: in Blender 5.x ``layer.data[i]`` costs time proportional to the layer's
+            # size, so reading it per corner made this writer quadratic (65,536 corners: 74 s; triangulated, 151 s).
+            mesh_loops_col = _bulk_tuples(mesh.vertex_colors.active.data, "color", 4) if is_col else None
+            mesh_loops_uv = _bulk_tuples(mesh.uv_layers.active.data, "uv", 2) if is_uv else None
 
             # Check if vertex colors can be exported in per-vertex mode.
             # Do we have just one color per vertex in every face that uses the vertex?
@@ -748,8 +751,8 @@ def export(file,
                         for lidx in p.loop_indices:
                             l = mesh_loops[lidx]
                             if vert_color[l.vertex_index] is None:
-                                vert_color[l.vertex_index] = mesh_loops_col[lidx].color[:]
-                            elif vert_color[l.vertex_index] != mesh_loops_col[lidx].color[:]:
+                                vert_color[l.vertex_index] = mesh_loops_col[lidx]
+                            elif vert_color[l.vertex_index] != mesh_loops_col[lidx]:
                                 return False, ()
 
                     return True, vert_color
@@ -821,8 +824,6 @@ def export(file,
                     ident = ident[:-1]
                     fw('%s</Appearance>\n' % ident)
 
-                    mesh_loops_uv = mesh.uv_layers.active.data if is_uv else None
-
                     # -- IndexedFaceSet or IndexedLineSet
                     if use_triangulate:
                         ident_step = ident + (' ' * (-len(ident) +
@@ -849,22 +850,22 @@ def export(file,
 
                             def vertex_key(lidx):
                                 return (
-                                    _tuple_from_rounded_iter(mesh_loops_uv[lidx].uv),
-                                    _tuple_from_rounded_iter(mesh_loops_col[lidx].color),
+                                    _tuple_from_rounded_iter(mesh_loops_uv[lidx]),
+                                    _tuple_from_rounded_iter(mesh_loops_col[lidx]),
                                 )
                         elif is_uv:
                             slot_uv = 0
 
                             def vertex_key(lidx):
                                 return (
-                                    _tuple_from_rounded_iter(mesh_loops_uv[lidx].uv),
+                                    _tuple_from_rounded_iter(mesh_loops_uv[lidx]),
                                 )
                         elif is_col:
                             slot_col = 0
 
                             def vertex_key(lidx):
                                 return (
-                                    _tuple_from_rounded_iter(mesh_loops_col[lidx].color),
+                                    _tuple_from_rounded_iter(mesh_loops_col[lidx]),
                                 )
                         else:
                             # ack, not especially efficient in this case
@@ -1032,7 +1033,7 @@ def export(file,
                             fw('%s<TextureCoordinate point="' % ident)
                             for i in polygons_group:
                                 for lidx in mesh_polygons[i].loop_indices:
-                                    fw('%.4f %.4f ' % mesh_loops_uv[lidx].uv[:])
+                                    fw('%.4f %.4f ' % mesh_loops_uv[lidx])
                             fw('" />\n')
 
                         if is_col:
@@ -1047,7 +1048,7 @@ def export(file,
                             else:  # Export as colors per face.
                                 # TODO: average them rather than using the first one!
                                 for i in polygons_group:
-                                    fw('%.3f %.3f %.3f %.3f ' % mesh_loops_col[mesh_polygons[i].loop_start].color[:])
+                                    fw('%.3f %.3f %.3f %.3f ' % mesh_loops_col[mesh_polygons[i].loop_start])
                             fw('" />\n')
 
                         # --- output vertexColors
@@ -1838,6 +1839,13 @@ def export(file,
 ##########################################################
 # Callbacks, needed before Main
 ##########################################################
+
+
+def _bulk_tuples(collection, prop, width):
+    """``[tuple(item.<prop>) for item in collection]`` with one ``foreach_get`` (same float values, linear time)."""
+    flat = [0.0] * (len(collection) * width)
+    collection.foreach_get(prop, flat)
+    return [tuple(flat[i:i + width]) for i in range(0, len(flat), width)]
 
 
 def gzip_open_utf8(filepath, mode):
