@@ -15,6 +15,7 @@ import os
 
 try:
     from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .hanim_names import HANIM_JOINT_PROPERTY, map_bones
     from .interaction import check_interactions, read_interaction, read_tour
     from .material import analyze_material
     from .matrix_safety import inverted64, scale_to_children_matrix
@@ -23,6 +24,7 @@ try:
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from hanim_names import HANIM_JOINT_PROPERTY, map_bones
     from interaction import check_interactions, read_interaction, read_tour
     from material import analyze_material
     from matrix_safety import inverted64, scale_to_children_matrix
@@ -696,12 +698,21 @@ def _skinned_meshes(armature, candidates):
     return skinned
 
 
-def _build_joint_tree(armature):
-    """Return (root IRJoints, {bone name: IRJoint}) from the armature's rest bones."""
+def _build_joint_tree(armature, diagnostics=None):
+    """Return (root IRJoints, {bone name: IRJoint}) from the armature's rest bones.
+
+    Bones that follow a known naming convention (or carry ``x3d_hanim_joint``) get their H-Anim 2.0 joint name in
+    ``hanim_name``.
+    """
     joints = {}
     for bone in armature.data.bones:
         head = bone.head_local
         joints[bone.name] = IRJoint(name=bone.name, center=(float(head[0]), float(head[1]), float(head[2])))
+    mapping, problems = map_bones((bone.name, bone.get(HANIM_JOINT_PROPERTY)) for bone in armature.data.bones)
+    for bone_name, joint_name in mapping.items():
+        joints[bone_name].hanim_name = joint_name
+    if diagnostics is not None:
+        diagnostics.extend(f"Armature {armature.name!r}: {problem}." for problem in problems)
     roots = []
     for bone in armature.data.bones:
         joint = joints[bone.name]
@@ -712,7 +723,7 @@ def _build_joint_tree(armature):
     return roots, joints
 
 
-def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_triangulate=False):
+def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_triangulate=False, diagnostics=None):
     """Build an HAnimHumanoid for ``armature`` with ``skinned`` meshes as skin.
 
     Skin vertices are expressed in armature space and pooled into one
@@ -720,9 +731,10 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
     its vertex group. ``material_sink(material)`` registers a material and
     returns its name. Returns (humanoid, skin geometries).
     """
-    roots, joints = _build_joint_tree(armature)
+    roots, joints = _build_joint_tree(armature, diagnostics)
     skin_geometries: list[IRMeshGeometry] = []
-    humanoid = IRHumanoid(name=armature.name, transform=_matrix_transform(local_matrix), root_joints=roots)
+    humanoid = IRHumanoid(name=armature.name, transform=_matrix_transform(local_matrix), root_joints=roots,
+                          standard_joint_count=sum(1 for joint in joints.values() if joint.hanim_name))
     skin_def = f"hanim_{_safe_key(armature.name)}_skinCoord"
     armature_inverse = inverted64(armature.matrix_world, armature.name)
 
@@ -1521,6 +1533,7 @@ def extract_scene(
                 local_matrix=local_matrix,
                 material_sink=register_material,
                 use_triangulate=use_triangulate,
+                diagnostics=ir_scene.diagnostics,
             )
             ir_scene.geometries.extend(skin_geometries)
             ir_scene.humanoids.append(humanoid)

@@ -367,6 +367,9 @@ class IRJoint:
 
     name: str
     center: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    # The H-Anim 2.0 standard joint name this bone is written under (hanim_names.py), else None: ``name`` is then written.
+    # ``name`` stays the Blender bone name: it keys the DEF, the vertex group and the animation target.
+    hanim_name: str | None = None
     children: list["IRJoint"] = field(default_factory=list)
     skin_coord_index: list[int] = field(default_factory=list)
     skin_coord_weight: list[float] = field(default_factory=list)
@@ -386,6 +389,8 @@ class IRHumanoid:
     root_joints: list[IRJoint] = field(default_factory=list)
     skin_coord: list[tuple[float, float, float]] = field(default_factory=list)
     skin_shapes: list[IRShape] = field(default_factory=list)
+    # Joints written under a standard H-Anim name, and the total (the HAnimHumanoid ``info`` says so).
+    standard_joint_count: int = 0
 
     def iter_joints(self):
         for root in self.root_joints:

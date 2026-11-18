@@ -609,6 +609,7 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     if instance.humanoid_name and instance.humanoid_name in humanoids:
         humanoid = humanoids[instance.humanoid_name]
         placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
+                                standard_joint_count=humanoid.standard_joint_count,
                                 skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes)
         xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir, look=look))
     if instance.inline is not None:
@@ -644,7 +645,7 @@ def _joint_def(defs: _DefNames, humanoid_name, joint_name):
 
 def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children"):
     joint_def = _joint_def(defs, humanoid_name, joint.name)
-    attrs = [f'DEF="{joint_def}"', f"name={quoteattr(joint.name)}", f'center="{_fmt3(joint.center)}"']
+    attrs = [f'DEF="{joint_def}"', f"name={quoteattr(joint.hanim_name or joint.name)}", f'center="{_fmt3(joint.center)}"']
     if container_field != "children":
         attrs.append(f'containerField="{container_field}"')
     if joint.skin_coord_index:
@@ -659,11 +660,18 @@ def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field
     return "".join(xml)
 
 
+def _humanoid_info(humanoid):
+    total = sum(1 for _ in humanoid.iter_joints())
+    return _mfstring([f"{humanoid.standard_joint_count} of {total} joints carry standard H-Anim 2.0 names; the rest keep "
+                      "their Blender bone names", "exported by X3D Blender I/O"])
+
+
 def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK):
     humanoid_def = defs.get("humanoid", humanoid.name, "hanim_")
     tx = humanoid.transform
     xml = [
         f'{indent}<HAnimHumanoid DEF="{humanoid_def}" name={quoteattr(humanoid.name)} version="2.0" '
+        f"info='{_humanoid_info(humanoid)}' "
         f'skeletalConfiguration="BLENDER" '
         f'translation="{_fmt3_length(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
         f'scale="{_fmt3_length(tx.scale)}">\n'
