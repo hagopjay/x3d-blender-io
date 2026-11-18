@@ -6759,6 +6759,66 @@ def _import_coordinate_morphs(morphs, timers_for_interp, defDict, scene, fps, fr
     return last_frame
 
 
+_CONSUMED_ROUTES = {("fraction", "fraction"), ("value", "translation"), ("value", "rotation"),
+                    ("value", "scale"), ("value", "point")}
+_EVENT_NODES = {"TouchSensor", "ProximitySensor", "VisibilitySensor", "PlaneSensor", "CylinderSensor", "SphereSensor",
+                "KeySensor", "StringSensor", "BooleanFilter", "BooleanToggle", "BooleanTrigger", "BooleanSequencer",
+                "IntegerTrigger", "IntegerSequencer", "TimeTrigger", "Script", "Switch"}
+
+
+def import_loss_records(all_nodes):
+    """What a file says that the importer cannot keep, as ``[{kind, node, detail}]``.
+
+    The importer turns interpolator chains into keyframes and discards the rest of the event graph. Dropping it
+    silently let export, import, export turn a click-to-open door into a different scene that still validated, so every
+    sensor, event utility, unconsumed ROUTE and timer whose start or loop intent is not kept is listed here.
+    """
+    losses = []
+    timers = {}
+    for node, _ancestry in all_nodes:
+        if getattr(node, "x3dNode", None) is None:
+            continue
+        spec = node.getSpec()
+        name = node.getDefName() or ""
+        if spec in _EVENT_NODES and spec != "Switch":
+            losses.append({"kind": "node", "node": f"{spec} {name}".strip(), "detail": "event node not imported"})
+        elif spec == "TimeSensor":
+            timers[name] = node
+        elif spec == "ROUTE":
+            pair = (_attribute_raw(node, "fromField", "").replace("_changed", ""),
+                    _attribute_raw(node, "toField", "").replace("set_", ""))
+            if pair not in _CONSUMED_ROUTES:
+                losses.append({"kind": "route", "node": f"{_attribute_raw(node, 'fromNode', '')}.{_attribute_raw(node, 'fromField', '')}"
+                                                        f" -> {_attribute_raw(node, 'toNode', '')}.{_attribute_raw(node, 'toField', '')}",
+                               "detail": "ROUTE not imported"})
+    for name, node in timers.items():
+        loop = node.getFieldAsBool("loop", False, ())
+        start = node.getFieldAsFloat("startTime", 0.0, ())
+        if not loop or start != 0.0:
+            losses.append({"kind": "timer", "node": f"TimeSensor {name}".strip(),
+                           "detail": f"loop={str(loop).lower()} startTime={start:g}: play-once or delayed start is not kept "
+                                     "(the animation is keyed from frame 1 and re-exported as a looping SceneTimer)"})
+    return losses
+
+
+def report_import_losses(all_nodes, bpycontext):
+    """Log the loss records, store them on the scene, and raise under ``X3D_IMPORT_STRICT=1``."""
+    import json
+    losses = import_loss_records(all_nodes)
+    if not losses:
+        return losses
+    for record in losses:
+        logger.warning("X3D import loss: %s %s: %s", record["kind"], record["node"], record["detail"])
+    try:
+        bpycontext.scene["x3d_import_losses"] = json.dumps(losses)
+    except Exception:  # pragma: no cover - a scene that cannot hold a property
+        pass
+    if os.environ.get("X3D_IMPORT_STRICT", "").lower() in ("1", "true", "yes"):
+        raise ValueError(f"X3D import lost {len(losses)} behaviour record(s) (X3D_IMPORT_STRICT=1): "
+                         + "; ".join(f"{r['kind']} {r['node']}" for r in losses[:5]))
+    return losses
+
+
 def importRoutesXML(all_nodes, global_matrix, bpycontext):
     """Turn XML <ROUTE> chains into keyframes on the objects under animated Transforms.
 
@@ -7400,6 +7460,7 @@ def load_web3d(
         importRoutesXML(all_nodes, global_matrix, bpycontext)
     except Exception as exc:  # animation must never break a geometry import
         logger.error("XML ROUTE animation import failed: %s", exc, exc_info=True)
+    report_import_losses(all_nodes, bpycontext)
 
     # Switch: every child is imported, so nothing is lost on the way back out, but only the chosen one is shown; the others
     # are hidden in the viewport and the render, as an X3D browser draws them

@@ -33,12 +33,32 @@ class StrictValidatorTests(unittest.TestCase):
     def test_comments_and_text_are_ignored(self):
         self.assertTrue(validate_xml_text(GOOD.replace("<Scene>", "<Scene><!-- note -->")).valid)
 
-    def test_nan_and_infinity_tokens_are_errors(self):
-        for token in ("nan", "inf", "-inf", "NaN", "Infinity"):
+    def test_nan_and_infinity_in_a_real_field_are_errors(self):
+        for token in ("nan", "inf", "-inf", "NaN", "Infinity", "1e999"):
             doc = GOOD.replace("<Shape>", f'<Transform translation="1 {token} 0"><Shape>').replace("</Shape>", "</Shape></Transform>")
             result = validate_xml_text(doc)
             self.assertFalse(result.valid, token)
-            self.assertIn("Non-finite number", result.errors[0])
+            self.assertIn("<Transform translation>", result.errors[0])
+
+    def test_legal_strings_that_look_like_numbers_pass(self):
+        doc = ('<X3D version="4.0"><head><meta name="title" content="NaN"/></head><Scene>'
+               '<WorldInfo title="Infinity" info=\'"inf" "nan"\'/><Transform DEF="inf"><Shape DEF="NaN"><Box/></Shape></Transform></Scene></X3D>')
+        self.assertEqual(validate_xml_text(doc).errors, [])
+
+    def test_boolean_field_must_be_true_or_false(self):
+        doc = GOOD.replace("<Box/>", '<Box solid="maybe"/>')
+        result = validate_xml_text(doc)
+        self.assertFalse(result.valid)
+        self.assertIn("<Box solid>", result.errors[0])
+        self.assertTrue(validate_xml_text(GOOD.replace("<Box/>", '<Box solid="false"/>')).valid)
+
+    def test_integer_field_refuses_fractions(self):
+        base = '<X3D version="4.0"><Scene><IntegerSequencer key="0 1" keyValue="%s"/></Scene></X3D>'
+        self.assertFalse(validate_xml_text(base % "1.5 2").valid)
+        self.assertTrue(validate_xml_text(base % "1 0x10 -3").valid)
+
+    def test_use_references_are_not_field_checked(self):
+        self.assertTrue(validate_xml_text(GOOD.replace("<Box/>", '<Box DEF="B"/><Box USE="B"/>')).valid)
 
     def test_compressed_file_is_validated_not_skipped(self):
         with tempfile.TemporaryDirectory() as folder:
