@@ -11,6 +11,7 @@ duplicated.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 import re
@@ -75,28 +76,47 @@ class _DefNames:
         return True
 
 
+_NONFINITE = {"count": 0}
+
+
+def _finite(value) -> float:
+    """``value`` as a float; NaN and infinity become 0 (X3D has no such literal, and "nan" makes the file invalid).
+    The count is read by ``nonfinite_count`` so the exporter can warn that data was replaced."""
+    value = float(value)
+    if value != value or value in (float("inf"), float("-inf")):
+        _NONFINITE["count"] += 1
+        return 0.0
+    return value
+
+
+def nonfinite_count() -> int:
+    """How many NaN or infinite numbers were written as 0 since the process started."""
+    return _NONFINITE["count"]
+
+
 def _fmt(value: float) -> str:
-    return "%.6f" % value
+    return "%.6f" % _finite(value)
 
 
 def _fmt_short(value: float) -> str:
     """Six decimals with the trailing zeros dropped: the interpolator arrays dominate an animated file's size."""
-    text = ("%.6f" % value).rstrip("0").rstrip(".")
+    text = ("%.6f" % _finite(value)).rstrip("0").rstrip(".")
     return "0" if text in ("", "-0") else text
 
 
 def _fmt2(values):
-    return "%.6f %.6f" % tuple(values[:2])
+    return "%.6f %.6f" % tuple(_finite(v) for v in values[:2])
 
 
 def _fmt3(values):
-    return "%.6f %.6f %.6f" % tuple(values[:3])
+    return "%.6f %.6f %.6f" % tuple(_finite(v) for v in values[:3])
 
 
 def _fmt_length(value: float) -> str:
     """A translation or scale component: six decimals as before, but significant digits below 1e-3, where six
     decimals kept too few digits or printed 0 (a scale of 1.057e-16, one unit = one light-year, became
     "0.000000"; a molecule built in metres lost every atom position)."""
+    value = _finite(value)
     if value != 0.0 and abs(value) < 1e-3:
         return "%.9g" % value
     return "%.6f" % value
@@ -122,7 +142,7 @@ def _sfcolor(values):
 
 
 def _fmt4(values):
-    return "%.6f %.6f %.6f %.6f" % tuple(values[:4])
+    return "%.6f %.6f %.6f %.6f" % tuple(_finite(v) for v in values[:4])
 
 
 def _unit_rgba(values):
@@ -899,7 +919,7 @@ def _float32(value: float) -> float:
 
 def _fmt_float32(value: float) -> str:
     """Shortest ``%g`` text (6 to 9 significant digits) that reads back as the same float32."""
-    target = _float32(value)
+    target = _float32(_finite(value))
     for digits in (6, 7, 8):
         text = "%.*g" % (digits, target)
         if _float32(float(text)) == target:
@@ -1124,6 +1144,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     """
     if version not in {"4.0", "4.1"}:
         raise ValueError(f"Unsupported X3D version for the modern writer: {version!r}")
+    nonfinite_before = nonfinite_count()
     ir_scene = with_display_colours(ir_scene, colour_space)
     look = _Look(classic=ir_scene.material_model == "classic", colour_space=colour_space,
                  forced=ir_scene.material_model_forced)
@@ -1180,3 +1201,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
 
     write("  </Scene>\n")
     write("</X3D>\n")
+    replaced = nonfinite_count() - nonfinite_before
+    if replaced:
+        logging.getLogger(__name__).warning(
+            "%d NaN or infinite number(s) in the scene were written as 0 (X3D has no such literal)", replaced)

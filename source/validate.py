@@ -4,10 +4,18 @@
 
 from __future__ import annotations
 
+import gzip
 import keyword
 from dataclasses import dataclass, field
 from xml.etree.ElementTree import ParseError
 from xml.etree import ElementTree as ET
+
+try:
+    from .x3d_nodes import KNOWN_ELEMENTS
+except ImportError:  # tests and tools import the source folder as top-level modules
+    from x3d_nodes import KNOWN_ELEMENTS
+
+_GZIP_MAGIC = b"\x1f\x8b"
 
 
 @dataclass(slots=True)
@@ -17,10 +25,20 @@ class ValidationResult:
     warnings: list[str] = field(default_factory=list)
 
 
+def _parse_file(filepath: str) -> ET.ElementTree:
+    """Parse an .x3d file, reading a gzip-compressed one (x3dz) transparently by its magic bytes."""
+    with open(filepath, "rb") as handle:
+        head = handle.read(2)
+    if head == _GZIP_MAGIC:
+        with gzip.open(filepath, "rb") as handle:
+            return ET.ElementTree(ET.fromstring(handle.read()))
+    return ET.parse(filepath)
+
+
 def validate_xml_file(filepath: str) -> ValidationResult:
     try:
-        tree = ET.parse(filepath)
-    except ParseError as exc:
+        tree = _parse_file(filepath)
+    except (ParseError, OSError, EOFError, gzip.BadGzipFile) as exc:
         return ValidationResult(valid=False, errors=[f"XML parse error: {exc}"])
 
     return validate_xml_tree(tree)
@@ -48,7 +66,36 @@ def validate_xml_tree(tree: ET.ElementTree) -> ValidationResult:
     if root.find("Scene") is None:
         warnings.append("No Scene element found.")
 
-    return ValidationResult(valid=True, warnings=warnings)
+    errors = unknown_element_errors(root) + nonfinite_number_errors(root)
+    return ValidationResult(valid=not errors, errors=errors, warnings=warnings)
+
+
+_NONFINITE_TOKENS = {"nan", "inf", "-inf", "+inf", "infinity", "-infinity", "+nan", "-nan"}
+
+
+def nonfinite_number_errors(root) -> list[str]:
+    """One error per element name carrying a NaN or infinity token in an attribute: X3D has no such literal."""
+    seen: dict[str, int] = {}
+    for element in root.iter():
+        if not isinstance(element.tag, str):
+            continue
+        for value in element.attrib.values():
+            if any(token.lower() in _NONFINITE_TOKENS for token in value.replace(",", " ").split()):
+                seen[element.tag] = seen.get(element.tag, 0) + 1
+                break
+    return [f"Non-finite number (NaN or infinity) in <{tag}> ({count}x)" for tag, count in sorted(seen.items())]
+
+
+def unknown_element_errors(root) -> list[str]:
+    """One error per distinct element name that is not an X3D node or structural element (``<Banana>``)."""
+    seen: dict[str, int] = {}
+    for element in root.iter():
+        tag = element.tag
+        if not isinstance(tag, str):  # comments and processing instructions
+            continue
+        if tag not in KNOWN_ELEMENTS:
+            seen[tag] = seen.get(tag, 0) + 1
+    return [f"Unknown X3D element <{tag}> ({count}x)" for tag, count in sorted(seen.items())]
 
 
 def validate_with_x3d_py(filepath: str) -> ValidationResult | None:
@@ -72,8 +119,8 @@ def validate_with_x3d_py(filepath: str) -> ValidationResult | None:
     except Exception:  # pragma: no cover
         return None
     try:
-        tree = ET.parse(filepath)
-    except ParseError as exc:
+        tree = _parse_file(filepath)
+    except (ParseError, OSError, EOFError, gzip.BadGzipFile) as exc:
         return ValidationResult(valid=False, errors=[f"XML parse error: {exc}"])
     return validate_tree_with_x3d_py(tree.getroot(), x3d_module)
 

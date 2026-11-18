@@ -327,6 +327,16 @@ validates, and reimports. Verified on Blender 5.2 (`bpy` wheel). Blender 4.2 is 
 The legacy exporter is untouched; `export_pipeline.py` chooses the writer from the version option.
 Planning notes live in `docs/planning/`.
 
+### Export validation (strict by default)
+
+Every modern-path export is read back before it is called finished:
+
+* The XML must parse (a compressed `.x3dz` is read through gzip, not skipped), the root and version must be valid, and every element must be an X3D node or structural element. An invented element such as `<Banana>` is an error (`source/x3d_nodes.py`, generated from x3d.py 4.0.65.8).
+* Any `nan` or `inf` token in an attribute is an error. The writers never produce one: NaN and infinite numbers in the scene are written as 0 and a warning says how many.
+* When the `x3d` Python package is installed, its field and range errors fail the export too. Set `X3D_EXPORT_VALIDATION=warn` to log them and export anyway.
+
+A failed check raises `ValueError` with the reasons, so a headless export exits non-zero. Tests: `tests/test_validate_strict.py`, `tests/test_export_hardening_bpy.py`.
+
 ## Upstream README
 
 
