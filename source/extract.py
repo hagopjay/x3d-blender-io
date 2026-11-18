@@ -1523,6 +1523,61 @@ def extract_scene(
                 members.append(built)
         return name
 
+    instance_shapes: dict[str, list[IRShape]] = {}
+
+    def geometry_instances(obj, name_prefix):
+        """Child instances for what ``obj``'s modifiers instance (Geometry Nodes Instance on Points, ...).
+
+        The evaluated mesh of such an object has no faces: the instances are separate entries of the depsgraph,
+        each an evaluated object valid only while the iteration is on it, so its geometry is extracted there. Each
+        distinct instanced mesh is written once (keyed by its data) and USE'd by the other instances."""
+        from types import SimpleNamespace
+        world_inverse = inverted64(obj.matrix_world, obj.name)
+        keys: dict[int, str] = {}
+        children: list[IRInstance] = []
+        skipped = 0
+        for item in depsgraph.object_instances:
+            if not item.is_instance or item.parent is None or item.parent.original != obj:
+                continue
+            source = item.object
+            if source.type != "MESH" or source.data is None:
+                skipped += 1
+                continue
+            pointer = source.data.as_pointer()
+            key = keys.get(pointer)
+            if key is None:
+                key = keys[pointer] = f"{name_prefix}{obj.name}.instance{len(keys)}"
+                mesh = source.data
+                slots = list(source.material_slots) or [SimpleNamespace(material=m) for m in mesh.materials]
+                if use_triangulate and hasattr(mesh, "calc_loop_triangles"):
+                    mesh.calc_loop_triangles()
+                geometries = extract_mesh_geometries(mesh, name=key, material_slots=slots,
+                                                     use_triangulate=use_triangulate, use_normals=use_normals)
+                geometries_by_key[key] = geometries
+                ir_scene.geometries.extend(geometries)
+                shapes = []
+                for geometry in geometries:
+                    material = slots[geometry.material_slot].material if geometry.material_slot < len(slots) else None
+                    shapes.append(IRShape(geometry_name=geometry.name, material_name=register_material(material)))
+                instance_shapes[key] = shapes
+            shapes = instance_shapes[key]
+            child = IRInstance(
+                source_key=f"INSTANCE:{key}",
+                object_name=f"{name_prefix}{obj.name}.instance{len(children)}",
+                object_type="MESH",
+                transform=_matrix_transform(world_inverse @ item.matrix_world.copy()),
+                shapes=list(shapes),
+                cast_shadow=bool(getattr(obj, "visible_shadow", True)),
+            )
+            if shapes:
+                child.geometry_name, child.material_name = shapes[0].geometry_name, shapes[0].material_name
+            else:
+                child.no_faces = True
+            children.append(child)
+        if skipped:
+            ir_scene.diagnostics.append(f"Object {obj.name!r}: {skipped} instance(s) of non-mesh data were not written.")
+        return children
+
     def build_instance(obj, parent, local_override=None, name_prefix=""):
         if local_override is not None:
             local_matrix = local_override
@@ -1597,12 +1652,20 @@ def extract_scene(
             instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
             instance.metadata = object_metadata(obj.get(METADATA_PROPERTY))
             instance.line_width = _line_width(obj)
+            # Geometry Nodes (and particle) instances; vertex/face instancing instances child objects, which are
+            # written as objects of their own
+            # (only for meshes: a curve, surface or text object's own evaluated mesh is listed as an instance of it, and
+            # that mesh is already written above)
+            if (use_mesh_modifiers and depsgraph is not None and obj.type == "MESH"
+                    and getattr(obj, "instance_type", "NONE") not in {"VERTS", "FACES"}):
+                instance.children.extend(geometry_instances(obj, name_prefix))
             if shapes:
                 instance.geometry_name = shapes[0].geometry_name
                 instance.material_name = shapes[0].material_name
             else:
                 instance.no_faces = True
-                ir_scene.diagnostics.append(f"Object {obj.name!r} has no exportable faces.")
+                if not instance.children:
+                    ir_scene.diagnostics.append(f"Object {obj.name!r} has no exportable faces.")
             ir_scene.object_names.append(obj.name)
         elif obj.type == "LIGHT":
             # Light values are local to the object's Transform, which carries the matrix.

@@ -1661,7 +1661,7 @@ def _gn_instances(ctx):
         case("gn.instances", "FIDELITY", "Un-realised Geometry Nodes instances are exported",
              "'Instance on Points' without 'Realize Instances' shows 16 cubes in Blender, but the evaluated mesh contains no instances, "
              "so nothing is written.  Expected: 96 faces (16 cubes x 6) or 16 USE references.",
-             chk("mesh", facts={"obj": "Z09_gn_instances", "faces": 96}))
+             chk("mesh", facts={"obj": "Z09_gn_instances", "faces": 96}, subtree=True))
     except Exception as exc:  # API differences between Blender versions
         log(f"Geometry-nodes cases skipped: {exc!r}")
 
