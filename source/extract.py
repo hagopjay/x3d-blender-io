@@ -18,7 +18,7 @@ try:
     from .hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from .interaction import check_interactions, read_interaction, read_tour
     from .material import analyze_material
-    from .matrix_safety import inverted64, scale_to_children_matrix
+    from .matrix_safety import axis_scales, inverted64, scale_to_children_matrix
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
@@ -27,7 +27,7 @@ except ImportError:  # pragma: no cover - standalone test fallback
     from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from interaction import check_interactions, read_interaction, read_tour
     from material import analyze_material
-    from matrix_safety import inverted64, scale_to_children_matrix
+    from matrix_safety import axis_scales, inverted64, scale_to_children_matrix
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
@@ -880,8 +880,41 @@ def static_world_matrix(obj):
     return static_world_matrix(parent) @ obj.matrix_parent_inverse @ matrix
 
 
+# Matrix.decompose() squares the axis lengths in float32: beyond about 1e19 (or below about 1e-19) the square overflows
+# (or underflows), the scale comes out inf or 0 and the rotation is wrong. Outside this range decompose in float64.
+_DECOMPOSE_FLOAT32_LIMIT = 1e15
+
+
+def _decompose64(matrix):
+    """``Matrix.decompose()`` computed in float64, with the same sign convention (a mirror negates all three scales).
+
+    An axis of length 0 has no direction: it is rebuilt from the other two, so the rotation stays orthonormal."""
+    import numpy as np
+    from mathutils import Matrix, Quaternion, Vector
+
+    values = np.array(matrix, dtype=np.float64)
+    linear = values[:3, :3]
+    scale = np.linalg.norm(linear, axis=0)
+    translation = Vector(values[:3, 3].tolist())
+    columns = [linear[:, i] / scale[i] if scale[i] > 0.0 else None for i in range(3)]
+    for i in range(3):
+        if columns[i] is None:
+            a, b = columns[(i + 1) % 3], columns[(i + 2) % 3]
+            if a is None or b is None:  # two axes of length 0: no rotation can be recovered
+                return translation, Quaternion(), Vector(scale.tolist())
+            columns[i] = np.cross(a, b)
+            columns[i] /= np.linalg.norm(columns[i])
+    rotation = np.stack(columns, axis=1)
+    if np.linalg.det(rotation) < 0.0:
+        rotation, scale = -rotation, -scale
+    return translation, Matrix(rotation.tolist()).to_quaternion(), Vector(scale.tolist())
+
+
 def _matrix_transform(matrix) -> IRTransform:
-    loc, rot, scale = matrix.decompose()
+    if any(s > _DECOMPOSE_FLOAT32_LIMIT or 0.0 < s < 1.0 / _DECOMPOSE_FLOAT32_LIMIT for s in axis_scales(matrix)):
+        loc, rot, scale = _decompose64(matrix)
+    else:
+        loc, rot, scale = matrix.decompose()
     axis, angle = rot.to_axis_angle()
     if abs(angle) < 1e-9:
         axis = (0.0, 0.0, 1.0)
