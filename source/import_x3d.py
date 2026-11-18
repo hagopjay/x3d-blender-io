@@ -6793,6 +6793,34 @@ def _route_tuple(attrs):
     return (attrs["fromNode"], attrs["fromField"], attrs["toNode"], attrs["toField"])
 
 
+def _timer_problems(timer):
+    """Why a TimeSensor is not the exporter's trigger-only timer (play once, never started at load, enabled)."""
+    real = timer.getRealNode()
+    names = {attr.name: attr.value for attr in real.x3dNode.attributes.values()} if hasattr(real.x3dNode, "attributes") else {}
+    problems = []
+    for name, value in names.items():
+        if name in ("DEF", "cycleInterval", "containerField"):
+            continue
+        if name == "loop":
+            if str(value).strip().lower() == "true":
+                problems.append("loop=true")
+        elif name == "enabled":
+            if str(value).strip().lower() != "true":
+                problems.append(f"enabled={value}")
+        elif name == "startTime":
+            continue
+        else:
+            problems.append(f"{name}={value}")
+    if timer.getFieldAsFloat("startTime", 0.0, ()) < _NEVER_STARTED:
+        problems.append("starts at load (startTime below 1e+29)")
+    return problems
+
+
+# the exact event fields each exporter pattern routes from (isOver is hover, isActive is press; touchTime is a click)
+_START_FIELD = {"TouchSensor": "touchTime", "ProximitySensor": "enterTime"}
+_BIND_FIELD = {"TouchSensor": "isActive", "ProximitySensor": "isActive"}
+
+
 def _timer_chain(timer_def, route_attrs, defs):
     """Edges and target Transform DEFs of the interpolator chain a timer drives: timer -> interpolators -> Transforms."""
     edges, targets = set(), set()
@@ -6824,8 +6852,10 @@ def _sensor_field_problems(node, spec, parent):
                 problems.append(f"center={value} (a centred box is all the properties hold)")
         elif spec == "ProximitySensor" and name == "size":
             sizes = [float(v) for v in str(value).replace(",", " ").split()]
-            if len(sizes) != 3 or max(sizes) - min(sizes) > 1e-6 * max(1.0, max(sizes)) or min(sizes) <= 0:
-                problems.append(f"size={value} (only a cube, 2 x radius, is kept)")
+            scale = _static_triple(parent, "scale", (1.0, 1.0, 1.0))
+            world = [abs(a) * abs(b) for a, b in zip(sizes, scale)] if len(sizes) == 3 else []
+            if len(world) != 3 or min(sizes) <= 0 or min(world) <= 0 or max(world) - min(world) > 1e-6 * max(1.0, max(world)):
+                problems.append(f"size={value} (only a box that is a cube in world space, 2 x radius, is kept)")
         else:
             problems.append(f"{name}={value}")
     return problems
@@ -6836,13 +6866,13 @@ def _action_from_routes(sensor_def, route_attrs, defs, all_nodes):
     for attrs in route_attrs:
         if attrs["fromNode"] != sensor_def:
             continue
-        if attrs["toField"] == "set_bind" and attrs["toNode"].startswith("CA_"):
+        if attrs["toField"] == "set_bind" and attrs["fromField"] == "isActive" and attrs["toNode"].startswith("CA_"):
             return ["viewpoint", attrs["toNode"][3:]]
-        if attrs["toField"] == "set_boolean":                      # click: sensor -> BooleanFilter -> set_bind
+        if attrs["toField"] == "set_boolean" and attrs["fromField"] == "isActive":   # click: sensor -> BooleanFilter -> set_bind
             for second in route_attrs:
                 if second["fromNode"] == attrs["toNode"] and second["toField"] == "set_bind" and second["toNode"].startswith("CA_"):
                     return ["viewpoint", second["toNode"][3:]]
-        if attrs["toField"] == "set_startTime":
+        if attrs["toField"] == "set_startTime" and attrs["fromField"] in ("touchTime", "enterTime"):
             _edges, targets = _timer_chain(attrs["toNode"], route_attrs, defs)
             for name in sorted(targets):
                 target = defs.get(name)
@@ -7011,7 +7041,10 @@ def rebuild_interaction(all_nodes):
         if action == "animate":
             chosen = None
             for attrs in outgoing:
-                if attrs["toField"] != "set_startTime":
+                if attrs["toField"] != "set_startTime" or attrs["fromField"] != _START_FIELD[spec]:
+                    continue
+                timer = defs.get(attrs["toNode"])
+                if timer is None or timer.getSpec() != "TimeSensor" or _timer_problems(timer):
                     continue
                 chain_edges, targets = _timer_chain(attrs["toNode"], route_attrs, defs)
                 if (target_defs & targets) or (not target_defs and chain_edges):
@@ -7023,9 +7056,11 @@ def rebuild_interaction(all_nodes):
             rebuilt.nodes.add(chosen[0]["toNode"])
         elif action == "viewpoint":
             for attrs in outgoing:
-                if attrs["toField"] == "set_bind" and attrs["toNode"] in target_defs:
+                if attrs["fromField"] != _BIND_FIELD[spec]:
+                    continue
+                if spec == "ProximitySensor" and attrs["toField"] == "set_bind" and attrs["toNode"] in target_defs:
                     edges = {_route_tuple(attrs)}
-                elif attrs["toField"] == "set_boolean":
+                elif spec == "TouchSensor" and attrs["toField"] == "set_boolean":
                     for second in route_attrs:
                         if second["fromNode"] == attrs["toNode"] and second["toField"] == "set_bind" and second["toNode"] in target_defs:
                             edges = {_route_tuple(attrs), _route_tuple(second)}
@@ -7034,7 +7069,7 @@ def rebuild_interaction(all_nodes):
                 continue
         elif action == "tour":
             for attrs in outgoing:
-                if attrs["toField"] == "set_startTime":
+                if attrs["toField"] == "set_startTime" and attrs["fromField"] == _START_FIELD[spec]:
                     tour_edges_pending.append((_route_tuple(attrs), attrs["toNode"]))
             if not tour_edges_pending:
                 continue
@@ -7091,9 +7126,11 @@ def import_loss_records(all_nodes, rebuilt=None):
     for name, node in timers.items():
         loop = node.getFieldAsBool("loop", False, ())
         start = node.getFieldAsFloat("startTime", 0.0, ())
-        if not loop or start != 0.0:
+        extra = [p for p in _timer_problems(node) if not p.startswith(("loop=", "starts at load"))]
+        if not loop or start != 0.0 or extra:
             losses.append({"kind": "timer", "node": f"TimeSensor {name}".strip(),
-                           "detail": f"loop={str(loop).lower()} startTime={start:g}: play-once or delayed start is not kept "
+                           "detail": f"loop={str(loop).lower()} startTime={start:g}"
+                                     + "".join(f" {p}" for p in extra) + ": play-once, disabled or delayed start is not kept "
                                      "(the animation is keyed from frame 1 and re-exported as a looping SceneTimer)"})
     return losses
 
