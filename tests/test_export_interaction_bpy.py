@@ -76,6 +76,8 @@ class ExportInteractionTests(unittest.TestCase):
         self.assertIsNotNone(sensor)
         timers = {t.get("DEF"): t.get("loop") for t in root.iter("TimeSensor")}
         self.assertEqual(timers, {"TT_Door": "false"})                       # no SceneTimer: nothing runs free
+        # startTime 0 + loop false would end at load and park the door at the end of its animation
+        self.assertGreater(float(next(root.iter("TimeSensor")).get("startTime")), 1e20)
         routes = _routes(root)
         self.assertIn((sensor.get("DEF"), "touchTime", "TT_Door", "set_startTime"), routes)
         self.assertIn(("TT_Door", "fraction_changed", "PI_Door", "set_fraction"), routes)
@@ -103,7 +105,10 @@ class ExportInteractionTests(unittest.TestCase):
         pad["x3d_trigger"], pad["x3d_radius"] = "proximity", 2.5
         root = self._export()
         sensor = root.find(".//ProximitySensor")
-        self.assertEqual(sensor.get("size").split(), ["5", "5", "5"])
+        self.assertEqual(sensor.get("size").split(), ["5", "5", "5"])   # the cube has scale 1
+        pad.scale = (0.5, 0.5, 2.0)                                     # a scaled object must not shrink the radius
+        sizes = [float(v) for v in self._export().find(".//ProximitySensor").get("size").split()]
+        self.assertEqual(sorted(sizes), [2.5, 10.0, 10.0])               # Blender Z (x2) is X3D Y
         self.assertIn((sensor.get("DEF"), "enterTime", "TT_Pad", "set_startTime"), _routes(root))
 
     def test_click_to_viewpoint_binds_only_on_press(self):
@@ -123,6 +128,7 @@ class ExportInteractionTests(unittest.TestCase):
         root = self._export()
         timer = next(t for t in root.iter("TimeSensor") if t.get("DEF") == "TourTimer")
         self.assertEqual(timer.get("loop"), "false")
+        self.assertGreater(float(timer.get("startTime")), 1e20)
         self.assertAlmostEqual(float(timer.get("cycleInterval")), 2 + 2 + 1)
         pi = next(p for p in root.iter("PositionInterpolator") if p.get("DEF") == "PI_TourRig")
         values = [float(v) for v in pi.get("keyValue").split()]
@@ -140,6 +146,7 @@ class ExportInteractionTests(unittest.TestCase):
         self.scene["x3d_tour_autostart"] = True
         root = self._export()
         self.assertEqual(next(t for t in root.iter("TimeSensor") if t.get("DEF") == "TourTimer").get("loop"), "true")
+        self.assertIsNone(next(t for t in root.iter("TimeSensor") if t.get("DEF") == "TourTimer").get("startTime"))
 
     def test_an_unreachable_target_is_dropped_with_a_diagnostic(self):
         cube = self._cube("Lonely")

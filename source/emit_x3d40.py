@@ -683,6 +683,12 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
     return "".join(xml)
 
 
+# A TimeSensor that only a trigger should start: with the default startTime 0 and loop false, a browser sees a cycle that
+# ended long ago and sends fraction_changed 1 at load, which parks every targeted object (and the tour rig) at the END of
+# its animation (X_ITE 16.7.1 did exactly that). A startTime far in the future keeps it silent until a ROUTE sets it.
+_NEVER_STARTED = "1e+30"
+
+
 def _triggered_targets(ir_scene):
     """Objects whose animation an authored trigger plays: they get a timer of their own instead of the scene's."""
     return {instance.interaction.target for instance in ir_scene.iter_instances()
@@ -708,7 +714,7 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
     for target in sorted(triggered):
         if any(a.target == target and a.target_kind == "transform" for a in ir_scene.animations):
             xml.append(f'{indent}<TimeSensor DEF="{_trigger_timer_def(defs, target)}" cycleInterval="{_fmt(cycle)}" '
-                       f'loop="false" />\n')
+                       f'loop="false" startTime="{_NEVER_STARTED}" />\n')
     routes = []
     shared: dict[tuple, list] = {}  # geometries with the same keys and states share one CoordinateInterpolator
     for geometry in morphs:
@@ -779,9 +785,10 @@ def _sensor_xml(instance, defs: _DefNames, indent):
     description = quoteattr(f"{interaction.action} {interaction.target}".strip())
     if interaction.trigger == "click":
         return f'{indent}<TouchSensor DEF="{_sensor_def(defs, instance)}" description={description} />\n'
-    size = _fmt_short(2.0 * interaction.radius)
-    return (f'{indent}<ProximitySensor DEF="{_sensor_def(defs, instance)}" center="0 0 0" '
-            f'size="{size} {size} {size}" />\n')
+    # the sensor sits inside the object's Transform, so the object's scale would scale the box: divide it back out so
+    # the box is 2 x radius in world units (rotation still turns it with the object)
+    size = " ".join(_fmt_short(2.0 * interaction.radius / max(abs(axis), 1e-6)) for axis in instance.transform.scale)
+    return f'{indent}<ProximitySensor DEF="{_sensor_def(defs, instance)}" center="0 0 0" size="{size}" />\n'
 
 
 def _tour_xml(tour, defs: _DefNames, indent):
@@ -797,11 +804,13 @@ def _tour_xml(tour, defs: _DefNames, indent):
         positions += [_fmt3_length(stop.transform.translation)] * 2
         rotations += [_fmt4(stop.transform.rotation_axis_angle)] * 2
     loop = tour.loop or tour.autostart
+    start_attr = "" if tour.autostart else ' startTime="%s"' % _NEVER_STARTED
     xml = [
         f'{indent}<Transform DEF="{rig_def}" translation="{positions[0]}" rotation="{rotations[0]}">\n',
         f'{indent}  <Viewpoint DEF="{view_def}" description="Tour"{fov} />\n',
         f"{indent}</Transform>\n",
-        f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(max(total, 1e-3))}" loop="{"true" if loop else "false"}" />\n',
+        f'{indent}<TimeSensor DEF="{timer_def}" cycleInterval="{_fmt(max(total, 1e-3))}" loop="{"true" if loop else "false"}"'
+        f'{start_attr} />\n',
         f'{indent}<PositionInterpolator DEF="PI_TourRig" key="{key_text}" keyValue="{" ".join(positions)}" />\n',
         f'{indent}<OrientationInterpolator DEF="OI_TourRig" key="{key_text}" keyValue="{" ".join(rotations)}" />\n',
     ]
@@ -1006,6 +1015,12 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
             components["Shape"] = 2
         if any(shape.geometry_name not in geometries and shape.geometry_hint == "Circle2D" for shape in shapes):
             components["Geometry2D"] = 2
+        interaction = instance.interaction
+        if interaction is not None:
+            # X_ITE 16.7.1 ignores a TouchSensor in a file that does not declare its component
+            components["PointingDeviceSensor" if interaction.trigger == "click" else "EnvironmentalSensor"] = 1
+            if interaction.trigger == "click" and interaction.action == "viewpoint":
+                components["EventUtilities"] = 1
     return sorted(components.items())
 
 
