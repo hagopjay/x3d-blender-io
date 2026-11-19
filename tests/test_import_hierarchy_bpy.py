@@ -204,6 +204,67 @@ class ImportHierarchyTests(unittest.TestCase):
         coords = sorted(tuple(round(c, 6) + 0.0 for c in v.co) for v in tilted.data.vertices)
         self.assertEqual(coords, sorted([(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]))
 
+    def test_animation_reaches_every_use_transform_in_its_own_parent_space(self):
+        body = ('<Transform DEF="OB_Left" translation="10 0 0"><Transform DEF="Shared">'
+                + _shape() + '</Transform></Transform>'
+                '<Transform DEF="OB_Right" translation="-10 0 0" rotation="0 0 1 1.57079632679">'
+                '<Transform USE="Shared"/></Transform>'
+                '<TimeSensor DEF="Clock" cycleInterval="1" loop="true"/>'
+                '<PositionInterpolator DEF="Move" key="0 1" keyValue="0 0 0 2 0 0"/>'
+                '<ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Move" toField="set_fraction"/>'
+                '<ROUTE fromNode="Move" fromField="value_changed" toNode="Shared" toField="set_translation"/>')
+        self._import("animated_use.x3d", '<X3D version="4.0"><Scene>' + body + '</Scene></X3D>')
+        left, right = self._ob("Left").children[0], self._ob("Right").children[0]
+        for child in (left, right):
+            self.assertIsNotNone(child.animation_data and child.animation_data.action)
+        bpy.context.scene.frame_set(bpy.context.scene.frame_end)
+        self.assertLess((left.matrix_world.translation - _x3d_to_blender((12, 0, 0))).length, 1e-5)
+        self.assertLess((right.matrix_world.translation - _x3d_to_blender((-10, 2, 0))).length, 1e-5)
+
+    def test_inline_texture_cache_does_not_escape_its_file(self):
+        # These ImageTexture nodes have identical XML descriptions but resolve against different directories.
+        child_dir = os.path.join(self.tmp.name, "child_assets")
+        os.makedirs(child_dir, exist_ok=True)
+        for directory, colour in ((self.tmp.name, (1, 0, 0, 1)), (child_dir, (0, 1, 0, 1))):
+            image = bpy.data.images.new("fixture", width=1, height=1)
+            image.pixels[:] = colour
+            image.filepath_raw = os.path.join(directory, "albedo.png")
+            image.file_format = 'PNG'
+            image.save()
+            bpy.data.images.remove(image)
+        shape = ('<Shape DEF="Picture"><Appearance><Material/>'
+                 '<ImageTexture url=\'"albedo.png"\'/></Appearance>' + QUAD + '</Shape>')
+        with open(os.path.join(child_dir, "child.x3d"), "w", encoding="utf-8") as handle:
+            handle.write('<X3D version="4.0"><Scene>' + shape + '</Scene></X3D>')
+        self._import("parent_texture.x3d", '<X3D version="4.0"><Scene>'
+                     '<Inline url=\'"child_assets/child.x3d"\'/>'
+                     + shape.replace('DEF="Picture"', 'DEF="ParentPicture"') + '</Scene></X3D>')
+        for name, directory in (("Picture", child_dir), ("ParentPicture", self.tmp.name)):
+            images = [node.image for node in self._ob(name).active_material.node_tree.nodes
+                      if node.type == 'TEX_IMAGE']
+            self.assertEqual(len(images), 1)
+            self.assertEqual(os.path.realpath(bpy.path.abspath(images[0].filepath)),
+                             os.path.realpath(os.path.join(directory, "albedo.png")))
+
+    def test_hidden_switch_or_lod_branch_cannot_own_a_selected_branch(self):
+        for tag, attributes in (("Switch", 'whichChoice="1"'), ("LOD", 'range="5"')):
+            with self.subTest(selector=tag):
+                bpy.ops.wm.read_factory_settings(use_empty=True)
+                body = ('<Transform DEF="Outer"><' + tag + ' ' + attributes + '>'
+                        + _shape().replace('<Shape>', '<Shape DEF="Hidden">')
+                        + '<Transform DEF="OB_Visible">' + _shape() + '</Transform>'
+                        + '</' + tag + '></Transform>')
+                self._import("branch_owner.x3d", '<X3D version="4.0"><Scene>' + body + '</Scene></X3D>')
+                hidden, visible = self._ob("Hidden"), self._ob("Visible")
+                self.assertTrue(hidden.hide_render)
+                self.assertTrue(hidden.hide_get())
+                self.assertFalse(visible.hide_render)
+                self.assertFalse(visible.hide_get())
+                outer = self._ob("Outer")
+                self.assertEqual(outer.type, 'EMPTY')
+                self.assertEqual(hidden.parent, outer)
+                self.assertEqual(visible.parent, outer)
+
     def test_flat_import_is_still_available(self):
         self._import("chain.x3d", CHAIN_DOC, keep_hierarchy=False)
         self.assertTrue(all(ob.parent is None for ob in bpy.context.scene.objects))

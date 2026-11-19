@@ -12,7 +12,7 @@ with the given operator options (default: the add-on's defaults, X3D 4.0). Pass 
 with, or E0 -> E1 reports option differences as losses. Writes OUT_DIR/<stem>/{e1.x3d,e2.x3d,s1.json,s2.json,log.txt}.
 
 E0 -> E1 is what one round trip loses or changes; E1 -> E2 must be empty (the round trip converges in one step).
-S1 -> S2 is the same question asked of the Blender scene. Compare with fixed_point.py, which runs this leg.
+S1 -> S2 records a partial Blender-scene snapshot for diagnosis. The driver currently gates only the X3D diff.
 """
 from __future__ import annotations
 
@@ -135,14 +135,21 @@ def step(src: Path, dst: Path, snap: Path, log):
     with redirect_stdout(buf):
         res = bpy.ops.import_scene.x3d(filepath=str(src), **IMPORT_OPTS)
     log.write(f"import {src.name}: {res}\n{buf.getvalue()[-4000:]}\n")
+    if res != {"FINISHED"}:
+        raise RuntimeError(f"import did not finish: {res}")
     snap.write_text(json.dumps(snapshot(), indent=1, sort_keys=True))
     buf = io.StringIO()
     with redirect_stdout(buf):
         res = bpy.ops.export_scene.x3d(filepath=str(dst), **EXPORT_OPTS)
     log.write(f"export {dst.name}: {res}\n{buf.getvalue()[-4000:]}\n")
+    if res != {"FINISHED"}:
+        raise RuntimeError(f"export did not finish: {res}")
 
 
+if not inputs:
+    raise SystemExit("at least one input file is required")
 register()
+failed = False
 for src in inputs:
     od = out_root / (src.parent.name + "__" + src.stem)
     od.mkdir(parents=True, exist_ok=True)
@@ -152,5 +159,9 @@ for src in inputs:
             step(od / "e1.x3d", od / "e2.x3d", od / "s2.json", log)
             print("ok", src, flush=True)
         except Exception:
+            failed = True
             log.write(traceback.format_exc())
             print("FAIL", src, traceback.format_exc().splitlines()[-1], flush=True)
+
+if failed:
+    raise SystemExit(1)

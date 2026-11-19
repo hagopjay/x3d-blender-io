@@ -12,11 +12,12 @@ shift every node after it.
 Numeric attributes (whitespace-separated lists of numbers) compare with |a-b| <= abs + rel*max(|a|,|b|); other
 attributes compare as strings after whitespace normalisation. DEF and USE values are compared as references, not
 spellings: a DEF renamed consistently (Cube -> Cube_001) is not a difference, a USE that points to a different node is.
+Index/count fields compare exactly, and order-sensitive child lists (for example Switch and LOD) compare by position.
 With --strict-defs a DEF spelled differently is a difference too (the fixed-point gate uses it on E1 -> E2, where names
 must not drift).
 
 Exit 0 when the files are equivalent, 1 when they differ. Each difference is one record:
-  {"kind": "missing"|"extra"|"attr_missing"|"attr_extra"|"value", "path": "...", "tag": ..., "attr": ..., "a": ..., "b": ...}
+  {"kind": "missing"|"extra"|"attr_missing"|"attr_extra"|"value"|"tag"|"text", "path": "...", "tag": ..., "attr": ..., "a": ..., "b": ...}
 and the summary groups them by (kind, tag, attr) with counts, which is what a parity report needs.
 """
 from __future__ import annotations
@@ -36,10 +37,19 @@ REF_ATTRS = {"DEF", "USE"}
 # angles per corner fan, so a normal re-read from Blender moves by up to ~3e-4 (measured on the suite, Nov 2026).
 FIELD_ABS = {("Normal", "vector"): 1e-3}
 ROUTE_REF_ATTRS = {"fromNode", "toNode"}
+# Integer topology and selector fields must not inherit the relative tolerance used for coordinates: at index
+# 100000, rel=1e-4 would otherwise accept an index changed by ten vertices.
+INTEGER_ATTRS = {"coordIndex", "colorIndex", "normalIndex", "texCoordIndex", "index", "skinCoordIndex",
+                 "stripCount", "fanCount", "vertexCount", "whichChoice", "numComponents", "numJoints",
+                 "uOrder", "vOrder", "uDimension", "vDimension"}
+# These children are selected or associated by their position. Matching a DEF after a reorder would hide a changed
+# Switch choice, LOD distance band, CADLayer visibility or multi-texture channel.
+ORDERED_CHILDREN = {"Switch", "LOD", "CADLayer", "MultiTexture", "MultiTextureCoordinate", "MultiTextureTransform"}
 
 
 def load(path: str) -> ET.Element:
-    data = open(path, "rb").read()
+    with open(path, "rb") as src:
+        data = src.read()
     if data[:2] == b"\x1f\x8b":
         data = gzip.decompress(data)
     return ET.fromstring(data)
@@ -64,11 +74,15 @@ def _signature(el: ET.Element) -> str | None:
     return None
 
 
-def _align(ca: list, cb: list):
+def _align(ca: list, cb: list, parent_tag: str | None = None):
     """Pair children of two parents: first by (tag, DEF) where both sides carry that DEF, then the rest by tag and
     position among the remaining siblings of that tag."""
     ca = [c for c in ca if isinstance(c.tag, str)]
     cb = [c for c in cb if isinstance(c.tag, str)]
+    if parent_tag in ORDERED_CHILDREN:
+        return [((ca[i].tag if i < len(ca) else cb[i].tag, i),
+                 ca[i] if i < len(ca) else None, cb[i] if i < len(cb) else None)
+                for i in range(max(len(ca), len(cb)))]
     defs_b = {(c.tag, c.get("DEF")): c for c in cb if c.get("DEF")}
     pairs, used_b = [], set()
     rest_a = []
@@ -124,6 +138,7 @@ class Differ:
         self.records.append({"kind": kind, "path": path, "tag": tag, "attr": attr, "a": a, "b": b})
 
     def compare(self, a: ET.Element, b: ET.Element):
+        self.records, self.def_a, self.def_b, self.pending_refs = [], {}, {}, []
         self._walk(a, b, a.tag)
         # references: a USE / ROUTE end is the same when it names the DEF found at the same aligned path
         for name, va, vb, path, tag in self.pending_refs:
@@ -134,6 +149,15 @@ class Differ:
 
     def _walk(self, a, b, path):
         tag = a.tag
+        if a.tag != b.tag:
+            self._rec("tag", path, tag, a=a.tag, b=b.tag)
+            return
+        # XML indentation is immaterial; embedded source/string content is not. In particular, Script CDATA must
+        # not vanish from the fidelity measurement simply because its code is text instead of an attribute.
+        for part in ("text", "tail"):
+            ta, tb = (getattr(a, part) or "").strip(), (getattr(b, part) or "").strip()
+            if ta != tb:
+                self._rec("text", path, tag, part, ta[:80], tb[:80])
         if a.get("DEF"):
             self.def_a[a.get("DEF")] = path
         if b.get("DEF"):
@@ -160,13 +184,15 @@ class Differ:
                 na, nb = _numbers(va), _numbers(vb)
                 if len(na) != len(nb):
                     self._rec("value", path, tag, name, f"{len(na)} numbers", f"{len(nb)} numbers")
-                elif not all(_close(x, y, self.rel, max(self.abs, FIELD_ABS.get((tag, name), 0.0))) for x, y in zip(na, nb)):
+                elif not all(x == y if name in INTEGER_ATTRS else
+                             _close(x, y, self.rel, max(self.abs, FIELD_ABS.get((tag, name), 0.0)))
+                             for x, y in zip(na, nb)):
                     worst = max(abs(x - y) for x, y in zip(na, nb))
                     self._rec("value", path, tag, name, va[:80], vb[:80] + f"  (max |d| {worst:.3g})")
                 continue
             if " ".join(va.split()) != " ".join(vb.split()):
                 self._rec("value", path, tag, name, va[:80], vb[:80])
-        for k, ca, cb in _align(list(a), list(b)):
+        for k, ca, cb in _align(list(a), list(b), tag):
             sub = f"{path}/{k[0]}[{k[1]}]"
             lone = ca if cb is None else cb if ca is None else None
             if lone is not None and lone.get("DEF"):

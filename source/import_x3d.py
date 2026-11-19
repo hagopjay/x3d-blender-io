@@ -162,11 +162,12 @@ def imageConvertCompat(path):
         return path  # assume win32 has quicktime, dont convert
 
     if path.lower().endswith('.gif'):
-        path_to = path[:-3] + 'png'
-        os.system('convert "%s" "%s"' % (path, path_to))  # for now just hope we have image magick
-
-        if os.path.exists(path_to):
-            return path_to
+        from .import_resources import convert_gif
+        import subprocess
+        try:
+            return convert_gif(path)
+        except (OSError, subprocess.SubprocessError) as exc:
+            logger.warning("Failed to convert GIF image: %s", exc)
 
     return path
 
@@ -456,7 +457,7 @@ class vrmlNode(object):
                  'parsed',
                  'parsed_vcol',
                  'shared_mesh',
-                 'hierarchy_owner')
+                 'hierarchy_owners')
 
     def __init__(self, parent, node_type, lineno):
         self.id = None
@@ -468,7 +469,7 @@ class vrmlNode(object):
         self.parsed = None  # We try to reuse objects in a smart way
         self.parsed_vcol = None  # for a classic material in parsed: whether it was built for a Shape with a Color node
         self.shared_mesh = None  # for a geometry node: (mesh, material) its first Shape built, for its USEs to share
-        self.hierarchy_owner = None  # for a Transform under keep_hierarchy: the Blender object that stands for it
+        self.hierarchy_owners = []  # (object, occurrence ancestry) for every DEF/USE of a Transform
         if parent:
             parent.children.append(self)
 
@@ -1555,20 +1556,9 @@ def _make_sax_parser():
     element was silently dropped: a 4.1 file with 18,000 or more splats
     imported nothing. With deferral off every element arrives before close().
     """
-    import xml.sax
-    from xml.sax import expatreader
+    from .import_resources import make_x3d_sax_parser
 
-    class _NoDeferralExpatParser(expatreader.ExpatParser):
-        def reset(self):
-            super().reset()
-            # Python 3.12.3+ / 3.13 with Expat 2.6+; older builds never defer
-            if hasattr(self._parser, "SetReparseDeferralEnabled"):
-                self._parser.SetReparseDeferralEnabled(False)
-
-    try:
-        return _NoDeferralExpatParser()
-    except Exception:  # pragma: no cover - no Expat in this Python
-        return xml.sax.make_parser()
+    return make_x3d_sax_parser()
 
 
 def x3d_parse(path):
@@ -4596,42 +4586,21 @@ def appearance_CreateDefaultMaterial():
 
 def web_resource_download_helper(url, default_ext, default_name, output_path=None):
     """ Downloads a web resource from a url and saves it to output_path on disk. E.g. image file """
-    if url in download_cache: # check cache first for same file to save bandwidth
-        return download_cache[url]
-
     if not bpy.app.online_access: # web download requires network permission which is not always granted
         logger.warning("Can't download web resource: online access denied by user")
         return None
 
-    import requests
-    from tempfile import gettempdir
-    from mimetypes import guess_extension
+    cached_path = download_cache.get(url)
+    if cached_path and os.path.isfile(cached_path):
+        return cached_path
 
-    if not output_path:
-        output_path = gettempdir()
-    elif not os.path.isdir(output_path):
-        raise ValueError("Provided output_path must be a directory.")
+    from .import_resources import download_resource
 
     try:
-        # Request the content from the URL
-        response = requests.get(url, stream=True)
-        response.raise_for_status()  # Raise exception for HTTP errors
-
-        # Get the file extension from the content type and Generate a filename
-        content_type = response.headers.get('Content-Type', '')
-        ext = guess_extension(content_type.split(';')[0].strip()) or default_ext
-        filename = os.path.basename(url.split('?')[0]) or default_name
-        if '.' not in filename:  # Ensure filename has an extension
-            filename += ext
-
-        full_path = os.path.join(output_path, filename)
-        with open(full_path, 'wb') as f:
-            for chunk in response.iter_content(1024):
-                f.write(chunk)
-
+        full_path = download_resource(url, directory=output_path,
+                                      default_extension=default_ext, name=default_name)
         download_cache[url] = full_path
         return full_path
-
     except Exception as e:
         logger.warning(f"Failed to download web resource: {e}")
         return None
@@ -6688,7 +6657,9 @@ def _gltf_to_blender_matrix():
 
 def _resolve_inline_url(node, url):
     base = os.path.dirname(node.getFilename() or current_file_path or "")
-    candidates = [url, os.path.join(base, url), os.path.join(base, os.path.basename(url))]
+    # Relative URLs belong to the containing document, never the process's unrelated working directory.
+    candidates = ([url] if os.path.isabs(url) else
+                  [os.path.join(base, url), os.path.join(base, os.path.basename(url))])
     for candidate in candidates:
         for variant in (candidate, bpy.path.resolve_ncase(candidate)):
             if os.path.isfile(variant):
@@ -6844,7 +6815,8 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
     The empty keeps the URL in ``x3d_inline_url`` so the exporter writes an
     Inline again instead of the loaded content.
     """
-    global current_file_path, material_cache
+    global current_file_path, material_cache, texture_cache, image_alpha_cache, line_material_cache
+    global unlit_surface_cache, unlit_colour_cache, physical_colour_cache
 
     urls = node.getFieldAsMFStringArray('url', [], ancestry)
     name = node.getDefName() or (os.path.splitext(os.path.basename(urls[0]))[0] if urls else "Inline")
@@ -6883,7 +6855,11 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
     lower = resolved.lower()
     parent_inverse = None
     _INLINE_STACK.append(resolved)
-    saved_file, saved_cache = current_file_path, material_cache
+    # load_web3d replaces these file-scoped caches. A child file's relative texture URLs describe different assets
+    # from the same spelling in its parent; never leave the child's description cache active when returning.
+    saved_file = current_file_path
+    saved_caches = (material_cache, texture_cache, image_alpha_cache, line_material_cache,
+                    unlit_surface_cache, unlit_colour_cache, physical_colour_cache)
     try:
         if lower.endswith(('.x3d', '.x3dz', '.x3dv', '.wrl', '.wrz')):
             load_web3d(bpy.context, resolved, PREF_FLAT=PREF_FLAT, PREF_CIRCLE_DIV=PREF_CIRCLE_DIV,
@@ -6909,7 +6885,9 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
         logger.error("Inline %r failed to load: %s", resolved, exc, exc_info=True)
     finally:
         _INLINE_STACK.pop()
-        current_file_path, material_cache = saved_file, saved_cache
+        current_file_path = saved_file
+        (material_cache, texture_cache, image_alpha_cache, line_material_cache,
+         unlit_surface_cache, unlit_colour_cache, physical_colour_cache) = saved_caches
 
     for obj in bpy.data.objects:
         if obj in before or obj.parent is not None:
@@ -7426,7 +7404,7 @@ def _chain_matrix(ancestry, global_matrix, upto=None):
     return global_matrix @ matrix
 
 
-_PART = re.compile(r"^(?:ME_)?(.+)_m(\d+)$")
+_PART = re.compile(r"^ME_(.+)_m(\d+)$")
 
 
 def _join_material_parts(objs, name):
@@ -7434,9 +7412,12 @@ def _join_material_parts(objs, name):
     geometry DEF'd ME_<mesh>_m0, ME_<mesh>_m1, ... Join such Shapes back into one object with one material slot each
     (glTF importers do the same for a node's primitives). Only that exact pattern, on meshes nothing else uses, at one
     world matrix, without animation: a hand-written Transform with several Shapes keeps one object per Shape under an
-    Empty. Returns the joined object, or None."""
+    Empty. The modern exporter writes anonymous Shapes under an OB_ Transform; explicit Shape DEF/USE identities
+    must never be consumed by this heuristic. Returns the joined object, or None."""
     if len(objs) < 2 or any(ob.type != 'MESH' or ob.data.users != 1 or ob.animation_data is not None
                             or ob.data.shape_keys is not None for ob in objs):
+        return None
+    if any(ob.get(X3D_DEF_PROPERTY) != "OB_" + name or ob.get(X3D_USE_PROPERTY) for ob in objs):
         return None
     parts = [_PART.match(ob.data.get(X3D_DEF_PROPERTY, "") or "") for ob in objs]
     if not all(parts) or len({m.group(1) for m in parts}) != 1:
@@ -7473,7 +7454,7 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
     non-uniformly scaled parent into the child's mesh, which a parented child does not need (Blender composes the
     parent's scale with the child's rotation itself), so that bake is undone here.
 
-    Returns {Transform node: object}; importRoutesXML keys only that object, so its children follow it."""
+    Returns {Transform node: [objects]}; importRoutesXML keys every DEF/USE occurrence owner, so its children follow it."""
     def key_of(ancestry, upto):
         return tuple(id(a) for a in ancestry[:upto + 1])
 
@@ -7481,6 +7462,7 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
     parent_key = {}      # key -> key of the Transform above it, or None
     members = {}         # key -> [objects whose nearest Transform it is]
     worlds = {}          # object -> exact world matrix
+    branch_owners = set()  # Transforms whose direct objects lie behind a Switch/LOD visibility boundary
 
     def register(ancestry, indices):
         previous = None
@@ -7495,7 +7477,13 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
     for ob, ancestry in created:
         if ob is None or ob.parent is not None:
             continue
-        nearest = register(ancestry, [i for i, a in enumerate(ancestry) if a.getSpec() == 'Transform'])
+        transform_indices = [i for i, a in enumerate(ancestry) if a.getSpec() == 'Transform']
+        nearest = register(ancestry, transform_indices)
+        if nearest is not None and any(a.getSpec() in {'Switch', 'LOD', 'GeoLOD'}
+                                       for a in ancestry[transform_indices[-1] + 1:]):
+            # A branch's Shape cannot own the Transform above the selector: hiding that Shape would also hide
+            # child Transforms belonging to other branches (or content outside the selector).
+            branch_owners.add(nearest)
         unbaked = _UNBAKED_DATA.pop(ob.as_pointer(), None)
         if unbaked is not None:
             baked = ob.data
@@ -7523,7 +7511,7 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
         name = node.getRealNode().getDefName() or "Transform"
         name = name[3:] if name.startswith("OB_") and len(name) > 3 else name
         joined = None
-        if len(objs) > 1:
+        if len(objs) > 1 and key not in branch_owners:
             saved = {ob.name: worlds.pop(ob) for ob in objs}   # before the join removes all but one of them
             joined = _join_material_parts(objs, name)
             if joined is None:
@@ -7531,7 +7519,7 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
             else:
                 worlds[joined] = next(iter(saved.values()))
                 members[key] = objs = [joined]
-        if len(objs) == 1:
+        if len(objs) == 1 and key not in branch_owners:
             owners[key] = objs[0]
         elif objs or key in has_children or (node.getDefName() or "").startswith("OB_"):
             empty = bpy.data.objects.new(name, None)
@@ -7569,8 +7557,10 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
     by_node = {}
     for key, owner in owners.items():
         node = transforms[key][0].getRealNode()
-        node.hierarchy_owner = owner
-        by_node[node] = owner
+        # A DEF may occur under several parents through USE. Keep the ancestry with each owner: neither a single
+        # pointer nor the DEF's own ancestry describes all occurrences of an animated Transform.
+        node.hierarchy_owners.append((owner, transforms[key][1]))
+        by_node.setdefault(node, []).append(owner)
     bpy.context.view_layer.update()
     return by_node
 
@@ -7663,10 +7653,9 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
 
         # Objects whose ancestry passes through the animated Transform; under keep_hierarchy only the object that
         # stands for the Transform (rebuild_hierarchy), in its parent's space, and its children follow it
-        owner = target.getRealNode().hierarchy_owner
-        if owner is not None:
-            target_ancestry = next((anc for n, anc in all_nodes if n is target), None)
-            keyed = [(owner, None, target_ancestry if target_ancestry is not None else [])]
+        owners = target.getRealNode().hierarchy_owners
+        if owners:
+            keyed = [(owner, None, ancestry) for owner, ancestry in owners]
         else:
             keyed = [(getattr(n, 'blendObject', None), n, anc) for n, anc in all_nodes]
         for bpyob, node, ancestry in keyed:

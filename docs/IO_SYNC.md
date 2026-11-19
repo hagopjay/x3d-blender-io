@@ -15,9 +15,15 @@ Let `E` be export and `I` be import, both with the same options. For a file `F0`
 - **Fidelity (measured, reported):** `E(I(F0))` against `F0`. What one round trip changes. Every difference is either
   fixed, or listed in `tools/io_sync/parity.json` as *open* (with an owner decision if one is needed) or *by design*.
 
-Convergence is the gate because it has no false positives: whatever the import does to a file, doing it twice must
-change nothing more. Fidelity needs judgement (a written-out default, renumbered indices), so it is a ledger, not a
-gate.
+Convergence catches accumulating drift; it does not prove fidelity. An importer that drops every light on its first
+load can still converge to a permanently dark scene. Fidelity needs judgement (a written-out default, renumbered
+indices), so it is reported separately. The ledger currently documents known losses; the tool does **not** match
+E0 → E1 differences against that ledger or fail on a newly introduced first-trip loss. Add targeted preservation
+assertions and reviewed loss budgets beside the convergence gate.
+
+The comparison also has limits: floating-point tolerances can hide errors smaller than their thresholds, and names
+or child-order changes can be harmless in some contexts and semantic in others. A nonempty diff needs interpretation;
+a zero diff is evidence for the measured properties only.
 
 ## The instruments
 
@@ -26,6 +32,7 @@ gate.
 | `tools/io_sync/fixed_point.py SUITE_OUT OUT` | Blender | imports each export-suite file and exports it twice with the file's own options; writes `summary.txt` / `summary.json`; exit 1 when E1 → E2 is not empty |
 | `tools/io_sync/x3d_diff.py A B` | Python | structural diff: children paired by DEF, then by what they hold, then by position; numeric tolerances; `--strict-defs` |
 | `tools/io_sync/check_parity.py FILES` | Python | every element in real exports is declared in `parity.json` |
+| `tests/test_io_instruments.py` | Python | adversarial semantic-diff and failed-run regressions |
 | `tests/test_io_parity.py` | Python | every element the emitter's source can write is declared, every declared import exists, every fixed asymmetry names a test |
 | `tests/test_io_sync_bpy.py` | Blender | one failing-first test per fixed asymmetry |
 
@@ -51,7 +58,10 @@ python3 tools/io_sync/fixed_point.py /tmp/suite /tmp/io-sync --blender "$(which 
 4. **State the export reads, the import sets.** If the export samples `frame_start..frame_end`, the import sets
    them (S3). If the export writes DEF/USE for shared data, the import shares the data (S4).
 5. **Blender's storage limits are tolerances, not bugs, and they are documented.** Custom normals are 16-bit angles:
-   `Normal.vector` compares at 1e-3 (`x3d_diff.FIELD_ABS`). Anything else compares at 1e-4.
+   `Normal.vector` compares at 1e-3 (`x3d_diff.FIELD_ABS`). Other floating-point fields use absolute **plus relative**
+   tolerance 1e-4 in the gate: at coordinate 100000 this permits a difference of about 10 scene units. Choose tighter
+   scale-aware bounds for fidelity assertions. Integer topology/selector fields (`x3d_diff.INTEGER_ATTRS`) compare
+   exactly. Switch, LOD and other indexed child lists compare by position, preserving their semantics.
 6. **Fix with a failing test first.** The test fails on the code before the fix, and the asymmetry's entry in
    `parity.json` names it.
 7. **A decision that changes behaviour for every user is the owner's.** Such items stay *open* in the ledger, with
@@ -71,12 +81,26 @@ python3 tools/io_sync/fixed_point.py /tmp/suite /tmp/io-sync --blender "$(which 
   against real output (CI exports), and with an explicit status per entry: exact, equivalent, lossy, unmeasured.
   "Unmeasured" is a status, so gaps are visible rather than assumed.
 - **Keep a ledger of known differences with an owner and a test.** A difference is fixed (with a test), open (with
-  what it would take), or by design (with the reason). A new difference that is none of these fails CI.
+  what it would take), or by design (with the reason). The existing gate fails new E1 → E2 drift; enforcing newly
+  introduced E0 → E1 losses against the ledger remains follow-up work.
 - **Make conversions explicit and paired.** Every colour-space, unit or axis conversion has one function per side,
   named for its inverse, and a test that composes them.
 - **Run both directions on the same options.** Report option-dependent differences separately from real losses (the
   first measurement here reported every Normal node of the main suite file, 169, as lost; the second export only had
   `use_normals` off).
+
+## Evidence and independent oracles
+
+Each driver invocation writes into a fresh `OUT/<profile>/run-*` directory and records the exact artifact path in
+`summary.json`. Failed or cancelled operators, missing outputs, an empty manifest, and unknown profile names fail
+the run. Prior successful artifacts cannot satisfy a later failed invocation.
+
+`s1.json` and `s2.json` are diagnostic snapshots, not a gated Blender-scene equality. They currently record counts,
+transforms and selected material settings, but omit vertex positions, UV values, shader links and keyframe values.
+An independent Blender oracle should compare those values, object/data sharing and attachment, and evaluated world
+transforms at sampled animation times. Then add foreign X3D/VRML fixtures with explicit preservation expectations,
+followed by controlled X_ITE-versus-Blender renders. C14N goldens can detect serialization changes; they cannot by
+themselves prove geometric, appearance or behavioral equivalence.
 
 ## Status (18 Nov 2026, Blender 5.1.0, export suite on main 1e661a5)
 

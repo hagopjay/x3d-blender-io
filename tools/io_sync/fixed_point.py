@@ -22,6 +22,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -35,7 +36,8 @@ IGNORE_META = True
 
 def run(suite: Path, out: Path, blender: str, profiles, rel, abs_):
     manifest = json.loads((suite / "x3d_suite_manifest.json").read_text())
-    rows = {}
+    out.mkdir(parents=True, exist_ok=True)
+    rows = {key: {"error": "unknown profile"} for key in profiles if key not in manifest["profiles"]}
     for key, prof in manifest["profiles"].items():
         if profiles and key not in profiles:
             continue
@@ -44,22 +46,27 @@ def run(suite: Path, out: Path, blender: str, profiles, rel, abs_):
         imp = {"color_space": "AS_IS"} if opts.get("color_space") == "AS_IS" else {}
         e0 = suite / prof["file"]
         od = out / key
-        cmd = [blender, "-b", "--factory-startup", "-noaudio", "--python", str(HERE / "fixed_point_leg.py"), "--",
-               str(od), "--export", json.dumps(opts), "--import", json.dumps(imp), str(e0)]
+        od.mkdir(parents=True, exist_ok=True)
+        # Never accept evidence left by a previous invocation, including when Blender catches a Python failure and
+        # exits zero. Preserve each run's logs while selecting only this invocation's exact expected directory.
+        run_root = Path(tempfile.mkdtemp(prefix="run-", dir=od))
+        leg = run_root / (e0.parent.name + "__" + e0.stem)
+        cmd = [blender, "-b", "--factory-startup", "-noaudio", "--python-exit-code", "1", "--python", str(HERE / "fixed_point_leg.py"), "--",
+               str(run_root), "--export", json.dumps(opts), "--import", json.dumps(imp), str(e0)]
         proc = subprocess.run(cmd, capture_output=True, text=True)
-        leg = next(od.glob("*/"), None)
-        if proc.returncode or leg is None or not (leg / "e2.x3d").exists():
-            rows[key] = {"error": (proc.stdout + proc.stderr)[-2000:]}
+        if proc.returncode or not all((leg / name).is_file() for name in ("e1.x3d", "e2.x3d", "s1.json", "s2.json")):
+            rows[key] = {"error": (proc.stdout + proc.stderr)[-2000:] or "leg did not produce all expected outputs",
+                         "artifacts": str(run_root)}
             continue
         r01 = x3d_diff.diff_files(str(e0), str(leg / "e1.x3d"), rel, abs_)
         r12 = x3d_diff.diff_files(str(leg / "e1.x3d"), str(leg / "e2.x3d"), rel, abs_, strict_defs=True)
         if IGNORE_META:
             r01 = [r for r in r01 if r["tag"] != "meta"]
             r12 = [r for r in r12 if r["tag"] != "meta"]
-        rows[key] = {"options": opts, "import": imp, "e0_e1": x3d_diff.summarise(r01), "e1_e2": x3d_diff.summarise(r12),
+        rows[key] = {"artifacts": str(leg), "options": opts, "import": imp, "e0_e1": x3d_diff.summarise(r01), "e1_e2": x3d_diff.summarise(r12),
                      "e0_e1_count": len(r01), "e1_e2_count": len(r12)}
     (out / "summary.json").write_text(json.dumps(rows, indent=1))
-    lines = []
+    lines = [] if rows else ["No profiles selected; no round trips were checked."]
     for key, row in rows.items():
         if "error" in row:
             lines.append(f"{key}: LEG FAILED\n{row['error']}")
@@ -72,7 +79,7 @@ def run(suite: Path, out: Path, blender: str, profiles, rel, abs_):
                              f"{str(ex['a'])[:60]!r} -> {str(ex['b'])[:60]!r}")
     (out / "summary.txt").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
-    return 1 if any(row.get("e1_e2_count", 1) for row in rows.values()) else 0
+    return 1 if not rows or any(row.get("e1_e2_count", 1) for row in rows.values()) else 0
 
 
 def main():
