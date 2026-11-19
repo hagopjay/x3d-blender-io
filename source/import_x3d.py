@@ -876,7 +876,10 @@ class vrmlNode(object):
             array_data = array_as_number(child_array)
         else:
             # Normal vrml
-            array_data = child_array.array_data
+            array_data = getattr(child_array, "array_data", None)
+            if array_data is None:  # a node where numbers belong: malformed, read as empty
+                logger.warning("field %r holds %s, not numbers; read as empty", field, type(child_array).__name__)
+                return []
 
         if group == -1 or len(array_data) == 0:
             return array_data
@@ -1197,10 +1200,17 @@ class vrmlNode(object):
 
             if self.node_type == NODE_REFERENCE:
                 # Only assign the reference and quit
-                key = words[words.index('USE') + 1]
+                position = words.index('USE') + 1
+                key = words[position] if position < len(words) else None
                 self.id = (words[0],)
 
-                self.reference = self.getDefDict()[key]
+                reference = self.getDefDict().get(key)
+                if reference is None:
+                    logger.warning('Reference %s not found' % key)
+                    if self.parent is not None and self in self.parent.children:
+                        self.parent.children.remove(self)
+                    return new_i
+                self.reference = reference
                 return new_i
 
             self.id = tuple(words)
@@ -1281,7 +1291,7 @@ class vrmlNode(object):
                         except:
                             pass
                     else:
-                        logger.warning("unable to parse a numline: %s" % (numline,))
+                        logger.warning("unable to parse a numline: %s" % (l,))
                     # This should not extend over multiple lines however it is possible
                     if values:
                         self.array_data.extend(values)
@@ -1318,8 +1328,10 @@ class vrmlNode(object):
                             while 1:
                                 LOOP_GUARD -= 1
                                 if LOOP_GUARD < 0:
-                                    raise Exception("__parse: infinite loop in handling multiline VRML string")
+                                    raise ValueError("__parse: infinite loop in handling multiline VRML string")
                                 i += 1
+                                if i >= len(lines):
+                                    raise ValueError("__parse: unterminated VRML string at the end of the file")
                                 accumulated_lines = accumulated_lines +"\n" + lines[i]
                                 quote_count = vrml_count_quote(accumulated_lines)
                                 if (quote_count % 2) == 0:  # even number, VRML string completed
@@ -1569,6 +1581,8 @@ def x3d_parse(path):
 
     if data is None:
         return None, 'Failed to open file: ' + path
+    if not data.strip():  # minidom raises TypeError on an empty document
+        return None, 'File is empty: ' + path
 
     # Enable line number reporting in the parser - kinda brittle
     def set_content_handler(dom_handler):
@@ -1616,6 +1630,9 @@ GLOBALS = {'CIRCLE_DETAIL': 16}
 
 def translateRotation(rot):
     """ axis, angle """
+    if len(rot) < 4:  # malformed SFRotation (fewer than four numbers): no rotation
+        logger.warning("rotation %r has %d of 4 numbers; read as no rotation", rot, len(rot))
+        return Matrix.Identity(4)
     return Matrix.Rotation(rot[3], 4, Vector(rot[:3]))
 
 
@@ -1894,12 +1911,47 @@ def importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry):
 # of texture coordinates follows the loop array.
 # The loops array must be flat.
 def importMesh_ApplyTextureToLoops(bpymesh, loops):
+    if len(loops) != 2 * len(bpymesh.loops):  # e.g. a texCoordIndex shorter than coordIndex
+        logger.warning("%d texture coordinates for %d face corners; UVs skipped", len(loops) // 2, len(bpymesh.loops))
+        return
     d = bpymesh.uv_layers.new().data
     d.foreach_set('uv', loops)
 
 
 def flip(r, ccw):
     return r if ccw else r[::-1]
+
+def clean_index_field(values, field):
+    """An MFInt32 index field as ints: a non-integer, non-finite or negative entry other than -1 is malformed and
+    becomes -1 (end of face) with a warning, instead of raising TypeError/IndexError deep in the mesh build."""
+    cleaned, bad = [], 0
+    for value in values:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            number = math.nan
+        if not math.isfinite(number) or not number.is_integer() or number < -1:
+            cleaned.append(-1)
+            bad += 1
+        else:
+            cleaned.append(int(number))
+    if bad:
+        logger.warning("%s: %d malformed entr%s read as -1", field, bad, "y" if bad == 1 else "ies")
+    return cleaned
+
+
+def pad_values(values, need, filler, field):
+    """Extend ``values`` to ``need`` entries with ``filler`` when an index points past its end (as
+    validate_points_field does for points), so a short Normal/Color/TextureCoordinate cannot crash the import."""
+    if len(values) < need:
+        logger.warning("%s has %d values but is indexed up to %d; padding", field, len(values), need - 1)
+        values = list(values) + [filler] * (need - len(values))
+    return values
+
+
+def _index_need(*arrays):
+    return max((max(array) + 1 for array in arrays if array), default=0)
+
 
 def validate_points_field(coord_index, points):
     """
@@ -2111,7 +2163,7 @@ def importMesh_IndexedFaceSet(geom, ancestry):
         points = coord.getFieldAsArray('point', 3, ancestry, conversion_scale)
         if coord.canHaveReferences():
             coord.parsed = points
-    index = geom.getFieldAsArray('coordIndex', 0, ancestry)
+    index = clean_index_field(geom.getFieldAsArray('coordIndex', 0, ancestry), 'coordIndex')
 
     while index and index[-1] == -1:
         del index[-1]
@@ -2177,7 +2229,8 @@ def importMesh_IndexedFaceSet(geom, ancestry):
     if normals:
         per_vertex = geom.getFieldAsBool('normalPerVertex', True, ancestry)
         vectors = normals.getFieldAsArray('vector', 3, ancestry)
-        normal_index = geom.getFieldAsArray('normalIndex', 0, ancestry)
+        normal_index = clean_index_field(geom.getFieldAsArray('normalIndex', 0, ancestry), 'normalIndex')
+        vectors = pad_values(vectors, max(len(faces), _index_need(normal_index, index)), (0.0, 0.0, 1.0), 'Normal')
         if per_vertex:
             if len(normal_index) == 0:
                 normal_index = index
@@ -2206,7 +2259,8 @@ def importMesh_IndexedFaceSet(geom, ancestry):
             rgb = [c + [1.0] for c in colors.getFieldAsArray('color', 3, ancestry)]
 
         color_per_vertex = geom.getFieldAsBool('colorPerVertex', True, ancestry)
-        color_index = geom.getFieldAsArray('colorIndex', 0, ancestry)
+        color_index = clean_index_field(geom.getFieldAsArray('colorIndex', 0, ancestry), 'colorIndex')
+        rgb = pad_values(rgb, max(len(faces), _index_need(color_index, index)), [1.0, 1.0, 1.0, 1.0], 'Color')
         has_color_index = len(color_index) != 0
         has_valid_color_index = index.count(-1) == color_index.count(-1)
 
@@ -2263,7 +2317,8 @@ def importMesh_IndexedFaceSet(geom, ancestry):
     tex_coord = geom.getChildBySpec('TextureCoordinate')
     if tex_coord:
         tex_coord_points = tex_coord.getFieldAsArray('point', 2, ancestry)
-        tex_index = geom.getFieldAsArray('texCoordIndex', 0, ancestry)
+        tex_index = clean_index_field(geom.getFieldAsArray('texCoordIndex', 0, ancestry), 'texCoordIndex')
+        tex_coord_points = pad_values(tex_coord_points, _index_need(tex_index, index), (0.0, 0.0), 'TextureCoordinate')
         tex_index = processPerVertexIndex(tex_index)
         loops = [co for f in tex_index
                  for v in f
@@ -3242,6 +3297,8 @@ def fit_classic_lights(faces, lights, headlight, view, srgb):
     if not lit.any():
         return None
     weight, albedo, glow, xite, gltf = weight[lit], albedo[lit], glow[lit], xite[lit], gltf[lit]
+    if not all(np.isfinite(array).all() for array in (weight, albedo, glow, xite, gltf)) or not weight.sum() > 0.0:
+        return None   # a NaN/inf colour or intensity in the file: nothing to fit (every miss() would be NaN)
     rows = len(weight) * 3
     weight = np.repeat(weight / weight.sum() / 3.0, 3)   # one row per face and channel
     albedo, glow = albedo.reshape(rows), glow.reshape(rows)
