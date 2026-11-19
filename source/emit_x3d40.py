@@ -56,11 +56,12 @@ class _DefNames:
         self.emitted: set[tuple[str, str]] = set()
         self._sidecars: dict[str, str] = {}      # sidecar file name -> sha256 of its bytes
 
-    def get(self, kind: str, key: str, prefix: str) -> str:
+    def get(self, kind: str, key: str, prefix: str, label: str | None = None) -> str:
+        """The DEF for ``key`` of ``kind``, made from ``label`` (default ``key``) and unique in the file."""
         lookup = (kind, key)
         name = self._by_key.get(lookup)
         if name is None:
-            base = f"{prefix}{_safe_name(key, kind)}"
+            base = f"{prefix}{_safe_name(label if label is not None else key, kind)}"
             name = base
             counter = 1
             while name in self._used:
@@ -253,12 +254,23 @@ def _texture_url(texture_ref, output_dir=None):
     return url.replace("\\", "/") if url else ""
 
 
-def _texture_xml(texture_ref, indent, *, container_field, output_dir=None):
+def _texture_xml(texture_ref, indent, *, container_field, output_dir=None, defs: "_DefNames | None" = None):
+    """An ImageTexture for ``texture_ref``. With ``defs``, the first texture for a url (and wrap mode) gets a DEF and
+    later ones a USE with their own containerField, so an image shared by several materials, in any role, is loaded
+    once (Web3D's X3D Schematron warns about repeated urls)."""
     url = _texture_url(texture_ref, output_dir=output_dir)
     if not url:
         return ""
-    xml = f"{indent}<ImageTexture containerField=\"{container_field}\" url='{_mfstring([url])}'"
-    if texture_ref.extension == "CLIP":
+    clip = texture_ref.extension == "CLIP"
+    attrs = ""
+    if defs is not None:
+        key = f"{url}|{'clip' if clip else 'repeat'}"
+        texture_def = defs.get("texture", key, "TX_", label=os.path.splitext(os.path.basename(url))[0])
+        if not defs.first_use("texture", key):
+            return f'{indent}<ImageTexture USE="{texture_def}" containerField="{container_field}" />\n'
+        attrs = f' DEF="{texture_def}"'
+    xml = f"{indent}<ImageTexture{attrs} containerField=\"{container_field}\" url='{_mfstring([url])}'"
+    if clip:
         xml += ' repeatS="false" repeatT="false"'
     xml += " />\n"
     return xml
@@ -283,7 +295,7 @@ def _texture_transform_xml(material, indent):
     return ""
 
 
-def _classic_material_xml(material, material_def, indent, look: _Look, *, output_dir=None):
+def _classic_material_xml(material, material_def, indent, look: _Look, *, output_dir=None, defs=None):
     """``(material xml, appearance texture xml)`` of a Material written for ``material``. The base colour texture goes in
     the Appearance's texture field, the way a classic file has it (X3D 17.2.2: an RGB texture replaces diffuseColor)."""
     alpha = material.base_color[3] if len(material.base_color) > 3 else 1.0
@@ -305,7 +317,7 @@ def _classic_material_xml(material, material_def, indent, look: _Look, *, output
     if material.occlusion_strength is not None and material.occlusion_strength != 1.0:
         attrs.append(f'occlusionStrength="{_fmt(material.occlusion_strength)}"')
     inner = "".join(
-        _texture_xml(ref, indent + "  ", container_field=field, output_dir=output_dir)
+        _texture_xml(ref, indent + "  ", container_field=field, output_dir=output_dir, defs=defs)
         for field, ref in (("emissiveTexture", material.emissive_texture), ("normalTexture", material.normal_texture),
                            ("occlusionTexture", material.occlusion_texture))
         if ref is not None
@@ -316,11 +328,12 @@ def _classic_material_xml(material, material_def, indent, look: _Look, *, output
         xml = f"{indent}<Material {' '.join(attrs)} />\n"
     texture = ""
     if material.base_color_texture is not None:
-        texture = _texture_xml(material.base_color_texture, indent, container_field="texture", output_dir=output_dir)
+        texture = _texture_xml(material.base_color_texture, indent, container_field="texture", output_dir=output_dir,
+                               defs=defs)
     return xml, texture
 
 
-def _material_xml(material, material_def, indent, *, output_dir=None):
+def _material_xml(material, material_def, indent, *, output_dir=None, defs=None):
     tag = "UnlitMaterial" if material.unlit else "PhysicalMaterial"
     alpha = material.base_color[3] if len(material.base_color) > 3 else 1.0
     transparency = max(0.0, min(1.0, 1.0 - alpha))
@@ -355,7 +368,7 @@ def _material_xml(material, material_def, indent, *, output_dir=None):
         textures.extend(material.texture_refs())
 
     texture_xml = "".join(
-        _texture_xml(texture_ref, indent + "  ", container_field=container_field, output_dir=output_dir)
+        _texture_xml(texture_ref, indent + "  ", container_field=container_field, output_dir=output_dir, defs=defs)
         for container_field, texture_ref in textures
     )
     if texture_xml:
@@ -381,11 +394,12 @@ def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look:
             attrs.append(f'alphaCutoff="{_fmt(material.alpha_cutoff)}"')
     xml = [f"{indent}<Appearance {' '.join(attrs)}>\n"]
     if _is_classic(material, look):
-        material_xml, texture_xml = _classic_material_xml(material, material_def, indent + "  ", look, output_dir=output_dir)
+        material_xml, texture_xml = _classic_material_xml(material, material_def, indent + "  ", look, output_dir=output_dir,
+                                                          defs=defs)
         xml.append(material_xml)
         xml.append(texture_xml)
     else:
-        xml.append(_material_xml(material, material_def, indent + "  ", output_dir=output_dir))
+        xml.append(_material_xml(material, material_def, indent + "  ", output_dir=output_dir, defs=defs))
     xml.append(_texture_transform_xml(material, indent + "  "))
     if line_width is not None:
         xml.append(f'{indent}  <LineProperties linewidthScaleFactor="{_fmt_short(line_width)}" />\n')
