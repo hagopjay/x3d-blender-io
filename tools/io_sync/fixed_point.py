@@ -13,6 +13,8 @@ For each file E0: fixed_point_leg.py imports it and re-exports E1, then imports 
   - E0 -> E1: what one Blender round trip changes in a file this add-on wrote (the import/export asymmetries);
   - E1 -> E2: must be empty up to number formatting, DEF spellings included; anything here is a round trip that does
     not converge (it changes the file again on every import/export).
+  - with --budget FILE: E0 -> E1 must stay within the committed per-group budget, so a new first-trip loss fails even
+    when it then converges (tools/io_sync/first_trip_budget.json; --write-budget regenerates it).
 Writes OUT_DIR/summary.json and OUT_DIR/summary.txt; exit 1 when E1 -> E2 has differences beyond --rel/--abs.
 """
 from __future__ import annotations
@@ -22,6 +24,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -33,9 +36,45 @@ DEFAULT_BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/
 IGNORE_META = True
 
 
+def _group_key(g) -> str:
+    return f"{g['kind']}|{g['tag']}|{g['attr'] or ''}"
+
+
+def first_trip_counts(rows) -> dict:
+    """{profile: {"kind|tag|attr": count}} of the E0 -> E1 differences, the form the budget file holds."""
+    return {key: {_group_key(g): g["count"] for g in row["e0_e1"]} for key, row in rows.items() if "error" not in row}
+
+
+def budget_violations(rows, budget) -> tuple[list[str], list[str]]:
+    """Compare this run's first-trip differences with the committed budget.
+
+    A group (kind, element, field) that grew, or that the budget does not list, is a violation: a new loss in one
+    import/export round trip, which the convergence check alone cannot see (a loss on the first trip that then stays
+    lost converges). A group that shrank is reported so the budget can be tightened in the same change."""
+    violations, tightened = [], []
+    for key, counts in first_trip_counts(rows).items():
+        allowed = budget.get("profiles", {}).get(key)
+        if allowed is None:
+            violations.append(f"{key}: no first-trip budget for this profile")
+            continue
+        for group, count in sorted(counts.items()):
+            limit = allowed.get(group)
+            if limit is None:
+                violations.append(f"{key}: new first-trip difference {group} x{count}")
+            elif count > limit:
+                violations.append(f"{key}: {group} {count} > budget {limit}")
+            elif count < limit:
+                tightened.append(f"{key}: {group} {count} < budget {limit}")
+        for group, limit in sorted(allowed.items()):
+            if group not in counts:
+                tightened.append(f"{key}: {group} 0 < budget {limit}")
+    return violations, tightened
+
+
 def run(suite: Path, out: Path, blender: str, profiles, rel, abs_):
     manifest = json.loads((suite / "x3d_suite_manifest.json").read_text())
-    rows = {}
+    out.mkdir(parents=True, exist_ok=True)
+    rows = {key: {"error": "unknown profile"} for key in profiles if key not in manifest["profiles"]}
     for key, prof in manifest["profiles"].items():
         if profiles and key not in profiles:
             continue
@@ -44,22 +83,27 @@ def run(suite: Path, out: Path, blender: str, profiles, rel, abs_):
         imp = {"color_space": "AS_IS"} if opts.get("color_space") == "AS_IS" else {}
         e0 = suite / prof["file"]
         od = out / key
-        cmd = [blender, "-b", "--factory-startup", "-noaudio", "--python", str(HERE / "fixed_point_leg.py"), "--",
-               str(od), "--export", json.dumps(opts), "--import", json.dumps(imp), str(e0)]
+        od.mkdir(parents=True, exist_ok=True)
+        # Never accept evidence left by a previous invocation, including when Blender catches a Python failure and
+        # exits zero. Preserve each run's logs while selecting only this invocation's exact expected directory.
+        run_root = Path(tempfile.mkdtemp(prefix="run-", dir=od))
+        leg = run_root / (e0.parent.name + "__" + e0.stem)
+        cmd = [blender, "-b", "--factory-startup", "-noaudio", "--python-exit-code", "1", "--python", str(HERE / "fixed_point_leg.py"), "--",
+               str(run_root), "--export", json.dumps(opts), "--import", json.dumps(imp), str(e0)]
         proc = subprocess.run(cmd, capture_output=True, text=True)
-        leg = next(od.glob("*/"), None)
-        if proc.returncode or leg is None or not (leg / "e2.x3d").exists():
-            rows[key] = {"error": (proc.stdout + proc.stderr)[-2000:]}
+        if proc.returncode or not all((leg / name).is_file() for name in ("e1.x3d", "e2.x3d", "s1.json", "s2.json")):
+            rows[key] = {"error": (proc.stdout + proc.stderr)[-2000:] or "leg did not produce all expected outputs",
+                         "artifacts": str(run_root)}
             continue
         r01 = x3d_diff.diff_files(str(e0), str(leg / "e1.x3d"), rel, abs_)
         r12 = x3d_diff.diff_files(str(leg / "e1.x3d"), str(leg / "e2.x3d"), rel, abs_, strict_defs=True)
         if IGNORE_META:
             r01 = [r for r in r01 if r["tag"] != "meta"]
             r12 = [r for r in r12 if r["tag"] != "meta"]
-        rows[key] = {"options": opts, "import": imp, "e0_e1": x3d_diff.summarise(r01), "e1_e2": x3d_diff.summarise(r12),
+        rows[key] = {"artifacts": str(leg), "options": opts, "import": imp, "e0_e1": x3d_diff.summarise(r01), "e1_e2": x3d_diff.summarise(r12),
                      "e0_e1_count": len(r01), "e1_e2_count": len(r12)}
     (out / "summary.json").write_text(json.dumps(rows, indent=1))
-    lines = []
+    lines = [] if rows else ["No profiles selected; no round trips were checked."]
     for key, row in rows.items():
         if "error" in row:
             lines.append(f"{key}: LEG FAILED\n{row['error']}")
@@ -72,7 +116,7 @@ def run(suite: Path, out: Path, blender: str, profiles, rel, abs_):
                              f"{str(ex['a'])[:60]!r} -> {str(ex['b'])[:60]!r}")
     (out / "summary.txt").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
-    return 1 if any(row.get("e1_e2_count", 1) for row in rows.values()) else 0
+    return 1 if not rows or any(row.get("e1_e2_count", 1) for row in rows.values()) else 0
 
 
 def main():
@@ -83,9 +127,28 @@ def main():
     p.add_argument("--profiles", default="")
     p.add_argument("--rel", type=float, default=1e-4)
     p.add_argument("--abs", type=float, default=1e-4)
+    p.add_argument("--budget", type=Path, help="fail when the first-trip (E0 -> E1) differences exceed this budget")
+    p.add_argument("--write-budget", type=Path, help="write this run's first-trip differences as the new budget")
     o = p.parse_args()
     o.out.mkdir(parents=True, exist_ok=True)
-    sys.exit(run(o.suite, o.out, o.blender, [x for x in o.profiles.split(",") if x], o.rel, o.abs))
+    status = run(o.suite, o.out, o.blender, [x for x in o.profiles.split(",") if x], o.rel, o.abs)
+    rows = json.loads((o.out / "summary.json").read_text())
+    if o.write_budget:
+        o.write_budget.write_text(json.dumps({
+            "schema": "x3d-blender-io.first-trip-budget/v1",
+            "about": "E0 -> E1 differences per profile and (kind|element|field), as counted by fixed_point.py with "
+                     "x3d_diff at --rel/--abs 1e-4 (Normal 1e-3). A group may shrink; growing or appearing fails CI. "
+                     "Regenerate with --write-budget in the change that fixes or deliberately accepts a difference.",
+            "profiles": first_trip_counts(rows)}, indent=1, sort_keys=True) + "\n")
+    if o.budget:
+        violations, tightened = budget_violations(rows, json.loads(o.budget.read_text()))
+        for line in tightened:
+            print("budget can tighten:", line)
+        for line in violations:
+            print("BUDGET EXCEEDED:", line)
+        if violations:
+            status = 1
+    sys.exit(status)
 
 
 if __name__ == "__main__":

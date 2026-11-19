@@ -117,6 +117,16 @@ class StructuralDiffTests(unittest.TestCase):
         self.assertTrue(self._diff('<X3D><Coordinate point="0 0 1"/></X3D>',
                                    '<X3D><Coordinate point="0 0.0005 1"/></X3D>', abs_=1e-4))
 
+    def test_large_coordinates_get_no_looser_bound(self):
+        # rel=1e-4 alone would accept half a metre at 100 km; positions compare in document units
+        a = '<X3D><Coordinate point="100000 0 0"/></X3D>'
+        moved = self._diff(a, '<X3D><Coordinate point="100000.5 0 0"/></X3D>', rel=1e-4, abs_=1e-4)
+        self.assertEqual([(r["tag"], r["attr"]) for r in moved], [("Coordinate", "point")])
+        self.assertEqual(self._diff(a, '<X3D><Coordinate point="100000.00005 0 0"/></X3D>', rel=1e-4, abs_=1e-4), [])
+        # a non-positional field keeps the relative bound
+        self.assertEqual(self._diff('<X3D><TimeSensor cycleInterval="100000"/></X3D>',
+                                    '<X3D><TimeSensor cycleInterval="100000.5"/></X3D>', rel=1e-4, abs_=1e-4), [])
+
     def test_children_align_by_def_not_position(self):
         a = '<X3D><Transform DEF="OB_A"/><Transform DEF="OB_B" translation="1 0 0"/></X3D>'
         b = '<X3D><Transform DEF="OB_B" translation="1 0 0"/></X3D>'
@@ -145,3 +155,43 @@ class StructuralDiffTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FirstTripBudgetTests(unittest.TestCase):
+    """tools/io_sync/fixed_point.py --budget: a first-trip loss fails even when the round trip then converges."""
+
+    @staticmethod
+    def _rows(*groups, e1_e2=0):
+        return {"main": {"e0_e1": [{"kind": k, "tag": t, "attr": a, "count": n} for k, t, a, n in groups],
+                         "e1_e2": [], "e0_e1_count": sum(g[3] for g in groups), "e1_e2_count": e1_e2}}
+
+    def setUp(self):
+        import fixed_point
+        self.fp = fixed_point
+        self.budget = {"profiles": {"main": {"value|Transform|translation": 3, "missing|Group|": 2}}}
+
+    def test_within_budget_passes(self):
+        violations, tightened = self.fp.budget_violations(
+            self._rows(("value", "Transform", "translation", 3), ("missing", "Group", None, 2)), self.budget)
+        self.assertEqual((violations, tightened), ([], []))
+
+    def test_a_converging_loss_of_every_light_fails(self):
+        # the reviewer's case: drop the lights on the first import; E1 -> E2 is then empty forever
+        rows = self._rows(("value", "Transform", "translation", 3), ("missing", "Group", None, 2),
+                          ("missing", "DirectionalLight", None, 3), e1_e2=0)
+        violations, _ = self.fp.budget_violations(rows, self.budget)
+        self.assertEqual(violations, ["main: new first-trip difference missing|DirectionalLight| x3"])
+
+    def test_a_grown_group_fails_and_a_shrunk_one_is_reported(self):
+        rows = self._rows(("value", "Transform", "translation", 4))
+        violations, tightened = self.fp.budget_violations(rows, self.budget)
+        self.assertEqual(violations, ["main: value|Transform|translation 4 > budget 3"])
+        self.assertEqual(tightened, ["main: missing|Group| 0 < budget 2"])
+
+    def test_a_profile_without_budget_fails(self):
+        violations, _ = self.fp.budget_violations(self._rows(), {"profiles": {}})
+        self.assertEqual(violations, ["main: no first-trip budget for this profile"])
+
+    def test_committed_budget_covers_every_suite_profile(self):
+        budget = json.loads((ROOT / "tools" / "io_sync" / "first_trip_budget.json").read_text())
+        self.assertEqual(sorted(budget["profiles"]), ["crease", "main", "x41"])

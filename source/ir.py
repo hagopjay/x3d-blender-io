@@ -145,6 +145,12 @@ class IRInlineAsset:
     asset_type: str = "x3d"
     transform: IRTransform = field(default_factory=IRTransform)
     import_policy: str = "native"
+    # the Inline's url MFString in order: alternatives for one asset, of which the first that loads is used (X3D 4.0
+    # Networking); empty means just ``url``
+    alternatives: tuple[str, ...] = ()
+
+    def candidate_urls(self) -> tuple[str, ...]:
+        return self.alternatives or (self.url,)
 
 
 @dataclass

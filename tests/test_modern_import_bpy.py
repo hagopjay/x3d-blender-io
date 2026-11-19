@@ -136,6 +136,26 @@ class ModernImportTests(unittest.TestCase):
         tagged = [m for m in bpy.data.materials if m.get("x3d_inline_source") == "cube.glb"]
         self.assertTrue(tagged)
 
+    def _inline_roots(self):
+        return [o for o in bpy.data.objects if o.get("x3d_inline_url")]
+
+    def test_a_missing_first_alternative_falls_back_to_the_next(self):
+        path = self.write("<Inline url='\"absent.glb\" \"cube.glb\"'/>")
+        self.assertIn("FINISHED", bpy.ops.import_scene.x3d(filepath=path))
+        roots = self._inline_roots()
+        self.assertEqual(len(roots), 1)
+        self.assertTrue(all(o["x3d_inline_source"] == "cube.glb" for o in bpy.data.objects if o.parent is roots[0]))
+
+    def test_only_the_first_working_alternative_is_imported(self):
+        import shutil
+        shutil.copy(self.glb, os.path.join(self.tmpdir, "copy.glb"))
+        path = self.write("<Inline url='\"cube.glb\" \"copy.glb\"'/>")
+        self.assertIn("FINISHED", bpy.ops.import_scene.x3d(filepath=path))
+        self.assertEqual(len(self._inline_roots()), 1)              # the fallback is not imported as a second model
+        meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+        self.assertEqual(len(meshes), 1)
+        self.assertEqual(meshes[0]["x3d_inline_source"], "cube.glb")
+
     def test_populate_reports_unsupported_inline_types(self):
         parse = __import__(self.pkg + ".parse_x3d40", fromlist=["parse_x3d40"])
         populate = __import__(self.pkg + ".populate", fromlist=["populate"])
