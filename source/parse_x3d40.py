@@ -53,11 +53,15 @@ def _collect_inline_assets(element, ir_scene: IRScene, current_transform: IRTran
         next_transform = _compose_transforms(current_transform, _transform_from_element(element))
     elif tag == "Inline":
         url_value = element.attrib.get("url", "").strip()
-        for inline_url in _parse_mfstring_urls(url_value):
+        urls = tuple(_parse_mfstring_urls(url_value))
+        if urls:
+            # One Inline is one asset: its url values are ordered alternatives, not several models (populate loads the
+            # first that resolves and imports)
             ir_scene.inline_assets.append(
                 IRInlineAsset(
-                    url=inline_url,
-                    asset_type=_guess_inline_type(inline_url),
+                    url=urls[0],
+                    asset_type=_guess_inline_type(urls[0]),
+                    alternatives=urls,
                     transform=IRTransform(
                         translation=next_transform.translation,
                         rotation_axis_angle=next_transform.rotation_axis_angle,

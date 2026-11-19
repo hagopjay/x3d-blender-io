@@ -130,6 +130,30 @@ def _populate_viewpoints(context, ir_scene):
     return created_names
 
 
+def _load_first_alternative(ir_scene, inline_asset):
+    """Import the first of an Inline's url alternatives that is a supported glTF, exists and imports; the rest are
+    fallbacks and are never imported as well. Records the chosen url on the asset. Returns (path, object names), or
+    None with a diagnostic per rejected alternative."""
+    from .parse_x3d40 import _guess_inline_type
+
+    for url in inline_asset.candidate_urls():
+        if _guess_inline_type(url) != "gltf":
+            ir_scene.diagnostics.append(f"Unsupported Inline asset type for modern importer: {url}")
+            continue
+        resolved_path = _resolve_inline_path(ir_scene.source_path, url)
+        if not os.path.isfile(resolved_path):
+            ir_scene.diagnostics.append(f"Inline alternative not found: {url}")
+            continue
+        try:
+            names = import_gltf(resolved_path)
+        except (OSError, RuntimeError) as exc:
+            ir_scene.diagnostics.append(f"Inline alternative failed to import: {url}: {exc}")
+            continue
+        inline_asset.url, inline_asset.asset_type = url, "gltf"
+        return resolved_path, names
+    return None
+
+
 def populate_scene(context, ir_scene):
     """Populate Blender data from IR.
 
@@ -143,12 +167,10 @@ def populate_scene(context, ir_scene):
     _apply_scene_metadata(inline_library, ir_scene)
 
     for asset_index, inline_asset in enumerate(ir_scene.inline_assets):
-        resolved_path = _resolve_inline_path(ir_scene.source_path, inline_asset.url)
-        if inline_asset.asset_type != "gltf":
-            ir_scene.diagnostics.append(f"Unsupported Inline asset type for modern importer: {inline_asset.url}")
+        loaded = _load_first_alternative(ir_scene, inline_asset)
+        if loaded is None:
             continue
-
-        imported_names = import_gltf(resolved_path)
+        resolved_path, imported_names = loaded
         material_names = imported_material_names(imported_names)
         imported_objects = [context.scene.objects[name] for name in imported_names if name in context.scene.objects]
         asset_collection = _ensure_inline_collection(

@@ -45,8 +45,11 @@ class ParseX3D40Tests(unittest.TestCase):
 
         self.assertEqual(ir_scene.name, "Inline Demo")
         self.assertEqual(ir_scene.source_path, str(filepath))
-        self.assertEqual([asset.url for asset in ir_scene.inline_assets], ["scene.glb", "fallback.x3d"])
-        self.assertEqual([asset.asset_type for asset in ir_scene.inline_assets], ["gltf", "x3d"])
+        # one Inline is one asset: its url values are ordered alternatives (X3D 4.0 Networking), not two models
+        self.assertEqual(len(ir_scene.inline_assets), 1)
+        asset = ir_scene.inline_assets[0]
+        self.assertEqual(asset.candidate_urls(), ("scene.glb", "fallback.x3d"))
+        self.assertEqual((asset.url, asset.asset_type), ("scene.glb", "gltf"))
 
     def test_parse_file_preserves_inline_transform(self):
         x3d_text = """<?xml version="1.0" encoding="UTF-8"?>
