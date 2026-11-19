@@ -454,7 +454,8 @@ class vrmlNode(object):
                  'PROTO_NAMESPACE',
                  'x3dNode',
                  'parsed',
-                 'parsed_vcol')
+                 'parsed_vcol',
+                 'shared_mesh')
 
     def __init__(self, parent, node_type, lineno):
         self.id = None
@@ -465,6 +466,7 @@ class vrmlNode(object):
         self.x3dNode = None  # for x3d import only
         self.parsed = None  # We try to reuse objects in a smart way
         self.parsed_vcol = None  # for a classic material in parsed: whether it was built for a Shape with a Color node
+        self.shared_mesh = None  # for a geometry node: (mesh, material) its first Shape built, for its USEs to share
         if parent:
             parent.children.append(self)
 
@@ -1789,9 +1791,18 @@ def make_colour_attribute_active(bpymesh, attribute):
                 pass
 
 
+def _vertex_colours_are_display():
+    """Whether this shape's Color / ColorRGBA values are display (sRGB) values to convert to linear: under the SRGB
+    colour space and not drawn with a PhysicalMaterial. The export's rule mirrored (extract.display_colour and
+    emit_x3d40.with_display_colours): under AS_IS it writes vertex colours as Blender holds them, so the import must
+    read them back unchanged, or each AS_IS round trip darkens them once more (a point colour 0.5 became 0.214, then
+    0.038)."""
+    return colour_space == 'SRGB' and not vertex_colours_linear
+
+
 def set_new_float_color_attribute(bpymesh, color_data, name: str = "ColorPerCorner", convert_to_linear: bool = True):
     """Uses the new blender api to apply colors to a mesh as vertex colors (domain face corner)"""
-    if convert_to_linear and not vertex_colours_linear:
+    if convert_to_linear and _vertex_colours_are_display():
         # convert color spaces to account for api changes from legacy to newer api; every fourth value is alpha,
         # which is not a colour (a ColorRGBA alpha of 0.5 used to become 0.21)
         color_data = [col_val if i % 4 == 3 else srgb_to_linear(col_val) for i, col_val in enumerate(color_data)]
@@ -2204,7 +2215,14 @@ def importMesh_IndexedFaceSet(geom, ancestry):
     points = validate_points_field(faces, points)
 
     bpymesh = bpy.data.meshes.new(name="IndexedFaceSet")
-    bpymesh.from_pydata(points, [], faces)
+    # With a Normal node the faces must be smooth while the custom normals are set: Blender encodes each custom normal
+    # against its corner fan, and a flat face (from_pydata's default since 4.1) is a fan of its own, so every corner of
+    # a shared vertex was quantised on its own (up to ~0.04 degree apart) and the re-export split each such vertex.
+    # Blender marks the edges sharp itself where the file's normals differ across a vertex.
+    try:
+        bpymesh.from_pydata(points, [], faces, shade_flat=not geom.getChildBySpec('Normal'))
+    except TypeError:  # Blender before 4.1: no shade_flat, faces are smooth
+        bpymesh.from_pydata(points, [], faces)
     # No validation here. It throws off the per-face stuff.
 
     # Similar treatment for normal and color indices
@@ -3006,8 +3024,9 @@ CIRCLE_DIV_RANGE = (3, 512)
 # behaviour so far); 'SRGB' converts the classic materials' colours from sRGB to linear, so Blender and every glTF
 # viewer show what X_ITE shows. Measured on 12 Nov 2026 (X_ITE 16.7, Babylon.js 9.32, headless Chrome): an
 # emissiveColor of 0.5 is 128 in X_ITE, 186 in Babylon.js from the glb made as is, 128 from the glb made with SRGB.
-# Color and ColorRGBA values have always been converted (set_new_float_color_attribute). The X3D export does not
-# convert back yet, so SRGB is for imports that are rendered, not round-tripped.
+# Color and ColorRGBA values are converted under SRGB unless the shape uses a PhysicalMaterial, and kept under AS_IS,
+# the same rule the export applies (_vertex_colours_are_display), so an import and an export with the same colour
+# space round-trip.
 COLOUR_SPACES = ('AS_IS', 'SRGB')
 COLOUR_SPACE_ALIASES = {"X_ITE": "SRGB", "XITE": "SRGB", "LINEAR_WHEN_PHYSICAL_MATERIAL": "SRGB", "LINEAR": "AS_IS",
                         "NONE": "AS_IS", "AUTO": ""}
@@ -3622,8 +3641,9 @@ def x3d_point_colours(geom, ancestry):
 
 def set_point_colours(bpymesh, rgba, kind):
     """One X3D colour per vertex as the POINT-domain attribute LINE_COLOUR_ATTRIBUTE. RGB goes from sRGB to linear as
-    for faces (set_new_float_color_attribute); alpha is not a colour and is kept as it is."""
-    flat = [v for (r, g, b, a) in rgba for v in (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), a)]
+    for faces when _vertex_colours_are_display(); alpha is not a colour and is kept as it is."""
+    encode = srgb_to_linear if _vertex_colours_are_display() else float
+    flat = [v for (r, g, b, a) in rgba for v in (encode(r), encode(g), encode(b), a)]
     attr = bpymesh.color_attributes.new(LINE_COLOUR_ATTRIBUTE, 'FLOAT_COLOR', 'POINT')
     attr.data.foreach_set("color", flat)
     bpymesh["x3d_colour_kind"] = kind
@@ -3788,6 +3808,19 @@ def unlit_pbr_material(bpymat, bsdf, emissive):
 physical_colour_cache = {}
 
 
+def _name_derived_material(mat, source, suffix):
+    """Name a material derived from ``source`` (its colour or line variant) ``<source><suffix>``, unless ``source``
+    already ends with ``suffix``: a file this add-on wrote names the variant itself (MA_X_colour), so the Appearance
+    material arrives as X_colour and appending again grew the name on every round trip (X_colour_colour). The variant
+    then takes that name and the source, which in such a file only the variant uses, moves aside to <name>.source."""
+    if source is None or not source.name.endswith(suffix):
+        mat.name = (source.name if source is not None else mat.name) + suffix
+        return
+    want = source.name
+    source.name = want + ".source"
+    mat.name = want
+
+
 def physical_colour_material(bpymat):
     """The copy of a PhysicalMaterial's Principled material for a filled geometry with a Color or ColorRGBA node,
     made once per import for each material and solid: the colours (ColorPerCorner) drive Base Color, and multiply a
@@ -3797,7 +3830,7 @@ def physical_colour_material(bpymat):
     the glb. The Base Color socket keeps baseColor as its value, so the X3D export writes the PhysicalMaterial back
     unchanged beside the Color node. The colours stay linear: the face importers keep a Color under a
     PhysicalMaterial as given (vertex_colours_linear)."""
-    key = (bpymat.name, bool(bpymat.use_backface_culling))
+    key = (bpymat.as_pointer(), bool(bpymat.use_backface_culling))
     hit = physical_colour_cache.get(key)
     if hit is not None:
         return hit
@@ -3806,7 +3839,7 @@ def physical_colour_material(bpymat):
     if bsdf is None:
         return bpymat
     mat = bpymat.copy()
-    mat.name = bpymat.name + "_colour"
+    _name_derived_material(mat, bpymat, "_colour")
     tree = mat.node_tree
     bsdf = next(n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED')
     base = bsdf.inputs['Base Color']
@@ -3845,14 +3878,14 @@ def unlit_colour_material(bpymat, colour_kind, alpha_mode='AUTO'):
     The Emission node keeps emissiveColor as its colour's value, so the X3D export writes the UnlitMaterial back with
     the same emissiveColor and transparency beside the Color node. The copy is per alphaMode and per solid, which
     the copy carries as use_backface_culling (one UnlitMaterial can be USEd on solid and two-sided geometry)."""
-    key = (bpymat.name, colour_kind, alpha_mode, bool(bpymat.use_backface_culling))
+    key = (bpymat.as_pointer(), colour_kind, alpha_mode, bool(bpymat.use_backface_culling))
     hit = unlit_colour_cache.get(key)
     if hit is not None:
         return hit
     if bpymat.node_tree is None or not any(n.type == 'EMISSION' for n in bpymat.node_tree.nodes):
         return bpymat
     mat = bpymat.copy()
-    mat.name = bpymat.name + "_colour"
+    _name_derived_material(mat, bpymat, "_colour")
     tree = mat.node_tree
     out = _output_node(tree)
     emission = next(n for n in tree.nodes if n.type == 'EMISSION')
@@ -3915,7 +3948,7 @@ def unlit_colour_material(bpymat, colour_kind, alpha_mode='AUTO'):
     return mat
 
 
-def line_point_material(name, rgb, alpha=1.0, colours=None):
+def line_point_material(name, rgb, alpha=1.0, colours=None, source=None):
     """The unlit material lines and points are drawn with (made once per import for each colour, alpha and kind).
 
     colours None: the one colour `rgb`. 'RGB' / 'RGBA': the vertex colours in LINE_COLOUR_ATTRIBUTE, which replace
@@ -3931,7 +3964,12 @@ def line_point_material(name, rgb, alpha=1.0, colours=None):
     hit = line_material_cache.get(key)
     if hit is not None:
         return hit
+    # "<name>_lines", as the export names a mesh's loose edges, but never twice (see _name_derived_material)
     mat = bpy.data.materials.new(name + "_lines")
+    if source is not None and source.name == name:
+        _name_derived_material(mat, source, "_lines")
+    elif name.endswith("_lines"):
+        mat.name = name
     if mat.node_tree is None:                     # Blender before 5.0 makes the node tree on request
         mat.use_nodes = True
     tree = mat.node_tree
@@ -4455,7 +4493,7 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
         alpha = 1.0
         specular_color = [0.0, 0.0, 0.0]
 
-    bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
+    bpymat = bpy.data.materials.new((exported_material_name(mat) if mat_name else None) or vrmlname)
     if mat_name:
         bpymat[X3D_DEF_PROPERTY] = mat_name
     if mat:
@@ -4883,12 +4921,26 @@ def _link_texture_alpha(node_tree, bsdf, bpyima, alpha):
     return True
 
 
+def exported_material_name(mat):
+    """The Blender name for a material node: its DEF, without the MA_ this add-on's export adds.
+
+    The export writes material X as <Appearance DEF="APP_X"><PhysicalMaterial DEF="MA_X"/>. Naming the Blender material
+    MA_X made the next export write MA_MA_X (87 materials renamed per round trip of the export suite). Only that exact
+    pattern is stripped (see exported_object_name); x3d_def keeps the DEF as written."""
+    name = mat.getDefName()
+    if name and name.startswith("MA_") and len(name) > 3:
+        appearance = getattr(mat.getRealNode(), "parent", None)
+        if appearance is not None and hasattr(appearance, "getDefName") and appearance.getDefName() == "APP_" + name[3:]:
+            return name[3:]
+    return name
+
+
 def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
     """Create a Principled (or Emission) Blender material from PhysicalMaterial / UnlitMaterial."""
     spec = mat.getSpec()
     unlit = spec == 'UnlitMaterial'
     mat_name = mat.getDefName()
-    bpymat = bpy.data.materials.new(mat_name if mat_name else vrmlname)
+    bpymat = bpy.data.materials.new(exported_material_name(mat) or vrmlname)
     if mat_name:
         bpymat[X3D_DEF_PROPERTY] = mat_name
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
@@ -5014,8 +5066,29 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
         # transparency 1 stays Principled: Blender folds a Mix Shader whose factor is 0 into its Transparent BSDF before
         # the glTF exporter looks, so the unlit shape could not carry alpha 0, which the Principled one does (MASK)
         unlit_pbr_material(bpymat, bsdf, emissive)
+    _apply_texture_wrap(bpymat, textures, images, ancestry)
     # Two-sided rendering follows the geometry's solid field, which importShape applies later.
     return bpymat
+
+
+def _apply_texture_wrap(bpymat, textures, images, ancestry):
+    """repeatS / repeatT of each PhysicalMaterial / UnlitMaterial texture as its image nodes' extension.
+
+    The classic Material path set it (appearance_Create) but this one did not, so a clamped texture came back
+    repeating, and the re-export, seeing the same image twice with the same wrap, wrote the clamped one as a USE of the
+    repeating one. Blender has one extension for both axes: CLIP only when both repeat fields are false, as there."""
+    if bpymat.node_tree is None:
+        return
+    wrap = {}
+    for container, tex_node in textures.items():
+        bpyima = images.get(container)
+        if bpyima is None or tex_node.getSpec() == 'MovieTexture':
+            continue
+        repeat = tex_node.getFieldAsBool('repeatS', True, ancestry) or tex_node.getFieldAsBool('repeatT', True, ancestry)
+        wrap[bpyima.name] = "REPEAT" if repeat else "CLIP"
+    for image_node in bpymat.node_tree.nodes:
+        if image_node.type == 'TEX_IMAGE' and image_node.image is not None and image_node.image.name in wrap:
+            image_node.extension = wrap[image_node.image.name]
 
 
 def importShape_LoadPBRAppearance(vrmlname, appr, mat_node, ancestry, node):
@@ -5222,55 +5295,60 @@ def _set_world_matrix(bpyob, matrix):
 def importShape_ProcessObject(
         bpycollection, vrmlname, bpydata, geom, geom_spec, node,
         bpymat, has_alpha, texmtx, ancestry,
-        global_matrix, solidify, solidify_value):
+        global_matrix, solidify, solidify_value, reused=False):
 
-    geom_name = geom.getDefName() if hasattr(geom, "getDefName") else None
-    if geom_name:
-        bpydata.name = geom_name[3:] if geom_name.startswith("ME_") and len(geom_name) > 3 else geom_name
-        bpydata[X3D_DEF_PROPERTY] = geom_name
-    else:
-        bpydata.name = vrmlname + "_" + geom_spec
-
-    # curves like IndexedLineSet can also have a material,
-    # although it won't be visible until the curve has some depth
-    if type(bpydata) == bpy.types.Curve:
-        if bpymat:
-            bpydata.materials.append(bpymat)
-
-    if type(bpydata) == bpy.types.Mesh:
-        # solid, as understood by the spec, is always true in Blender
-        # solid=false, we don't support it yet.
-        creaseAngle = geom.getFieldAsFloat('creaseAngle', None, ancestry)
-        if creaseAngle is not None and not bpydata.has_custom_normals:
-            bpydata.set_sharp_from_angle(angle=creaseAngle)
-        elif geom_spec in SMOOTH_PRIMITIVES and not bpydata.has_custom_normals:
-            smooth_primitive(bpydata, geom_spec)
+    # reused: a USE of geometry already built with this material (_shared_mesh); the mesh is final and only the new
+    # object below links it
+    if not reused:
+        geom_name = geom.getDefName() if hasattr(geom, "getDefName") else None
+        if geom_name:
+            bpydata.name = geom_name[3:] if geom_name.startswith("ME_") and len(geom_name) > 3 else geom_name
+            bpydata[X3D_DEF_PROPERTY] = geom_name
         else:
-            bpydata.polygons.foreach_set("use_smooth", [False] * len(bpydata.polygons))
+            bpydata.name = vrmlname + "_" + geom_spec
 
-        # Only ever 1 material per shape
-        if bpymat:
-            bpydata.materials.append(bpymat)
+        # curves like IndexedLineSet can also have a material,
+        # although it won't be visible until the curve has some depth
+        if type(bpydata) == bpy.types.Curve:
+            if bpymat:
+                bpydata.materials.append(bpymat)
 
-        if bpydata.uv_layers:
-            if has_alpha and bpymat:
-                bpymat.surface_render_method = "BLENDED"
+        if type(bpydata) == bpy.types.Mesh:
+            # solid, as understood by the spec, is always true in Blender
+            # solid=false, we don't support it yet.
+            creaseAngle = geom.getFieldAsFloat('creaseAngle', None, ancestry)
+            if creaseAngle is not None and not bpydata.has_custom_normals:
+                bpydata.set_sharp_from_angle(angle=creaseAngle)
+            elif geom_spec in SMOOTH_PRIMITIVES and not bpydata.has_custom_normals:
+                smooth_primitive(bpydata, geom_spec)
+            elif bpydata.has_custom_normals:
+                pass  # the file's normals decide; flat faces would re-split the corner fans (see importMesh_IndexedFaceSet)
+            else:
+                bpydata.polygons.foreach_set("use_smooth", [False] * len(bpydata.polygons))
 
-            if texmtx:
-                # Apply texture transform?
-                uv_copy = Vector()
-                for l in bpydata.uv_layers.active.data:
-                    luv = l.uv
-                    uv_copy.x = luv[0]
-                    uv_copy.y = luv[1]
-                    l.uv[:] = (uv_copy @ texmtx)[0:2]
+            # Only ever 1 material per shape
+            if bpymat:
+                bpydata.materials.append(bpymat)
 
-        # Done transforming the texture
-        # TODO: check if per-polygon textures are supported here.
-    elif type(bpydata) == bpy.types.TextCurve:
-        # Text with textures??? Not sure...
-        if bpymat:
-            bpydata.materials.append(bpymat)
+            if bpydata.uv_layers:
+                if has_alpha and bpymat:
+                    bpymat.surface_render_method = "BLENDED"
+
+                if texmtx:
+                    # Apply texture transform?
+                    uv_copy = Vector()
+                    for l in bpydata.uv_layers.active.data:
+                        luv = l.uv
+                        uv_copy.x = luv[0]
+                        uv_copy.y = luv[1]
+                        l.uv[:] = (uv_copy @ texmtx)[0:2]
+
+            # Done transforming the texture
+            # TODO: check if per-polygon textures are supported here.
+        elif type(bpydata) == bpy.types.TextCurve:
+            # Text with textures??? Not sure...
+            if bpymat:
+                bpydata.materials.append(bpymat)
 
     # Can transform data or object, better the object so we can instance
     # the data
@@ -5620,6 +5698,28 @@ def importMetadata(node, ancestors=()):
     return tree
 
 
+def _shared_mesh(geom, bpymat, texmtx):
+    """The mesh a USE of this geometry can share, or None to build its own.
+
+    The export writes one mesh used by several objects (linked duplicates, collection instances) as a DEF and USEs of
+    it; building a new mesh per USE made each a copy, so the re-export wrote the geometry out again for every user. A
+    USE shares the first mesh when it gets the same material and no TextureTransform (which is baked into the UVs, so
+    such a USE needs its own UVs)."""
+    if not geom.reference or texmtx is not None:
+        return None
+    cached = geom.getRealNode().shared_mesh
+    if cached is None:
+        return None
+    mesh, material = cached
+    try:
+        mesh.name
+    except ReferenceError:  # removed since (File > New between imports)
+        return None
+    if (material is None) != (bpymat is None) or (material is not None and material != bpymat):
+        return None
+    return mesh
+
+
 def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify_value):
     global vertex_colours_linear
     # Under Shape, we can only have Appearance, MetadataXXX and a geometry node
@@ -5709,9 +5809,10 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
     # geometries are easier to flip than others
     geom_fn = geometry_importers.get(geom_spec)
     if geom_fn is not None:
+        shared = _shared_mesh(geom, bpymat, texmtx)
         vertex_colours_linear = appr is not None and appr.getChildBySpec('PhysicalMaterial') is not None
         try:
-            bpydata = geom_fn(geom, ancestry)
+            bpydata = shared if shared is not None else geom_fn(geom, ancestry)
         finally:
             vertex_colours_linear = False
 
@@ -5724,8 +5825,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
-            name = bpymat.name if bpymat is not None else (vrmlname or geom_spec)
-            bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata))
+            # a source moved aside by _name_derived_material keeps its cache key
+            name = bpymat.name.removesuffix(".source") if bpymat is not None else (vrmlname or geom_spec)
+            bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata), source=bpymat)
             line_properties = appr.getChildBySpec('LineProperties') if appr is not None else None
             line_width = line_properties.getFieldAsFloat('linewidthScaleFactor', None, ancestry) if line_properties else None
 
@@ -5734,7 +5836,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         importShape_ProcessObject(
             bpycollection, vrmlname, bpydata, geom, geom_spec,
             node, bpymat, tex_has_alpha, texmtx,
-            ancestry, global_matrix, solidify, solidify_value)
+            ancestry, global_matrix, solidify, solidify_value, reused=shared is not None)
+        if shared is None and texmtx is None and isinstance(bpydata, bpy.types.Mesh):
+            geom.getRealNode().shared_mesh = (bpydata, bpymat)
         if texmtx is not None and isinstance(bpydata, bpy.types.Mesh) and PRIMITIVE_PROPERTY in bpydata:
             del bpydata[PRIMITIVE_PROPERTY]  # its UVs carry a TextureTransform the primitive would lose
         if appr is not None and geom_spec not in LINE_POINT_SPECS and node.blendObject is not None:
@@ -5774,10 +5878,23 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
 LIGHT_ENERGY_PER_INTENSITY = 1.75
 
 
+def exported_object_name(node, ancestry, prefix):
+    """The Blender name for a light or viewpoint: its DEF, without the prefix this add-on's export adds.
+
+    The export writes object X's light as <Transform DEF="OB_X"><PointLight DEF="LA_X"/> (a camera: CA_X). Naming the
+    object after the node's own DEF made it LA_X, which the next export wrote as OB_LA_X / LA_LA_X: one more prefix per
+    round trip, and every ROUTE or Script naming the node broke. Only that exact pattern is stripped, so a hand-written
+    DEF="LA_Lamp" keeps its name; x3d_def still records the DEF as written."""
+    own = node.getDefName()
+    if own and own.startswith(prefix) and len(own) > len(prefix):
+        parent = next((a.getDefName() for a in reversed(ancestry) if hasattr(a, "getDefName") and a.getDefName()), None)
+        if parent == "OB_" + own[len(prefix):]:
+            return own[len(prefix):]
+    return own
+
+
 def importLamp_PointLight(node, ancestry):
-    vrmlname = node.getDefName()
-    if not vrmlname:
-        vrmlname = 'PointLight'
+    vrmlname = exported_object_name(node, ancestry, "LA_") or 'PointLight'
 
     # attenuation = node.getFieldAsFloatTuple('attenuation', (1.0, 0.0, 0.0), ancestry) # TODO
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
@@ -5797,9 +5914,7 @@ def importLamp_PointLight(node, ancestry):
 
 
 def importLamp_DirectionalLight(node, ancestry):
-    vrmlname = node.getDefName()
-    if not vrmlname:
-        vrmlname = 'DirectLight'
+    vrmlname = exported_object_name(node, ancestry, "LA_") or 'DirectLight'
 
     color = node.getFieldAsFloatTuple('color', (1.0, 1.0, 1.0), ancestry)
     direction = node.getFieldAsFloatTuple('direction', (0.0, 0.0, -1.0), ancestry)
@@ -5819,9 +5934,7 @@ def importLamp_DirectionalLight(node, ancestry):
 
 
 def importLamp_SpotLight(node, ancestry):
-    vrmlname = node.getDefName()
-    if not vrmlname:
-        vrmlname = 'SpotLight'
+    vrmlname = exported_object_name(node, ancestry, "LA_") or 'SpotLight'
 
     # attenuation = geom.getFieldAsFloatTuple('attenuation', (1.0, 0.0, 0.0), ancestry) # TODO
     beamWidth = node.getFieldAsFloat('beamWidth', 1.570796, ancestry)  # max is documented to be 1.0 but some files have higher.
@@ -5956,9 +6069,7 @@ def importGeoViewpoint_Matrix(node, orientation, bpycam, ancestry):
 
 
 def importViewpoint(bpycollection, node, ancestry, global_matrix):
-    name = node.getDefName()
-    if not name:
-        name = 'Viewpoint'
+    name = exported_object_name(node, ancestry, "CA_") or 'Viewpoint'
 
     fieldOfView = node.getFieldAsFloat('fieldOfView', 0.785398, ancestry)  # max is documented to be 1.0 but some files have higher.
     # jump = node.getFieldAsBool('jump', True, ancestry)
@@ -6489,7 +6600,9 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
             if appr.getChildBySpec(('PhysicalMaterial', 'UnlitMaterial')):
                 bpymat.use_backface_culling = geometry_solid(geom, ancestry)
 
-    obj = bpy.data.objects.new(mesh_name, mesh)
+    # the export names a skin's geometry ME_<object>_skin; the object keeps <object>, or each round trip adds a "_skin"
+    object_name = mesh_name[:-len("_skin")] if (geom.getDefName() or "").endswith("_skin") and len(mesh_name) > 5 else mesh_name
+    obj = bpy.data.objects.new(object_name, mesh)
     bpycollection.objects.link(obj)
     obj.parent = armature
     obj.matrix_world = armature.matrix_world.copy()
@@ -7391,8 +7504,28 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
                 for kf in fcu.keyframe_points:
                     kf.interpolation = 'LINEAR'
 
-    if last_frame > scene.frame_end:
-        scene.frame_end = int(round(last_frame))
+    _fit_frame_end(scene, last_frame)
+
+
+def _fit_frame_end(scene, last_frame):
+    """End the timeline where the file's animation ends.
+
+    The export samples scene.frame_start..frame_end, so a 2 s file imported into the default 1..250 timeline came back
+    as a 10.4 s cycle that holds still for its last 8.4 s. When the scene had no animation before this import
+    (_timeline_fit_pending, set by load_web3d) the first animation fits frame_end to its own end; later ones, and every
+    import into an already animated scene, only extend it, so a user's longer timeline is never cut."""
+    global _timeline_fit_pending
+    end = int(round(last_frame))
+    if end <= scene.frame_start:
+        return
+    if _timeline_fit_pending:
+        scene.frame_end = end
+        _timeline_fit_pending = False
+    elif end > scene.frame_end:
+        scene.frame_end = end
+
+
+_timeline_fit_pending = False
 
 
 def _animate_joint(defDict, target_def, joint, channel_defs, timers_for_interp, scene, fps, frame_start):
@@ -7458,8 +7591,7 @@ def _animate_joint(defDict, target_def, joint, channel_defs, timers_for_interp, 
     for fcu in _action_fcurves(armature.animation_data.action):
         for kf in fcu.keyframe_points:
             kf.interpolation = 'LINEAR'
-    if last_frame > scene.frame_end:
-        scene.frame_end = int(round(last_frame))
+    _fit_frame_end(scene, last_frame)
 
 
 def _action_fcurves(action):
@@ -7785,6 +7917,9 @@ def load_web3d(
     image_alpha_cache = {}
 
     bpyscene = bpycontext.scene
+    global _timeline_fit_pending
+    _timeline_fit_pending = not any(ob.animation_data is not None and ob.animation_data.action is not None
+                                    for ob in bpyscene.objects)
 
     if as_collection:
         active_collection = bpy.context.view_layer.active_layer_collection.collection
