@@ -158,8 +158,13 @@ class SwatchBookRoundTripTests(unittest.TestCase):
         self.assertEqual(result, {"FINISHED"})
 
         meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
-        # 7 swatch objects; the two-tone sphere imports as two shapes
-        self.assertEqual(len(meshes), 9, [obj.name for obj in meshes])
+        # the swatch book's own 8 objects: the two-tone sphere is written as two Shapes (ME_..._m0 / _m1) and the
+        # import joins them back into one mesh with both material slots (keep_hierarchy, the default)
+        self.assertEqual(sorted(obj.name for obj in meshes),
+                         sorted(["SwatchDielectric", "SwatchMetal", "SwatchGlass", "SwatchUnlit", "SwatchTextured",
+                                 "SwatchTwoTone", "SwatchCubeA", "SwatchCubeB"]))
+        two_tone = bpy.context.scene.objects["SwatchTwoTone"]
+        self.assertEqual([m.name for m in two_tone.data.materials], ["TwoToneTop", "TwoToneBottom"])
 
         # the swatch book's own material names: the export writes MA_<name> inside APP_<name>, and the import strips
         # that pattern again (it used to keep MA_, so the next export wrote MA_MA_<name>)

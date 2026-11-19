@@ -109,10 +109,12 @@ class IdentityTests(unittest.TestCase):
         self.assertEqual(by_name["BoxShape.001"]["x3d_use"], "BoxShape")
         self.assertEqual(by_name["CamMain"]["x3d_def"], "CamMain")
         self.assertEqual(by_name["LampKey"]["x3d_def"], "LampKey")
-        self.assertEqual(gltf["meshes"][0]["extras"]["x3d_def"], "BoxGeom")
-        self.assertEqual(gltf["materials"][0]["extras"]["x3d_def"], "RedMat")
+        # by name, not by index: the glTF exporter numbers meshes in node order, which the hierarchy changes
+        box = next(i for i, m in enumerate(gltf["meshes"]) if m.get("extras", {}).get("x3d_def") == "BoxGeom")
+        self.assertEqual(gltf["meshes"][box]["name"], "BoxGeom")
+        self.assertEqual([m["extras"]["x3d_def"] for m in gltf["materials"]], ["RedMat"])
         self.assertEqual(len(gltf["meshes"]), 2)    # the USE'd Box is one mesh on two nodes
-        self.assertEqual(sum(1 for n in gltf["nodes"] if n.get("mesh") == 0), 2)
+        self.assertEqual(sum(1 for n in gltf["nodes"] if n.get("mesh") == box), 2)
 
 
 if __name__ == "__main__":

@@ -310,6 +310,16 @@ class ImportExportSyncTests(unittest.TestCase):
         self.assertTrue({"Lamp", "Cam", "Box"} <= names, names)
         self.assertIn("Paint", bpy.data.materials)
 
+    def test_a_material_only_coloured_shapes_use_keeps_its_name(self):
+        doc = ('<X3D version="4.0"><Scene><Transform DEF="OB_Dyed"><Shape><Appearance DEF="APP_Dye">'
+               '<PhysicalMaterial DEF="MA_Dye" baseColor="0.5 0.5 0.5"/></Appearance>'
+               '<IndexedFaceSet coordIndex="0 1 2 3 -1">' + _QUAD + '<Color color="1 0 0 0 1 0 0 0 1 1 1 1"/>'
+               '</IndexedFaceSet></Shape></Transform></Scene></X3D>')
+        self._import(self._write("dyed.x3d", doc))
+        self.assertEqual([m.name for m in self._mesh_object().data.materials], ["Dye"])
+        root = self._export("dyed_again.x3d")
+        self.assertIn("MA_Dye", _defs(root))
+
     def test_hand_written_prefix_is_kept(self):
         self._import(self._write("hand.x3d", HAND_DOC))
         lights = [ob for ob in bpy.context.scene.objects if ob.type == 'LIGHT']

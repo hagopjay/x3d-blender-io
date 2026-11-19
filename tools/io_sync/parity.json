@@ -8,68 +8,306 @@
     "unmeasured": "the export can write it but no corpus file of the fixed-point check contains it yet"
   },
   "nodes": {
-    "X3D": {"import": "structural", "round_trip": "exact"},
-    "head": {"import": "structural", "round_trip": "exact"},
-    "component": {"import": "structural", "round_trip": "exact"},
-    "meta": {"import": "yes", "round_trip": "equivalent", "note": "generator, file name and date describe the export run and change on every export (A11)"},
-    "Scene": {"import": "structural", "round_trip": "exact"},
-    "Transform": {"import": "yes", "round_trip": "lossy", "note": "the import is flat: nested Transforms become world matrices (A1)"},
-    "Group": {"import": "structural", "round_trip": "lossy", "note": "flattened with the hierarchy (A1)"},
-    "Shape": {"import": "yes", "round_trip": "lossy", "note": "a multi-material mesh (one Transform, several Shapes) comes back as one object per Shape (A2)"},
-    "Appearance": {"import": "yes", "round_trip": "equivalent", "note": "alphaMode of a dithered material (A8)"},
-    "PhysicalMaterial": {"import": "yes", "round_trip": "exact", "note": "metallic / roughness 1 (the X3D defaults) are written out after a round trip"},
-    "UnlitMaterial": {"import": "yes", "round_trip": "exact"},
-    "Material": {"import": "yes", "round_trip": "unmeasured", "note": "written only with the classic material model"},
-    "ImageTexture": {"import": "yes", "round_trip": "exact"},
-    "TextureTransform": {"import": "yes", "round_trip": "lossy", "note": "baked into the UVs on import (A5)"},
-    "TextureCoordinate": {"import": "yes", "round_trip": "lossy", "note": "a mesh without UVs gains a TextureCoordinate (A6)"},
-    "IndexedFaceSet": {"import": "yes", "round_trip": "exact"},
-    "IndexedLineSet": {"import": "yes", "round_trip": "equivalent", "note": "a closed polyline gets its first point written again at the end (A7)"},
-    "PointSet": {"import": "yes", "round_trip": "exact"},
-    "LineProperties": {"import": "yes", "round_trip": "unmeasured"},
-    "Coordinate": {"import": "yes", "round_trip": "exact"},
-    "Normal": {"import": "yes", "round_trip": "exact", "note": "within 1e-3: Blender stores custom normals as 16-bit angles"},
-    "Color": {"import": "yes", "round_trip": "unmeasured"},
-    "ColorRGBA": {"import": "yes", "round_trip": "exact"},
-    "Box": {"import": "yes", "round_trip": "unmeasured", "note": "written for meshes the import made from a primitive"},
-    "Sphere": {"import": "yes", "round_trip": "unmeasured"},
-    "Cone": {"import": "yes", "round_trip": "unmeasured"},
-    "Cylinder": {"import": "yes", "round_trip": "unmeasured"},
-    "Circle2D": {"import": "yes", "round_trip": "unmeasured"},
-    "Rectangle2D": {"import": "yes", "round_trip": "unmeasured"},
-    "DirectionalLight": {"import": "yes", "round_trip": "exact"},
-    "PointLight": {"import": "yes", "round_trip": "exact"},
-    "SpotLight": {"import": "yes", "round_trip": "exact"},
-    "Viewpoint": {"import": "yes", "round_trip": "exact"},
-    "NavigationInfo": {"import": "yes", "round_trip": "exact"},
-    "Background": {"import": "yes", "round_trip": "exact"},
-    "TimeSensor": {"import": "yes", "round_trip": "exact"},
-    "PositionInterpolator": {"import": "yes", "round_trip": "lossy", "note": "a child's local animation comes back in world space (A1)"},
-    "OrientationInterpolator": {"import": "yes", "round_trip": "lossy", "note": "a parent's own animation is lost with the hierarchy (A1)"},
-    "CoordinateInterpolator": {"import": "yes", "round_trip": "exact"},
-    "ROUTE": {"import": "yes", "round_trip": "lossy", "note": "follows the interpolators (A1)"},
-    "BooleanFilter": {"import": "yes", "round_trip": "unmeasured"},
-    "ProximitySensor": {"import": "yes", "round_trip": "unmeasured"},
-    "TouchSensor": {"import": "yes", "round_trip": "unmeasured"},
-    "HAnimHumanoid": {"import": "yes", "round_trip": "exact"},
-    "HAnimJoint": {"import": "yes", "round_trip": "equivalent", "note": "skinCoordIndex renumbered with the skin's vertex split; weights per vertex position identical"},
-    "Inline": {"import": "yes", "round_trip": "equivalent", "note": "url rewritten relative to the new file"},
-    "MetadataSet": {"import": "yes", "round_trip": "unmeasured"},
-    "GaussianSplats": {"import": "yes", "round_trip": "exact", "note": "X3D 4.1 draft; written by x3d_version X3D41"}
+    "X3D": {
+      "import": "structural",
+      "round_trip": "exact"
+    },
+    "head": {
+      "import": "structural",
+      "round_trip": "exact"
+    },
+    "component": {
+      "import": "structural",
+      "round_trip": "exact"
+    },
+    "meta": {
+      "import": "yes",
+      "round_trip": "equivalent",
+      "note": "generator, file name and date describe the export run and change on every export (A11)"
+    },
+    "Scene": {
+      "import": "structural",
+      "round_trip": "exact"
+    },
+    "Transform": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "keep_hierarchy (default): one Blender object per Transform, parented as nested, local matrix = the file's Transform; an Empty for a Transform with several or no objects"
+    },
+    "Group": {
+      "import": "structural",
+      "round_trip": "lossy",
+      "note": "no matrix, so not kept as an object; a collection instance (Group DEF/USE) comes back as copies (A12)"
+    },
+    "Shape": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "the export's per-material Shapes of one mesh (ME_<mesh>_m<k>) are joined back into one object; a hand-written Transform with several Shapes keeps one object per Shape under an Empty"
+    },
+    "Appearance": {
+      "import": "yes",
+      "round_trip": "equivalent",
+      "note": "alphaMode of a dithered material (A8)"
+    },
+    "PhysicalMaterial": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "metallic / roughness 1 (the X3D defaults) are written out after a round trip"
+    },
+    "UnlitMaterial": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "Material": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "written only with the classic material model"
+    },
+    "ImageTexture": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "TextureTransform": {
+      "import": "yes",
+      "round_trip": "lossy",
+      "note": "baked into the UVs on import (A5)"
+    },
+    "TextureCoordinate": {
+      "import": "yes",
+      "round_trip": "lossy",
+      "note": "a mesh without UVs gains a TextureCoordinate (A6)"
+    },
+    "IndexedFaceSet": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "IndexedLineSet": {
+      "import": "yes",
+      "round_trip": "equivalent",
+      "note": "a closed polyline gets its first point written again at the end (A7)"
+    },
+    "PointSet": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "LineProperties": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "Coordinate": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "Normal": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "within 1e-3: Blender stores custom normals as 16-bit angles"
+    },
+    "Color": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "ColorRGBA": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "Box": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "written for meshes the import made from a primitive"
+    },
+    "Sphere": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "Cone": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "Cylinder": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "Circle2D": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "Rectangle2D": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "DirectionalLight": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "PointLight": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "SpotLight": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "Viewpoint": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "NavigationInfo": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "Background": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "TimeSensor": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "PositionInterpolator": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "keyed on the animated Transform's own object, in its parent's space"
+    },
+    "OrientationInterpolator": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "as PositionInterpolator"
+    },
+    "CoordinateInterpolator": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "ROUTE": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "BooleanFilter": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "ProximitySensor": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "TouchSensor": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "HAnimHumanoid": {
+      "import": "yes",
+      "round_trip": "exact"
+    },
+    "HAnimJoint": {
+      "import": "yes",
+      "round_trip": "equivalent",
+      "note": "skinCoordIndex renumbered with the skin's vertex split; weights per vertex position identical"
+    },
+    "Inline": {
+      "import": "yes",
+      "round_trip": "equivalent",
+      "note": "url rewritten relative to the new file"
+    },
+    "MetadataSet": {
+      "import": "yes",
+      "round_trip": "unmeasured"
+    },
+    "GaussianSplats": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "X3D 4.1 draft; written by x3d_version X3D41"
+    }
   },
   "asymmetries": [
-    {"id": "S1", "status": "fixed", "what": "file normals were set on flat faces, so each corner was quantised alone and the re-export split shared vertices (1908 -> 2828 on a label mesh)", "test": "test_file_normals_re_export_without_splitting_vertices"},
-    {"id": "S2", "status": "fixed", "what": "point and line colours were converted sRGB -> linear under AS_IS, darkening on every AS_IS round trip", "test": "test_as_is_point_colours_round_trip_unchanged"},
-    {"id": "S3", "status": "fixed", "what": "a 2 s animation imported into the 1..250 timeline was exported as a 10.4 s cycle", "test": "test_animation_sets_the_timeline_of_an_unanimated_scene"},
-    {"id": "S4", "status": "fixed", "what": "a USE of geometry became a copy of the mesh, so the re-export wrote it out again", "test": "test_shared_geometry_is_written_once_on_re_export"},
-    {"id": "S5", "status": "fixed", "what": "repeatS / repeatT of a PhysicalMaterial texture were not read", "test": "test_clamped_physical_texture_re_exports_clamped"},
-    {"id": "S6", "status": "fixed", "what": "export prefixes and suffixes (LA_, CA_, MA_, _colour, _lines, _skin) stayed in Blender names and grew by one per round trip", "test": "test_names_do_not_drift_over_round_trips"},
-    {"id": "A1", "status": "open", "what": "the import is flat (load_web3d PREF_FLAT): nested Transforms, Groups and a parent's own animation come back as world-space objects", "decision": "owner: keep flat, or import the hierarchy (the PREF_FLAT=False path exists)"},
-    {"id": "A2", "status": "open", "what": "a multi-material mesh comes back as one object per material", "decision": "depends on A1"},
-    {"id": "A5", "status": "open", "what": "a TextureTransform is baked into the UVs instead of a Mapping node"},
-    {"id": "A6", "status": "open", "what": "a mesh without UVs gains a TextureCoordinate after a round trip"},
-    {"id": "A7", "status": "open", "what": "a closed IndexedLineSet loop gets its first point written again"},
-    {"id": "A8", "status": "open", "what": "a dithered (HASHED) material comes back as alphaMode BLEND"},
-    {"id": "A11", "status": "by-design", "what": "head meta that describe the export run (generator, file name, date) change on every export"}
+    {
+      "id": "S1",
+      "status": "fixed",
+      "what": "file normals were set on flat faces, so each corner was quantised alone and the re-export split shared vertices (1908 -> 2828 on a label mesh)",
+      "test": "test_file_normals_re_export_without_splitting_vertices"
+    },
+    {
+      "id": "S2",
+      "status": "fixed",
+      "what": "point and line colours were converted sRGB -> linear under AS_IS, darkening on every AS_IS round trip",
+      "test": "test_as_is_point_colours_round_trip_unchanged"
+    },
+    {
+      "id": "S3",
+      "status": "fixed",
+      "what": "a 2 s animation imported into the 1..250 timeline was exported as a 10.4 s cycle",
+      "test": "test_animation_sets_the_timeline_of_an_unanimated_scene"
+    },
+    {
+      "id": "S4",
+      "status": "fixed",
+      "what": "a USE of geometry became a copy of the mesh, so the re-export wrote it out again",
+      "test": "test_shared_geometry_is_written_once_on_re_export"
+    },
+    {
+      "id": "S5",
+      "status": "fixed",
+      "what": "repeatS / repeatT of a PhysicalMaterial texture were not read",
+      "test": "test_clamped_physical_texture_re_exports_clamped"
+    },
+    {
+      "id": "S6",
+      "status": "fixed",
+      "what": "export prefixes and suffixes (LA_, CA_, MA_, _colour, _lines, _skin) stayed in Blender names and grew by one per round trip",
+      "test": "test_names_do_not_drift_over_round_trips"
+    },
+    {
+      "id": "S7",
+      "status": "fixed",
+      "what": "the import was flat: nested Transforms, Groups and a parent's own animation came back as world-space objects (load_web3d PREF_FLAT). keep_hierarchy (default on) rebuilds the Transform hierarchy",
+      "test": "test_nested_transforms_become_a_parent_chain"
+    },
+    {
+      "id": "S8",
+      "status": "fixed",
+      "what": "a mesh with several materials came back as one object per material",
+      "test": "test_the_export_material_parts_join_into_one_object"
+    },
+    {
+      "id": "S9",
+      "status": "fixed",
+      "what": "an Inline's own load cleared the parent file's record of shear-baked meshes, so a later USE copied the baked mesh and keep_hierarchy could not undo the bake",
+      "test": "test_shear_is_undone_when_an_inline_loads_later_in_the_file"
+    },
+    {
+      "id": "S10",
+      "status": "fixed",
+      "what": "a material used only by shapes with a Color node came back renamed X_colour",
+      "test": "test_a_material_only_coloured_shapes_use_keeps_its_name"
+    },
+    {
+      "id": "A5",
+      "status": "open",
+      "what": "a TextureTransform is baked into the UVs instead of a Mapping node"
+    },
+    {
+      "id": "A6",
+      "status": "open",
+      "what": "a mesh without UVs gains a TextureCoordinate after a round trip"
+    },
+    {
+      "id": "A7",
+      "status": "open",
+      "what": "a closed IndexedLineSet loop gets its first point written again"
+    },
+    {
+      "id": "A8",
+      "status": "open",
+      "what": "a dithered (HASHED) material comes back as alphaMode BLEND"
+    },
+    {
+      "id": "A11",
+      "status": "by-design",
+      "what": "head meta that describe the export run (generator, file name, date) change on every export"
+    },
+    {
+      "id": "A12",
+      "status": "open",
+      "what": "a collection instance (Transform > Group DEF, then USE of the Group) comes back as separate objects, not a Blender collection instance"
+    }
   ]
 }
