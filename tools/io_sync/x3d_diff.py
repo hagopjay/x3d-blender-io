@@ -9,7 +9,8 @@ Both trees are walked in document order. Children are aligned per parent by (tag
 DEF, then by a signature (the first DEF or description below the node, for the DEF-less Transform around a light or a
 camera), the rest by tag and position among the remaining siblings of that tag, so one missing or renamed node does not
 shift every node after it.
-Numeric attributes (whitespace-separated lists of numbers) compare with |a-b| <= abs + rel*max(|a|,|b|); other
+Numeric attributes (whitespace-separated lists of numbers) compare with |a-b| <= abs + rel*max(|a|,|b|), positions
+(POSITION_FIELDS) with |a-b| <= abs alone, so a large coordinate gets no looser bound; other
 attributes compare as strings after whitespace normalisation. DEF and USE values are compared as references, not
 spellings: a DEF renamed consistently (Cube -> Cube_001) is not a difference, a USE that points to a different node is.
 Index/count fields compare exactly, and order-sensitive child lists (for example Switch and LOD) compare by position.
@@ -37,6 +38,15 @@ REF_ATTRS = {"DEF", "USE"}
 # angles per corner fan, so a normal re-read from Blender moves by up to ~3e-4 (measured on the suite, Nov 2026).
 FIELD_ABS = {("Normal", "vector"): 1e-3}
 ROUTE_REF_ATTRS = {"fromNode", "toNode"}
+# Positions are compared in document units, never relative to their size: with rel=1e-4 a vertex at 100,000 m could
+# move 10 m and still match, which hides a real error in an engineering or geospatial scene. These fields get the
+# absolute tolerance only (0.1 mm in metres at the default 1e-4).
+POSITION_FIELDS = {("Coordinate", "point"), ("CoordinateDouble", "point"), ("Transform", "translation"),
+                   ("Transform", "center"), ("Viewpoint", "position"), ("Viewpoint", "centerOfRotation"),
+                   ("OrthoViewpoint", "position"), ("OrthoViewpoint", "centerOfRotation"),
+                   ("PointLight", "location"), ("SpotLight", "location"), ("HAnimJoint", "center"),
+                   ("HAnimHumanoid", "center"), ("PositionInterpolator", "keyValue"),
+                   ("CoordinateInterpolator", "keyValue")}
 # Integer topology and selector fields must not inherit the relative tolerance used for coordinates: at index
 # 100000, rel=1e-4 would otherwise accept an index changed by ten vertices.
 INTEGER_ATTRS = {"coordIndex", "colorIndex", "normalIndex", "texCoordIndex", "index", "skinCoordIndex",
@@ -185,7 +195,8 @@ class Differ:
                 if len(na) != len(nb):
                     self._rec("value", path, tag, name, f"{len(na)} numbers", f"{len(nb)} numbers")
                 elif not all(x == y if name in INTEGER_ATTRS else
-                             _close(x, y, self.rel, max(self.abs, FIELD_ABS.get((tag, name), 0.0)))
+                             _close(x, y, 0.0 if (tag, name) in POSITION_FIELDS else self.rel,
+                                    max(self.abs, FIELD_ABS.get((tag, name), 0.0)))
                              for x, y in zip(na, nb)):
                     worst = max(abs(x - y) for x, y in zip(na, nb))
                     self._rec("value", path, tag, name, va[:80], vb[:80] + f"  (max |d| {worst:.3g})")

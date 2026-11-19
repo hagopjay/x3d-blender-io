@@ -117,6 +117,16 @@ class StructuralDiffTests(unittest.TestCase):
         self.assertTrue(self._diff('<X3D><Coordinate point="0 0 1"/></X3D>',
                                    '<X3D><Coordinate point="0 0.0005 1"/></X3D>', abs_=1e-4))
 
+    def test_large_coordinates_get_no_looser_bound(self):
+        # rel=1e-4 alone would accept half a metre at 100 km; positions compare in document units
+        a = '<X3D><Coordinate point="100000 0 0"/></X3D>'
+        moved = self._diff(a, '<X3D><Coordinate point="100000.5 0 0"/></X3D>', rel=1e-4, abs_=1e-4)
+        self.assertEqual([(r["tag"], r["attr"]) for r in moved], [("Coordinate", "point")])
+        self.assertEqual(self._diff(a, '<X3D><Coordinate point="100000.00005 0 0"/></X3D>', rel=1e-4, abs_=1e-4), [])
+        # a non-positional field keeps the relative bound
+        self.assertEqual(self._diff('<X3D><TimeSensor cycleInterval="100000"/></X3D>',
+                                    '<X3D><TimeSensor cycleInterval="100000.5"/></X3D>', rel=1e-4, abs_=1e-4), [])
+
     def test_children_align_by_def_not_position(self):
         a = '<X3D><Transform DEF="OB_A"/><Transform DEF="OB_B" translation="1 0 0"/></X3D>'
         b = '<X3D><Transform DEF="OB_B" translation="1 0 0"/></X3D>'
