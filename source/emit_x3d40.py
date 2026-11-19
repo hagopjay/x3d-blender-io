@@ -140,6 +140,19 @@ def _fmt3_length(values):
     return " ".join(_fmt_length(float(value)) for value in values[:3])
 
 
+def _fmt_points(points):
+    """Coordinate points: lengths, so below 1e-3 they keep significant digits (a 3e-7 mesh was written as zeros)."""
+    return " ".join(_fmt3_length(point) for point in points)
+
+
+def _fmt_short_length(value: float) -> str:
+    """``_fmt_short`` for a length: trailing zeros dropped, significant digits below 1e-3."""
+    value = _finite(value)
+    if value != 0.0 and abs(value) < 1e-3:
+        return "%.9g" % value
+    return _fmt_short(value)
+
+
 def _sfcolor(values):
     """Fit an RGB triple into the SFColor range [0, 1] that the X3D 4.0 XSD enforces.
 
@@ -403,7 +416,7 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     if geometry.is_lines:
         xml = [
             f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n',
-            f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n',
+            f'{indent}  <Coordinate point="{_fmt_points(geometry.coord)}" />\n',
         ]
         if geometry.color and len(geometry.color) == len(geometry.coord):
             # one colour per vertex, which X3D draws in place of the material's emissiveColor (a Color node: colorIndex
@@ -428,10 +441,10 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
         coord_def = defs.get("coord", geometry.name, "CO_")
         xml.append(
             f'{indent}  <Coordinate DEF="{coord_def}" '
-            f'point="{" ".join(_fmt3(point) for point in geometry.morph_states[0])}" />\n'
+            f'point="{_fmt_points(geometry.morph_states[0])}" />\n'
         )
     else:
-        xml.append(f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n')
+        xml.append(f'{indent}  <Coordinate point="{_fmt_points(geometry.coord)}" />\n')
     if geometry.normal:
         xml.append(f'{indent}  <Normal vector="{" ".join(_fmt3(vector) for vector in geometry.normal)}" />\n')
     if geometry.tex_coord:
@@ -727,7 +740,7 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
         if skin_def:
             xml.append(
                 f'{indent}  <Coordinate DEF="{skin_def}" containerField="skinCoord" '
-                f'point="{" ".join(_fmt3(point) for point in humanoid.skin_coord)}" />\n'
+                f'point="{_fmt_points(humanoid.skin_coord)}" />\n'
             )
     for shape in humanoid.skin_shapes:
         xml.append(f'{indent}  <Shape containerField="skin">\n')
@@ -789,7 +802,7 @@ def _animation_xml(ir_scene, defs: _DefNames, indent):
             shared.setdefault(signature, []).append(geometry)
             node_def = defs.get("coord_interpolator", geometry.name, "CI_")
             keys = " ".join(_fmt_short(key) for key in geometry.morph_keys)
-            values = " ".join(_fmt_short(value) for state in geometry.morph_states for point in state for value in point)
+            values = " ".join(_fmt_short_length(value) for state in geometry.morph_states for point in state for value in point)
             xml.append(f'{indent}<CoordinateInterpolator DEF="{node_def}" key="{keys}" keyValue="{values}" />\n')
             routes.append((timer_def, "fraction_changed", node_def, "set_fraction"))
             routes.append((node_def, "value_changed", defs.get("coord", geometry.name, "CO_"), "set_point"))
