@@ -408,11 +408,28 @@ def _default_appearance_xml(indent, look: _Look = _PLAIN_LOOK):
 # Geometry
 
 
+def _point_set_xml(geometry, geometry_def, indent):
+    """A vertices-only mesh: a PointSet with one Color / ColorRGBA per point when it has POINT colours."""
+    xml = [f'{indent}<PointSet DEF="{geometry_def}">\n',
+           f'{indent}  <Coordinate point="{" ".join(_fmt3_length(point) for point in geometry.coord)}" />\n']
+    if geometry.color and len(geometry.color) == len(geometry.coord):
+        if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
+            values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
+            xml.append(f'{indent}  <ColorRGBA color="{values}" />\n')
+        else:
+            values = " ".join(_fmt3(_sfcolor(color[:3])) for color in geometry.color)
+            xml.append(f'{indent}  <Color color="{values}" />\n')
+    xml.append(f"{indent}</PointSet>\n")
+    return "".join(xml)
+
+
 def _geometry_xml(geometry, defs: _DefNames, indent):
     geometry_def = defs.get("geometry", geometry.name, "ME_")
-    node = "IndexedLineSet" if geometry.is_lines else "IndexedFaceSet"
+    node = "PointSet" if geometry.is_points else "IndexedLineSet" if geometry.is_lines else "IndexedFaceSet"
     if not defs.first_use("geometry", geometry.name):
         return f'{indent}<{node} USE="{geometry_def}" />\n'
+    if geometry.is_points:
+        return _point_set_xml(geometry, geometry_def, indent)
     if geometry.is_lines:
         xml = [
             f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n',

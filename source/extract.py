@@ -512,9 +512,9 @@ def _edge_polylines(edges) -> list[list[int]]:
     return lines
 
 
-def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None) -> list[IRMeshGeometry]:
-    """A mesh without faces (an evaluated curve, loose edges) becomes one line geometry."""
-    lines = _edge_polylines([tuple(edge.vertices) for edge in mesh.edges])
+def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None, edges=None) -> list[IRMeshGeometry]:
+    """A mesh's loose edges (all of them for a mesh without faces: an evaluated curve) become one line geometry."""
+    lines = _edge_polylines(edges if edges is not None else [tuple(edge.vertices) for edge in mesh.edges])
     if not lines:
         return []
     used = sorted({v for line in lines for v in line})
@@ -535,6 +535,53 @@ def _extract_edge_lines(mesh, *, name: str, vertex_matrix=None) -> list[IRMeshGe
     return [IRMeshGeometry(name=name, coord=coord, coord_index=coord_index, source_mesh=name,
                            orig_vertex_index=used, is_lines=True, color=color)]
 
+
+
+def _extract_loose_points(mesh, *, name: str, indices, vertex_matrix=None) -> list[IRMeshGeometry]:
+    """Vertices no face or edge uses become one point geometry (a PointSet), with their POINT colours."""
+    coord = []
+    for index in indices:
+        point = mesh.vertices[index].co
+        if vertex_matrix is not None:
+            point = vertex_matrix @ point
+        coord.append((float(point[0]), float(point[1]), float(point[2])))
+    color_at, color_domain = _color_values(mesh)
+    color = [color_at(index) for index in indices] if color_at is not None and color_domain == "POINT" else []
+    return [IRMeshGeometry(name=name, coord=coord, source_mesh=name, orig_vertex_index=list(indices), is_points=True,
+                           color=color)]
+
+
+def _extract_loose_geometries(mesh, *, name: str, vertex_matrix=None, alone: bool) -> list[IRMeshGeometry]:
+    """Loose edges as lines, named ``name`` when they are all the mesh has; a mesh of vertices only as points.
+
+    Stray vertices beside faces or edges stay unwritten (suite case Z01.loose.geometry: they must not inflate the
+    object's bounds); a mesh that is nothing but vertices (a point cloud kept as a mesh) has nothing else to show."""
+    vertices = getattr(mesh, "vertices", None)
+    if vertices is None or not len(vertices):
+        return []
+    used = bytearray(len(vertices))
+    loops = getattr(mesh, "loops", None)
+    if getattr(mesh, "polygons", None) and loops is not None and len(loops):
+        corner_vertices = [0] * len(loops)
+        loops.foreach_get("vertex_index", corner_vertices)
+        for index in corner_vertices:
+            used[index] = 1
+    loose_edges = []
+    edges = getattr(mesh, "edges", None)
+    if edges is not None and len(edges):
+        loose = [False] * len(edges)
+        edges.foreach_get("is_loose", loose)
+        ends = [0] * (2 * len(edges))
+        edges.foreach_get("vertices", ends)
+        loose_edges = [(ends[2 * i], ends[2 * i + 1]) for i, flag in enumerate(loose) if flag]
+        for a, b in loose_edges:
+            used[a] = used[b] = 1
+    if loose_edges:
+        return _extract_edge_lines(mesh, name=name if alone else f"{name}_lines", vertex_matrix=vertex_matrix,
+                                   edges=loose_edges)
+    if alone and not any(used):
+        return _extract_loose_points(mesh, name=name, indices=range(len(vertices)), vertex_matrix=vertex_matrix)
+    return []
 
 
 def _crease_from_sharp_edges(mesh) -> float:
@@ -585,8 +632,10 @@ def extract_mesh_geometries(
     use_normals: bool = False,
     vertex_matrix=None,
     recorded_solid: bool | None = None,
+    include_loose: bool = True,
 ) -> list[IRMeshGeometry]:
-    """Split a Blender mesh into one IRMeshGeometry per used material slot.
+    """Split a Blender mesh into one IRMeshGeometry per used material slot, plus its loose edges (an IndexedLineSet)
+    and, for a mesh of vertices only, a PointSet, unless ``include_loose`` is off.
 
     ``vertex_matrix`` (optional) transforms every vertex (used to express a
     skinned mesh in its armature's space).
@@ -599,10 +648,22 @@ def extract_mesh_geometries(
     polygons = getattr(mesh, "polygons", None)
     vertices = getattr(mesh, "vertices", None)
     loops = getattr(mesh, "loops", None)
-    if not polygons and vertices is not None and getattr(mesh, "edges", None):
-        return _extract_edge_lines(mesh, name=name, vertex_matrix=vertex_matrix)
     if not polygons or vertices is None or loops is None:
-        return []
+        if not include_loose:
+            return _extract_edge_lines(mesh, name=name, vertex_matrix=vertex_matrix) if getattr(mesh, "edges", None) else []
+        return _extract_loose_geometries(mesh, name=name, vertex_matrix=vertex_matrix, alone=True)
+    geometries = _extract_face_geometries(mesh, name=name, material_slots=material_slots,
+                                          use_triangulate=use_triangulate, use_normals=use_normals,
+                                          vertex_matrix=vertex_matrix, recorded_solid=recorded_solid)
+    if include_loose:
+        geometries += _extract_loose_geometries(mesh, name=name, vertex_matrix=vertex_matrix, alone=not geometries)
+    return geometries
+
+
+def _extract_face_geometries(mesh, *, name, material_slots, use_triangulate, use_normals, vertex_matrix,
+                             recorded_solid) -> list[IRMeshGeometry]:
+    """The faces of ``mesh``, one IRMeshGeometry per used material slot (see extract_mesh_geometries)."""
+    polygons, vertices, loops = mesh.polygons, mesh.vertices, mesh.loops
 
     uv_at = _uv_values(mesh)
     color_at, color_domain = _color_values(mesh)
@@ -778,6 +839,7 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
             use_triangulate=use_triangulate,
             use_normals=False,
             vertex_matrix=armature_inverse @ mesh_obj.matrix_world,
+            include_loose=False,   # a skin shares one skinCoord; a PointSet has no index into it
         )
         group_names = [group.name for group in mesh_obj.vertex_groups]
         for geometry in geometries:
@@ -1350,7 +1412,7 @@ def _sample_shape_key_morphs(scene, depsgraph, sources, geometries_by_key, *, fr
                 continue
             keys = [(frame - frame_start) / span for frame in frames]
             for geometry in geometries_by_key.get(geometry_key, []):
-                if geometry.is_lines or geometry.skin_coord_def or not geometry.orig_vertex_index:
+                if geometry.is_lines or geometry.is_points or geometry.skin_coord_def or not geometry.orig_vertex_index:
                     continue
                 geometry.morph_keys = keys
                 geometry.morph_states = [[state[i] for i in geometry.orig_vertex_index] for state in samples]
