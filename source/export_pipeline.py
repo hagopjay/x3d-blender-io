@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import logging
 import os
 from typing import Callable
@@ -183,7 +183,7 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
         suffix = ".x3dz" if settings.use_compress else ".x3d"
         return os.path.join(export_dir, f"{bpy.path.clean_name(name)}{suffix}")
 
-    def run_writer(export_file, depsgraph, local_scene, view_layer):
+    def run_writer(export_file, depsgraph, local_scene, view_layer, settings=settings):
         ir_scene = None
         copy_set = set()
         if settings.use_modern_path:
@@ -219,22 +219,28 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
             path_reference_copy(copy_set)
 
     base_dir = os.path.dirname(filepath)
-    prefix = os.path.basename(filepath).replace(".x3d", "").replace(".x3dz", "")
+    # "scene.x3dz" -> "scene" (replacing ".x3d" first left "scenez"); "scene.x3d.x3dz" from ensure_ext -> "scene"
+    prefix = os.path.basename(filepath)
+    for extension in (".x3dz", ".x3d"):
+        if prefix.lower().endswith(extension):
+            prefix = prefix[: -len(extension)]
 
     if settings.batch_mode == "OFF":
         run_writer(filepath, context.evaluated_depsgraph_get(), context.scene, context.view_layer)
     elif settings.batch_mode == "COLLECTION":
+        # One file per top-level collection of this view layer, holding that collection and its children only: the
+        # active collection decides what is written (use_active_collection was off here, so every file held the
+        # whole scene), and a collection whose objects all sit in child collections is no longer skipped.
         original_collection = context.view_layer.active_layer_collection
+        per_collection = replace(settings, use_active_collection=True)
         try:
-            for collection in bpy.data.collections:
-                if not collection.objects:
-                    continue
-                child = context.view_layer.layer_collection.children.get(collection.name)
-                if child is None:
+            for child in context.view_layer.layer_collection.children:
+                if child.exclude or not child.collection.all_objects:
                     continue
                 context.view_layer.active_layer_collection = child
-                export_path = get_export_path(base_dir, f"{prefix}_{collection.name}")
-                run_writer(export_path, context.evaluated_depsgraph_get(), context.scene, context.view_layer)
+                export_path = get_export_path(base_dir, f"{prefix}_{child.collection.name}")
+                run_writer(export_path, context.evaluated_depsgraph_get(), context.scene, context.view_layer,
+                           settings=per_collection)
         finally:
             context.view_layer.active_layer_collection = original_collection
     elif settings.batch_mode == "SCENE":
@@ -242,7 +248,7 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
             export_path = get_export_path(base_dir, f"{prefix}_{scene.name}")
             run_writer(export_path, scene.view_layers[0].depsgraph, scene, scene.view_layers[0])
     elif settings.batch_mode == "OBJECT":
-        for obj in bpy.data.objects:
+        for obj in list(context.scene.objects):  # this scene's objects, not every object in the file
             if settings.use_visible and not obj.visible_get():
                 continue
             if settings.use_selection and not obj.select_get():
@@ -257,7 +263,7 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
                 bpy.data.scenes.remove(temp_scene)
     elif settings.batch_mode == "OBJECT_HIERARCHY":
         exported_objects = set()
-        for obj in bpy.data.objects:
+        for obj in list(context.scene.objects):
             if settings.use_visible and not obj.visible_get():
                 continue
             if settings.use_selection and not obj.select_get():
