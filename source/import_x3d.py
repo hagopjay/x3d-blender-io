@@ -455,7 +455,8 @@ class vrmlNode(object):
                  'x3dNode',
                  'parsed',
                  'parsed_vcol',
-                 'shared_mesh')
+                 'shared_mesh',
+                 'hierarchy_owner')
 
     def __init__(self, parent, node_type, lineno):
         self.id = None
@@ -467,6 +468,7 @@ class vrmlNode(object):
         self.parsed = None  # We try to reuse objects in a smart way
         self.parsed_vcol = None  # for a classic material in parsed: whether it was built for a Shape with a Color node
         self.shared_mesh = None  # for a geometry node: (mesh, material) its first Shape built, for its USEs to share
+        self.hierarchy_owner = None  # for a Transform under keep_hierarchy: the Blender object that stands for it
         if parent:
             parent.children.append(self)
 
@@ -3808,11 +3810,44 @@ def unlit_pbr_material(bpymat, bsdf, emissive):
 physical_colour_cache = {}
 
 
+_derived_materials = []   # (source, variant, suffix) made by this import; see settle_derived_material_names
+
+
+def settle_derived_material_names():
+    """A colour variant (X_colour) whose source material X ended up drawing nothing takes the name X.
+
+    physical_colour_material and unlit_colour_material copy a material for the shapes with a Color node, since the
+    same Appearance may also draw shapes without one. When every user of X had colours, X itself is left unused, and
+    the scene's only material for those shapes was X_colour: a Blender material TwoToneTop came back as
+    TwoToneTop_colour. Run once per import, after every shape is made."""
+    variants = {}
+    for source, variant, suffix in _derived_materials:
+        try:
+            variants.setdefault(source.as_pointer(), []).append((source, variant, suffix))
+        except ReferenceError:
+            continue
+    for entries in variants.values():
+        if len(entries) != 1:
+            continue
+        source, variant, suffix = entries[0]
+        try:
+            if source.users or not variant.users or variant.name != source.name + suffix:
+                continue
+            want = source.name
+            source.name = want + ".source"
+            variant.name = want
+        except ReferenceError:
+            continue
+    _derived_materials.clear()
+
+
 def _name_derived_material(mat, source, suffix):
     """Name a material derived from ``source`` (its colour or line variant) ``<source><suffix>``, unless ``source``
     already ends with ``suffix``: a file this add-on wrote names the variant itself (MA_X_colour), so the Appearance
     material arrives as X_colour and appending again grew the name on every round trip (X_colour_colour). The variant
     then takes that name and the source, which in such a file only the variant uses, moves aside to <name>.source."""
+    if source is not None and suffix == "_colour":
+        _derived_materials.append((source, mat, suffix))
     if source is None or not source.name.endswith(suffix):
         mat.name = (source.name if source is not None else mat.name) + suffix
         return
@@ -6800,7 +6835,8 @@ def importGaussianSplats(bpycollection, node, ancestry, global_matrix):
     return obj
 
 
-def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PREF_CIRCLE_DIV, solidify, solidify_value):
+def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PREF_CIRCLE_DIV, solidify, solidify_value,
+                 PREF_HIERARCHY=False):
     """Inline node -> placeholder empty with the referenced asset loaded underneath it.
 
     X3D and VRML files go through this importer recursively, glTF through
@@ -6852,7 +6888,7 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
         if lower.endswith(('.x3d', '.x3dz', '.x3dv', '.wrl', '.wrz')):
             load_web3d(bpy.context, resolved, PREF_FLAT=PREF_FLAT, PREF_CIRCLE_DIV=PREF_CIRCLE_DIV,
                        global_scale=conversion_scale, global_matrix=empty.matrix_world @ frame,
-                       solidify=solidify, solidify_value=solidify_value)
+                       solidify=solidify, solidify_value=solidify_value, PREF_HIERARCHY=PREF_HIERARCHY)
             parent_inverse = _inverted(empty.matrix_world, name)
         elif lower.endswith(('.gltf', '.glb')):
             from .bridge_gltf import import_gltf
@@ -7362,6 +7398,183 @@ def report_import_losses(all_nodes, bpycontext):
     return losses
 
 
+def _parent_in_place(child, parent, world, parent_world):
+    """Parent ``child`` to ``parent`` without moving it: the local matrix as location / rotation / scale, or, when
+    parent and child together hold shear (a rotated child of a non-uniformly scaled parent), the parent's inverse in
+    matrix_parent_inverse so the world matrix stays exact. The export writes parent_world^-1 @ child_world either way."""
+    import numpy as np
+    child.parent = parent
+    local = _inverted(parent_world, parent.name) @ world
+    loc, rot, scale = local.decompose()
+    nearest = Matrix.LocRotScale(loc, rot, scale)
+    size = max(float(np.abs(np.array(local, dtype=np.float64)).max()), 1e-30)
+    if float(np.abs(np.array(nearest, dtype=np.float64) - np.array(local, dtype=np.float64)).max()) <= 1e-6 * size:
+        child.matrix_parent_inverse = Matrix()
+        child.matrix_basis = nearest
+    else:
+        child.matrix_parent_inverse = _inverted(parent_world, parent.name)
+        child.matrix_basis = world
+
+
+def _chain_matrix(ancestry, global_matrix, upto=None):
+    """global_matrix @ every Transform in ``ancestry`` (up to index ``upto``, inclusive): the exact world matrix of a
+    node below them, shear included."""
+    matrix = Matrix()
+    for anc in ancestry[: None if upto is None else upto + 1]:
+        if anc.getSpec() == 'Transform':
+            matrix = matrix @ translateTransform(anc, ancestry)
+    return global_matrix @ matrix
+
+
+_PART = re.compile(r"^(?:ME_)?(.+)_m(\d+)$")
+
+
+def _join_material_parts(objs, name):
+    """The export writes a Blender mesh with several materials as one Transform holding a Shape per material, their
+    geometry DEF'd ME_<mesh>_m0, ME_<mesh>_m1, ... Join such Shapes back into one object with one material slot each
+    (glTF importers do the same for a node's primitives). Only that exact pattern, on meshes nothing else uses, at one
+    world matrix, without animation: a hand-written Transform with several Shapes keeps one object per Shape under an
+    Empty. Returns the joined object, or None."""
+    if len(objs) < 2 or any(ob.type != 'MESH' or ob.data.users != 1 or ob.animation_data is not None
+                            or ob.data.shape_keys is not None for ob in objs):
+        return None
+    parts = [_PART.match(ob.data.get(X3D_DEF_PROPERTY, "") or "") for ob in objs]
+    if not all(parts) or len({m.group(1) for m in parts}) != 1:
+        return None
+    if sorted(int(m.group(2)) for m in parts) != list(range(len(objs))):
+        return None
+    world = objs[0].matrix_world
+    if any(max(abs(a - b) for ra, rb in zip(world, ob.matrix_world) for a, b in zip(ra, rb)) > 1e-6 for ob in objs):
+        return None
+    ordered = [ob for _k, ob in sorted(zip((int(m.group(2)) for m in parts), objs), key=lambda item: item[0])]
+    first = ordered[0]
+    with bpy.context.temp_override(active_object=first, object=first, selected_objects=ordered,
+                                   selected_editable_objects=ordered):
+        bpy.ops.object.join()
+    first.name = name
+    first.data.name = parts[0].group(1)
+    first.data[X3D_DEF_PROPERTY] = "ME_" + parts[0].group(1)
+    return first
+
+
+def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
+    """Give the flat import the file's Transform hierarchy back (the import option keep_hierarchy).
+
+    ``created`` lists (object, ancestry) for every object the import made, in the file's order, each already at its
+    world matrix. Each X3D Transform gets one Blender object to stand for it: the object of the Transform's only
+    Shape, light, Viewpoint, humanoid or Inline (the export writes Blender object X as <Transform DEF="OB_X"> around
+    its Shapes), the export's Shapes of one multi-material mesh joined back into one object (_join_material_parts),
+    or else an Empty named after the Transform (several objects, child Transforms only, or an exported Empty: a
+    Transform DEF'd OB_ with nothing in it). Every object is then parented to the object of its nearest Transform.
+    Group, Switch, LOD and the other grouping nodes have no matrix and are not kept as objects. Objects that already
+    have a parent (a skin on its armature, an Inline's content on its placeholder) keep it.
+
+    World matrices come from the file, shear included: the flat import bakes the shear of a rotated child under a
+    non-uniformly scaled parent into the child's mesh, which a parented child does not need (Blender composes the
+    parent's scale with the child's rotation itself), so that bake is undone here.
+
+    Returns {Transform node: object}; importRoutesXML keys only that object, so its children follow it."""
+    def key_of(ancestry, upto):
+        return tuple(id(a) for a in ancestry[:upto + 1])
+
+    transforms = {}      # key -> (Transform node, its ancestry)
+    parent_key = {}      # key -> key of the Transform above it, or None
+    members = {}         # key -> [objects whose nearest Transform it is]
+    worlds = {}          # object -> exact world matrix
+
+    def register(ancestry, indices):
+        previous = None
+        for i in indices:
+            key = key_of(ancestry, i)
+            if key not in transforms:
+                transforms[key] = (ancestry[i], ancestry[:i])
+                parent_key[key] = previous
+            previous = key
+        return previous
+
+    for ob, ancestry in created:
+        if ob is None or ob.parent is not None:
+            continue
+        nearest = register(ancestry, [i for i, a in enumerate(ancestry) if a.getSpec() == 'Transform'])
+        unbaked = _UNBAKED_DATA.pop(ob.as_pointer(), None)
+        if unbaked is not None:
+            baked = ob.data
+            ob.data = unbaked
+            if baked.users == 0:
+                bpy.data.meshes.remove(baked) if isinstance(baked, bpy.types.Mesh) else None
+            worlds[ob] = _chain_matrix(ancestry, global_matrix)
+        else:
+            worlds[ob] = ob.matrix_world.copy()
+        if nearest is not None:
+            members.setdefault(nearest, [])
+            if ob not in members[nearest]:
+                members[nearest].append(ob)
+    # an exported Empty: <Transform DEF="OB_X"> with no object below it
+    for node, ancestry in all_nodes:
+        if node.getSpec() == 'Transform' and (node.getDefName() or "").startswith("OB_") \
+                and not any(a.getSpec() == 'HAnimHumanoid' for a in ancestry):
+            path = list(ancestry) + [node]
+            register(path, [i for i, a in enumerate(path) if a.getSpec() == 'Transform'])
+
+    has_children = {k for k in parent_key.values() if k is not None}
+    owners = {}
+    for key, (node, ancestry) in transforms.items():
+        objs = members.get(key, [])
+        name = node.getRealNode().getDefName() or "Transform"
+        name = name[3:] if name.startswith("OB_") and len(name) > 3 else name
+        joined = None
+        if len(objs) > 1:
+            saved = {ob.name: worlds.pop(ob) for ob in objs}   # before the join removes all but one of them
+            joined = _join_material_parts(objs, name)
+            if joined is None:
+                worlds.update({bpy.data.objects[n]: w for n, w in saved.items()})
+            else:
+                worlds[joined] = next(iter(saved.values()))
+                members[key] = objs = [joined]
+        if len(objs) == 1:
+            owners[key] = objs[0]
+        elif objs or key in has_children or (node.getDefName() or "").startswith("OB_"):
+            empty = bpy.data.objects.new(name, None)
+            bpycollection.objects.link(empty)
+            empty.empty_display_type = 'PLAIN_AXES'
+            empty.empty_display_size = 0.2
+            worlds[empty] = getFinalMatrix(node, None, ancestry, global_matrix)
+            empty.matrix_world = worlds[empty]
+            tag_x3d_identity(empty, node, ancestry)
+            owners[key] = empty
+
+    def owner_above(key):
+        key = parent_key.get(key)
+        while key is not None and key not in owners:
+            key = parent_key.get(key)
+        return owners.get(key) if key is not None else None
+
+    links = []
+    for key, owner in owners.items():
+        above = owner_above(key)
+        if above is not None and above is not owner:
+            links.append((len(key), owner, above))
+        for ob in members.get(key, []):
+            if ob is not owner:
+                links.append((len(key) + 1, ob, owner))
+    parented = set()
+    for _depth, child, parent in sorted(links, key=lambda item: item[0]):
+        if child.parent is None:
+            _parent_in_place(child, parent, worlds[child], worlds[parent])
+            parented.add(child)
+    for ob, world in worlds.items():   # a root whose shear bake was undone: its matrix as the file gives it
+        if ob not in parented and ob.parent is None:
+            _set_world_matrix(ob, world)
+
+    by_node = {}
+    for key, owner in owners.items():
+        node = transforms[key][0].getRealNode()
+        node.hierarchy_owner = owner
+        by_node[node] = owner
+    bpy.context.view_layer.update()
+    return by_node
+
+
 def importRoutesXML(all_nodes, global_matrix, bpycontext):
     """Turn XML <ROUTE> chains into keyframes on the objects under animated Transforms.
 
@@ -7448,10 +7661,20 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
         cent = target.getFieldAsFloatTuple('center', None, ())
         scaori = target.getFieldAsFloatTuple('scaleOrientation', None, ())
 
-        # Objects whose ancestry passes through the animated Transform
-        for node, ancestry in all_nodes:
-            bpyob = getattr(node, 'blendObject', None)
-            if bpyob is None or target not in ancestry:
+        # Objects whose ancestry passes through the animated Transform; under keep_hierarchy only the object that
+        # stands for the Transform (rebuild_hierarchy), in its parent's space, and its children follow it
+        owner = target.getRealNode().hierarchy_owner
+        if owner is not None:
+            target_ancestry = next((anc for n, anc in all_nodes if n is target), None)
+            keyed = [(owner, None, target_ancestry if target_ancestry is not None else [])]
+        else:
+            keyed = [(getattr(n, 'blendObject', None), n, anc) for n, anc in all_nodes]
+        for bpyob, node, ancestry in keyed:
+            if bpyob is None:
+                continue
+            if node is None:   # the hierarchy owner: the target itself is the last Transform
+                ancestry = list(ancestry) + [target]
+            elif target not in ancestry:
                 continue
             index = ancestry.index(target)
             above = Matrix()
@@ -7462,7 +7685,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
             for anc in ancestry[index + 1:]:
                 if anc.getSpec() == 'Transform':
                     below = below @ translateTransform(anc, ancestry)
-            if node.getSpec() == 'Transform':
+            if node is not None and node.getSpec() == 'Transform':
                 below = below @ translateTransform(node, ancestry)
 
             # Non-Transform nodes (lights, viewpoints) carry their own local offset
@@ -7489,7 +7712,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
                 sca = _interpolate_channel(key_lists.get('scale'), value_lists.get('scale'), key, 'scale') or static_sca
                 world = global_matrix @ above @ _x3d_transform_matrix(tx, rot, sca, cent, scaori) @ below @ own_offset
                 if bpyob.parent is not None:
-                    world = _inverted(bpyob.parent.matrix_world, bpyob.parent.name) @ world
+                    world = _inverted(bpyob.parent.matrix_world @ bpyob.matrix_parent_inverse, bpyob.parent.name) @ world
                 frame = frame_start + key * cycle_interval * fps
                 last_frame = max(last_frame, frame)
                 loc, quat, scale = world.decompose()
@@ -7890,12 +8113,17 @@ def load_web3d(
         HELPER_FUNC=None,
         as_collection=False,
         solidify=False,
-        solidify_value=0.1
+        solidify_value=0.1,
+        PREF_HIERARCHY=False
 ):
 
     global current_file_path
     current_file_path = filepath
-    _UNBAKED_DATA.clear()
+    if not _INLINE_STACK:
+        # only the outermost file: an Inline's own load_web3d ran in the middle of its parent's and wiped the parent's
+        # record of which meshes carry a baked shear (a USE after an Inline then copied the baked mesh, and
+        # keep_hierarchy could not undo the bake)
+        _UNBAKED_DATA.clear()
     # Used when adding blender primitives
     GLOBALS['CIRCLE_DETAIL'] = PREF_CIRCLE_DIV
 
@@ -7948,6 +8176,7 @@ def load_web3d(
 
     # fill with tuples - (node, [parents-parent, parent])
     all_nodes = root_node.getSerialized([], [])
+    created = []  # (object, ancestry) of every object this file's nodes made, for rebuild_hierarchy
     # the first Background of the file is the one a browser shows; an inlined file's does not count
     background_seen = bool(_INLINE_STACK)
     # objects a Switch does not choose; collected as each is made, since a node under a USE'd Switch (or a USE'd Shape)
@@ -7982,7 +8211,8 @@ def load_web3d(
             importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify_value)
         elif spec == 'Inline':
             importInline(bpycollection, node, ancestry, global_matrix, PREF_FLAT=PREF_FLAT,
-                         PREF_CIRCLE_DIV=PREF_CIRCLE_DIV, solidify=solidify, solidify_value=solidify_value)
+                         PREF_CIRCLE_DIV=PREF_CIRCLE_DIV, solidify=solidify, solidify_value=solidify_value,
+                         PREF_HIERARCHY=PREF_HIERARCHY)
         elif spec == 'GaussianSplats':
             importGaussianSplats(bpycollection, node, ancestry, global_matrix)
         elif spec in {'PointLight', 'DirectionalLight', 'SpotLight'}:
@@ -8006,6 +8236,8 @@ def load_web3d(
             action = bpy.data.ipos.new('web3d_ipo', 'Object')
             translatePositionInterpolator(node, action)
             '''
+        if node.blendObject is not None and node.blendObject is not made_before:
+            created.append((node.blendObject, list(ancestry)))
         if node.blendObject is not None and node.blendObject is not made_before \
                 and any(anc.getSpec() == 'Switch' for anc in ancestry) and switch_hides(node, ancestry):
             switch_hidden.append(node.blendObject)
@@ -8018,6 +8250,12 @@ def load_web3d(
             lod_path = lod_chain(node, ancestry)
             if lod_path:
                 lod_members.append((node.blendObject, lod_path))
+
+    if PREF_HIERARCHY and PREF_FLAT:
+        try:
+            rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes)
+        except Exception as exc:  # the objects are already in place; a failed rebuild leaves the flat import
+            logger.error("Hierarchy rebuild failed, objects stay flat: %s", exc, exc_info=True)
 
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
@@ -8123,8 +8361,8 @@ def resolve_gpu_instances(value):
 def group_instances(objects, min_count=2):
     """Parent every set of >= min_count loose mesh objects that share one mesh to an Empty named "<mesh>.instances".
 
-    The import is flat (PREF_FLAT): a Group, or a Transform with a USE below it, leaves its instances as scene
-    roots, and Blender's glTF exporter writes EXT_mesh_gpu_instancing only for children of one Empty that share a mesh
+    With keep_hierarchy off the import is flat, and a Group or a Transform with a USE below it leaves its instances
+    as scene roots (with it on, only instances that are scene roots are grouped), and Blender's glTF exporter writes EXT_mesh_gpu_instancing only for children of one Empty that share a mesh
     and have no children of their own. The Empty sits at the origin with an identity matrix, so no world matrix
     changes; it carries the custom property ``x3d_instance_group`` (the mesh name). Returns the new Empties."""
     by_mesh = {}
@@ -8162,7 +8400,8 @@ def load(context,
          circle_divisions=None,
          color_space=None,
          light_units=None,
-         gpu_instances=None
+         gpu_instances=None,
+         keep_hierarchy=True
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
@@ -8170,7 +8409,9 @@ def load(context,
     light_units: 'BLENDER' or 'X_ITE' (see LIGHT_UNITS; None or 'AUTO': BLENDER_X3D_LIGHT_UNITS, else X_ITE with
     the SRGB colour space and BLENDER with AS_IS).
     gpu_instances: group objects that share a mesh under one Empty each, so the glTF exporter's GPU Instances option
-    writes EXT_mesh_gpu_instancing (also on when BLENDER_X3D_GPU_INSTANCES is 1; see group_instances)."""
+    writes EXT_mesh_gpu_instancing (also on when BLENDER_X3D_GPU_INSTANCES is 1; see group_instances).
+    keep_hierarchy: parent objects as the file's Transforms nest them (rebuild_hierarchy); False imports every object
+    at its world matrix without parents, as before."""
     global colour_space, lighting_units, navigation_headlight, bound_view, default_view
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
@@ -8204,6 +8445,7 @@ def load(context,
         clear_stale_scene_properties(context.scene)
     objects_before = {ob.name for ob in bpy.data.objects}
     actions_before = {action.name for action in bpy.data.actions}
+    _derived_materials.clear()
     for file in paths:
         # loadWithProfiler(operator, context, filepath, global_matrix)
         load_web3d(context, file,
@@ -8213,9 +8455,11 @@ def load(context,
                 global_matrix=global_matrix,
                 as_collection=as_collection,
                 solidify=solidify,
-                solidify_value=solidify_value
+                solidify_value=solidify_value,
+                PREF_HIERARCHY=bool(keep_hierarchy)
                 )
     finalize_lod()
+    settle_derived_material_names()
     new_objects = [ob for ob in bpy.data.objects if ob.name not in objects_before]
     for ob in new_objects:
         ob[IMPORTED_OBJECT_PROPERTY] = True     # what the scene-level flags (headlight, lighting model...) apply to

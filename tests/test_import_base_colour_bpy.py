@@ -52,6 +52,14 @@ def _shape(name, material, geometry=None):
             f"{geometry or QUAD.format(colour='')}</Shape>")
 
 
+
+def _vertex_colour_material(prefix):
+    """The material, named after the DEF ``prefix``, that reads the vertex colours (the Shape with a Color node draws
+    with it), whatever suffix the import gave it."""
+    import bpy
+    return next(m for m in bpy.data.materials if m.name.startswith(prefix) and m.node_tree is not None
+                and any(n.type == 'VERTEX_COLOR' for n in m.node_tree.nodes))
+
 def _principled(mat):
     return next(n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
 
@@ -169,7 +177,7 @@ class ImportBaseColourTests(unittest.TestCase):
         self._import("vcol.x3d", _shape(
             "S", f"<PhysicalMaterial DEF='MF' baseColor='{TINT[0]} {TINT[1]} {TINT[2]}'/>",
             QUAD.format(colour="<Color color='1 1 1 1 1 1 1 1 1 1 1 1'/>")))
-        mat = next(m for m in __import__("bpy").data.materials if m.name.startswith("MF") and m.name.endswith("_colour"))
+        mat = _vertex_colour_material("MF")
         socket = _principled(mat).inputs["Base Color"]
         a, b = _multiplied_by(socket)
         self.assertEqual(a.links[0].from_node.type, 'VERTEX_COLOR')
@@ -180,7 +188,7 @@ class ImportBaseColourTests(unittest.TestCase):
         self._import("both.x3d", _shape(
             "S", f"<PhysicalMaterial DEF='MG' baseColor='{TINT[0]} {TINT[1]} {TINT[2]}'><ImageTexture containerField='baseTexture' url='\"tex.png\"'/></PhysicalMaterial>",
             QUAD.format(colour="<Color color='1 1 1 1 1 1 1 1 1 1 1 1'/>")))
-        mat = next(m for m in __import__("bpy").data.materials if m.name.startswith("MG") and m.name.endswith("_colour"))
+        mat = _vertex_colour_material("MG")
         tree = mat.node_tree
         mixes = [n for n in tree.nodes if n.bl_idname == "ShaderNodeMix"]
         constants = [tuple(round(c, 4) for c in b.default_value[:3]) for n in mixes
@@ -202,7 +210,9 @@ class ImportBaseColourTests(unittest.TestCase):
             length, kind = struct.unpack("<II", f.read(8))
             doc = json.loads(f.read(length))
         factors = {m["name"].split(".")[0]: m["pbrMetallicRoughness"].get("baseColorFactor", [1, 1, 1, 1]) for m in doc["materials"]}
-        for name in ("MH", "MI_colour"):
+        # MI's only user has a Color node, so its vertex-colour material is the one named MI (see
+        # settle_derived_material_names); it used to be MI_colour
+        for name in ("MH", "MI"):
             for got, want in zip(factors[name][:3], TINT):
                 self.assertAlmostEqual(got, want, places=4, msg=name)
         self.assertEqual([round(c, 4) for c in factors["MJ"][:3]], [1.0, 1.0, 1.0])
@@ -219,7 +229,7 @@ class ImportBaseColourTests(unittest.TestCase):
         textured = self._mat("MP")
         self.assertEqual(_principled(textured).inputs["Base Color"].links[0].from_node.type, 'TEX_IMAGE')
         self.assertFalse(any(n.bl_idname == "ShaderNodeMix" for n in textured.node_tree.nodes))
-        coloured = next(m for m in bpy.data.materials if m.name.startswith("MQ") and m.name.endswith("_colour"))
+        coloured = _vertex_colour_material("MQ")
         socket = _principled(coloured).inputs["Base Color"]
         self.assertFalse(any(n.bl_idname == "ShaderNodeMix" and not all(
             round(c, 4) == 1.0 for s in n.inputs if s.type == 'RGBA' and not s.is_linked for c in s.default_value[:3])

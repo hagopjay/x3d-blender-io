@@ -119,6 +119,12 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         default=False,
     )
 
+    keep_hierarchy: BoolProperty(
+        name=translate(lang, "keep_hierarchy"),
+        description=translate(lang, "keep_hierarchy_description"),
+        default=True,
+    )
+
     solidify: BoolProperty(
         name=translate(lang, "solidify"),
         description=translate(lang, "solidify_description"),
@@ -194,6 +200,9 @@ def import_ui_general(layout, operator):
 
         line = body.row(align=True)
         line.prop(operator, "gpu_instances")
+
+        line = body.row(align=True)
+        line.prop(operator, "keep_hierarchy")
 
 def import_ui_transform(layout, operator):
     header, body = layout.panel("IMPORT_SCENE_OT_x3d_transform", default_closed=False)

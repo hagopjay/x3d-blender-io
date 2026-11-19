@@ -36,13 +36,13 @@ class ImportRoutesAnd2DTests(unittest.TestCase):
         cls.tmpdir = tempfile.mkdtemp(prefix="x3d_routes2d_")
         _register_extension(cls.tmpdir)
 
-    def _import(self, name: str, body: str):
+    def _import(self, name: str, body: str, **options):
         import bpy
         bpy.ops.wm.read_factory_settings(use_empty=True)
         path = os.path.join(self.tmpdir, name)
         with open(path, "w", encoding="utf-8") as f:
             f.write(HEADER + body + FOOTER)
-        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=path, **options), {"FINISHED"})
         return {o.name: o for o in bpy.context.scene.objects}
 
     def test_route_animates_every_object_under_one_transform(self):
@@ -67,9 +67,33 @@ class ImportRoutesAnd2DTests(unittest.TestCase):
 """)
         meshes = [o for o in objs.values() if o.type == "MESH"]
         self.assertEqual(len(meshes), 3)
+        # every object under an animated Transform moves (keep_hierarchy: Second follows First, its parent)
+        scene = bpy.context.scene
+        quarter = scene.frame_start + (scene.frame_end - scene.frame_start) // 4
+        scene.frame_set(scene.frame_start)
+        start = {o.name: o.matrix_world.copy() for o in meshes}
+        scene.frame_set(quarter)
         for o in meshes:
-            self.assertIsNotNone(o.animation_data, o.name)
-            self.assertIsNotNone(o.animation_data.action, o.name)
+            moved = max(abs(a - b) for ra, rb in zip(start[o.name], o.matrix_world) for a, b in zip(ra, rb))
+            self.assertGreater(moved, 1e-3, o.name)
+        self.assertEqual(objs["Second"].parent, objs["First"])
+        self.assertGreaterEqual(bpy.context.scene.frame_end, 20 * 24)
+
+    def test_flat_import_keys_every_object_under_one_transform(self):
+        import bpy
+        objs = self._import("two_under_one_flat.x3d", """
+<TimeSensor DEF='Clock' cycleInterval='20' loop='true'/>
+<OrientationInterpolator DEF='Turn' key='0 0.5 1' keyValue='0 1 0 0, 0 1 0 3.14159, 0 1 0 6.28318'/>
+<Transform DEF='Spinner'>
+  <Shape DEF='First'><Box size='1 1 1'/></Shape>
+  <Transform translation='2 0 0'><Shape DEF='Second'><Sphere radius='0.5'/></Shape></Transform>
+</Transform>
+<ROUTE fromNode='Clock' fromField='fraction_changed' toNode='Turn' toField='set_fraction'/>
+<ROUTE fromNode='Turn' fromField='value_changed' toNode='Spinner' toField='set_rotation'/>
+""", keep_hierarchy=False)
+        for name in ("First", "Second"):
+            self.assertIsNone(objs[name].parent)
+            self.assertIsNotNone(objs[name].animation_data and objs[name].animation_data.action, name)
         self.assertGreaterEqual(bpy.context.scene.frame_end, 20 * 24)
 
     def test_rectangle2d(self):

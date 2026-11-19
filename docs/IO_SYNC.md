@@ -55,7 +55,8 @@ python3 tools/io_sync/fixed_point.py /tmp/suite /tmp/io-sync --blender "$(which 
 6. **Fix with a failing test first.** The test fails on the code before the fix, and the asymmetry's entry in
    `parity.json` names it.
 7. **A decision that changes behaviour for every user is the owner's.** Such items stay *open* in the ledger, with
-   the decision written next to them, until the owner decides (A1, the flat import).
+   the decision written next to them, until the owner decides. (The flat import, A1, waited for one; the owner chose
+   to keep the hierarchy, and it became S7 with the old behaviour one option away.)
 
 ## Practices that carry over to any pair of readers and writers
 
@@ -79,16 +80,17 @@ python3 tools/io_sync/fixed_point.py /tmp/suite /tmp/io-sync --blender "$(which 
 
 ## Status (18 Nov 2026, Blender 5.1.0, export suite on main 1e661a5)
 
-| Profile | E0 → E1 differences, before → after | E1 → E2 (DEFs compared literally), before → after |
+| Profile | E0 → E1 differences: main → import fixes → hierarchy | E1 → E2 (DEFs compared literally): main → now |
 |---|---|---|
-| main (4.0, hierarchy, animation, normals) | 946 → 278 | 287 → 0 |
-| crease (4.0, creaseAngle, AS_IS colours) | 427 → 82 | 262 → 0 |
-| x41 (4.1 draft, GaussianSplats) | 462 → 164 | 261 → 0 |
+| main (4.0, hierarchy, animation, normals) | 946 → 278 → 221 | 287 → 0 |
+| crease (4.0, creaseAngle, AS_IS colours) | 427 → 82 → 65 | 262 → 0 |
+| x41 (4.1 draft, GaussianSplats) | 462 → 164 → 98 | 261 → 0 |
 
-"Before" is main 1e661a5 measured with the same tools (`fixed_point.py`, tolerances 1e-4, Normal 1e-3). Compared
-leniently (a DEF spelled differently is not a difference), E1 → E2 was 27, 7 and 6 before: most of the strict count
+"main" is 1e661a5 measured with the same tools (`fixed_point.py`, tolerances 1e-4, Normal 1e-3). Compared
+leniently (a DEF spelled differently is not a difference), E1 → E2 was 27, 7 and 6 on main: most of the strict count
 is names that grew by one prefix or suffix per round trip.
 
-Most of the remaining E0 → E1 differences come from A1, the flat import (`import_x3d.load_web3d`, `PREF_FLAT`): nested
-Transforms come back as world-space objects, which shifts every node under them and turns a child's animation into a
-world-space one. The full list is in `tools/io_sync/parity.json`.
+What remains in E0 → E1 is listed in `tools/io_sync/parity.json` as open: a TextureTransform baked into the UVs
+(A5), a UV-less mesh gaining a TextureCoordinate (A6), a closed line loop repeating its first point (A7), a dithered
+material as alphaMode BLEND (A8) and a collection instance coming back as copies (A12), plus written-out defaults and
+renumbered indices that are equivalent.
