@@ -1840,13 +1840,29 @@ def export(file,
 ##########################################################
 
 
-def gzip_open_utf8(filepath, mode):
-    """Workaround for py3k only allowing binary gzip writing"""
+def gzip_open_utf8(filepath, mode, header_name=None):
+    """Workaround for py3k only allowing binary gzip writing.
+
+    ``header_name`` is the file name recorded in the gzip header (default: ``filepath``'s), so a document written
+    to a temporary name and renamed afterwards still carries its final name."""
 
     import gzip
 
     # need to investigate encoding
-    file = gzip.open(filepath, mode)
+    if header_name is None:
+        file = gzip.open(filepath, mode)
+    else:
+        raw = open(filepath, mode + 'b' if 'b' not in mode else mode)
+        file = gzip.GzipFile(filename=header_name, mode=mode, fileobj=raw)
+        close_gzip = file.close
+
+        def close_both():
+            try:
+                close_gzip()
+            finally:
+                raw.close()
+
+        file.close = close_both
     write_real = file.write
 
     def write_wrap(data):
@@ -1855,6 +1871,50 @@ def gzip_open_utf8(filepath, mode):
     file.write = write_wrap
 
     return file
+
+
+class _NamedAs:
+    """A file object that reports ``name`` instead of its own: the legacy writer derives the texture and shader
+    folders and the ``filename`` meta from ``file.name``, and must see the target while it writes a temporary file."""
+
+    def __init__(self, file, name):
+        self._file = file
+        self.name = name
+
+    def __getattr__(self, attribute):
+        return getattr(self._file, attribute)
+
+
+def _write_replacing(target, use_compress, write):
+    """Call ``write(file)`` on a temporary file beside ``target`` and move it over ``target`` only if it returns.
+
+    An exception (disk full, a bug, an interrupt) removes the temporary file and leaves the previous ``target``
+    byte-identical. The temporary file is in the target's folder, so the final ``os.replace`` is atomic."""
+    import tempfile
+
+    folder, base = os.path.split(os.path.abspath(target))
+    handle, temporary = tempfile.mkstemp(prefix=f".{base}.", suffix=".x3d-partial", dir=folder)
+    os.close(handle)
+    try:
+        with (gzip_open_utf8(temporary, 'w', header_name=base) if use_compress
+              else open(temporary, 'w', encoding='utf-8')) as file:
+            write(_NamedAs(file, target))
+        if os.path.exists(target):
+            try:  # keep the permissions of the file being replaced; mkstemp creates 0600
+                os.chmod(temporary, os.stat(target).st_mode & 0o7777)
+            except OSError:
+                pass
+        else:
+            umask = os.umask(0)
+            os.umask(umask)
+            os.chmod(temporary, 0o666 & ~umask)
+        os.replace(temporary, target)
+    except BaseException:
+        try:
+            os.remove(temporary)
+        except OSError:
+            pass
+        raise
 
 
 def _publish_staged(stage, staged, target):
@@ -1966,7 +2026,8 @@ def save(context,
     def _legacy_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
         del ir_scene
         logger.info("Export orchestration active; delegating current write to legacy emitter for %r", export_file)
-        with (gzip_open_utf8(export_file, 'w') if settings.use_compress else open(export_file, 'w', encoding='utf-8')) as file:
+        # Written to a temporary file and renamed, so a failure half way never truncates the previous document.
+        def write(file):
             export(
                 file,
                 settings.global_matrix or mathutils.Matrix(),
@@ -1991,6 +2052,8 @@ def save(context,
                 meta_license=settings.meta_license,
                 color_space=settings.color_space,
             )
+
+        _write_replacing(export_file, settings.use_compress, write)
 
     def _modern_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
         del depsgraph, scene, view_layer
