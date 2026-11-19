@@ -181,6 +181,13 @@ jobs:
       - name: Validate the exports (fails when any CORE case fails)
         run: python3 tests/suite/validate_x3d_export.py suite-out --html suite-out/report.html
 
+      - name: Import/export parity (every exported element is declared in tools/io_sync/parity.json)
+        run: python3 tools/io_sync/check_parity.py suite-out/x3d_suite_main.x3d suite-out/x3d_suite_crease.x3d suite-out/x3d_suite_x41.x3d
+
+      - name: Import/export fixed point (import -> export twice; the second round trip must change nothing)
+        # docs/IO_SYNC.md. E0 -> E1 (what one round trip changes) is reported; E1 -> E2 must be empty, DEFs included.
+        run: python3 tools/io_sync/fixed_point.py suite-out io-sync-out --blender "$BLENDER_DIR/blender"
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -188,6 +195,8 @@ jobs:
           path: |
             suite-out/report.html
             suite-out/x3d_suite_manifest.json
+            io-sync-out/summary.txt
+            io-sync-out/summary.json
           if-no-files-found: ignore
 
   fidelity-gate:
