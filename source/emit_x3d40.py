@@ -395,16 +395,19 @@ def _default_appearance_xml(indent, look: _Look = _PLAIN_LOOK):
 # Geometry
 
 
-def _vertex_colour_xml(geometry, indent):
-    """One colour per vertex of a line or point set, drawn in place of the material's emissiveColor (a Color node;
-    ColorRGBA only when an alpha is below 1). Empty when the geometry has no such colours."""
-    if not geometry.color or len(geometry.color) != len(geometry.coord):
-        return ""
-    if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
-        values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
-        return f'{indent}<ColorRGBA color="{values}" />\n'
-    values = " ".join(_fmt3(_sfcolor(color[:3])) for color in geometry.color)
-    return f'{indent}<Color color="{values}" />\n'
+def _point_set_xml(geometry, geometry_def, indent):
+    """A vertices-only mesh: a PointSet with one Color / ColorRGBA per point when it has POINT colours."""
+    xml = [f'{indent}<PointSet DEF="{geometry_def}">\n',
+           f'{indent}  <Coordinate point="{" ".join(_fmt3_length(point) for point in geometry.coord)}" />\n']
+    if geometry.color and len(geometry.color) == len(geometry.coord):
+        if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
+            values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
+            xml.append(f'{indent}  <ColorRGBA color="{values}" />\n')
+        else:
+            values = " ".join(_fmt3(_sfcolor(color[:3])) for color in geometry.color)
+            xml.append(f'{indent}  <Color color="{values}" />\n')
+    xml.append(f"{indent}</PointSet>\n")
+    return "".join(xml)
 
 
 def _geometry_xml(geometry, defs: _DefNames, indent):
@@ -413,20 +416,23 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     if not defs.first_use("geometry", geometry.name):
         return f'{indent}<{node} USE="{geometry_def}" />\n'
     if geometry.is_points:
-        return "".join([
-            f'{indent}<PointSet DEF="{geometry_def}">\n',
-            f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n',
-            _vertex_colour_xml(geometry, indent + "  "),
-            f"{indent}</PointSet>\n",
-        ])
+        return _point_set_xml(geometry, geometry_def, indent)
     if geometry.is_lines:
-        # colorIndex follows coordIndex
-        return "".join([
+        xml = [
             f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n',
             f'{indent}  <Coordinate point="{" ".join(_fmt3(point) for point in geometry.coord)}" />\n',
-            _vertex_colour_xml(geometry, indent + "  "),
-            f"{indent}</IndexedLineSet>\n",
-        ])
+        ]
+        if geometry.color and len(geometry.color) == len(geometry.coord):
+            # one colour per vertex, which X3D draws in place of the material's emissiveColor (a Color node: colorIndex
+            # follows coordIndex); ColorRGBA only when an alpha is below 1
+            if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
+                values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
+                xml.append(f'{indent}  <ColorRGBA color="{values}" />\n')
+            else:
+                values = " ".join(_fmt3(_sfcolor(color[:3])) for color in geometry.color)
+                xml.append(f'{indent}  <Color color="{values}" />\n')
+        xml.append(f"{indent}</IndexedLineSet>\n")
+        return "".join(xml)
     attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
     if not geometry.solid:
         attrs.append('solid="false"')
