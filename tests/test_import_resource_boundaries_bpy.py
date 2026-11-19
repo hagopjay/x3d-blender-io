@@ -62,13 +62,31 @@ class ImportResourceBoundaryTests(unittest.TestCase):
         def fake_convert(argv, **_kwargs):
             Path(argv[2]).write_bytes(png.read_bytes())
 
-        with patch("io_scene_x3d.import_resources.subprocess.run", side_effect=fake_convert) as run:
+        # the converter runs only where Blender cannot read GIF and the user opted in
+        with patch.object(self.importer, "blender_reads_gif", return_value=False), \
+                patch.dict("os.environ", {self.importer.GIF_CONVERT_ENV: "1"}), \
+                patch("io_scene_x3d.import_resources.subprocess.run", side_effect=fake_convert) as run:
             loaded = load_image(str(source), convert_callback=self.importer.imageConvertCompat, place_holder=False)
         converted = run.call_args.args[0][2]
         self.addCleanup(Path(converted).unlink, missing_ok=True)
         self.assertIsNotNone(loaded)
         self.assertEqual(run.call_args.args[0][1], str(source))
         self.assertNotIn("shell", run.call_args.kwargs)
+
+    def test_this_blender_reads_gif_itself(self):
+        # Blender 5.1 reads GIF through OpenImageIO; if a supported version cannot, the opt-in below is the only route
+        self.assertTrue(self.importer.blender_reads_gif())
+
+    def test_no_external_converter_runs_by_default(self):
+        source = self.directory / "plain.gif"
+        source.write_bytes(self.importer._GIF_PROBE)
+        for reads in (True, False):
+            with patch.object(self.importer, "blender_reads_gif", return_value=reads), \
+                    patch.dict("os.environ", {}, clear=False) as env, \
+                    patch("io_scene_x3d.import_resources.subprocess.run") as run:
+                env.pop(self.importer.GIF_CONVERT_ENV, None)
+                self.assertEqual(self.importer.imageConvertCompat(str(source)), str(source))
+                run.assert_not_called()
 
     def test_online_permission_prevents_download_even_with_cached_file(self):
         cached = self.directory / "cached.png"

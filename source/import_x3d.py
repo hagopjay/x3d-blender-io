@@ -156,19 +156,55 @@ def vrml_split(text):
     return result
 
 
-def imageConvertCompat(path):
+# A 1 x 1 GIF, for asking the running Blender whether it reads GIF itself
+_GIF_PROBE = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+_blender_reads_gif_cache = []
+GIF_CONVERT_ENV = "BLENDER_X3D_CONVERT_GIF"
 
-    if os.sep == '\\':
-        return path  # assume win32 has quicktime, dont convert
 
-    if path.lower().endswith('.gif'):
-        from .import_resources import convert_gif
-        import subprocess
+def blender_reads_gif():
+    """Whether this Blender loads GIF images itself (5.1 does, through OpenImageIO). Probed once per session."""
+    if not _blender_reads_gif_cache:
+        import tempfile
+        ok = False
+        fd, probe = tempfile.mkstemp(prefix="x3d-gif-probe-", suffix=".gif")
         try:
-            return convert_gif(path)
-        except (OSError, subprocess.SubprocessError) as exc:
-            logger.warning("Failed to convert GIF image: %s", exc)
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(_GIF_PROBE)
+            image = bpy.data.images.load(probe, check_existing=False)
+            try:
+                size = tuple(image.size)          # reading the size loads the pixels; has_data is False before
+                ok = bool(size == (1, 1) and image.has_data)
+            finally:
+                bpy.data.images.remove(image)
+        except (RuntimeError, OSError):
+            ok = False
+        finally:
+            try:
+                os.unlink(probe)
+            except OSError:
+                pass
+        _blender_reads_gif_cache.append(ok)
+    return _blender_reads_gif_cache[0]
 
+
+def imageConvertCompat(path):
+    """Image path for Blender to load. A GIF is converted to PNG only when this Blender cannot read GIF itself and the
+    user opted in (BLENDER_X3D_CONVERT_GIF=1): the converter is an external program (ImageMagick) parsing an image
+    from an untrusted scene, the classic ImageTragick route, so it never runs by default. Filenames never reach a
+    shell (import_resources.convert_gif)."""
+    if os.sep == '\\' or not path.lower().endswith('.gif') or blender_reads_gif():
+        return path
+    if os.environ.get(GIF_CONVERT_ENV, "").strip().lower() not in {"1", "true", "yes", "on"}:
+        logger.warning("GIF texture %r not loaded: this Blender cannot read GIF, and converting it needs ImageMagick; "
+                       "set %s=1 to allow that conversion", os.path.basename(path), GIF_CONVERT_ENV)
+        return path
+    from .import_resources import convert_gif
+    import subprocess
+    try:
+        return convert_gif(path)
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Failed to convert GIF image: %s", exc)
     return path
 
 # notes
