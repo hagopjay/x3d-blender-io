@@ -161,34 +161,36 @@ class SwatchBookRoundTripTests(unittest.TestCase):
         # 7 swatch objects; the two-tone sphere imports as two shapes
         self.assertEqual(len(meshes), 9, [obj.name for obj in meshes])
 
+        # the swatch book's own material names: the export writes MA_<name> inside APP_<name>, and the import strips
+        # that pattern again (it used to keep MA_, so the next export wrote MA_MA_<name>)
         materials = {material.name: material for material in bpy.data.materials}
-        gold = materials["MA_Gold"]
+        gold = materials["Gold"]
         bsdf = gold.node_tree.nodes["Principled BSDF"]
         self.assertAlmostEqual(bsdf.inputs["Metallic"].default_value, 1.0, places=5)
         self.assertAlmostEqual(bsdf.inputs["Roughness"].default_value, 0.2, places=5)
         self.assertAlmostEqual(bsdf.inputs["Base Color"].default_value[0], 1.0, places=5)
         self.assertAlmostEqual(bsdf.inputs["Base Color"].default_value[1], 0.77, places=5)
 
-        glass = materials["MA_Glass"]
+        glass = materials["Glass"]
         bsdf = glass.node_tree.nodes["Principled BSDF"]
         self.assertAlmostEqual(bsdf.inputs["Alpha"].default_value, 0.4, places=5)
         self.assertEqual(glass.surface_render_method, "BLENDED")
 
-        neon = materials["MA_Neon"]
+        neon = materials["Neon"]
         # written as an UnlitMaterial, which X_ITE 16.7.1 draws unlit (Unlit2.glsl), so it comes back as the unlit
         # Emission shape (KHR_materials_unlit in glTF) rather than a Principled BSDF's emission: same strength and colour
         emission = next(n for n in neon.node_tree.nodes if n.type == "EMISSION")
         self.assertAlmostEqual(emission.inputs["Strength"].default_value, 1.0, places=5)
         self.assertAlmostEqual(emission.inputs["Color"].default_value[1], 0.5, places=5)
 
-        checker = materials["MA_Checker"]
+        checker = materials["Checker"]
         image_nodes = [node for node in checker.node_tree.nodes if node.type == "TEX_IMAGE"]
         self.assertEqual(len(image_nodes), 1)
         self.assertIsNotNone(image_nodes[0].image)
 
-        dielectric = materials["MA_Dielectric"]
+        dielectric = materials["Dielectric"]
         self.assertTrue(dielectric.use_backface_culling)
-        self.assertFalse(materials["MA_Gold"].use_backface_culling)
+        self.assertFalse(materials["Gold"].use_backface_culling)
 
         textured = next(obj for obj in meshes if "SwatchTextured" in obj.name)
         self.assertTrue(textured.data.uv_layers)
@@ -433,7 +435,7 @@ class HAnimExportTests(unittest.TestCase):
         self.assertEqual(len(skin.data.vertices), self.vertex_count)
         self.assertEqual(sorted(group.name for group in skin.vertex_groups), ["lower", "upper"])
         self.assertTrue(any(m.type == "ARMATURE" and m.object == armature for m in skin.modifiers))
-        self.assertEqual(skin.data.materials[0].name, "MA_Skin")
+        self.assertEqual(skin.data.materials[0].name, "Skin")   # the fixture's name, not the export's MA_Skin
         weighted = sum(1 for v in skin.data.vertices if v.groups)
         self.assertEqual(weighted, self.vertex_count)
 
