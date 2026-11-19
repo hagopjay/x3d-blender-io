@@ -119,6 +119,13 @@ def clean_def(txt):
     })
 
 
+def _bulk_tuples(collection, prop, width):
+    """``[tuple(item.<prop>) for item in collection]`` with one ``foreach_get`` (same float values, linear time)."""
+    flat = [0.0] * (len(collection) * width)
+    collection.foreach_get(prop, flat)
+    return [tuple(flat[i:i + width]) for i in range(0, len(flat), width)]
+
+
 def build_hierarchy(objects):
     """ returns parent child relationships, skipping
     """
@@ -1839,13 +1846,6 @@ def export(file,
 ##########################################################
 # Callbacks, needed before Main
 ##########################################################
-
-
-def _bulk_tuples(collection, prop, width):
-    """``[tuple(item.<prop>) for item in collection]`` with one ``foreach_get`` (same float values, linear time)."""
-    flat = [0.0] * (len(collection) * width)
-    collection.foreach_get(prop, flat)
-    return [tuple(flat[i:i + width]) for i in range(0, len(flat), width)]
 
 
 def gzip_open_utf8(filepath, mode):
