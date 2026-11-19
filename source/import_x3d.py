@@ -1414,26 +1414,18 @@ class vrmlNode(object):
 
 
 def gzipOpen(path):
-    import gzip
-
-    data = None
-    file_ext = os.path.splitext(path)[1].lower()
+    """The file's text, gunzipped when it is gzip, within the decompressed source budget (import_resources); None when
+    it cannot be read, with the reason logged."""
+    from .import_resources import ResourceLimitError, read_source_bytes
 
     try:
-        if file_ext in ['.x3dz']:
-            # Handle .x3dz files
-            with gzip.open(path, 'rb') as file:
-                data = file.read()
-            data = data.decode(encoding='utf-8', errors='surrogateescape')
-        else:
-            # Handle regular text files
-            with open(path, 'r', encoding='utf-8', errors='surrogateescape') as file:
-                data = file.read()
+        return read_source_bytes(path).decode(encoding='utf-8', errors='surrogateescape')
+    except ResourceLimitError as exc:
+        logger.error("Not importing %s: %s", path, exc)
     except Exception:
         import traceback
         traceback.print_exc()
-
-    return data
+    return None
 
 
 

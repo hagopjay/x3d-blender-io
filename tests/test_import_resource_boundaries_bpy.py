@@ -25,7 +25,9 @@ class ImportResourceBoundaryTests(unittest.TestCase):
         cls.temporary = tempfile.TemporaryDirectory(prefix="x3d-resource-tests-")
         cls.addClassCleanup(cls.temporary.cleanup)
         cls.directory = Path(cls.temporary.name)
-        _register_extension(cls.temporary.name)
+        # Register from a folder that outlives this class: the add-on package stays in sys.modules for the rest of the
+        # run, and a deleted package path broke every later test that imports a submodule not loaded yet (export_x3d).
+        _register_extension(tempfile.mkdtemp(prefix="x3d-resource-addon-"))
         cls.importer = importlib.import_module("io_scene_x3d.import_x3d")
 
     def test_external_x3d_doctype_imports_geometry(self):

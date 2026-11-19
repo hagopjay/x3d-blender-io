@@ -169,3 +169,43 @@ class XMLResourceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+import os  # noqa: E402
+import import_resources  # noqa: E402
+
+
+class SourceBudgetTests(unittest.TestCase):
+    """read_source_bytes: gzip by content, a decompressed-size budget (a small .x3dz can expand to gigabytes)."""
+
+    def setUp(self):
+        import tempfile
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+
+    def _write(self, name, data, gzipped=False):
+        import gzip
+        path = os.path.join(self.dir.name, name)
+        with (gzip.open if gzipped else open)(path, "wb") as handle:
+            handle.write(data)
+        return path
+
+    def test_gzip_is_recognised_by_content_not_extension(self):
+        doc = b"<X3D><Scene/></X3D>"
+        for name in ("a.x3dz", "b.wrz", "c.x3dv", "d.x3d"):
+            self.assertEqual(import_resources.read_source_bytes(self._write(name, doc, gzipped=True)), doc)
+        self.assertEqual(import_resources.read_source_bytes(self._write("plain.x3d", doc)), doc)
+
+    def test_a_decompression_bomb_stops_at_the_budget(self):
+        bomb = self._write("bomb.x3dz", b"<X3D>" + b" " * (4 * 1024 * 1024) + b"</X3D>", gzipped=True)
+        self.assertLess(os.path.getsize(bomb), 64 * 1024)          # 4 MiB of text in a few kilobytes of gzip
+        with self.assertRaisesRegex(import_resources.ResourceLimitError, "decompressed"):
+            import_resources.read_source_bytes(bomb, limit=1024 * 1024)
+
+    def test_the_budget_follows_the_environment(self):
+        from unittest import mock
+        with mock.patch.dict(os.environ, {import_resources.SOURCE_MAX_BYTES_ENV: "10"}):
+            with self.assertRaises(import_resources.ResourceLimitError):
+                import_resources.read_source_bytes(self._write("big.x3d", b"0123456789A"))
+        with mock.patch.dict(os.environ, {import_resources.SOURCE_MAX_BYTES_ENV: "nonsense"}):
+            self.assertEqual(import_resources.source_byte_limit(), import_resources.SOURCE_MAX_BYTES)

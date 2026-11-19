@@ -24,6 +24,35 @@ class ResourceLimitError(ValueError):
     """The resource exceeds an importer's explicit resource budget."""
 
 
+SOURCE_MAX_BYTES_ENV = "BLENDER_X3D_MAX_SOURCE_BYTES"
+SOURCE_MAX_BYTES = 1024 ** 3   # 1 GiB of X3D / VRML text, after decompression
+
+
+def source_byte_limit():
+    """The decompressed source budget: BLENDER_X3D_MAX_SOURCE_BYTES when it is a positive integer, else 1 GiB."""
+    try:
+        value = int(os.environ.get(SOURCE_MAX_BYTES_ENV, ""))
+    except ValueError:
+        return SOURCE_MAX_BYTES
+    return value if value > 0 else SOURCE_MAX_BYTES
+
+
+def read_source_bytes(path, limit=None):
+    """The bytes of an X3D / VRML file, gunzipped when they are gzip (by content, so .x3dz, .wrz and a gzipped .x3dv
+    all load), never more than ``limit`` after decompression: a few kilobytes of gzip can expand to gigabytes."""
+    import gzip
+    limit = source_byte_limit() if limit is None else limit
+    with open(path, "rb") as raw:
+        gzipped = raw.read(2) == b"\x1f\x8b"
+    opener = gzip.open if gzipped else open
+    with opener(path, "rb") as handle:
+        data = handle.read(limit + 1)
+    if len(data) > limit:
+        raise ResourceLimitError(f"{os.path.basename(path)} is larger than {limit} bytes"
+                                 f"{' when decompressed' if gzipped else ''} (set {SOURCE_MAX_BYTES_ENV} to raise it)")
+    return data
+
+
 class _HTTPRedirectsOnly(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if urlsplit(newurl).scheme.lower() not in {"http", "https"}:
