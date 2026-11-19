@@ -554,9 +554,14 @@ def c_parent(ck, doc, env):
 
 # -- mesh ----------------------------------------------------------------------------
 
-def _gather_mesh(doc, tr):
+def _gather_mesh(doc, tr, subtree=False):
+    """Faces of the object's own Shapes; with ``subtree`` also those of nested Transforms (instances), whose points are
+    then in their own frames, so only face counts are comparable."""
     P_all, nfaces, area, faces_out = [], 0, 0.0, []
-    for sh in doc.shapes(tr):
+    shapes = doc.shapes(tr)
+    if subtree:
+        shapes = shapes + [sh for child in tr.iter("Transform") if child is not tr for sh in doc.shapes(child)]
+    for sh in shapes:
         d = ifs_data(doc, doc.geometry(sh))
         if d is None:
             continue
@@ -578,7 +583,7 @@ def c_mesh(ck, doc, env):
     if err:
         return err
     f = ck["facts"]
-    P, nfaces, area, faces = _gather_mesh(doc, tr)
+    P, nfaces, area, faces = _gather_mesh(doc, tr, subtree=bool(ck.get("subtree")))
     msgs, notes = [], []
     want_faces = f.get("faces")
     if ck.get("faces_eq") == "tris" or (env.triangulated and "tris" in f):
@@ -1638,6 +1643,9 @@ def selftest():
         expect("mesh check passes", CHECKS["mesh"]({"k": "mesh", "facts": facts}, doc, env).ok)
         expect("mesh check fails on wrong face count", not CHECKS["mesh"]({"k": "mesh", "facts": dict(facts, faces=2)}, doc, env).ok)
         expect("mesh check fails on wrong area", not CHECKS["mesh"]({"k": "mesh", "facts": dict(facts, area=2.0)}, doc, env).ok)
+        expect("mesh subtree counts a nested Transform's faces",
+               CHECKS["mesh"]({"k": "mesh", "facts": {"obj": "parent", "faces": 1}, "subtree": True}, doc, env).ok
+               and not CHECKS["mesh"]({"k": "mesh", "facts": {"obj": "parent", "faces": 1}}, doc, env).ok)
         expect("normals check", CHECKS["normals"]({"k": "normals", "obj": "child", "unit": True, "all_equal": [0, 0, 1]}, doc, env).ok)
         expect("mat check with X3D default fallback",
                CHECKS["mat"]({"k": "mat", "obj": "child", "attrs": {"baseColor": [0.5, 0.25, 0.125], "roughness": 0.4, "metallic": 1.0}}, doc, env).ok)
