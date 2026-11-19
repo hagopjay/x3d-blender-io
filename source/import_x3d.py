@@ -1984,6 +1984,15 @@ def _index_need(*arrays):
     return max((max(array) + 1 for array in arrays if array), default=0)
 
 
+def _attribute_need(own_index, coord_index, per_vertex, face_count):
+    """How many Normal/Color/TextureCoordinate values a face set reads, by the X3D IndexedFaceSet rules: its own
+    index field when given; otherwise coordIndex when the values are per vertex, or one value per face when not.
+    (Taking the maximum over coordIndex as well, as before, warned "indexed up to" on correct per-face files.)"""
+    if own_index:
+        return _index_need(own_index)
+    return _index_need(coord_index) if per_vertex else face_count
+
+
 def validate_points_field(coord_index, points):
     """
     validate number of points compared to coordIndex to ensure proper face building without errors
@@ -2268,7 +2277,7 @@ def importMesh_IndexedFaceSet(geom, ancestry):
         per_vertex = geom.getFieldAsBool('normalPerVertex', True, ancestry)
         vectors = normals.getFieldAsArray('vector', 3, ancestry)
         normal_index = clean_index_field(geom.getFieldAsArray('normalIndex', 0, ancestry), 'normalIndex')
-        vectors = pad_values(vectors, max(len(faces), _index_need(normal_index, index)), (0.0, 0.0, 1.0), 'Normal')
+        vectors = pad_values(vectors, _attribute_need(normal_index, index, per_vertex, len(faces)), (0.0, 0.0, 1.0), 'Normal')
         if per_vertex:
             if len(normal_index) == 0:
                 normal_index = index
@@ -2298,7 +2307,7 @@ def importMesh_IndexedFaceSet(geom, ancestry):
 
         color_per_vertex = geom.getFieldAsBool('colorPerVertex', True, ancestry)
         color_index = clean_index_field(geom.getFieldAsArray('colorIndex', 0, ancestry), 'colorIndex')
-        rgb = pad_values(rgb, max(len(faces), _index_need(color_index, index)), [1.0, 1.0, 1.0, 1.0], 'Color')
+        rgb = pad_values(rgb, _attribute_need(color_index, index, color_per_vertex, len(faces)), [1.0, 1.0, 1.0, 1.0], 'Color')
         has_color_index = len(color_index) != 0
         has_valid_color_index = index.count(-1) == color_index.count(-1)
 
@@ -2356,7 +2365,7 @@ def importMesh_IndexedFaceSet(geom, ancestry):
     if tex_coord:
         tex_coord_points = tex_coord.getFieldAsArray('point', 2, ancestry)
         tex_index = clean_index_field(geom.getFieldAsArray('texCoordIndex', 0, ancestry), 'texCoordIndex')
-        tex_coord_points = pad_values(tex_coord_points, _index_need(tex_index, index), (0.0, 0.0), 'TextureCoordinate')
+        tex_coord_points = pad_values(tex_coord_points, _attribute_need(tex_index, index, True, len(faces)), (0.0, 0.0), 'TextureCoordinate')
         tex_index = processPerVertexIndex(tex_index)
         loops = [co for f in tex_index
                  for v in f
