@@ -734,7 +734,7 @@ def _joint_def(defs: _DefNames, humanoid_name, joint_name):
 
 def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children"):
     joint_def = _joint_def(defs, humanoid_name, joint.name)
-    attrs = [f'DEF="{joint_def}"', f"name={quoteattr(_nmtoken(joint.hanim_name or joint.name, 'joint'))}", f'center="{_fmt3(joint.center)}"']
+    attrs = [f'DEF="{joint_def}"', "name=" + quoteattr(_nmtoken(joint.hanim_name or joint.name, "joint")), f'center="{_fmt3(joint.center)}"']
     if container_field != "children":
         attrs.append(f'containerField="{container_field}"')
     if joint.skin_coord_index:
@@ -761,9 +761,10 @@ def _humanoid_info(humanoid):
 
 def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK):
     humanoid_def = defs.get("humanoid", humanoid.name, "hanim_")
+    humanoid_token = _nmtoken(humanoid.name, "humanoid")
     tx = humanoid.transform
     xml = [
-        f'{indent}<HAnimHumanoid DEF="{humanoid_def}" name={quoteattr(_nmtoken(humanoid.name, 'humanoid'))} version="2.0" '
+        f'{indent}<HAnimHumanoid DEF="{humanoid_def}" name={quoteattr(humanoid_token)} version="2.0" '
         f"{_humanoid_info_attr(humanoid)}"
         f'skeletalConfiguration="BLENDER" '
         f'translation="{_fmt3_length(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
