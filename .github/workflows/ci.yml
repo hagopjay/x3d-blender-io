@@ -186,7 +186,8 @@ jobs:
 
       - name: Import/export fixed point (import -> export twice; the second round trip must change nothing)
         # docs/IO_SYNC.md. E0 -> E1 (what one round trip changes) is reported; E1 -> E2 must be empty, DEFs included.
-        run: python3 tools/io_sync/fixed_point.py suite-out io-sync-out --blender "$BLENDER_DIR/blender"
+        # --budget: the first trip (E0 -> E1) may not lose anything new either (tools/io_sync/first_trip_budget.json)
+        run: python3 tools/io_sync/fixed_point.py suite-out io-sync-out --blender "$BLENDER_DIR/blender" --budget tools/io_sync/first_trip_budget.json
 
       - uses: actions/upload-artifact@v7
         if: always()

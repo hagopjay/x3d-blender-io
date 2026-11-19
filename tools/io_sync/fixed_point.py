@@ -13,6 +13,8 @@ For each file E0: fixed_point_leg.py imports it and re-exports E1, then imports 
   - E0 -> E1: what one Blender round trip changes in a file this add-on wrote (the import/export asymmetries);
   - E1 -> E2: must be empty up to number formatting, DEF spellings included; anything here is a round trip that does
     not converge (it changes the file again on every import/export).
+  - with --budget FILE: E0 -> E1 must stay within the committed per-group budget, so a new first-trip loss fails even
+    when it then converges (tools/io_sync/first_trip_budget.json; --write-budget regenerates it).
 Writes OUT_DIR/summary.json and OUT_DIR/summary.txt; exit 1 when E1 -> E2 has differences beyond --rel/--abs.
 """
 from __future__ import annotations
@@ -32,6 +34,41 @@ import x3d_diff  # noqa: E402
 DEFAULT_BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 # head/meta that name the file or the tool run: they change on every export by design
 IGNORE_META = True
+
+
+def _group_key(g) -> str:
+    return f"{g['kind']}|{g['tag']}|{g['attr'] or ''}"
+
+
+def first_trip_counts(rows) -> dict:
+    """{profile: {"kind|tag|attr": count}} of the E0 -> E1 differences, the form the budget file holds."""
+    return {key: {_group_key(g): g["count"] for g in row["e0_e1"]} for key, row in rows.items() if "error" not in row}
+
+
+def budget_violations(rows, budget) -> tuple[list[str], list[str]]:
+    """Compare this run's first-trip differences with the committed budget.
+
+    A group (kind, element, field) that grew, or that the budget does not list, is a violation: a new loss in one
+    import/export round trip, which the convergence check alone cannot see (a loss on the first trip that then stays
+    lost converges). A group that shrank is reported so the budget can be tightened in the same change."""
+    violations, tightened = [], []
+    for key, counts in first_trip_counts(rows).items():
+        allowed = budget.get("profiles", {}).get(key)
+        if allowed is None:
+            violations.append(f"{key}: no first-trip budget for this profile")
+            continue
+        for group, count in sorted(counts.items()):
+            limit = allowed.get(group)
+            if limit is None:
+                violations.append(f"{key}: new first-trip difference {group} x{count}")
+            elif count > limit:
+                violations.append(f"{key}: {group} {count} > budget {limit}")
+            elif count < limit:
+                tightened.append(f"{key}: {group} {count} < budget {limit}")
+        for group, limit in sorted(allowed.items()):
+            if group not in counts:
+                tightened.append(f"{key}: {group} 0 < budget {limit}")
+    return violations, tightened
 
 
 def run(suite: Path, out: Path, blender: str, profiles, rel, abs_):
@@ -90,9 +127,28 @@ def main():
     p.add_argument("--profiles", default="")
     p.add_argument("--rel", type=float, default=1e-4)
     p.add_argument("--abs", type=float, default=1e-4)
+    p.add_argument("--budget", type=Path, help="fail when the first-trip (E0 -> E1) differences exceed this budget")
+    p.add_argument("--write-budget", type=Path, help="write this run's first-trip differences as the new budget")
     o = p.parse_args()
     o.out.mkdir(parents=True, exist_ok=True)
-    sys.exit(run(o.suite, o.out, o.blender, [x for x in o.profiles.split(",") if x], o.rel, o.abs))
+    status = run(o.suite, o.out, o.blender, [x for x in o.profiles.split(",") if x], o.rel, o.abs)
+    rows = json.loads((o.out / "summary.json").read_text())
+    if o.write_budget:
+        o.write_budget.write_text(json.dumps({
+            "schema": "x3d-blender-io.first-trip-budget/v1",
+            "about": "E0 -> E1 differences per profile and (kind|element|field), as counted by fixed_point.py with "
+                     "x3d_diff at --rel/--abs 1e-4 (Normal 1e-3). A group may shrink; growing or appearing fails CI. "
+                     "Regenerate with --write-budget in the change that fixes or deliberately accepts a difference.",
+            "profiles": first_trip_counts(rows)}, indent=1, sort_keys=True) + "\n")
+    if o.budget:
+        violations, tightened = budget_violations(rows, json.loads(o.budget.read_text()))
+        for line in tightened:
+            print("budget can tighten:", line)
+        for line in violations:
+            print("BUDGET EXCEEDED:", line)
+        if violations:
+            status = 1
+    sys.exit(status)
 
 
 if __name__ == "__main__":

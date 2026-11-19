@@ -17,9 +17,12 @@ Let `E` be export and `I` be import, both with the same options. For a file `F0`
 
 Convergence catches accumulating drift; it does not prove fidelity. An importer that drops every light on its first
 load can still converge to a permanently dark scene. Fidelity needs judgement (a written-out default, renumbered
-indices), so it is reported separately. The ledger currently documents known losses; the tool does **not** match
-E0 → E1 differences against that ledger or fail on a newly introduced first-trip loss. Add targeted preservation
-assertions and reviewed loss budgets beside the convergence gate.
+indices), so it is reported separately, and held by a **first-trip budget**: `tools/io_sync/first_trip_budget.json`
+records, per profile, how many E0 → E1 differences each (kind, element, field) group may have. CI runs
+`fixed_point.py --budget`, so a group that grows, or a group that is new (every light dropped on the first load), fails
+even when the round trip then converges. A change that fixes a loss regenerates the budget (`--write-budget`) so it
+shrinks; a change that accepts a new difference must regenerate it too, which puts the decision in the diff for review.
+The budget counts differences; it does not judge them, so targeted preservation tests still carry the meaning.
 
 The comparison also has limits: floating-point tolerances can hide errors smaller than their thresholds, and names
 or child-order changes can be harmless in some contexts and semantic in others. A nonempty diff needs interpretation;
@@ -81,8 +84,8 @@ python3 tools/io_sync/fixed_point.py /tmp/suite /tmp/io-sync --blender "$(which 
   against real output (CI exports), and with an explicit status per entry: exact, equivalent, lossy, unmeasured.
   "Unmeasured" is a status, so gaps are visible rather than assumed.
 - **Keep a ledger of known differences with an owner and a test.** A difference is fixed (with a test), open (with
-  what it would take), or by design (with the reason). The existing gate fails new E1 → E2 drift; enforcing newly
-  introduced E0 → E1 losses against the ledger remains follow-up work.
+  what it would take), or by design (with the reason). Gate both trips: E1 → E2 must be empty, and E0 → E1 must
+  stay within a committed per-group budget that only shrinks unless a reviewed change says otherwise.
 - **Make conversions explicit and paired.** Every colour-space, unit or axis conversion has one function per side,
   named for its inverse, and a test that composes them.
 - **Run both directions on the same options.** Report option-dependent differences separately from real losses (the
