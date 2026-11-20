@@ -23,7 +23,8 @@ from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROP
                       IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
-                      METADATA_NODE_TYPES, METADATA_PROPERTY, VIEWPOINT_DESCRIPTION_PROPERTY, record_inline_source, scene_head_meta,
+                      METADATA_NODE_TYPES, METADATA_PROPERTY, SCENE_METADATA_PROPERTY, TRANSFORM_METADATA_PROPERTY,
+                      VIEWPOINT_DESCRIPTION_PROPERTY, record_inline_source, scene_head_meta,
                       HEADLIGHT_LUX_PROPERTY, IMPORTED_OBJECT_PROPERTY, LIGHTING_MODEL_PROPERTY, clear_stale_scene_properties)
 from .viewpoint_fov import blender_camera_angle, render_size
 
@@ -4559,6 +4560,7 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     if mat_name:
         bpymat[X3D_DEF_PROPERTY] = mat_name
     if mat:
+        keep_host_metadata(bpymat, mat)
         bpymat[MATERIAL_MODEL_PROPERTY] = 'classic'   # a Material or TwoSidedMaterial: the 4.0 export writes one again
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
 
@@ -4984,6 +4986,7 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
     bpymat = bpy.data.materials.new(exported_material_name(mat) or vrmlname)
     if mat_name:
         bpymat[X3D_DEF_PROPERTY] = mat_name
+    keep_host_metadata(bpymat, mat)
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
     node_tree = bpymat.node_tree
     bsdf = bpymat_wrap.node_principled_bsdf
@@ -5718,6 +5721,8 @@ def importMetadata(node, ancestors=()):
     USE nodes are resolved; a set that contains itself through USE, which X3D does not allow, is cut there."""
     real = node.getRealNode()
     tree = {"node": real.getSpec()}
+    if real.getDefName():
+        tree["def"] = real.getDefName()
     for field in ("name", "reference"):
         text = _attribute_raw(real, field, None)
         if text is not None:
@@ -5737,6 +5742,77 @@ def importMetadata(node, ancestors=()):
         if text is not None:
             tree["value"] = text
     return tree
+
+
+def host_metadata(node):
+    """The nested-dict form of ``node``'s own Metadata* child (its metadata field), or None. Never raises: metadata
+    must not stop an import."""
+    real = node.getRealNode()
+    if getattr(real, "x3dNode", None) is None:   # Classic VRML: no element to read containerField from
+        return None
+    for child in real.children:
+        if child.getSpec() in METADATA_NODE_TYPES and getattr(child.getRealNode(), "x3dNode", None) is not None:
+            try:
+                return importMetadata(child)
+            except (TypeError, ValueError, RecursionError) as exc:
+                logger.warning("Metadata of %s %r not kept: %s", real.getSpec(), real.getDefName(), exc)
+                return None
+    return None
+
+
+def keep_host_metadata(idblock, node, key=METADATA_PROPERTY):
+    """Store ``node``'s Metadata* child on ``idblock`` under ``key`` and mark the node as placed."""
+    if idblock is None:
+        return
+    tree = host_metadata(node)
+    if tree is not None:
+        idblock[key] = tree
+        _METADATA_PLACED.add(id(node.getRealNode()))
+
+
+# real nodes whose Metadata found a Blender object or material during this import (reset by the outermost load_web3d)
+_METADATA_PLACED = set()
+_MATERIAL_SPECS = frozenset(("Material", "PhysicalMaterial", "UnlitMaterial", "TwoSidedMaterial"))
+
+
+def keep_scene_metadata(bpyscene, all_nodes):
+    """Every Metadata* node whose host got no Blender object or material, kept on the scene (SCENE_METADATA_PROPERTY)
+    so that an import never drops one silently. A Shape's is on its object and is not repeated here."""
+    kept, seen = [], set()
+    for node, ancestry in all_nodes:
+        real = node.getRealNode()
+        spec = real.getSpec()
+        if spec == 'Shape' or spec in METADATA_NODE_TYPES or id(real) in seen or id(real) in _METADATA_PLACED:
+            continue
+        if any(a.getSpec() in ('HAnimHumanoid', 'ProtoDeclare', 'ExternProtoDeclare') for a in ancestry):
+            continue
+        tree = host_metadata(node)
+        if tree is None:
+            continue
+        seen.add(id(real))
+        entry = {"host": spec, "def": real.getDefName() or "",
+                 "path": "/".join(n for n in (a.getRealNode().getDefName() for a in ancestry) if n), "metadata": tree}
+        if spec == 'WorldInfo':
+            for field in ("title", "info"):
+                text = _attribute_raw(real, field, None)
+                if text is not None:
+                    entry[field] = text
+        kept.append(entry)
+    if kept:
+        try:   # appended: an inlined file's hosts are stored before its parent's, and a second import adds its own
+            bpyscene[SCENE_METADATA_PROPERTY] = [_plain(item) for item in bpyscene.get(SCENE_METADATA_PROPERTY, ())] + kept
+        except (TypeError, ValueError) as exc:
+            logger.warning("Scene-level Metadata not kept: %s", exc)
+    return kept
+
+
+def _plain(item):
+    """An ID property group or array as plain dicts / lists (what assigning a list of dicts needs)."""
+    if hasattr(item, "to_dict"):
+        return item.to_dict()
+    if hasattr(item, "to_list"):
+        return item.to_list()
+    return item
 
 
 def _shared_mesh(geom, bpymat, texmtx):
@@ -6166,6 +6242,7 @@ def importTransform(bpycollection, node, ancestry, global_matrix):
     bpyob = node.blendData = node.blendObject = bpy.data.objects.new(name, None)
     bpycollection.objects.link(bpyob)
     tag_x3d_identity(bpyob, node, ancestry)
+    keep_host_metadata(bpyob, node, TRANSFORM_METADATA_PROPERTY)
     bpyob.select_set(True)
 
     bpyob.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
@@ -7591,6 +7668,12 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
         if ob not in parented and ob.parent is None:
             _set_world_matrix(ob, world)
 
+    for key, owner in owners.items():
+        # the object that stands for a Transform carries that Transform's Metadata (a joined or single Shape object
+        # keeps its own Shape Metadata under METADATA_PROPERTY as before)
+        if TRANSFORM_METADATA_PROPERTY not in owner:
+            keep_host_metadata(owner, transforms[key][0], TRANSFORM_METADATA_PROPERTY)
+
     by_node = {}
     for key, owner in owners.items():
         node = transforms[key][0].getRealNode()
@@ -8146,6 +8229,7 @@ def load_web3d(
     global current_file_path
     current_file_path = filepath
     if not _INLINE_STACK:
+        _METADATA_PLACED.clear()
         # only the outermost file: an Inline's own load_web3d ran in the middle of its parent's and wiped the parent's
         # record of which meshes carry a baked shear (a USE after an Inline then copied the baked mesh, and
         # keep_hierarchy could not undo the bake)
@@ -8290,6 +8374,10 @@ def load_web3d(
         importRoutesXML(all_nodes, global_matrix, bpycontext)
     except Exception as exc:  # animation must never break a geometry import
         logger.error("XML ROUTE animation import failed: %s", exc, exc_info=True)
+    try:
+        keep_scene_metadata(bpyscene, all_nodes)
+    except Exception as exc:  # metadata must never stop an import
+        logger.error("Scene-level Metadata not kept: %s", exc, exc_info=True)
     report_import_losses(all_nodes, bpycontext)
 
     # Switch: every child is imported, so nothing is lost on the way back out, but only the chosen one is shown; the others
