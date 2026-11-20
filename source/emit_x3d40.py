@@ -404,10 +404,11 @@ def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look:
     if _is_classic(material, look):
         material_xml, texture_xml = _classic_material_xml(material, material_def, indent + "  ", look, output_dir=output_dir,
                                                           defs=defs)
-        xml.append(material_xml)
+        xml.append(_with_metadata(material_xml, getattr(material, "metadata", None), indent + "  ", defs))
         xml.append(texture_xml)
     else:
-        xml.append(_material_xml(material, material_def, indent + "  ", output_dir=output_dir, defs=defs))
+        xml.append(_with_metadata(_material_xml(material, material_def, indent + "  ", output_dir=output_dir, defs=defs),
+                                  getattr(material, "metadata", None), indent + "  ", defs))
     xml.append(_texture_transform_xml(material, indent + "  "))
     if line_width is not None:
         xml.append(f'{indent}  <LineProperties linewidthScaleFactor="{_fmt_short(line_width)}" />\n')
@@ -629,10 +630,15 @@ def _background_xml(background, indent):
     return f"{indent}<Background {' '.join(attrs)} />\n"
 
 
-def _metadata_xml(node, indent, container_field=None):
+def _metadata_xml(node, indent, container_field=None, defs=None):
     """A Metadata* node. Inside a MetadataSet the X3D 4.0 default containerField, value, applies; a node's own
-    metadata field needs containerField="metadata"."""
-    attrs = [f'containerField="{container_field}"'] if container_field else []
+    metadata field needs containerField="metadata". With ``defs``, the DEF the node had in the imported file is
+    written again (made unique: a tree read through USE is stored as a copy on each host)."""
+    attrs = []
+    if defs is not None and node.def_name:
+        attrs.append(f'DEF="{defs.get("metadata", str(id(node)), "", label=node.def_name)}"')
+    if container_field:
+        attrs.append(f'containerField="{container_field}"')
     if node.name is not None:
         attrs.append(f"name={quoteattr(node.name)}")
     if node.reference is not None:
@@ -643,8 +649,43 @@ def _metadata_xml(node, indent, container_field=None):
         return f"{indent}<{node.node_type} {' '.join(attrs)} />\n"
     if not node.members:
         return f"{indent}<MetadataSet {' '.join(attrs)} />\n"
-    members = "".join(_metadata_xml(member, indent + "  ") for member in node.members)
+    members = "".join(_metadata_xml(member, indent + "  ", defs=defs) for member in node.members)
     return f"{indent}<MetadataSet {' '.join(attrs)}>\n{members}{indent}</MetadataSet>\n"
+
+
+def _with_metadata(node_xml, metadata, indent, defs=None):
+    """``node_xml`` (one element, self-closing or with children, as the material writers return it) with ``metadata``
+    as its first child, the node's own metadata field."""
+    if metadata is None or not node_xml:
+        return node_xml
+    child = _metadata_xml(metadata, indent + "  ", "metadata", defs)
+    head, newline, rest = node_xml.partition("\n")
+    if head.endswith("/>"):
+        tag = head.strip()[1:].split()[0]
+        return f"{head[:-2].rstrip()}>\n{child}{indent}</{tag}>\n{rest}"
+    return f"{head}\n{child}{rest}"
+
+
+def _world_info_xml(hosts, defs, indent, diagnostics):
+    """The WorldInfo nodes the importer kept with their Metadata; every other kept host is named in ``diagnostics``,
+    since it has no Blender object the export could write it on."""
+    xml = []
+    for host in hosts:
+        if host.host != "WorldInfo":
+            where = host.def_name or host.path or "no DEF"
+            diagnostics.append(f"Metadata of imported {host.host} ({where}) is kept in the .blend file "
+                               "(scene property x3d_scene_metadata) but not written: no Blender object stands for that node.")
+            continue
+        attrs = []
+        if host.def_name:
+            attrs.append(f'DEF="{defs.get("worldinfo", host.def_name, "")}"')
+        if host.title is not None:
+            attrs.append(f"title={quoteattr(host.title)}")
+        if host.info:
+            attrs.append("info='" + host.info.replace("&", "&amp;").replace("<", "&lt;").replace("'", "&apos;") + "'")
+        open_tag = f"{indent}<WorldInfo {' '.join(attrs)}>" if attrs else f"{indent}<WorldInfo>"
+        xml.append(f"{open_tag}\n{_metadata_xml(host.metadata, indent + '  ', 'metadata', defs)}{indent}</WorldInfo>\n")
+    return "".join(xml)
 
 
 def _subtree_hidden(instance):
@@ -670,6 +711,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         f'rotation="{_fmt4((rx, ry, rz, ra))}" '
         f'scale="{_fmt3_length((sx, sy, sz))}"{visible_attr}>\n'
     ]
+    if instance.transform_metadata is not None:
+        xml.append(_metadata_xml(instance.transform_metadata, indent + "  ", "metadata", defs))
     if instance.interaction is not None:
         xml.append(_sensor_xml(instance, defs, indent + "  "))
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
@@ -678,7 +721,7 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     for index, shape in enumerate(instance.iter_shapes()):
         xml.append(f"{indent}  <Shape{shape_attrs}>\n")
         if index == 0 and instance.metadata is not None:
-            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata"))
+            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata", defs))
         material = materials.get(shape.material_name) if shape.material_name else None
         geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
         line_width = instance.line_width if geometry is not None and geometry.is_lines else None
@@ -1254,6 +1297,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     # An imported scene gets the headlight its file had (a browser's headlight lights the same faces whether or not the
     # file has lights; X3D's default is on); a scene made in Blender has none when it has lights of its own.
     headlight = ir_scene.headlight if ir_scene.headlight is not None else not ir_scene.has_lights()
+    write(_world_info_xml(getattr(ir_scene, "metadata_hosts", ()), defs, "    ", diagnostics))
     write(
         f'    <NavigationInfo headlight="{"true" if headlight else "false"}" '
         "type='\"EXAMINE\" \"ANY\"' />\n"

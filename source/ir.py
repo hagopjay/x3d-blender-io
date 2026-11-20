@@ -117,6 +117,8 @@ class IRPBRMaterial:
     alpha_cutoff: float | None = None
     double_sided: bool | None = None
     unlit: bool = False
+    # Metadata* node (IRMetadataNode) read by the importer from the X3D material; written as its metadata field.
+    metadata: object | None = None
     base_color_texture: IRTextureRef | None = None
     metallic_roughness_texture: IRTextureRef | None = None
     normal_texture: IRTextureRef | None = None
@@ -209,10 +211,23 @@ class IRMetadataNode:
     """One X3D Metadata* node. MetadataSet holds ``members``; the others hold ``value``, the field's X3D text."""
 
     node_type: str  # MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString
+    def_name: str | None = None   # the node's own DEF in the imported file
     name: str | None = None
     reference: str | None = None
     value: str | None = None
     members: list["IRMetadataNode"] = field(default_factory=list)
+
+
+@dataclass
+class IRMetadataHost:
+    """A Metadata* node whose X3D host has no Blender object or material (WorldInfo, a Group, a Viewpoint...)."""
+
+    host: str                      # the host's node type
+    metadata: IRMetadataNode
+    def_name: str | None = None
+    path: str | None = None        # DEF'd ancestors, outermost first, "/"-joined
+    title: str | None = None       # WorldInfo title
+    info: str | None = None        # WorldInfo info, as X3D MFString text
 
 
 @dataclass
@@ -339,6 +354,8 @@ class IRInstance:
     cast_shadow: bool = True
     # Metadata node written as the metadata field of the instance's first Shape.
     metadata: IRMetadataNode | None = None
+    # Metadata node written as the metadata field of the instance's own Transform.
+    transform_metadata: IRMetadataNode | None = None
     # Set by the extractor when a mesh-like object evaluated to no faces (edge-only mesh, zero vertices, Geometry
     # Nodes output that is only instances). Such an object keeps its Transform but must not get a placeholder Shape.
     no_faces: bool = False
@@ -439,6 +456,8 @@ class IRScene:
     material_model_forced: bool = False
     # The NavigationInfo headlight the scene had when it was imported (True/False), None when it never had one.
     headlight: bool | None = None
+    # Metadata of imported hosts with no Blender counterpart; WorldInfo ones are written, the rest reported.
+    metadata_hosts: list[IRMetadataHost] = field(default_factory=list)
 
     def iter_instances(self):
         """Depth-first walk over every instance, nested children included (the members of each instanced collection

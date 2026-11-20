@@ -212,6 +212,11 @@
       "import": "yes",
       "round_trip": "unmeasured"
     },
+    "WorldInfo": {
+      "import": "yes",
+      "round_trip": "equivalent",
+      "note": "written only for an imported WorldInfo that carries a Metadata node (scene property x3d_scene_metadata); title, info and the metadata tree come back as read (tests/test_metadata_hosts_bpy.py). A WorldInfo without Metadata is not kept."
+    },
     "GaussianSplats": {
       "import": "yes",
       "round_trip": "exact",

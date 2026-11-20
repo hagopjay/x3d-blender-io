@@ -14,7 +14,7 @@ import math
 import os
 
 try:
-    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from .interaction import check_interactions, read_interaction, read_tour
     from .material import analyze_material
@@ -23,7 +23,7 @@ try:
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from interaction import check_interactions, read_interaction, read_tour
     from material import analyze_material
@@ -155,6 +155,13 @@ HEAD_META_PROPERTY = "x3d_head_meta"
 METADATA_PROPERTY = "x3d_metadata"
 METADATA_NODE_TYPES = frozenset(
     ("MetadataBoolean", "MetadataDouble", "MetadataFloat", "MetadataInteger", "MetadataSet", "MetadataString"))
+# The Metadata* node of the Transform an object stands for (the same nested form), written back as that Transform's own
+# metadata field. A material's Metadata* node is kept on the Blender material under METADATA_PROPERTY.
+TRANSFORM_METADATA_PROPERTY = "x3d_transform_metadata"
+# Metadata* nodes of every other host (WorldInfo, a Group, a Transform no single object stands for, a Viewpoint...),
+# kept on the scene as a list of {"host", "def", "path", "metadata"} (a WorldInfo also keeps "title" and "info").
+# WorldInfo entries are written back; the others stay in the .blend and the export names each one it did not write.
+SCENE_METADATA_PROPERTY = "x3d_scene_metadata"
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
@@ -164,7 +171,7 @@ HEADLIGHT_LUX_PROPERTY = "x3d_headlight_lux"
 # they stop applying when none of that content is left in the scene (scene_has_imported_content).
 IMPORTED_OBJECT_PROPERTY = "x3d_imported"
 SCENE_IMPORT_PROPERTIES = (COLOUR_SPACE_PROPERTY, LIGHTING_MODEL_PROPERTY, HEADLIGHT_PROPERTY, HEADLIGHT_LUX_PROPERTY,
-                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY)
+                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY, SCENE_METADATA_PROPERTY)
 # What marks content of a file imported before IMPORTED_OBJECT_PROPERTY existed: a DEF, USE or Inline record on the
 # object, a primitive, solid, light or splat record on its data (the importer's own names; extract cannot import them).
 _IMPORTED_OBJECT_MARKS = (IMPORTED_OBJECT_PROPERTY, "x3d_def", "x3d_def_path", "x3d_use", INLINE_URL_PROPERTY)
@@ -1038,6 +1045,8 @@ def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
     if get is None or depth > 64 or get("node") not in METADATA_NODE_TYPES:
         return None
     node = IRMetadataNode(node_type=get("node"))
+    if isinstance(get("def"), str) and get("def"):
+        node.def_name = get("def")
     for attribute in ("name", "reference"):
         text = get(attribute)
         if isinstance(text, str):
@@ -1050,6 +1059,31 @@ def object_metadata(item, depth: int = 0) -> IRMetadataNode | None:
     elif isinstance(value, str):
         node.value = value
     return node
+
+
+def _analyzed_material(material):
+    """``analyze_material`` plus the Metadata* node the importer kept on the Blender material."""
+    analyzed = analyze_material(material)
+    if analyzed:
+        try:
+            analyzed.metadata = object_metadata(material.get(METADATA_PROPERTY))
+        except (AttributeError, TypeError):
+            pass
+    return analyzed
+
+
+def scene_metadata_hosts(scene) -> list[IRMetadataHost]:
+    """The Metadata* nodes the importer kept on ``scene`` for hosts that have no Blender object or material."""
+    hosts = []
+    for item in imported_scene_property(scene, SCENE_METADATA_PROPERTY) or ():
+        get = getattr(item, "get", None)
+        metadata = object_metadata(get("metadata")) if get is not None else None
+        if metadata is None:
+            continue
+        text = lambda key: get(key) if isinstance(get(key), str) else None  # noqa: E731
+        hosts.append(IRMetadataHost(host=text("host") or "", def_name=text("def"), path=text("path"), metadata=metadata,
+                                    title=text("title"), info=text("info")))
+    return hosts
 
 
 def scene_background(scene) -> IRBackground | None:
@@ -1467,6 +1501,7 @@ def extract_scene(
     ir_scene.headlight = scene_headlight(scene)
     # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
     ir_scene.background = scene_background(scene)
+    ir_scene.metadata_hosts = scene_metadata_hosts(scene)
     world = getattr(scene, "world", None)
     if ir_scene.background is None and world is not None and getattr(world, "color", None) is not None:
         ir_scene.background_color = tuple(max(0.0, min(1.0, float(channel))) for channel in _world_color(world)[:3])
@@ -1510,7 +1545,7 @@ def extract_scene(
         if material is None:
             return None
         if material.name not in material_names:
-            analyzed = analyze_material(material)
+            analyzed = _analyzed_material(material)
             if analyzed:
                 ir_scene.materials.append(analyzed)
                 material_names.add(material.name)
@@ -1534,7 +1569,7 @@ def extract_scene(
             slots = obj.material_slots
             material = next((slot.material for slot in slots if slot.material is not None), None) if slots else None
             if material and material.name not in material_names:
-                analyzed = analyze_material(material)
+                analyzed = _analyzed_material(material)
                 if analyzed:
                     ir_scene.materials.append(analyzed)
                     material_names.add(material.name)
@@ -1587,7 +1622,7 @@ def extract_scene(
                 material = slots[geometry.material_slot].material
             material_name = material.name if material else None
             if material and material.name not in material_names:
-                analyzed = analyze_material(material)
+                analyzed = _analyzed_material(material)
                 if analyzed:
                     ir_scene.materials.append(analyzed)
                     material_names.add(material.name)
@@ -1694,6 +1729,7 @@ def extract_scene(
             object_type=obj.type,
             transform=_matrix_transform(local_matrix),
         )
+        instance.transform_metadata = object_metadata(obj.get(TRANSFORM_METADATA_PROPERTY))
         # only what the import hid for a Switch is written invisible; hide_render on any other object is a Blender-side
         # choice that does not reach the children, while visible="false" would hide the whole subtree
         instance.visible = not (bool(getattr(obj, "hide_render", False)) and obj.get(SWITCH_HIDDEN_PROPERTY) is not None)
