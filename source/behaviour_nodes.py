@@ -15,11 +15,13 @@ between two types is removed as it is made: the editor cannot hold a ROUTE X3D w
 """
 
 import bpy
-from bpy.props import CollectionProperty, PointerProperty, StringProperty
-from bpy.types import Node, NodeSocket, NodeTree, PropertyGroup
+from bpy.props import (BoolProperty, CollectionProperty, FloatProperty, FloatVectorProperty, IntProperty,
+                       PointerProperty, StringProperty)
+from bpy.types import Node, NodeSocket, NodeTree, Operator, PropertyGroup
 
 from . import behaviour_graph as bg
 from .behaviour_catalogue import NODES, TARGETS
+from .behaviour_sim import parse_value
 
 TREE_IDNAME = "X3DBehaviourTree"
 ANY = "X3DSocketAny"
@@ -61,9 +63,298 @@ SOCKET_CLASSES = tuple(_socket_class(name, colour) for name, colour in _COLOURS.
     _socket_class("", (0.2, 0.2, 0.2, 1)),)
 
 
+# ---------------------------------------------------------------------------------------------------------------
+# Field values. What is stored is always the X3D text of the file (``x3d_fields``); the typed widgets below read and
+# write that text, so the file's numbers never pass through a second copy.
+# ---------------------------------------------------------------------------------------------------------------
+
+def _row_of(node, name):
+    return next((row for row in NODES[node.x3d_type][1] if row[0] == name), None)
+
+
+def field_text(node, name):
+    """The X3D text of a field: what was set, else the standard's default, else ''."""
+    item = node.x3d_fields.get(name)
+    if item is not None and item.value != "":
+        return item.value
+    row = _row_of(node, name)
+    return (row[3] if row is not None else None) or ""
+
+
+def _store(node, name, value):
+    """Set a field from a Python value. A value equal to the standard's default is not stored (not written)."""
+    row = _row_of(node, name)
+    text = bg.to_lexical(value, row[1])
+    index = node.x3d_fields.find(name)
+    if row[3] is not None and parse_value(text, row[1]) == parse_value(row[3], row[1]):
+        if index >= 0:
+            node.x3d_fields.remove(index)
+        return
+    item = node.x3d_fields[index] if index >= 0 else node.x3d_fields.add()
+    item.name, item.value = name, text
+
+
+# Which values are places and turns in the scene's axes: the key values of the interpolators that move things, and
+# where a follower starts. Only these are shown turned when the tree's "Z up" switch is on.
+_SPATIAL = {("PositionInterpolator", "keyValue"), ("OrientationInterpolator", "keyValue"),
+            ("PositionDamper", "initialValue"), ("PositionDamper", "initialDestination"),
+            ("PositionChaser", "initialValue"), ("PositionChaser", "initialDestination"),
+            ("OrientationDamper", "initialValue"), ("OrientationDamper", "initialDestination"),
+            ("OrientationChaser", "initialValue"), ("OrientationChaser", "initialDestination")}
+
+
+def drives_root_objects(node):
+    """True when every Transform this node's values reach (through any chain of nodes) belongs to an object with no
+    parent. Those values are in the file's world axes (Y up); values for a child object are in its parent's axes, which
+    are Blender's already."""
+    seen, queue, found = {node.name}, [node], []
+    while queue:
+        current = queue.pop()
+        for socket in current.outputs:
+            for link in socket.links:
+                other = link.to_node
+                if other.name in seen:
+                    continue
+                seen.add(other.name)
+                if getattr(other, "x3d_role", None) == bg.TARGET:
+                    if other.x3d_type == "Transform" and other.x3d_object is not None:
+                        found.append(other.x3d_object.parent is None)
+                else:
+                    queue.append(other)
+    return bool(found) and all(found)
+
+
+def shows_blender_axes(node, name):
+    return bool(getattr(node.id_data, "x3d_blender_axes", False)) and (node.x3d_type, name) in _SPATIAL \
+        and drives_root_objects(node)
+
+
+def _to_blender(v):       # the export's default axes: X3D (x, y, z), Y up  ->  Blender (x, -z, y), Z up
+    return (v[0], -v[2] or 0.0, v[1]) + tuple(v[3:])
+
+
+def _to_x3d(v):
+    return (v[0], v[2], -v[1] or 0.0) + tuple(v[3:])
+
+
+def _accessors(name, x3d_type):
+    """(get, set) for one field. Blender counts a callback's arguments, so each is made here with exactly its own."""
+    def read(self):
+        value = parse_value(field_text(self, name), x3d_type)
+        if isinstance(value, tuple) and shows_blender_axes(self, name):
+            value = _to_blender(value)
+        return value
+
+    def write(self, value):
+        if not isinstance(value, (bool, int, float, str)):
+            value = tuple(value)
+            if shows_blender_axes(self, name):
+                value = _to_x3d(value)
+        _store(self, name, value)
+
+    return read, write
+
+
+def _rotation_accessors(read, write):
+    def axis(self):
+        return read(self)[:3]
+
+    def set_axis(self, value):
+        write(self, tuple(value) + (read(self)[3],))
+
+    def angle(self):
+        return read(self)[3]
+
+    def set_angle(self, value):
+        write(self, tuple(read(self)[:3]) + (value,))
+
+    return axis, set_axis, angle, set_angle
+
+
+def _typed_properties(x3d_type_name):
+    """bpy properties for the single-value fields of one node type, each reading and writing the field's X3D text."""
+    made = {}
+    for name, x3d_type, access, _default in NODES[x3d_type_name][1]:
+        if access not in ("inputOutput", "initializeOnly") or x3d_type.startswith("MF") or x3d_type == "SFNode":
+            continue
+
+        read, write = _accessors(name, x3d_type)
+        hint = f"{x3d_type_name}.{name} ({x3d_type}, {access})"
+        if x3d_type == "SFBool":
+            made[f"f_{name}"] = BoolProperty(name=name, description=hint, get=read, set=write)
+        elif x3d_type == "SFInt32":
+            made[f"f_{name}"] = IntProperty(name=name, description=hint, get=read, set=write)
+        elif x3d_type in ("SFFloat", "SFDouble"):
+            made[f"f_{name}"] = FloatProperty(name=name, description=hint, get=read, set=write, precision=3)
+        elif x3d_type == "SFTime":
+            made[f"f_{name}"] = FloatProperty(name=name, description=hint + ", seconds", get=read, set=write,
+                                              precision=3, unit="TIME_ABSOLUTE")
+        elif x3d_type == "SFString":
+            made[f"f_{name}"] = StringProperty(name=name, description=hint, get=read, set=write)
+        elif x3d_type in ("SFColor", "SFColorRGBA"):
+            made[f"f_{name}"] = FloatVectorProperty(name=name, description=hint, get=read, set=write, subtype="COLOR",
+                                                    size=4 if x3d_type == "SFColorRGBA" else 3, min=0.0, max=1.0)
+        elif x3d_type in ("SFVec2f", "SFVec3f", "SFVec2d", "SFVec3d"):
+            made[f"f_{name}"] = FloatVectorProperty(name=name, description=hint, get=read, set=write, precision=3,
+                                                    size=int(x3d_type[5]), subtype="XYZ" if x3d_type[5] == "3" else "NONE")
+        elif x3d_type == "SFRotation":
+            axis, set_axis, angle, set_angle = _rotation_accessors(read, write)
+            made[f"f_{name}_axis"] = FloatVectorProperty(name=f"{name} axis", description=hint + ": the axis", size=3,
+                                                         precision=3, get=axis, set=set_axis)
+            made[f"f_{name}_angle"] = FloatProperty(name=f"{name} angle", description=hint + ": the angle",
+                                                    subtype="ANGLE", precision=2, get=angle, set=set_angle)
+    return made
+
+
+# One row of an interpolator's or a sequencer's table: a key (when, 0 to 1) and the value there.
+KEY_KINDS = {"ScalarInterpolator": "number", "PositionInterpolator": "vector", "PositionInterpolator2D": "vector2",
+             "ColorInterpolator": "colour", "OrientationInterpolator": "rotation", "BooleanSequencer": "flag",
+             "IntegerSequencer": "whole"}
+_ROW_ZERO = {"number": 0.0, "vector": (0.0, 0.0, 0.0), "vector2": (0.0, 0.0), "colour": (0.0, 0.0, 0.0),
+             "rotation": (0.0, 0.0, 1.0, 0.0), "flag": False, "whole": 0}
+
+
+def _owner(item, collection="x3d_rows"):
+    """(node, index) of a key row or a field value. A row remembers where it is; the memory is checked, and the tree is
+    searched when it is stale (a node was renamed, a row was removed above this one)."""
+    tree, pointer = item.id_data, item.as_pointer()
+    node = tree.nodes.get(item.get("node", ""))
+    index = item.get("index", -1)
+    if node is not None and hasattr(node, collection):
+        items = getattr(node, collection)
+        if 0 <= index < len(items) and items[index].as_pointer() == pointer:
+            return node, index
+    for node in tree.nodes:
+        for index, other in enumerate(getattr(node, collection, ())):
+            if other.as_pointer() == pointer:
+                return node, index
+    return None, -1
+
+
+def key_table(node):
+    """(keys, values) of a node with a key table, padded so both have one entry per row."""
+    kind = KEY_KINDS[node.x3d_type]
+    keys = parse_value(field_text(node, "key"), "MFFloat")
+    values = parse_value(field_text(node, "keyValue"), _row_of(node, "keyValue")[1])
+    count = max(len(keys), len(values))
+    keys += [keys[-1] if keys else 0.0] * (count - len(keys))
+    values += [_ROW_ZERO[kind]] * (count - len(values))
+    return keys, values
+
+
+def store_key_table(node, keys, values):
+    _store(node, "key", list(keys))
+    _store(node, "keyValue", list(values))
+    sync_rows(node)
+
+
+def sync_rows(node):
+    """Make the node's row list as long as its key list (rows hold no values, only their place in the table)."""
+    if node.x3d_type not in KEY_KINDS:
+        return
+    wanted = len(key_table(node)[0])
+    while len(node.x3d_rows) < wanted:
+        node.x3d_rows.add()
+    while len(node.x3d_rows) > wanted:
+        node.x3d_rows.remove(len(node.x3d_rows) - 1)
+    for index, row in enumerate(node.x3d_rows):
+        if row.get("node") != node.name or row.get("index") != index:
+            row["node"], row["index"] = node.name, index
+
+
+def _row_value(row, part=None):
+    node, index = _owner(row)
+    if node is None:
+        return 0.0
+    keys, values = key_table(node)
+    if not 0 <= index < len(keys):
+        return 0.0 if part == "key" else _ROW_ZERO[KEY_KINDS[node.x3d_type]]
+    if part == "key":
+        return keys[index]
+    value = values[index]
+    if isinstance(value, tuple) and shows_blender_axes(node, "keyValue"):
+        value = _to_blender(value)
+    return value
+
+
+def _set_row_value(row, new, part=None):
+    node, index = _owner(row)
+    if node is None:
+        return
+    keys, values = key_table(node)
+    if not 0 <= index < len(keys):
+        return
+    if part == "key":
+        keys[index] = new
+    else:
+        if not isinstance(new, (bool, int, float)):
+            new = tuple(new)
+            if shows_blender_axes(node, "keyValue"):
+                new = _to_x3d(new)
+        values[index] = new
+    _store(node, "key", keys)
+    _store(node, "keyValue", values)
+
+
+def _row_key(row):
+    return _row_value(row, "key")
+
+
+def _set_row_key(row, value):
+    _set_row_value(row, value, "key")
+
+
+def _row_any(row):
+    return _row_value(row)
+
+
+def _set_row_any(row, value):
+    _set_row_value(row, value)
+
+
+def _row_axis(row):
+    return _row_value(row)[:3]
+
+
+def _set_row_axis(row, value):
+    _set_row_value(row, tuple(value) + (_row_value(row)[3],))
+
+
+def _row_angle(row):
+    return _row_value(row)[3]
+
+
+def _set_row_angle(row, value):
+    _set_row_value(row, tuple(_row_value(row)[:3]) + (value,))
+
+
+class X3DKeyRow(PropertyGroup):
+    """One row of a key table. The numbers live in the node's key and keyValue text; a row is a window onto them."""
+    key: FloatProperty(name="Key", description="When: 0 is the start of the cycle, 1 the end", precision=3,
+                       get=_row_key, set=_set_row_key)
+    number: FloatProperty(name="Value", precision=3, get=_row_any, set=_set_row_any)
+    whole: IntProperty(name="Value", get=_row_any, set=_set_row_any)
+    flag: BoolProperty(name="Value", get=_row_any, set=_set_row_any)
+    vector: FloatVectorProperty(name="Place", size=3, precision=3, subtype="XYZ", get=_row_any, set=_set_row_any)
+    vector2: FloatVectorProperty(name="Place", size=2, precision=3, get=_row_any, set=_set_row_any)
+    colour: FloatVectorProperty(name="Colour", size=3, subtype="COLOR", min=0.0, max=1.0,
+                                get=_row_any, set=_set_row_any)
+    axis: FloatVectorProperty(name="Axis", size=3, precision=3, get=_row_axis, set=_set_row_axis)
+    angle: FloatProperty(name="Angle", subtype="ANGLE", precision=2, get=_row_angle, set=_set_row_angle)
+
+
+def _text_changed(item, context):
+    if item.name not in ("key", "keyValue"):
+        return
+    node, _index = _owner(item, "x3d_fields")
+    if item.name in ("key", "keyValue") and getattr(node, "x3d_type", None) in KEY_KINDS:
+        sync_rows(node)
+
+
 class X3DFieldValue(PropertyGroup):
     """One field that has a value: the X3D field name and its lexical text, exactly as it is written to the file."""
-    value: StringProperty(name="Value", description="The field's value as X3D text, in the file's own axes (Y up)")
+    value: StringProperty(name="Value", description="The field's value as X3D text, in the file's own axes (Y up)",
+                          update=_text_changed)
 
 
 class X3DBehaviourTree(NodeTree):
@@ -71,6 +362,10 @@ class X3DBehaviourTree(NodeTree):
     bl_idname = TREE_IDNAME
     bl_label = "X3D Behaviour"
     bl_icon = "DRIVER"
+    x3d_blender_axes: BoolProperty(
+        name="Z up", default=False,
+        description="Show the places and turns of nodes that move parentless objects in Blender's axes (Z up) instead "
+                    "of the file's (Y up). Only the display changes; the stored X3D text does not")
 
     def update(self):
         # X3D: a ROUTE joins fields of one type. Remove a link that does not.
@@ -84,6 +379,9 @@ class X3DBehaviourTree(NodeTree):
 class _X3DNodeBase:
     x3d_def: StringProperty(name="DEF", description="The node's name in the X3D file")
     x3d_fields: CollectionProperty(type=X3DFieldValue)
+    x3d_rows: CollectionProperty(type=X3DKeyRow)
+    x3d_as_text: BoolProperty(name="As X3D text", default=False,
+                              description="Show every value as the text that is written to the file")
 
     @classmethod
     def poll(cls, tree):
@@ -113,12 +411,80 @@ class _BehaviourNode(_X3DNodeBase):
         layout.prop(self, "x3d_def")
         if self.x3d_type in bg.PLACED_TYPES:
             layout.prop(self, "x3d_parent")
-        for item in self.x3d_fields:
-            layout.prop(item, "value", text=item.name)
+        if self.x3d_as_text:
+            for item in self.x3d_fields:
+                layout.prop(item, "value", text=item.name)
+            return
+        shown = [name for name in MAIN_FIELDS.get(self.x3d_type, ())]
+        shown += [item.name for item in self.x3d_fields if item.name not in shown]
+        table = self.x3d_type in KEY_KINDS
+        for name in shown:
+            if not (table and name in ("key", "keyValue")):
+                self._draw_field(layout, name)
+        if table:
+            self._draw_table(layout)
+
+    def draw_buttons_ext(self, context, layout):
+        """The sidebar: every field that can hold a value, not only the ones the node shows."""
+        layout.prop(self, "x3d_def")
+        if self.x3d_type in bg.PLACED_TYPES:
+            layout.prop(self, "x3d_parent")
+        layout.prop(self, "x3d_as_text")
+        table = self.x3d_type in KEY_KINDS
+        for name, _type, access, _default in NODES[self.x3d_type][1]:
+            if access in ("inputOutput", "initializeOnly") and not (table and name in ("key", "keyValue")):
+                self._draw_field(layout, name)
+        if table:
+            self._draw_table(layout)
+
+    def _draw_field(self, layout, name):
+        row = _row_of(self, name)
+        if row is None:
+            return
+        if hasattr(self, f"f_{name}"):
+            if row[1] in ("SFVec2f", "SFVec3f", "SFVec2d", "SFVec3d"):
+                column = layout.column(align=True)
+                column.label(text=name + ("  (Z up)" if shows_blender_axes(self, name) else ""))
+                column.row(align=True).prop(self, f"f_{name}", text="")
+            else:
+                layout.prop(self, f"f_{name}", text=name)
+        elif hasattr(self, f"f_{name}_axis"):
+            column = layout.column(align=True)
+            column.label(text=name + ("  (Z up)" if shows_blender_axes(self, name) else ""))
+            line = column.row(align=True)
+            line.prop(self, f"f_{name}_axis", text="")
+            line.prop(self, f"f_{name}_angle", text="")
+        else:                                  # a list (MF) field without a table: its X3D text
+            item = self.x3d_fields.get(name)
+            if item is not None:
+                layout.prop(item, "value", text=name)
+            else:
+                layout.label(text=f"{name}: not set")
+
+    def _draw_table(self, layout):
+        kind = KEY_KINDS[self.x3d_type]
+        box = layout.column(align=True)
+        box.label(text="key  /  value" + ("  (Z up)" if shows_blender_axes(self, "keyValue") else ""))
+        for index, row in enumerate(self.x3d_rows):
+            line = box.row(align=True)
+            split = line.split(factor=0.22, align=True)
+            split.prop(row, "key", text="")
+            cell = split.row(align=True)
+            if kind == "rotation":
+                cell.prop(row, "axis", text="")
+                cell.prop(row, "angle", text="")
+            else:
+                cell.prop(row, kind, text="")
+            remove = line.operator(X3D_OT_behaviour_key_remove.bl_idname, text="", icon="REMOVE")
+            remove.node, remove.index = self.name, index
+        add = box.operator(X3D_OT_behaviour_key_add.bl_idname, text="Add a key", icon="ADD")
+        add.node = self.name
 
     def set_field(self, name, value):
         item = self.x3d_fields.get(name) or self.x3d_fields.add()
         item.name, item.value = name, value
+        if name in ("key", "keyValue"):
+            sync_rows(self)
 
 
 class _TargetNode(_X3DNodeBase):
@@ -161,8 +527,82 @@ def _node_class(x3d_type, base):
     return type(f"{prefix}{x3d_type}", (base, Node), {
         "bl_idname": f"{prefix}{x3d_type}", "bl_label": x3d_type, "x3d_type": x3d_type,
         "__doc__": f"X3D {x3d_type}" + (f" ({NODES[x3d_type][0]})" if base is _BehaviourNode else " (scene)"),
-        "__annotations__": dict(getattr(base, "__annotations__", {}), **_X3DNodeBase.__annotations__),
+        "__annotations__": dict(getattr(base, "__annotations__", {}), **_X3DNodeBase.__annotations__,
+                                **(_typed_properties(x3d_type) if base is _BehaviourNode else {})),
     })
+
+
+# The fields a node shows on its face even before they are given a value (the rest are in the sidebar).
+MAIN_FIELDS = {
+    "TimeSensor": ("cycleInterval", "loop"), "IntegerTrigger": ("integerKey",),
+    "PlaneSensor": ("autoOffset",), "ProximitySensor": ("size",),
+    **{name: ("tau", "order") for name in NODES if name.endswith(("Damper", "Damper2D"))},
+    **{name: ("duration",) for name in NODES if name.endswith(("Chaser", "Chaser2D"))},
+}
+
+
+def _tree_of(context):
+    space = context.space_data
+    tree = getattr(space, "edit_tree", None) if space is not None else None
+    if tree is None or tree.bl_idname != TREE_IDNAME:
+        tree = getattr(context.scene, "x3d_behaviour_tree", None)
+    return tree
+
+
+class X3D_OT_behaviour_key_add(Operator):
+    """Add a key after the last one (or halfway to the next, when one is named), with the value found there"""
+    bl_idname = "x3d.behaviour_key_add"
+    bl_label = "Add a key"
+    bl_options = {"REGISTER", "UNDO"}
+    node: StringProperty()
+    index: IntProperty(default=-1)
+
+    def execute(self, context):
+        tree = _tree_of(context)
+        node = tree.nodes.get(self.node) if tree is not None else None
+        if node is None or node.x3d_type not in KEY_KINDS:
+            return {"CANCELLED"}
+        add_key(node, self.index)
+        return {"FINISHED"}
+
+
+class X3D_OT_behaviour_key_remove(Operator):
+    """Remove this key and its value"""
+    bl_idname = "x3d.behaviour_key_remove"
+    bl_label = "Remove key"
+    bl_options = {"REGISTER", "UNDO"}
+    node: StringProperty()
+    index: IntProperty()
+
+    def execute(self, context):
+        tree = _tree_of(context)
+        node = tree.nodes.get(self.node) if tree is not None else None
+        if node is None or node.x3d_type not in KEY_KINDS:
+            return {"CANCELLED"}
+        remove_key(node, self.index)
+        return {"FINISHED"}
+
+
+def add_key(node, after=-1):
+    """Add a row to a key table: after row ``after`` (halfway to the next key), or at the end."""
+    keys, values = key_table(node)
+    zero = _ROW_ZERO[KEY_KINDS[node.x3d_type]]
+    if not keys:
+        keys, values = [0.0], [zero]
+    elif 0 <= after < len(keys) - 1:
+        keys.insert(after + 1, (keys[after] + keys[after + 1]) / 2)
+        values.insert(after + 1, values[after])
+    else:
+        keys.append(min(1.0, keys[-1] + 0.25) if keys[-1] < 1.0 else keys[-1])
+        values.append(values[-1])
+    store_key_table(node, keys, values)
+
+
+def remove_key(node, index):
+    keys, values = key_table(node)
+    if 0 <= index < len(keys):
+        del keys[index], values[index]
+        store_key_table(node, keys, values)
 
 
 BEHAVIOUR_CLASSES = {name: _node_class(name, _BehaviourNode) for name in NODES}
@@ -398,7 +838,8 @@ def import_graph(scene, filepath):
         [f"Behaviour graph: {message}" for message in graph.diagnostics]
 
 
-classes = (X3DFieldValue, *SOCKET_CLASSES, X3DBehaviourTree, *BEHAVIOUR_CLASSES.values(), *TARGET_CLASSES.values(),
+classes = (X3DKeyRow, X3DFieldValue, X3D_OT_behaviour_key_add, X3D_OT_behaviour_key_remove, *SOCKET_CLASSES,
+           X3DBehaviourTree, *BEHAVIOUR_CLASSES.values(), *TARGET_CLASSES.values(),
            X3DBehaviourCarried, X3D_MT_behaviour_add)
 
 

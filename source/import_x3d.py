@@ -20,7 +20,7 @@ from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
                       HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
-                      IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY,
+                      IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY, VISIBLE_FALSE_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
                       METADATA_NODE_TYPES, METADATA_PROPERTY, SCENE_METADATA_PROPERTY, TRANSFORM_METADATA_PROPERTY,
@@ -8306,6 +8306,8 @@ def load_web3d(
     # objects a Switch does not choose; collected as each is made, since a node under a USE'd Switch (or a USE'd Shape)
     # makes one object per instance and keeps only the last in node.blendObject
     switch_hidden = []
+    # objects made under a node whose visible field is false (X3D 4.0: X3DGroupingNode and X3DShapeNode have one)
+    visible_false = []
 
     for node, ancestry in all_nodes:
         # if 'castle.wrl' not in node.getFilename():
@@ -8365,6 +8367,10 @@ def load_web3d(
         if node.blendObject is not None and node.blendObject is not made_before \
                 and any(anc.getSpec() == 'Switch' for anc in ancestry) and switch_hides(node, ancestry):
             switch_hidden.append(node.blendObject)
+        if node.blendObject is not None and node.blendObject is not made_before and not all(
+                item.getFieldAsBool('visible', True, chain) is not False
+                for item, chain in [(anc, ancestry[:i]) for i, anc in enumerate(ancestry)] + [(node, ancestry)]):
+            visible_false.append(node.blendObject)
         if spec in ('LOD', 'GeoLOD'):
             lod_records[lod_key(node, ancestry)] = {
                 "node": node, "ancestry": list(ancestry), "global_matrix": global_matrix,
@@ -8403,6 +8409,14 @@ def load_web3d(
         except RuntimeError:  # not in the view layer
             bpyob.hide_viewport = True
         bpyob[SWITCH_HIDDEN_PROPERTY] = True
+    # visible="false": drawn by no browser until an event says otherwise; hidden here the same way, and written back
+    for bpyob in {o for ob in visible_false for o in [ob, *ob.children_recursive]}:
+        bpyob.hide_render = True
+        try:
+            bpyob.hide_set(True)
+        except RuntimeError:  # not in the view layer
+            bpyob.hide_viewport = True
+        bpyob[VISIBLE_FALSE_PROPERTY] = True
 
     for node, ancestry in all_nodes:
         if node.isRoot():

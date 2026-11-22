@@ -128,7 +128,7 @@ Arc2D, ArcClose2D, AudioClip, BooleanFilter, BooleanSequencer, BooleanToggle, Bo
 | `light.sun:transmission_factor` | dropped | `{"kind": "neq", "neutral": 1.0}` | per-light contribution factors of Blender's renderers |
 | `light.sun:volume_factor` | dropped | `{"kind": "neq", "neutral": 1.0}` | per-light contribution factors of Blender's renderers |
 | `material:displacement_method` | dropped | `{"kind": "neq", "neutral": "BUMP"}` | displacement is not written |
-| `object:hide_render` | dropped | `{"kind": "neq", "neutral": false}` | an object hidden in renders is still written, visible: only Switch children the import hid are written invisible (extract.py, by design) |
+| `object:hide_render` | dropped | `{"kind": "neq", "neutral": false}` | an object hidden in renders is still written, visible: only what the import hid (a Switch choice, a node with visible=false) is written invisible (extract.py, by design) |
 | `object:is_holdout` | dropped | `{"kind": "neq", "neutral": false, "when": {"in": ["MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME"], "prop": "type"}}` | per-object ray visibility of Blender's renderers; X3D has no per-ray visibility |
 | `object:is_shadow_catcher` | dropped | `{"kind": "neq", "neutral": false, "when": {"in": ["MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME"], "prop": "type"}}` | per-object ray visibility of Blender's renderers; X3D has no per-ray visibility |
 | `object:visible_camera` | dropped | `{"kind": "neq", "neutral": true, "when": {"in": ["MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME"], "prop": "type"}}` | per-object ray visibility of Blender's renderers; X3D has no per-ray visibility |

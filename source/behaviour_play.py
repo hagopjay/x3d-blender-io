@@ -1,0 +1,517 @@
+# SPDX-FileCopyrightText: 2026 HagopJay
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Play the X3D behaviour graph in Blender: the scene does in the viewport what the exported file will do in a browser.
+
+``Player(scene)`` reads the scene's behaviour node tree, runs it with ``behaviour_sim.Simulation`` and writes every
+value that reaches a target onto the Blender datablock it is bound to. ``stop()`` puts everything back.
+
+    player = Player(scene)
+    player.start(0.0)
+    player.press(button_object, 1.0)      # the pointer goes down on an object a sensor senses
+    player.release(1.1)
+    player.step(2.5)                      # the door is now where the file's browser would have it at 2.5 s
+    player.stop()                         # and back where it was
+
+The operator ``x3d.behaviour_play`` is the same thing driven by the mouse and a timer; it needs a window.
+
+Axes. The exporter writes a root object's Transform as ``global_matrix @ matrix_world`` and a child's as its matrix in
+its parent's space. The player turns each object into that Transform once, changes the field an event set, and turns it
+back, so a value means here what it means in the file.
+"""
+
+import time
+
+import bpy
+from bpy_extras.io_utils import axis_conversion
+from mathutils import Matrix, Quaternion, Vector
+
+from . import behaviour_graph as bg
+from . import behaviour_nodes
+from .behaviour_sim import POINTING, Simulation
+
+EXPORT_AXES = axis_conversion(to_forward='-Z', to_up='Y').to_4x4()      # the export dialog's default: -Z forward, Y up
+
+
+def _srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+class _TransformState:
+    """One object as the X3D Transform the exporter writes for it."""
+
+    def __init__(self, obj, global_matrix):
+        self.obj, self.basis = obj, obj.matrix_basis.copy()
+        if obj.parent is None:
+            self.outer = global_matrix.inverted()                     # matrix_basis = outer @ X3D matrix
+            local = global_matrix @ obj.matrix_basis
+        else:
+            self.outer = obj.matrix_parent_inverse.inverted()
+            local = obj.matrix_parent_inverse @ obj.matrix_basis
+        self.location, self.rotation, self.scale = local.decompose()
+
+    def write(self):
+        self.obj.matrix_basis = self.outer @ Matrix.LocRotScale(self.location, self.rotation, self.scale)
+
+    def restore(self):
+        self.obj.matrix_basis = self.basis
+
+
+class Player:
+    """A scene's behaviour graph, running on the scene's own objects."""
+
+    def __init__(self, scene, graph=None, *, global_matrix=None, flash=True):
+        self.scene = scene
+        self.graph = graph if graph is not None else behaviour_nodes.read(scene)
+        if self.graph is None:
+            raise bg.BehaviourError("no-graph", "this scene has no X3D Behaviour node tree to play")
+        self.sim = Simulation(self.graph)
+        self.global_matrix = global_matrix if global_matrix is not None else EXPORT_AXES
+        self.not_applied = []          # "Type.field" an event reached but the player does not show
+        self.now = 0.0
+        self._transforms, self._hidden, self._materials, self._lights, self._camera = {}, {}, {}, {}, scene.camera
+        self._over, self._held, self._plane = [], [], {}
+        self._sensors = {}             # Blender object name (None: the scene root) -> [sensor id, ...]
+        for node in self.graph.nodes.values():
+            if node.role == bg.BEHAVIOUR and node.node_type in POINTING:
+                self._sensors.setdefault(node.parent, []).append(node.id)
+        self._flash = self._tree_nodes() if flash else {}
+        self._colours = {}
+
+    # -- what can be clicked ------------------------------------------------------------------------------------
+
+    def sensors_for(self, obj):
+        """The pointing sensors that sense ``obj``: those of the nearest object above it that has any (X3D: the
+        sensors lowest in the hierarchy win), else the ones at the scene root."""
+        while obj is not None:
+            found = self._sensors.get(obj.name)
+            if found:
+                return list(found)
+            obj = obj.parent
+        return list(self._sensors.get(None, ()))
+
+    def sensed_objects(self):
+        """Every object some pointing sensor senses (the things worth clicking)."""
+        return [obj for obj in self.scene.objects if self.sensors_for(obj)]
+
+    def _frame(self, sensor_id):
+        """Sensor coordinates -> Blender world. A sensor shares its parent Transform's coordinates."""
+        parent = self.graph.nodes[sensor_id].parent
+        obj = bpy.data.objects.get(parent) if parent else None
+        return obj.matrix_world.copy() if obj is not None else self.global_matrix.inverted()
+
+    # -- time and the pointer -----------------------------------------------------------------------------------
+
+    def start(self, now=0.0):
+        self.now = now
+        self._apply(self.sim.start(now))
+
+    def step(self, now):
+        self.now = now
+        self._apply(self.sim.step(now))
+        self._flash_nodes()
+
+    def hover(self, obj, now):
+        """The pointer is over ``obj`` (None: over nothing a sensor senses)."""
+        wanted = self.sensors_for(obj) if obj is not None else []
+        for sensor in [s for s in self._over if s not in wanted]:
+            self._apply(self.sim.hover(sensor, False, now))
+        for sensor in [s for s in wanted if s not in self._over]:
+            self._apply(self.sim.hover(sensor, True, now))
+        self._over = wanted
+        return bool(wanted)
+
+    def press(self, obj, now, location=None):
+        """The button goes down on ``obj`` at ``location`` (Blender world). True when a sensor took it."""
+        self.hover(obj, now)
+        self._held = list(self._over)
+        for sensor in self._held:
+            point = self._frame(sensor).inverted() @ Vector(location) if location is not None else Vector((0, 0, 0))
+            self._plane[sensor] = point.z
+            self._apply(self.sim.press(sensor, now, tuple(point)))
+        return bool(self._held)
+
+    def drag(self, origin, direction, now):
+        """The pointer moved with the button down; ``origin`` and ``direction`` are its ray in Blender world. A
+        PlaneSensor follows the ray on the plane (its own XY, through the point it was pressed at)."""
+        for sensor in self._held:
+            if self.graph.nodes[sensor].node_type != "PlaneSensor":
+                continue
+            inverse = self._frame(sensor).inverted()
+            start, way = inverse @ Vector(origin), inverse.to_3x3() @ Vector(direction)
+            if abs(way.z) < 1e-9:
+                continue
+            point = start + way * ((self._plane[sensor] - start.z) / way.z)
+            self._apply(self.sim.drag(sensor, tuple(point), now))
+
+    def release(self, now):
+        for sensor in self._held:
+            self._apply(self.sim.release(sensor, now))
+        self._held = []
+
+    def click(self, obj, now, held=0.1):
+        taken = self.press(obj, now)
+        self.release(now + held)
+        return taken
+
+    # -- events onto datablocks -----------------------------------------------------------------------------------
+
+    def _apply(self, changes):
+        touched = {}
+        for node_id, field_name, value in changes:
+            node = self.graph.nodes[node_id]
+            kind, name = node.binding or (None, None)
+            if kind == "transform" or (kind in ("viewpoint", "light") and field_name == "visible"):
+                obj = bpy.data.objects.get(name)
+                if obj is None:
+                    continue
+                if field_name == "visible":
+                    self._show(obj, bool(value))
+                    continue
+                state = self._transforms.get(name)
+                if state is None:
+                    state = self._transforms[name] = _TransformState(obj, self.global_matrix)
+                if field_name == "translation":
+                    state.location = Vector(value)
+                elif field_name == "rotation":
+                    axis = Vector(value[:3])
+                    state.rotation = Quaternion(axis.normalized(), value[3]) if axis.length > 0 else Quaternion()
+                elif field_name == "scale":
+                    state.scale = Vector(value)
+                else:
+                    self._skip(node, field_name)
+                    continue
+                touched[name] = state
+            elif kind == "material":
+                self._paint(node, bpy.data.materials.get(name), field_name, value)
+            elif kind == "light":
+                self._light(node, bpy.data.objects.get(name), field_name, value)
+            elif kind == "viewpoint":
+                obj = bpy.data.objects.get(name)
+                if field_name == "set_bind" and value and obj is not None:
+                    self.scene.camera = obj
+                else:
+                    self._skip(node, field_name)
+            else:
+                self._skip(node, field_name)
+        for state in touched.values():
+            state.write()
+
+    def _skip(self, node, field_name):
+        label = f"{node.node_type}.{field_name}"
+        if label not in self.not_applied:
+            self.not_applied.append(label)
+
+    def _show(self, obj, visible):
+        for item in [obj, *obj.children_recursive]:          # visible="false" hides everything under the Transform
+            if item.name not in self._hidden:
+                self._hidden[item.name] = (item.hide_viewport, item.hide_render, self._eye(item))
+            item.hide_viewport = item.hide_render = not visible
+            if visible:
+                self._set_eye(item, False)
+
+    @staticmethod
+    def _eye(obj):
+        try:
+            return obj.hide_get()
+        except RuntimeError:
+            return None
+
+    @staticmethod
+    def _set_eye(obj, hidden):
+        try:
+            obj.hide_set(hidden)
+        except RuntimeError:       # not in the view layer
+            pass
+
+    def _paint(self, node, material, field_name, value):
+        if material is None:
+            return
+        shader = None
+        if material.use_nodes and material.node_tree is not None:
+            shader = next((n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if material.name not in self._materials:
+            saved = {"diffuse_color": tuple(material.diffuse_color)}
+            if shader is not None:
+                for socket in ("Base Color", "Emission Color", "Alpha", "Roughness", "Metallic", "Emission Strength"):
+                    if socket in shader.inputs:
+                        entry = shader.inputs[socket].default_value
+                        saved[socket] = tuple(entry) if hasattr(entry, "__len__") else entry
+            self._materials[material.name] = saved
+        display = node.node_type == "Material"               # Material colours are display colours, the others linear
+        colour = lambda: tuple(_srgb_to_linear(c) if display else c for c in value[:3]) + (1.0,)   # noqa: E731
+        socket, new = None, None
+        if field_name in ("diffuseColor", "baseColor"):
+            socket, new = "Base Color", colour()
+            material.diffuse_color = new[:3] + (material.diffuse_color[3],)
+        elif field_name == "emissiveColor":
+            socket, new = "Emission Color", colour()
+            if shader is not None and "Emission Strength" in shader.inputs and \
+                    shader.inputs["Emission Strength"].default_value == 0 and any(value[:3]):
+                shader.inputs["Emission Strength"].default_value = 1.0
+        elif field_name == "transparency":
+            socket, new = "Alpha", 1.0 - float(value)
+            material.diffuse_color = tuple(material.diffuse_color[:3]) + (new,)
+        elif field_name in ("roughness", "metallic"):
+            socket, new = field_name.capitalize(), float(value)
+        else:
+            return self._skip(node, field_name)
+        if shader is not None and socket in shader.inputs:
+            shader.inputs[socket].default_value = new
+
+    def _light(self, node, obj, field_name, value):
+        if obj is None or obj.type != "LIGHT":
+            return
+        if obj.name not in self._lights:
+            self._lights[obj.name] = (tuple(obj.data.color), obj.hide_viewport, obj.hide_render)
+        if field_name == "color":
+            obj.data.color = tuple(value[:3])
+        elif field_name == "on":
+            obj.hide_viewport = obj.hide_render = not value
+        else:
+            self._skip(node, field_name)
+
+    # -- the node editor lights up --------------------------------------------------------------------------------
+
+    def _tree_nodes(self):
+        tree = getattr(self.scene, "x3d_behaviour_tree", None)
+        return {} if tree is None else {(item.x3d_def or item.name): item for item in tree.nodes
+                                        if getattr(item, "x3d_role", None) is not None}
+
+    def _flash_nodes(self, glow=0.35):
+        if not self._flash:
+            return
+        recent = {}
+        for when, node_id, _field, _value in reversed(self.sim.log):
+            if self.now - when > glow:
+                break
+            recent.setdefault(node_id, when)
+        for node_id, item in self._flash.items():
+            if node_id not in recent and node_id not in self._colours:
+                continue
+            if node_id not in self._colours:
+                self._colours[node_id] = (item.use_custom_color, tuple(item.color))
+            base = self._colours[node_id][1] if self._colours[node_id][0] else (0.19, 0.19, 0.19)
+            heat = max(0.0, 1 - (self.now - recent[node_id]) / glow) if node_id in recent else 0.0
+            item.use_custom_color = True
+            item.color = tuple(b + (h - b) * heat for b, h in zip(base, (0.95, 0.62, 0.15)))
+            if heat == 0.0:
+                item.use_custom_color, item.color = self._colours.pop(node_id)
+
+    # -- the end --------------------------------------------------------------------------------------------------
+
+    def stop(self):
+        """Put every object, material, light and node colour back as it was before ``start``."""
+        for state in self._transforms.values():
+            state.restore()
+        for name, (viewport, render, eye) in self._hidden.items():
+            obj = bpy.data.objects.get(name)
+            if obj is not None:
+                obj.hide_viewport, obj.hide_render = viewport, render
+                if eye is not None:
+                    self._set_eye(obj, eye)
+        for name, saved in self._materials.items():
+            material = bpy.data.materials.get(name)
+            if material is None:
+                continue
+            material.diffuse_color = saved["diffuse_color"]
+            shader = next((n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None) \
+                if material.use_nodes and material.node_tree else None
+            for socket, entry in saved.items():
+                if shader is not None and socket in shader.inputs:
+                    shader.inputs[socket].default_value = entry
+        for name, (colour, viewport, render) in self._lights.items():
+            obj = bpy.data.objects.get(name)
+            if obj is not None:
+                obj.data.color, obj.hide_viewport, obj.hide_render = colour, viewport, render
+        for node_id, (custom, colour) in self._colours.items():
+            item = self._flash.get(node_id)
+            if item is not None:
+                item.use_custom_color, item.color = custom, colour
+        self.scene.camera = self._camera
+        self._transforms, self._hidden, self._materials, self._lights, self._colours = {}, {}, {}, {}, {}
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# The operator: a timer and the mouse
+# ---------------------------------------------------------------------------------------------------------------
+
+_running = {"player": None}
+
+
+def is_playing():
+    return _running["player"] is not None
+
+
+def _view_under(context, event):
+    """(region, region_3d, (x, y) in the region) of the 3D viewport the pointer is over, or None."""
+    for area in context.window.screen.areas:
+        if area.type != "VIEW_3D":
+            continue
+        for region in area.regions:
+            if region.type == "WINDOW" and region.x <= event.mouse_x < region.x + region.width \
+                    and region.y <= event.mouse_y < region.y + region.height:
+                return region, area.spaces.active.region_3d, (event.mouse_x - region.x, event.mouse_y - region.y)
+    return None
+
+
+class X3D_OT_behaviour_play(bpy.types.Operator):
+    """Run the X3D Behaviour graph in the viewport: click what a sensor senses and watch the events travel. Esc stops and puts the scene back"""
+    bl_idname = "x3d.behaviour_play"
+    bl_label = "Play X3D Behaviour"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        return not is_playing() and getattr(context.scene, "x3d_behaviour_tree", None) is not None
+
+    def invoke(self, context, event):
+        try:
+            self.player = Player(context.scene)
+        except bg.BehaviourError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        self.began, self.dragging = time.perf_counter(), False
+        self.player.start(0.0)
+        _running["player"] = self.player
+        self.timer = context.window_manager.event_timer_add(1 / 60, window=context.window)
+        context.window_manager.modal_handler_add(self)
+        sensed = len(self.player.sensed_objects())
+        context.workspace.status_text_set(
+            f"X3D Behaviour is playing: {sensed} object(s) answer the pointer. Click or drag them. Esc stops.")
+        for label in self.player.sim.not_simulated:
+            self.report({"WARNING"}, f"Not played: {label}")
+        return {"RUNNING_MODAL"}
+
+    def _ray(self, context, event):
+        from bpy_extras import view3d_utils
+        found = _view_under(context, event)
+        if found is None:
+            return None
+        region, region_3d, where = found
+        origin = view3d_utils.region_2d_to_origin_3d(region, region_3d, where)
+        direction = view3d_utils.region_2d_to_vector_3d(region, region_3d, where)
+        hit, location, _normal, _index, obj, _matrix = context.scene.ray_cast(
+            context.evaluated_depsgraph_get(), origin, direction)
+        return origin, direction, (obj.original if hit and obj is not None else None), (location if hit else None)
+
+    def modal(self, context, event):
+        now = time.perf_counter() - self.began
+        if event.type == "ESC" or _running["player"] is not self.player:
+            return self._finish(context)
+        if event.type == "TIMER":
+            self.player.step(now)
+            for area in context.window.screen.areas:
+                if area.type in ("VIEW_3D", "NODE_EDITOR"):
+                    area.tag_redraw()
+            return {"PASS_THROUGH"}
+        if event.type in ("MOUSEMOVE", "LEFTMOUSE"):
+            ray = self._ray(context, event)
+            if ray is None:
+                if self.dragging and event.type == "LEFTMOUSE" and event.value == "RELEASE":
+                    self.player.release(now)
+                    self.dragging = False
+                return {"PASS_THROUGH"}
+            origin, direction, obj, location = ray
+            if event.type == "MOUSEMOVE":
+                if self.dragging:
+                    self.player.drag(origin, direction, now)
+                    return {"RUNNING_MODAL"}
+                over = self.player.hover(obj, now)
+                context.window.cursor_set("HAND" if over else "DEFAULT")
+            elif event.value == "PRESS":
+                if obj is not None and self.player.press(obj, now, location):
+                    self.dragging = True
+                    return {"RUNNING_MODAL"}           # the click was for a sensor, not for selecting
+            elif event.value == "RELEASE" and self.dragging:
+                self.player.release(now)
+                self.dragging = False
+                return {"RUNNING_MODAL"}
+        return {"PASS_THROUGH"}
+
+    def _finish(self, context):
+        context.window_manager.event_timer_remove(self.timer)
+        self.player.stop()
+        if _running["player"] is self.player:
+            _running["player"] = None
+        context.workspace.status_text_set(None)
+        context.window.cursor_set("DEFAULT")
+        for area in context.window.screen.areas:
+            area.tag_redraw()
+        return {"FINISHED"}
+
+
+class X3D_OT_behaviour_stop(bpy.types.Operator):
+    """Stop playing and put the scene back as it was"""
+    bl_idname = "x3d.behaviour_stop"
+    bl_label = "Stop"
+
+    @classmethod
+    def poll(cls, context):
+        return is_playing()
+
+    def execute(self, context):
+        _running["player"] = None          # the running operator sees this on its next event and restores the scene
+        return {"FINISHED"}
+
+
+def _draw_buttons(layout, context):
+    if is_playing():
+        layout.operator(X3D_OT_behaviour_stop.bl_idname, icon="PAUSE")
+    else:
+        layout.operator(X3D_OT_behaviour_play.bl_idname, text="Play", icon="PLAY")
+
+
+def _node_header(self, context):
+    if getattr(context.space_data, "tree_type", "") == behaviour_nodes.TREE_IDNAME:
+        _draw_buttons(self.layout, context)
+        tree = getattr(context.space_data, "edit_tree", None)
+        if tree is not None and hasattr(tree, "x3d_blender_axes"):
+            self.layout.prop(tree, "x3d_blender_axes", toggle=True)
+
+
+class X3D_PT_behaviour_play(bpy.types.Panel):
+    bl_label = "X3D Behaviour"
+    bl_idname = "X3D_PT_behaviour_play"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "X3D"
+
+    def draw(self, context):
+        layout = self.layout
+        tree = getattr(context.scene, "x3d_behaviour_tree", None)
+        if tree is None:
+            layout.label(text="This scene has no behaviour graph yet.")
+            return
+        layout.prop(context.scene, "x3d_behaviour_tree", text="")
+        _draw_buttons(layout, context)
+        player = _running["player"]
+        if player is not None:
+            layout.label(text=f"{len(player.sensed_objects())} object(s) answer the pointer")
+            for label in player.sim.not_simulated:
+                layout.label(text=f"Not played: {label}", icon="ERROR")
+            for label in player.not_applied:
+                layout.label(text=f"Not shown: {label}", icon="INFO")
+        else:
+            layout.label(text="Click what a sensor senses. Esc stops.")
+
+
+classes = (X3D_OT_behaviour_play, X3D_OT_behaviour_stop, X3D_PT_behaviour_play)
+
+
+def register():
+    for cls in classes:
+        if not getattr(cls, "is_registered", False):
+            bpy.utils.register_class(cls)
+    bpy.types.NODE_HT_header.append(_node_header)
+
+
+def unregister():
+    if _running["player"] is not None:
+        _running["player"].stop()
+        _running["player"] = None
+    bpy.types.NODE_HT_header.remove(_node_header)
+    for cls in reversed(classes):
+        if getattr(cls, "is_registered", False):
+            bpy.utils.unregister_class(cls)

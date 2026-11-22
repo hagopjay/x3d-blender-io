@@ -1,0 +1,64 @@
+// SPDX-FileCopyrightText: 2026 HagopJay
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Records what X_ITE does with a behaviour graph, event by event, so tools/behaviour_sim_judge.py can ask the Python
+// simulator (source/behaviour_sim.py) to do the same and compare.
+//   NODE_PATH=$(npm root -g) node tools/behaviour_sim_judge.cjs <x_ite dist dir> <file.x3d> <sources.json> <clicks> <seconds> > trace.json
+// sources.json: [["DEF","field"], ...] every ROUTE source of the file (written by the .py with --sources).
+// A pointing sensor is found by moving the real pointer until one reports isOver; then <clicks> real clicks follow.
+// Every event carries X_ITE's own time stamp (browser.currentTime). Software GL: values and order are claims.
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const [xiteDir, file, sourcesFile, clicksArg, secondsArg] = process.argv.slice(2);
+const sources = JSON.parse(fs.readFileSync(sourcesFile, 'utf8'));
+const types = { '.js': 'text/javascript', '.css': 'text/css', '.x3d': 'model/x3d+xml' };
+const page = `<!doctype html><meta charset=utf-8><link rel=stylesheet href=/xite/x_ite.css><script src=/xite/x_ite.min.js></script>
+<style>body{margin:0}x3d-canvas{width:960px;height:600px;display:block}</style>
+<x3d-canvas id=c contextMenu=false notifications=false splashScreen=false timings=false></x3d-canvas>`;
+const srv = http.createServer((q, r) => {
+  const u = decodeURIComponent(q.url.split('?')[0]);
+  if (u === '/') { r.writeHead(200, { 'content-type': 'text/html' }); return r.end(page); }
+  const f = u === '/file' ? file : path.join(xiteDir, u.replace(/^\/xite\//, ''));
+  fs.readFile(f, (e, d) => { if (e) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': types[path.extname(f)] || 'application/octet-stream' }); r.end(d); });
+}).listen(0);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const p = await b.newPage({ viewport: { width: 960, height: 600 } });
+  const errors = []; p.on('pageerror', e => errors.push(String(e)));
+  await p.goto(`http://localhost:${srv.address().port}/`);
+  await p.evaluate(async () => { const B = X3D.getBrowser(document.getElementById('c')); await B.loadURL(new X3D.MFString('/file')); });
+  await p.waitForFunction(s => { try { return !!X3D.getBrowser(document.getElementById('c')).currentScene.getNamedNode(s); } catch (e) { return false; } }, sources[0][0], { timeout: 90000 });
+  await sleep(3000);   // let followers settle before recording
+  const info = await p.evaluate(sources => {
+    const B = X3D.getBrowser(document.getElementById('c')), s = B.currentScene;
+    window.__events = []; window.__frames = [];
+    const text = v => (v !== null && typeof v === 'object') ? String(v) : v;
+    const missing = [], sensors = [];
+    sources.forEach(([d, f], i) => {
+      try {
+        const node = s.getNamedNode(d);
+        node.getField(f).addFieldCallback('judge' + i, v => window.__events.push([B.getCurrentTime(), d, f, text(v)]));
+        if (/Sensor$/.test(node.getNodeTypeName()) && node.getNodeTypeName() !== 'TimeSensor' && !sensors.includes(d)) sensors.push(d);
+      } catch (e) { missing.push([d, f, String(e)]); }
+    });
+    const tick = () => { window.__frames.push(B.getCurrentTime()); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+    return { missing, sensors, began: B.getCurrentTime(), version: B.version, name: B.name };
+  }, sources);
+  let hit = null;
+  if (info.sensors.length && Number(clicksArg) > 0) {
+    scan: for (let y = 60; y < 600; y += 30) for (let x = 60; x < 960; x += 30) {
+      await p.mouse.move(x - 3, y - 3); await p.mouse.move(x, y, { steps: 2 }); await sleep(120);
+      if (await p.evaluate(ss => { const s = X3D.getBrowser(document.getElementById('c')).currentScene; return ss.some(d => s.getNamedNode(d).isOver); }, info.sensors)) { hit = { x, y }; break scan; }
+    }
+    for (let k = 0; hit && k < Number(clicksArg); k++) {
+      await p.mouse.move(hit.x, hit.y); await p.mouse.down(); await sleep(140); await p.mouse.up(); await sleep(1100);
+    }
+  }
+  await sleep(Number(secondsArg) * 1000);
+  const out = await p.evaluate(() => ({ events: window.__events, frames: window.__frames }));
+  await b.close(); srv.close();
+  console.log(JSON.stringify({ file: path.basename(file), browser: `${info.name} ${info.version}`, began: info.began, sensorAt: hit, clicks: Number(clicksArg), missing: info.missing, pageErrors: errors, frames: out.frames, events: out.events }));
+})();

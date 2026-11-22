@@ -1677,7 +1677,7 @@
    "id": "object:hide_render",
    "class": "dropped",
    "x3d": "Shape.visible",
-   "reason": "an object hidden in renders is still written, visible: only Switch children the import hid are written invisible (extract.py, by design)",
+   "reason": "an object hidden in renders is still written, visible: only what the import hid (a Switch choice, a node with visible=false) is written invisible (extract.py, by design)",
    "grade": "Confirmed",
    "receipt": {
     "kind": "neq",
