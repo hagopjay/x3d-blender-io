@@ -718,6 +718,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(_metadata_xml(instance.transform_metadata, indent + "  ", "metadata", defs))
     if instance.interaction is not None:
         xml.append(_sensor_xml(instance, defs, indent + "  "))
+    for text in getattr(defs, "behaviour_children", {}).get(instance.object_name, ()):
+        xml.append(f"{indent}  {text}\n")
     shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
     if not instance.visible and not subtree_hidden:
         shape_attrs += ' visible="false"'
@@ -1058,6 +1060,76 @@ def _fmt_exact(values, field: str, node: str) -> str:
     return " ".join(_fmt_float32(value) for value in flat)
 
 
+def _behaviour_emission(ir_scene, defs: _DefNames, diagnostics, indent):
+    """The scene's behaviour graph as X3D text, or None when the scene has none.
+
+    Runs before anything else takes a DEF: the graph's own names are reserved first, so a node called ``Timer`` in the
+    editor is ``Timer`` in the file, and each target gets the DEF its Transform, Viewpoint, light or material is about to
+    be written with (``defs.get`` gives one key one name). A ROUTE whose target is not exported is left out and counted:
+    nothing is dropped without a line in the head. Sampled animation of a field a ROUTE now drives is not written."""
+    graph = getattr(ir_scene, "behaviour", None)
+    if graph is None:
+        return None
+    try:
+        from . import behaviour_graph as bg
+    except ImportError:  # pragma: no cover - standalone test fallback
+        import behaviour_graph as bg
+    problems = [p for p in bg.validate(graph) if p["code"] != "unbound-target"]
+    for problem in problems:
+        diagnostics.append(f"Behaviour graph: {problem['where']}: {problem['message']}; left out.")
+    illegal = {p["where"] for p in problems}
+    if illegal:
+        graph.routes = [r for r in graph.routes
+                        if f"ROUTE {r.from_id}.{r.from_field} -> {r.to_id}.{r.to_field}" not in illegal]
+    for node in graph.nodes.values():            # the graph's names first
+        if node.role != bg.TARGET:
+            defs.get("behaviour", node.id, "", label=node.id)
+            for inner in node.inner:
+                defs.get("behaviour-inner", inner, "", label=inner)
+    by_object = {instance.object_name: instance for instance in ir_scene.iter_instances()}
+    used_materials = {shape.material_name for instance in by_object.values() for shape in instance.iter_shapes()}
+
+    # Identity: a target is written under the name it has in the graph (for an imported file, the DEF it came with), and
+    # a placed sensor's parent under the DEF the importer recorded. Asking ``defs`` first fixes that name for the key, so
+    # the Transform, Viewpoint, light or material written later gets the same one.
+    def def_of_target(node):
+        kind, name = node.binding
+        instance = by_object.get(name)
+        if kind == "transform" and instance is not None:
+            return defs.get("transform", name, "", label=node.id)
+        if kind == "viewpoint" and instance is not None and instance.viewpoint is not None:
+            view = instance.viewpoint
+            return defs.get("viewpoint", view.name or view.description or "Viewpoint", "", label=node.id)
+        if kind == "light" and instance is not None and instance.light is not None:
+            return defs.get("light", instance.light.name, "", label=node.id)
+        if kind == "material" and name in used_materials:
+            return defs.get("material", name, "", label=node.id)
+        return None
+
+    for node in graph.nodes.values():
+        if node.role == bg.TARGET and node.binding is not None:
+            def_of_target(node)
+    for name, wanted in getattr(graph, "def_hints", {}).items():
+        if name in by_object:
+            defs.get("transform", name, "", label=wanted)
+
+    emission = bg.emit(graph, def_of_node=lambda node_id: defs.get("behaviour", node_id, "", label=node_id),
+                       def_of_target=def_of_target, indent=indent,
+                       object_of_parent=lambda parent: parent if parent in by_object else None)
+    defs.behaviour_children = emission.children
+    diagnostics.extend(f"Behaviour graph: {message}" for message in emission.diagnostics)
+    if emission.dropped_routes:
+        diagnostics.append(f"Behaviour graph: {emission.dropped_routes} ROUTE(s) left out because an end is not in the "
+                           f"exported file; {emission.written_routes} written.")
+    driven = {name for name, field_name in emission.driven if field_name in ("translation", "rotation", "scale")}
+    sampled = [a for a in ir_scene.animations if a.target_kind == "transform" and a.target in driven]
+    if sampled:
+        ir_scene.animations = [a for a in ir_scene.animations if a not in sampled]
+        diagnostics.append("Behaviour graph: the keyframes of " + ", ".join(sorted(a.target for a in sampled)) +
+                           " are not sampled into interpolators, because the behaviour graph drives those objects.")
+    return emission
+
+
 def _splats_xml(splats, defs: _DefNames, indent, *, version="4.0", output_dir=None):
     """GaussianSplats node for X3D 4.1; a coloured PointSet for earlier versions; an Inline of a
     KHR_gaussian_splatting glb written beside the file when the object asked for one (any version)."""
@@ -1289,6 +1361,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     write("  <head>\n")
     for name, level in _components(ir_scene, version):
         write(f'    <component name="{name}" level="{level}" />\n')
+    defs = _DefNames()
+    behaviour = _behaviour_emission(ir_scene, defs, diagnostics, "    ")
     for name, content in head_meta(ir_scene.metadata, generator, diagnostics):
         write(_meta(name, content))
     if receipt_meta:
@@ -1296,7 +1370,6 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     write("  </head>\n")
     write("  <Scene>\n")
 
-    defs = _DefNames()
     geometries = ir_scene.geometry_by_name()
     materials = ir_scene.material_by_name()
     # An imported scene gets the headlight its file had (a browser's headlight lights the same faces whether or not the
@@ -1318,6 +1391,9 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
                             splats=splats, version=version, look=look, collections=ir_scene.collections))
     write(_animation_xml(ir_scene, defs, "    "))
     write(_interaction_xml(ir_scene, defs, "    "))
+    if behaviour is not None:
+        write("".join(behaviour.root))
+        write("".join(behaviour.routes))
 
     write("  </Scene>\n")
     write("</X3D>\n")

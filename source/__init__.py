@@ -52,6 +52,7 @@ from bpy_extras.io_utils import (
 from .translations import get_language, translate
 from .prefs import X3D_Preferences
 from . import interaction_ui
+from . import behaviour_nodes
 
 blender_version = bpy.app.version
 blender_version_higher_279 = blender_version[0] > 2 or (blender_version[0] == 2 and blender_version[1] >= 79)
@@ -107,6 +108,12 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         description=translate(lang, "scale_description"),
     )
 
+    use_behaviour_graph: BoolProperty(
+        name="Behaviour as node graph",
+        description="Build an X3D Behaviour node tree from the file's sensors, timers, interpolators and ROUTEs, "
+                    "so they can be seen and rewired in the node editor (proof of concept; XML encoding only)",
+        default=False,
+    )
     as_collection: BoolProperty(
         name=translate(lang, "as_collection"),
         description=translate(lang, "as_collection_description"),
@@ -172,6 +179,7 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         import_ui_general(layout, self)
         import_ui_transform(layout, self)
         import_ui_mesh(layout, self)
+        layout.prop(self, "use_behaviour_graph")
 
     def execute(self, context):
         from . import import_x3d
@@ -180,13 +188,18 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
                                             "axis_up",
                                             "file_unit",
                                             "filter_glob",
+                                            "use_behaviour_graph",
                                             ))
         global_matrix = axis_conversion(from_forward=self.axis_forward,
                                         from_up=self.axis_up,
                                         ).to_4x4()
         keywords["global_matrix"] = global_matrix
 
-        return import_x3d.load(context, **keywords)
+        result = import_x3d.load(context, **keywords)
+        if self.use_behaviour_graph and 'FINISHED' in result:
+            for message in behaviour_nodes.import_graph(context.scene, self.filepath):
+                self.report({'INFO'}, message)
+        return result
 
     def invoke(self, context, event):
         return self.invoke_popup(context)
@@ -747,6 +760,7 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    behaviour_nodes.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
@@ -755,6 +769,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
+    behaviour_nodes.unregister()
     for cls in classes:
         bpy.utils.unregister_class(cls)
 
