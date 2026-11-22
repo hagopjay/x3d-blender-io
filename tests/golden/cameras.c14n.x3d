@@ -1,10 +1,14 @@
 <X3D profile='Immersive' version='4.0'>
  <head>
+  <component level='3' name='Navigation'/>
   <component level='2' name='Shape'/>
-  <meta content='sha256=029416da56e78f747be735afd9ffbab8 dropped=0 approximated=1 clamped=0 schema=x3d-blender-io.loss-receipt/1' name='x3d-blender-io.receipt'/>
+  <meta content='sha256=4f53cda18c2baa0c0354bb5f9a3ecbe5 dropped=0 approximated=0 clamped=0 schema=x3d-blender-io.loss-receipt/1' name='x3d-blender-io.receipt'/>
  </head>
  <Scene>
   <NavigationInfo headlight='false' type='"EXAMINE" "ANY"'/>
+  <Transform DEF='OB_Persp' rotation='-0.48302 0.85146 0.20422 0.92177' scale='1 1 1' translation='6 4 6'>
+   <Viewpoint DEF='CA_Persp' description='Persp' fieldOfView='0.5632' orientation='0 0 1 0' position='0 0 0'/>
+  </Transform>
   <Transform DEF='OB_Target' rotation='-1 0 0 1.5708' scale='1 1 1' translation='0 0 0'>
    <Shape>
     <Appearance>
@@ -15,11 +19,8 @@
     </IndexedFaceSet>
    </Shape>
   </Transform>
-  <Transform DEF='OB_Persp' rotation='-0.48302 0.85146 0.20422 0.92177' scale='1 1 1' translation='6 4 6'>
-   <Viewpoint DEF='CA_Persp' description='Persp' fieldOfView='0.5632' orientation='0 0 1 0' position='0 0 0'/>
-  </Transform>
   <Transform DEF='OB_Ortho' rotation='0 0 1 0' scale='1 1 1' translation='0 0 8'>
-   <Viewpoint DEF='CA_Ortho' description='Ortho' orientation='0 0 1 0' position='0 0 0'/>
+   <OrthoViewpoint DEF='CA_Ortho' description='Ortho' fieldOfView='-2.5 -1.40625 2.5 1.40625' orientation='0 0 1 0' position='0 0 0'/>
   </Transform>
   <Transform DEF='OB_Key' rotation='-0.70625 0.64191 0.2986 1.16486' scale='1 1 1' translation='4 6 4'>
    <DirectionalLight DEF='LA_Key' ambientIntensity='0' color='1 1 1' direction='0 0 -1' global='true' intensity='0.8' shadows='true'/>

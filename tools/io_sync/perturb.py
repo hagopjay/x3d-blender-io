@@ -28,6 +28,7 @@ schema x3d-blender-io.mapping-blender/1). The run exits 1 when:
 Baseline (x3d.loom runs/blender-io-perturb-20261122, main 47ed742, bpy 5.3.0): 363 properties, 39 carried, 324 inert,
 one starting state, nothing declared. With three states and the table (22 Nov 2026): bpy 5.3.0 379 properties, 54
 carried; Blender 5.2.2 LTS 377 / 54; 5.1.2 374 / 54; 4.5.14 LTS 371 / 56; PASS on all four, 0 receipt disagreements.
+From 2.7.1 (ortho_scale, light temperature and use_temperature carried): 379 / 63, 377 / 63, 374 / 63, 371 / 65; PASS.
 """
 from __future__ import annotations
 

@@ -10,9 +10,9 @@ Measured 22 Nov 2026 from main 47ed742 plus this change, with bpy 5.3.0 and the 
 | Piece | File | What it says | Measured |
 |---|---|---|---|
 | Mapping table, Blender half | `source/mapping/blender_rna.json` | every Blender property the probe scene reaches: carried, approximated, clamped, dropped or editor_only, with its receipt rule | 262 rows + 3 patterns; 0 undeclared on 4 Blender versions |
-| Mapping table, X3D half | `mapping/x3d_fields.json`, `docs/MAPPING.md` | every node and field of X3D 4.0 (x3d.py), what the export writes and the import reads | 268 nodes, 3,363 fields; the export writes 30 nodes and 133 fields |
+| Mapping table, X3D half | `mapping/x3d_fields.json`, `docs/MAPPING.md` | every node and field of X3D 4.0 (x3d.py), what the export writes and the import reads | 268 nodes, 3,363 fields; the export writes 31 nodes and 138 fields (2.7.1; 30 and 133 in 2.7.0) |
 | Loss receipt v1 | `source/receipt.py` | a stable head line `x3d-blender-io.receipt` in every X3D 4.0 file, a `<file>.receipt.json` sidecar on request (export option or `BLENDER_X3D_RECEIPT=1`), a `prev` chain through re-imports | probe scene: 1 dropped, 4 approximated, 4 clamped; 0 disagreements with the sweep over about 8,800 exports |
-| Structure | `tools/schematron/` | the Web3D Consortium's X3D Schematron (vendored, pinned by sha256) on every suite export; disagreements are listed with a suspect judge and a count that may only shrink | 9 listed disagreements, 0 unexplained errors |
+| Structure | `tools/schematron/` | the Web3D Consortium's X3D Schematron (vendored, pinned by sha256) on every suite export; disagreements are listed with a suspect judge and a count that may only shrink | 12 listed disagreements (9 in 2.7.0), 0 unexplained errors |
 
 ## Gate 2: the oracles
 
@@ -30,10 +30,11 @@ and `expect-fail NAME -- CMD` passes only when CMD fails and names the fault.
 
 ## Findings these judges made (22 Nov 2026)
 
-1. **The bound camera follows the outliner, not `scene.camera`** (Confirmed, all 4 versions). X3D binds the first
-   Viewpoint in the file; the export writes Viewpoints in outliner order, so reordering the outliner changes which
-   camera a browser opens on (frozen scene `cameras`: Persp, the active camera, before; Ortho after). The importer binds
-   the first Viewpoint. Budget in `test_r3`: 1 of 12 scenes, may only shrink.
+1. **The bound camera followed the outliner, not `scene.camera`** (Confirmed, all 4 versions; fixed in 2.7.1). X3D
+   binds the first Viewpoint in the file; the export wrote Viewpoints in outliner order, so reordering the outliner
+   changed which camera a browser opened on (frozen scene `cameras`: Persp, the active camera, before; Ortho after).
+   The export now writes the subtree holding the active camera first (`extract.bind_first`); `test_r3` asserts 0 of 12
+   scenes move their binding.
 2. **Blender 4.5.14 LTS round trip did not converge** (Confirmed, fixed here). A text object's degenerate face got a
    corner normal of length 4.8e-05; the export wrote it as is and the re-import normalised it, so E1 to E2 had 10
    Normal differences on the suite's `Z04_label`. The export now writes unit normals; E1 to E2 is 0 on 4.5.14, 5.1.2
@@ -54,6 +55,16 @@ and `expect-fail NAME -- CMD` passes only when CMD fails and names the fault.
    convention the rig's own glb leg uses.
 6. **Schematron rule bug** (Confirmed): the HAnimJoint USE rule (`HAnimHumanoid[//*[@DEF=$USE]]`, .sch line 3674) uses
    an absolute `//` and fires whenever a scene has two humanoids. Report to Web3D held until the owner says send.
+7. **Two exporter losses fixed in 2.7.1** (Confirmed by the sweep on 4.5.14, 5.1.2, 5.2.2 and 5.3.0: 63 carried, 54
+   before). An ORTHO camera was written as a perspective Viewpoint; it is now an `OrthoViewpoint` (fieldOfView = the
+   `ortho_scale` box at the render aspect, so the file declares Navigation level 3), and the import reads it back, so
+   the suite's Viewpoint fieldOfView round trip is exact (first-trip budget 1 to 0 in each profile). A light's
+   `use_temperature` tint was dropped; the colour is now `color x temperature_color`, as Blender's glTF exporter writes.
+8. **A second Schematron rule bug** (Confirmed): the `Viewpoint | OrthoViewpoint` rule (.sch line 2495) reads
+   `(OrthoViewpoint and not(Full or Navigation >= 3)) or count(preceding::OrthoViewpoint) > 0`, so every Viewpoint
+   after the first OrthoViewpoint is reported as needing Navigation level 3 even when the head declares it. A two-node
+   file with Navigation level 3 gives 1 error with the OrthoViewpoint first and 0 with it second; the suite lists 7
+   per profile. Held with finding 6, not sent.
 
 ## Where they run
 

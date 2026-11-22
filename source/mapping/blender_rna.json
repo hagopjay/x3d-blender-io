@@ -275,11 +275,10 @@
   },
   {
    "id": "camera:ortho_scale",
-   "class": "dropped",
+   "class": "carried",
    "x3d": "OrthoViewpoint.fieldOfView",
-   "reason": "an orthographic camera is written as a perspective Viewpoint",
-   "grade": "Confirmed",
-   "why_no_receipt": "reported through camera:type"
+   "reason": "an orthographic camera is an OrthoViewpoint; ortho_scale spans its fitted side at the render's aspect (extract.ortho_extents); the import inverts it",
+   "grade": "Confirmed"
   },
   {
    "id": "camera:panorama_type",
@@ -348,11 +347,16 @@
    "id": "camera:type",
    "class": "approximated",
    "x3d": "Viewpoint",
-   "reason": "PERSP is a Viewpoint; ORTHO and PANO are also written as a perspective Viewpoint (X3D has OrthoViewpoint; not written)",
+   "reason": "PERSP is a Viewpoint and ORTHO an OrthoViewpoint (since 2.7.1); PANO is written as a perspective Viewpoint (X3D has no panoramic view)",
    "grade": "Confirmed",
    "receipt": {
-    "kind": "neq",
-    "neutral": "PERSP"
+    "kind": "always",
+    "when": {
+     "prop": "type",
+     "in": [
+      "PANO"
+     ]
+    }
    }
   },
   {
@@ -500,9 +504,9 @@
   },
   {
    "id": "light.area:temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "class": "approximated",
+   "x3d": "DirectionalLight.color",
+   "reason": "folded into the color: color x temperature_color, the product Blender's own glTF exporter writes; a re-import gets the tinted colour back with the temperature off",
    "grade": "Confirmed",
    "receipt": {
     "kind": "always",
@@ -582,9 +586,9 @@
   },
   {
    "id": "light.area:use_temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "colour temperature is not folded into the colour",
+   "class": "approximated",
+   "x3d": "DirectionalLight.color",
+   "reason": "turns the blackbody tint of the color on (see temperature)",
    "grade": "Confirmed",
    "why_no_receipt": "reported through light.area:temperature"
   },
@@ -721,9 +725,9 @@
   },
   {
    "id": "light.point:temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "class": "approximated",
+   "x3d": "PointLight.color",
+   "reason": "folded into the color: color x temperature_color, the product Blender's own glTF exporter writes; a re-import gets the tinted colour back with the temperature off",
    "grade": "Confirmed",
    "receipt": {
     "kind": "always",
@@ -802,9 +806,9 @@
   },
   {
    "id": "light.point:use_temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "colour temperature is not folded into the colour",
+   "class": "approximated",
+   "x3d": "PointLight.color",
+   "reason": "turns the blackbody tint of the color on (see temperature)",
    "grade": "Confirmed",
    "why_no_receipt": "reported through light.point:temperature"
   },
@@ -963,9 +967,9 @@
   },
   {
    "id": "light.spot:temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "class": "approximated",
+   "x3d": "SpotLight.color",
+   "reason": "folded into the color: color x temperature_color, the product Blender's own glTF exporter writes; a re-import gets the tinted colour back with the temperature off",
    "grade": "Confirmed",
    "receipt": {
     "kind": "always",
@@ -1055,9 +1059,9 @@
   },
   {
    "id": "light.spot:use_temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "colour temperature is not folded into the colour",
+   "class": "approximated",
+   "x3d": "SpotLight.color",
+   "reason": "turns the blackbody tint of the color on (see temperature)",
    "grade": "Confirmed",
    "why_no_receipt": "reported through light.spot:temperature"
   },
@@ -1225,9 +1229,9 @@
   },
   {
    "id": "light.sun:temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "class": "approximated",
+   "x3d": "DirectionalLight.color",
+   "reason": "folded into the color: color x temperature_color, the product Blender's own glTF exporter writes; a re-import gets the tinted colour back with the temperature off",
    "grade": "Confirmed",
    "receipt": {
     "kind": "always",
@@ -1290,9 +1294,9 @@
   },
   {
    "id": "light.sun:use_temperature",
-   "class": "dropped",
-   "x3d": null,
-   "reason": "colour temperature is not folded into the colour",
+   "class": "approximated",
+   "x3d": "DirectionalLight.color",
+   "reason": "turns the blackbody tint of the color on (see temperature)",
    "grade": "Confirmed",
    "why_no_receipt": "reported through light.sun:temperature"
   },

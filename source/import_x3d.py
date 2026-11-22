@@ -6188,14 +6188,28 @@ def importGeoViewpoint_Matrix(node, orientation, bpycam, ancestry):
 def importViewpoint(bpycollection, node, ancestry, global_matrix):
     name = exported_object_name(node, ancestry, "CA_") or 'Viewpoint'
 
-    fieldOfView = node.getFieldAsFloat('fieldOfView', 0.785398, ancestry)  # max is documented to be 1.0 but some files have higher.
+    fieldOfView = node.getFieldAsFloat('fieldOfView', 0.785398, ancestry) if node.getSpec() != 'OrthoViewpoint' else None  # max is documented to be 1.0 but some files have higher.
     # jump = node.getFieldAsBool('jump', True, ancestry)
     orientation = node.getFieldAsFloatTuple('orientation', (0.0, 0.0, 1.0, 0.0), ancestry)
     description = node.getFieldAsString('description', '', ancestry)
 
     bpycam = bpy.data.cameras.new(name)
 
-    bpycam.angle = blender_camera_angle(fieldOfView, bpycam.sensor_fit, *render_size(bpy.context.scene))
+    if node.getSpec() == 'OrthoViewpoint':
+        # fieldOfView is the four extents minX minY maxX maxY (default -1 -1 1 1). A browser keeps the whole box in
+        # view and widens one side to the display's aspect, so ortho_scale spans the box at the render's aspect on
+        # the camera's fitted side (the inverse of extract.ortho_extents). An off-centre box comes back centred.
+        extents = node.getFieldAsFloatTuple('fieldOfView', (-1.0, -1.0, 1.0, 1.0), ancestry, conversion_scale)
+        if len(extents) != 4 or extents[2] <= extents[0] or extents[3] <= extents[1]:
+            extents = (-1.0, -1.0, 1.0, 1.0)
+        size_x, size_y = extents[2] - extents[0], extents[3] - extents[1]
+        width, height = render_size(bpy.context.scene)
+        aspect = (float(width) / float(height)) if width and height else 1.0
+        bpycam.type = 'ORTHO'
+        # AUTO fits ortho_scale to the wider render side
+        bpycam.ortho_scale = max(size_x, size_y * aspect) if aspect >= 1.0 else max(size_y, size_x / aspect)
+    else:
+        bpycam.angle = blender_camera_angle(fieldOfView, bpycam.sensor_fit, *render_size(bpy.context.scene))
 
     if node.getSpec() == 'GeoViewpoint':
         mtx = importGeoViewpoint_Matrix(node, orientation, bpycam, ancestry)
@@ -8327,7 +8341,7 @@ def load_web3d(
             importGaussianSplats(bpycollection, node, ancestry, global_matrix)
         elif spec in {'PointLight', 'DirectionalLight', 'SpotLight'}:
             importLamp(bpycollection, node, spec, ancestry, global_matrix)
-        elif spec in {'Viewpoint', 'GeoViewpoint'}:
+        elif spec in {'Viewpoint', 'GeoViewpoint', 'OrthoViewpoint'}:
             importViewpoint(bpycollection, node, ancestry, global_matrix)
         elif spec == 'Transform':
             # Only use transform nodes when we are not importing a flat object hierarchy

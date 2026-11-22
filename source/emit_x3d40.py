@@ -591,13 +591,16 @@ def _viewpoint_xml(viewpoint, defs: _DefNames, indent):
         attrs.append(f"description={quoteattr(viewpoint.description)}")
     attrs.append(f'position="{_fmt3(viewpoint.transform.translation)}"')
     attrs.append(f'orientation="{_fmt4(viewpoint.transform.rotation_axis_angle)}"')
-    if viewpoint.field_of_view is not None:
+    ortho = getattr(viewpoint, "ortho_extents", None)
+    if ortho is not None:
+        attrs.append(f'fieldOfView="{" ".join(_fmt_length(v) for v in ortho)}"')
+    elif viewpoint.field_of_view is not None:
         attrs.append(f'fieldOfView="{_fmt(viewpoint.field_of_view)}"')
     if viewpoint.near_distance is not None:
         attrs.append(f'nearDistance="{_fmt_length(viewpoint.near_distance)}"')
     if viewpoint.far_distance is not None:
         attrs.append(f'farDistance="{_fmt_length(viewpoint.far_distance)}"')
-    return f"{indent}<Viewpoint {' '.join(attrs)} />\n"
+    return f"{indent}<{'OrthoViewpoint' if ortho is not None else 'Viewpoint'} {' '.join(attrs)} />\n"
 
 
 # Upper limits of Background skyAngle and groundAngle in the X3D 4.0 schema and object model: pi and pi/2, rounded up.
@@ -1257,6 +1260,8 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
             components["Shape"] = 2
         if any(shape.geometry_name not in geometries and shape.geometry_hint == "Circle2D" for shape in shapes):
             components["Geometry2D"] = 2
+        if instance.viewpoint is not None and getattr(instance.viewpoint, "ortho_extents", None) is not None:
+            components["Navigation"] = 3   # OrthoViewpoint is Navigation level 3; Immersive gives level 2
         interaction = instance.interaction
         if interaction is not None:
             # X_ITE 16.7.1 ignores a TouchSensor in a file that does not declare its component
