@@ -444,6 +444,8 @@ class IRScene:
     splats: list[IRGaussianSplats] = field(default_factory=list)
     cycle_interval: float | None = None
     tour: IRTour | None = None
+    # The scene's behaviour graph (behaviour_graph.Graph) when it has an X3D Behaviour node tree; the emitter writes it.
+    behaviour: object | None = None
     # Collection name -> its member instances in the collection's own frame (instance_offset at the origin).
     collections: dict[str, list[IRInstance]] = field(default_factory=dict)
     background_color: tuple[float, float, float] | None = None

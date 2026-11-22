@@ -215,6 +215,9 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
                 material_model=settings.material_model,
                 colour_space=settings.color_space,
             )
+            if getattr(local_scene, "x3d_behaviour_tree", None) is not None:
+                from . import behaviour_nodes
+                ir_scene.behaviour = behaviour_nodes.read(local_scene)
             resolve_texture_urls(ir_scene, export_file, settings.path_mode, copy_set)
             resolve_inline_urls(ir_scene, export_file, settings.path_mode)
         writer(
