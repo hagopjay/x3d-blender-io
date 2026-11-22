@@ -173,9 +173,13 @@ class FieldValueTests(unittest.TestCase):
 class CoerceFieldTests(unittest.TestCase):
 
     def test_booleans(self):
-        for text, want in (("true", True), ("TRUE", True), (" true ", True), ("false", False), ("yes", False)):
+        for text, want in (("true", True), (" true ", True), ("false", False)):
             with self.subTest(text=text):
                 self.assertIs(_coerce_field(text, _declaration("SFBool")), want)
+        # X3D's XML encoding has true and false only; these used to pass as False (chaos round, 22 Nov 2026)
+        for text in ("TRUE", "yes", "1", "", "true false"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                _coerce_field(text, _declaration("SFBool"))
 
     def test_strings(self):
         self.assertEqual(_coerce_field("  keep spaces ", _declaration("SFString")), "  keep spaces ")
@@ -190,7 +194,17 @@ class CoerceFieldTests(unittest.TestCase):
         self.assertEqual(_coerce_field("7", _declaration("SFDouble")), 7.0)
         value = _coerce_field("4", _declaration("SFInt32"))
         self.assertEqual((value, type(value)), (4, int))
-        self.assertEqual(_coerce_field("", _declaration("SFFloat")), 0)
+        for text in ("", "1 2"):   # an SFFloat is one number (an empty one used to read as 0)
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                _coerce_field(text, _declaration("SFFloat"))
+
+    def test_fixed_width_values_are_checked(self):
+        # x3d.py 4.0.65.8 accepts Box(size=(1, 1)), so the width is checked before it (chaos round, 22 Nov 2026)
+        for text, kind in (("1 1", "SFVec3f"), ("0.5", "SFRotation"), ("1 2 3 4", "SFVec3f"), ("1", "SFVec2f"),
+                           ("1 1 1", "SFColorRGBA"), ("1 2 3 4", "MFVec3f"), ("1 2 3", "MFVec2f")):
+            with self.subTest(text=text, kind=kind), self.assertRaises(ValueError):
+                _coerce_field(text, _declaration(kind))
+        self.assertEqual(_coerce_field("1 2 3 4 5 6", _declaration("MFVec3f")), [(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)])
 
     def test_single_vectors_are_tuples(self):
         self.assertEqual(_coerce_field("1 2 3", _declaration("SFVec3f")), (1.0, 2.0, 3.0))

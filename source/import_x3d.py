@@ -857,7 +857,9 @@ class vrmlNode(object):
         elif f[0].upper() == '"FALSE"' or f[0].upper() == 'FALSE':
             return False
         else:
-            logger.warning('"%s" could not be used as a bool for field "%s"' % (f[1], field))
+            # f has one entry here, so f[1] raised IndexError and a bool spelt "1", "yes" or "TRUE," ended the whole
+            # import (chaos round, 22 Nov 2026; Blender's own importer has the same line)
+            logger.warning('"%s" could not be used as a bool for field "%s"' % (f[0], field))
             return default
 
     def getFieldAsString(self, field, default, ancestry):
@@ -1660,6 +1662,9 @@ def translateRotation(rot):
 
 
 def translateScale(sca):
+    if len(sca) < 3:  # malformed SFVec3f: '1 1 --1' parses as two numbers, and sca[2] raised IndexError
+        logger.warning("scale %r has %d of 3 numbers; read as no scale", sca, len(sca))
+        return Matrix.Identity(4)
     mat = Matrix()  # 4x4 default
     mat[0][0] = sca[0]
     mat[1][1] = sca[1]
@@ -1673,6 +1678,13 @@ def translateTransform(node, ancestry):
     sca = node.getFieldAsFloatTuple('scale', None, ancestry)  # (1.0, 1.0, 1.0)
     scaori = node.getFieldAsFloatTuple('scaleOrientation', None, ancestry)  # (0.0, 0.0, 1.0, 0.0)
     tx = node.getFieldAsFloatTuple('translation', None, ancestry, conversion_scale)  # (0.0, 0.0, 0.0)
+
+    if cent and len(cent) != 3:
+        logger.warning("center %r has %d of 3 numbers; read as no center", cent, len(cent))
+        cent = None
+    if tx and len(tx) != 3:
+        logger.warning("translation %r has %d of 3 numbers; read as no translation", tx, len(tx))
+        tx = None
 
     if cent:
         cent_mat = Matrix.Translation(cent)
@@ -1972,11 +1984,31 @@ def clean_index_field(values, field):
     return cleaned
 
 
+class _PaddedValues(list):
+    """A value list that reads ``filler`` for any index past its end, without storing the padding."""
+
+    def __init__(self, values, filler):
+        super().__init__(values)
+        self.filler = filler
+
+    def __getitem__(self, i):
+        if isinstance(i, int) and i >= len(self):
+            return self.filler
+        return super().__getitem__(i)
+
+
+PAD_IN_PLACE = 1 << 16   # a gap this small is padded for real, as before
+
+
 def pad_values(values, need, filler, field):
     """Extend ``values`` to ``need`` entries with ``filler`` when an index points past its end (as
-    validate_points_field does for points), so a short Normal/Color/TextureCoordinate cannot crash the import."""
+    validate_points_field does for points), so a short Normal/Color/TextureCoordinate cannot crash the import.
+    A gap of more than PAD_IN_PLACE entries is not stored: one coordIndex of 2147483647 on a coloured mesh asked for
+    two billion colours and raised MemoryError (chaos round, 22 Nov 2026), so such a list reads the filler past its end."""
     if len(values) < need:
         logger.warning("%s has %d values but is indexed up to %d; padding", field, len(values), need - 1)
+        if need - len(values) > PAD_IN_PLACE:
+            return _PaddedValues(values, filler)
         values = list(values) + [filler] * (need - len(values))
     return values
 
@@ -1998,16 +2030,23 @@ def validate_points_field(coord_index, points):
     """
     validate number of points compared to coordIndex to ensure proper face building without errors
     """
+    # Each distinct out-of-range index gets one added vertex at the origin and the face points at it. The faces keep
+    # their count and order, so per-face colours and normals stay aligned. The old code padded the point list up to the
+    # largest index, so a single coordIndex of 2147483647 asked for two billion vertices (MemoryError, or a frozen
+    # Blender on a machine with the RAM), and 5000000 built 5,000,001 vertices for a quad (chaos round, 22 Nov 2026).
+    count = len(points)
+    added = {}
     for f in coord_index:
-        missing_point = False
-        for v in f:
-            try:
-                points[v]
-            except IndexError:
-                missing_point = True
-                points.extend([(0, 0, 0)] * (v - len(points) + 1))
-        if missing_point:
-            logger.warning("More coordIndex than points found")
+        for k, v in enumerate(f):
+            if 0 <= v < count:
+                continue
+            if v not in added:
+                added[v] = count + len(added)
+            f[k] = added[v]
+    if added:
+        logger.warning("%d coordIndex value(s) past the %d points (largest %d); each is read as a vertex at the origin",
+                       len(added), count, max(added))
+        points = list(points) + [(0, 0, 0)] * len(added)
     return points
 
 # -----------------------------------------------------------------------------------
@@ -6189,6 +6228,10 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
     name = exported_object_name(node, ancestry, "CA_") or 'Viewpoint'
 
     fieldOfView = node.getFieldAsFloat('fieldOfView', 0.785398, ancestry) if node.getSpec() != 'OrthoViewpoint' else None  # max is documented to be 1.0 but some files have higher.
+    if fieldOfView is not None and not (0.0 < fieldOfView < math.pi):
+        # X3D's range is (0, pi); INF raised "math domain error" in tan() and ended the import (chaos round, 22 Nov 2026)
+        logger.warning("Viewpoint fieldOfView %r is outside (0, pi); using the default pi/4", fieldOfView)
+        fieldOfView = 0.785398
     # jump = node.getFieldAsBool('jump', True, ancestry)
     orientation = node.getFieldAsFloatTuple('orientation', (0.0, 0.0, 1.0, 0.0), ancestry)
     description = node.getFieldAsString('description', '', ancestry)

@@ -10,6 +10,7 @@ emitter (``emit_x3d40``) never sees Blender objects.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 
@@ -31,6 +32,8 @@ except ImportError:  # pragma: no cover - standalone test fallback
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
+
+logger = logging.getLogger("export_x3d")
 
 
 MESH_LIKE_TYPES = {"MESH", "CURVE", "SURFACE", "FONT"}
@@ -96,6 +99,7 @@ LIGHT_REFERENCE_DISTANCE_PROPERTY = "x3d_reference_distance"
 # so the exports write it back: Blender's cutoff distance holds the world-space range, which also scales with the
 # light's Transforms and is unset for a radius of -1 or 0.
 LIGHT_RADIUS_PROPERTY = "x3d_radius"
+UNLIMITED_RADIUS = 1e9   # what a kept radius of -1 (unlimited in X_ITE) is written as: past any scene, in float32 range
 # A light's X3D color as the file gave it, kept when the import made the Blender colour linear (a classic scene read
 # as sRGB, the way X_ITE lights classic Materials), so the X3D 3.3 export can write the file's value back.
 LIGHT_COLOR_PROPERTY = "x3d_color"
@@ -1181,9 +1185,17 @@ def light_radius(data):
     mapping derives from the cone."""
     value = data.get(LIGHT_RADIUS_PROPERTY)
     try:
-        return float(value)
+        radius = float(value)
     except (TypeError, ValueError):
         return None
+    if radius < 0.0 or not math.isfinite(radius):
+        # X_ITE reads radius -1 as unlimited and the import keeps it, but X3D's range is [0, inf): the export then
+        # failed its own x3d.py check, so an X_ITE file could be imported and not re-exported (chaos round,
+        # 22 Nov 2026). UNLIMITED_RADIUS reaches past any scene and is a legal SFFloat.
+        logger.warning("light %r: radius %r (unlimited in X_ITE) is written as %g, X3D's range being [0, inf)",
+                       getattr(data, "name", "?"), value, UNLIMITED_RADIUS)
+        return UNLIMITED_RADIUS
+    return radius
 
 
 def imported_spot_cone(data):

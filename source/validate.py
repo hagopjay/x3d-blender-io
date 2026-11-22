@@ -177,7 +177,11 @@ def _coerce_field(value: str, declaration):
         field_type = getattr(field_type, "__name__", str(field_type))
     text = value.strip()
     if field_type == "SFBool":
-        return text.lower() == "true"
+        # X3D's XML encoding spells SFBool true or false only. lower() == "true" read "TRUE", "1" and "yes" as false
+        # and passed them, though the importer crashed on two of them (chaos round, 22 Nov 2026)
+        if text not in ("true", "false"):
+            raise ValueError(f"{value!r} is not an SFBool (true or false)")
+        return text == "true"
     if field_type == "SFString":
         return value
     if field_type == "MFString":
@@ -202,14 +206,22 @@ def _coerce_field(value: str, declaration):
     numbers = [float(token) for token in text.replace(",", " ").split()]
     if field_type.startswith("SFInt") or field_type.startswith("MFInt"):
         numbers = [int(number) for number in numbers]
+    width = (("ColorRGBA", 4), ("Color", 3), ("Vec2", 2), ("Vec3", 3), ("Vec4", 4), ("Rotation", 4), ("Quaternion", 4))
+    size = next((n for key, n in width if key in field_type and "Matrix" not in field_type), None)
     if field_type.startswith("SF"):
         if field_type in {"SFFloat", "SFDouble", "SFTime", "SFInt32"}:
-            return numbers[0] if numbers else 0
+            if len(numbers) != 1:
+                raise ValueError(f"{value!r} has {len(numbers)} numbers; {field_type} takes 1")
+            return numbers[0]
+        # x3d.py 4.0.65.8's assertValidSFVec3f and its kin accept a tuple of any length (Box(size=(1, 1)) writes
+        # size='1 1'), so the width is checked here
+        if size is not None and len(numbers) != size:
+            raise ValueError(f"{value!r} has {len(numbers)} numbers; {field_type} takes {size}")
         return tuple(numbers)
-    width = (("ColorRGBA", 4), ("Color", 3), ("Vec2", 2), ("Vec3", 3), ("Vec4", 4), ("Rotation", 4), ("Quaternion", 4))
-    for key, size in width:
-        if key in field_type and "Matrix" not in field_type:
-            return [tuple(numbers[index:index + size]) for index in range(0, len(numbers), size)]
+    if size is not None:
+        if len(numbers) % size:
+            raise ValueError(f"{len(numbers)} numbers is not a whole number of {field_type} values ({size} each)")
+        return [tuple(numbers[index:index + size]) for index in range(0, len(numbers), size)]
     return numbers
 
 
@@ -217,16 +229,12 @@ def validate_tree_with_x3d_py(root, x3d_module) -> ValidationResult:
     errors: list[str] = []
     warnings: list[str] = []
 
-    def visit(element):
+    def check(element):
         tag = element.tag
-        if tag in {"X3D", "head", "meta", "component", "unit", "Scene"}:
-            for child in element:
-                visit(child)
-            return
         node_class = getattr(x3d_module, tag, None)
         if node_class is None:
             warnings.append(f"<{tag}>: unknown X3D node")
-            return
+            return False
         if "USE" not in element.attrib:
             declared = {}
             try:
@@ -247,8 +255,13 @@ def validate_tree_with_x3d_py(root, x3d_module) -> ValidationResult:
                     errors.append(f"<{tag} {name}=...>: x3d.py halted ({exc})")
                 except Exception as exc:
                     errors.append(f"<{tag} {name}=...>: {exc}")
-        for child in element:
-            visit(child)
+        return True
 
-    visit(root)
+    # An explicit stack, not recursion: a scene nested 1,200 Groups deep (legal X3D) raised RecursionError here, so
+    # the validator crashed instead of answering (chaos round, 22 Nov 2026). Children are visited in document order.
+    stack = [root]
+    while stack:
+        element = stack.pop()
+        if element.tag in {"X3D", "head", "meta", "component", "unit", "Scene"} or check(element):
+            stack.extend(reversed(list(element)))
     return ValidationResult(valid=not errors, errors=errors, warnings=warnings)

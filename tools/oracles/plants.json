@@ -66,6 +66,17 @@
     "OVER TOLERANCE",
     "lit_cube"
    ]
+  },
+  "import-bool-crash": {
+   "judge": "chaos",
+   "what": "the importer's bool warning formats f[1] of a one-item list again, so a bool spelt 1 or yes ends the import (the bug the chaos round found; Blender's own importer has it)",
+   "file": "source/import_x3d.py",
+   "find": "            logger.warning('\"%s\" could not be used as a bool for field \"%s\"' % (f[0], field))",
+   "replace": "            logger.warning('\"%s\" could not be used as a bool for field \"%s\"' % (f[1], field))  # PLANTED FAULT import-bool-crash",
+   "must_say": [
+    "import-crash",
+    "getFieldAsBool"
+   ]
   }
  }
 }
