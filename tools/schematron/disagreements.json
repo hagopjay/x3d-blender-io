@@ -26,6 +26,15 @@
    "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
   },
   {
+   "profile": "crease",
+   "template": "<Viewpoint DEF=\u2026/> has 3 component statements with X3D profile=\u2026, but requires at least <component name=\u2026 level=\u2026/> or <X3D profile=\u2026/>",
+   "count": 7,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "The Viewpoint | OrthoViewpoint rule (vendor .sch line 2495) reads (local-name()='OrthoViewpoint' and not(Full or Navigation >= 3)) or count(preceding OrthoViewpoint) > 0: the last clause sits outside the parentheses, so the report fires on every Viewpoint that follows the first OrthoViewpoint in document order, whatever the head declares. The file declares Navigation level 3. A two-node file with Navigation level 3 (profile Full or Immersive) gives 1 error with the OrthoViewpoint first and 0 with it second. Candidate upstream report, held until he says send.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
    "profile": "main",
    "template": "<HAnimJoint DEF=\u2026 name=\u2026 USE=\u2026/> with parent HAnimJoint needs containerField=\u2026",
    "count": 6,
@@ -41,6 +50,15 @@
    "suspect": "schematron",
    "grade": "Confirmed",
    "reason": "The rule (vendor .sch line 3674) filters HAnimHumanoid[//*[@DEF=$USE][1]]: '//' inside the predicate is absolute, so it selects every humanoid of the scene and '!=' then fires whenever a scene holds two humanoids (the suite has Z14_rig and Z14_rig2). Each USE names a DEF inside its own humanoid's skeleton. Candidate upstream report, held until he says send.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "main",
+   "template": "<Viewpoint DEF=\u2026/> has 3 component statements with X3D profile=\u2026, but requires at least <component name=\u2026 level=\u2026/> or <X3D profile=\u2026/>",
+   "count": 7,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "The Viewpoint | OrthoViewpoint rule (vendor .sch line 2495) reads (local-name()='OrthoViewpoint' and not(Full or Navigation >= 3)) or count(preceding OrthoViewpoint) > 0: the last clause sits outside the parentheses, so the report fires on every Viewpoint that follows the first OrthoViewpoint in document order, whatever the head declares. The file declares Navigation level 3. A two-node file with Navigation level 3 (profile Full or Immersive) gives 1 error with the OrthoViewpoint first and 0 with it second. Candidate upstream report, held until he says send.",
    "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
   },
   {
@@ -68,6 +86,15 @@
    "suspect": "schematron",
    "grade": "Confirmed",
    "reason": "The rule (vendor .sch line 3674) filters HAnimHumanoid[//*[@DEF=$USE][1]]: '//' inside the predicate is absolute, so it selects every humanoid of the scene and '!=' then fires whenever a scene holds two humanoids (the suite has Z14_rig and Z14_rig2). Each USE names a DEF inside its own humanoid's skeleton. Candidate upstream report, held until he says send.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "x41",
+   "template": "<Viewpoint DEF=\u2026/> has 4 component statements with X3D profile=\u2026, but requires at least <component name=\u2026 level=\u2026/> or <X3D profile=\u2026/>",
+   "count": 7,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "The Viewpoint | OrthoViewpoint rule (vendor .sch line 2495) reads (local-name()='OrthoViewpoint' and not(Full or Navigation >= 3)) or count(preceding OrthoViewpoint) > 0: the last clause sits outside the parentheses, so the report fires on every Viewpoint that follows the first OrthoViewpoint in document order, whatever the head declares. The file declares Navigation level 3. A two-node file with Navigation level 3 (profile Full or Immersive) gives 1 error with the OrthoViewpoint first and 0 with it second. Candidate upstream report, held until he says send.",
    "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
   },
   {

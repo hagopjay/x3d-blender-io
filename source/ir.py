@@ -204,6 +204,8 @@ class IRViewpoint:
     # not Blender's default 0.1 to 1000: a planet-scale view clips everything without them.
     near_distance: float | None = None
     far_distance: float | None = None
+    # (minX, minY, maxX, maxY) when the camera is orthographic: written as an X3D OrthoViewpoint with this fieldOfView
+    ortho_extents: tuple[float, float, float, float] | None = None
 
 
 @dataclass

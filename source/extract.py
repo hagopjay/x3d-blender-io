@@ -1194,13 +1194,26 @@ def imported_spot_cone(data):
     return cut_off * (1.0 - float(data.spot_blend)), cut_off
 
 
+def light_rgb(data):
+    """A light's Blender colour with its colour temperature applied: Blender multiplies the colour by the blackbody
+    colour of ``temperature`` (``temperature_color``, read-only RNA, Blender 4.5+) when ``use_temperature`` is on, the
+    same product Blender's own glTF exporter writes (io_scene_gltf2 blender/exp/lights.py). X3D has no temperature
+    field, so the product is the X3D color; a re-import gets the tinted colour back with the temperature off."""
+    colour = [float(channel) for channel in data.color[:3]]
+    if getattr(data, "use_temperature", False):
+        tint = getattr(data, "temperature_color", None)
+        if tint is not None:
+            colour = [c * float(t) for c, t in zip(colour, tint[:3])]
+    return colour
+
+
 def light_colour(data, colour_space):
     """A light's X3D color next to classic Materials (the X3D 3.3 writer), written like their colours
     (display_colour): under 'SRGB' the file's value (LIGHT_COLOR_PROPERTY) while the Blender colour is still what the
     import made of it, else the Blender colour sRGB-encoded, the way X_ITE 16.7.1 lights a classic Material (its
     X3DMaterialNode picks X3D_COLORSPACE_SRGB when isPhysical () is false, dist/x_ite.js line 71561, and the colour
     maths runs on the color field as given); under 'AS_IS' the Blender colour unchanged. Clamped to [0, 1]."""
-    colour = tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3])
+    colour = tuple(max(0.0, min(1.0, channel)) for channel in light_rgb(data))
     if colour_space != 'SRGB':
         return colour
     stored = data.get(LIGHT_COLOR_PROPERTY)
@@ -1219,7 +1232,7 @@ def physical_light_colour(data):
     and ToneMapping2.glsl encodes the sum to sRGB at the end under X3D_COLORSPACE_LINEAR (line 67952), the colour space
     X3DMaterialNode picks for a PhysicalMaterial (line 71561, isPhysical () line 87646). The importer keeps a physical
     scene's light colours as given, so the colour comes back unchanged."""
-    return tuple(max(0.0, min(1.0, float(channel))) for channel in data.color[:3])
+    return tuple(max(0.0, min(1.0, channel)) for channel in light_rgb(data))
 
 
 def srgb_to_linear(value):
@@ -1317,9 +1330,29 @@ def _clip_distances(data, distance_scale=1.0):
     return near, far
 
 
+def ortho_extents(data, scene=None, distance_scale=1.0):
+    """X3D OrthoViewpoint fieldOfView (minX, minY, maxX, maxY) of an orthographic Blender camera.
+
+    ``ortho_scale`` spans the sensor-fit side of the render: the wider side under AUTO, the width under HORIZONTAL,
+    the height under VERTICAL. The extents are centred: lens shift is not written (camera:shift_x/shift_y stay
+    'dropped' in the mapping table and the loss receipt names them)."""
+    scale = float(data.ortho_scale) * distance_scale
+    width, height = render_size(scene) if scene is not None else (1.0, 1.0)
+    width, height = float(width) or 1.0, float(height) or 1.0
+    fit = getattr(data, "sensor_fit", "AUTO")
+    horizontal = fit == "HORIZONTAL" or (fit == "AUTO" and width >= height)
+    half_x, half_y = (scale / 2.0, scale / 2.0 * height / width) if horizontal else (scale / 2.0 * width / height,
+                                                                                    scale / 2.0)
+    return (-half_x, -half_y, half_x, half_y)
+
+
 def _extract_viewpoint(obj, local_matrix, scene=None, distance_scale=1.0) -> IRViewpoint:
-    """The description is the one the importer kept, or the camera's name when there is none."""
+    """The description is the one the importer kept, or the camera's name when there is none. An orthographic camera
+    becomes an X3D OrthoViewpoint (``ortho_extents``); a panoramic one is written as a perspective Viewpoint."""
     field_of_view = None
+    ortho = None
+    if obj.data.type == "ORTHO":
+        ortho = ortho_extents(obj.data, scene, distance_scale)
     if obj.data.type == "PERSP":
         field_of_view = float(obj.data.angle)
         if scene is not None:
@@ -1334,7 +1367,26 @@ def _extract_viewpoint(obj, local_matrix, scene=None, distance_scale=1.0) -> IRV
         field_of_view=field_of_view,
         near_distance=near,
         far_distance=far,
+        ortho_extents=ortho,
     )
+
+
+def bind_first(instances, camera_name) -> bool:
+    """Move the instance whose subtree holds camera ``camera_name``'s Viewpoint to the front of its siblings, at every
+    level, so that it is the first Viewpoint in the file: X3D binds the first Viewpoint it meets, and Blender's active
+    camera (scene.camera) is the one a render or the viewport's camera view uses. Other siblings keep their order.
+    Returns True when the camera is in ``instances`` (in place; nothing moves when it is absent or already first).
+
+    Before (main 50a49d5) Viewpoints followed the outliner, so reordering it changed the camera a browser opened on
+    (tests/test_metamorphic_bpy.py R3: 1 of 12 frozen scenes). The importer binds the first Viewpoint, so the active
+    camera now survives a round trip."""
+    for index, instance in enumerate(instances):
+        if (instance.object_name == camera_name and instance.viewpoint is not None) or \
+                bind_first(instance.children, camera_name):
+            if index:
+                instances.insert(0, instances.pop(index))
+            return True
+    return False
 
 
 def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, frame_step=1, armatures=()):
@@ -1855,6 +1907,10 @@ def extract_scene(
             instance = build_instance(obj, None)
             if instance is not None:
                 ir_scene.instances.append(instance)
+
+    active = getattr(scene, "camera", None)
+    if active is not None:
+        bind_first(ir_scene.instances, active.name)
 
     if use_animation and (objects_by_name or armatures):
         ir_scene.animations, ir_scene.cycle_interval = _sample_animation(
