@@ -12,8 +12,9 @@ Six relations x twelve scenes (tests/frozen_scenes.py), compared in canonical fo
   R1 move an object by v          exactly one Transform's translation changes, by v after the axis conversion
   R2 rename an object             nothing changes once DEF names are canonical (D1, D2, ...)
   R3 reorder the outliner         the same top-level subtrees (sibling order may move); the first Viewpoint, which X3D
-                                  binds, should not move: it does today in 1 of 12 (budget, see the test)
-  R4 export at global scale 2     only top-level Transforms change: translation and scale x2, rotation unchanged
+                                  binds, must not move (the active camera's Viewpoint is written first)
+  R4 export at global scale 2     only top-level Transforms change (translation and scale x2, rotation unchanged),
+                                  and a view's own lengths (OrthoViewpoint extents, near/far), which ignore Transform scale
   R5 export, import, export with a non-default axis and back
                                   the same file as the default-axis round trip
   R6 add an unused material       nothing changes
@@ -165,12 +166,10 @@ class MetamorphicRelations(unittest.TestCase):
                     first_moved.append(scene)
         print(f"[metamorphic] R3 strict order kept in {strict} of {len(self.scenes.SCENES)} scenes; first Viewpoint "
               f"moved in {first_moved}")
-        # KNOWN LOSS (Confirmed, bpy 5.3.0, main 47ed742): the export writes Viewpoints in outliner order and ignores
-        # scene.camera, and X3D binds the first Viewpoint it meets, so reordering the outliner changes which camera a
-        # browser opens on while Blender's active camera stays the same. The importer binds the first Viewpoint
-        # (populate.py), so the active camera survives a round trip only when it happens to come first. This budget
-        # may only shrink: writing scene.camera's Viewpoint first takes 'cameras' off it.
-        self.assertLessEqual(set(first_moved), {"cameras"})
+        # X3D binds the first Viewpoint it meets. Until 2.7.1 the export wrote Viewpoints in outliner order and ignored
+        # scene.camera, so reordering the outliner moved the binding in 1 of 12 scenes ('cameras'); extract.bind_first
+        # now writes the active camera's Viewpoint first. Budget: none.
+        self.assertEqual(first_moved, [])
     def test_r4_global_scale_doubles_lengths_and_nothing_else(self):
         for scene in self.scenes.SCENES:
             with self.subTest(scene=scene):
@@ -181,8 +180,17 @@ class MetamorphicRelations(unittest.TestCase):
                 self.assertEqual(len(removed), len(added))
                 self.assertGreater(len(removed), 0)
                 for old_line, new_line in zip(removed, added):
-                    self.assertEqual(len(old_line) - len(old_line.lstrip()), 2, f"{scene}: not top level: {old_line}")
                     old, new = _attrs(old_line), _attrs(new_line)
+                    if old_line.lstrip().startswith(("<OrthoViewpoint", "<Viewpoint")):
+                        # a view ignores its Transform's scale (X_ITE draws a Viewpoint under a scaled Transform the
+                        # same way), so the export scales a view's own lengths: ortho extents, near and far distance
+                        changed = {k for k in old if old[k] != new.get(k)}
+                        self.assertLessEqual(changed, {"fieldOfView", "nearDistance", "farDistance"}, scene)
+                        for key in changed:
+                            for a, b in zip(_floats(old[key]), _floats(new[key])):
+                                self.assertAlmostEqual(2.0 * a, b, places=4, msg=f"{scene} {key}")
+                        continue
+                    self.assertEqual(len(old_line) - len(old_line.lstrip()), 2, f"{scene}: not top level: {old_line}")
                     self.assertEqual(old.get("rotation"), new.get("rotation"))
                     for key in ("translation", "scale"):
                         for a, b in zip(_floats(old[key]), _floats(new[key])):

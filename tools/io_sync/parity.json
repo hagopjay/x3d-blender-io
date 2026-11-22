@@ -152,6 +152,11 @@
       "import": "yes",
       "round_trip": "exact"
     },
+    "OrthoViewpoint": {
+      "import": "yes",
+      "round_trip": "exact",
+      "note": "an orthographic camera since 2.7.1; extents follow the render aspect, an off-centre box comes back centred"
+    },
     "NavigationInfo": {
       "import": "yes",
       "round_trip": "exact"
