@@ -34,12 +34,15 @@ SCALE_TO_CHILDREN_PROPERTY = "x3d_scale_to_children"
 def inverted64(matrix, what="matrix"):
     """The inverse of a 4x4 transform, computed in float64 (see import_x3d._inverted, which this mirrors).
 
-    A singular matrix gives its pseudo-inverse and a warning; an inverse beyond float32 range gives the identity
-    and a warning."""
+    A singular matrix gives its pseudo-inverse and a warning; a non-finite matrix, or an inverse beyond float32 range,
+    gives the identity and a warning."""
     import numpy as np
     from mathutils import Matrix
 
     values = np.array(matrix, dtype=np.float64)
+    if not np.isfinite(values).all():  # a NaN or INF scale: pinv's SVD does not converge and the export aborted
+        logger.warning("%s holds a non-finite value (NaN or INF); using the identity as its inverse", what)
+        return Matrix()
     try:
         inverse = np.linalg.inv(values)
     except np.linalg.LinAlgError:

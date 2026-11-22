@@ -24,6 +24,7 @@ Measured 22 Nov 2026 from main 47ed742 plus this change, with bpy 5.3.0 and the 
 | Round-trip invariants | `tools/io_sync/invariants.py --budget` | after import and re-export: same faces, world bbox, materials, lights, viewpoints, instancing, ROUTEs, textures? | 8 edits in `tests/test_invariants.py` |
 | Same renderer, two exporters | `tools/fidelity_rig/same_renderer.py` | X_ITE on this add-on's X3D vs X_ITE on Blender's own glb: within the calibrated tolerance? | `basecolour-channels-swapped` |
 | Structure | `tools/schematron/schematron.py --plants` | does the Schematron flag a ROUTE to nowhere, a USE before DEF, a wrong component level, a missing component? | `tests/plants/schematron-*.x3d` |
+| Differential chaos | `tools/chaos/differential.py --fail-on-crash` | does any one-edit mutant of the frozen scenes crash the import, the re-export or a validator? (docs/CHAOS.md) | `import-bool-crash` |
 
 `python tools/oracles/plant.py list` prints every plant; `make NAME DIR` writes a copy of `source/` with the one edit,
 and `expect-fail NAME -- CMD` passes only when CMD fails and names the fault.

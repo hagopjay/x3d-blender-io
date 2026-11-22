@@ -4,7 +4,8 @@ name: Nightly robustness sweep
 # add-on supports, so a Blender point release or a judge's upstream drift shows up within a day, not at the next PR:
 #   - the perturbation sweep (silent-loss oracle) against the mapping table, all three starting states;
 #   - the golden files and the six metamorphic relations on the 12 frozen scenes;
-#   - the 195-case suite, its import/export fixed point, the round-trip invariants and the Web3D Schematron.
+#   - the 195-case suite, its import/export fixed point, the round-trip invariants and the Web3D Schematron;
+#   - differential chaos: one-edit mutants of the frozen scenes through the validators, the import and the re-export.
 # The same steps run on pull requests (ci.yml); this workflow adds the schedule and the full set of Blender versions in
 # one place. Runs on schedule and by hand (Actions tab, "Run workflow").
 
@@ -82,6 +83,16 @@ jobs:
       - name: Web3D Schematron
         if: always()
         run: python tools/schematron/schematron.py --gate suite-out --out nightly/schematron.json
+      - name: Differential chaos (960 one-edit mutants; tools/chaos/differential.py)
+        if: always()
+        # a fixed rng keeps last night's cases; the run number adds new ones every night. Fails when a mutant crashes
+        # the import, the re-export or a validator; judge disagreements are written to the artifact, not gated
+        run: |
+          for rng in 7 ${{ github.run_number }}; do
+            "$BLENDER_DIR/blender" -b --factory-startup -noaudio --python-exit-code 1 \
+              --python tools/chaos/differential.py -- --seeds tests/golden --per-seed 80 --rng "$rng" \
+              --out "nightly/chaos-$rng" --no-schematron --fail-on-crash
+          done
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -91,4 +102,5 @@ jobs:
             nightly/invariants.json
             nightly/schematron.json
             nightly/io-sync/summary.txt
+            nightly/chaos-*/summary.json
           if-no-files-found: warn

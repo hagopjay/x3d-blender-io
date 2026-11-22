@@ -269,6 +269,8 @@ jobs:
         run: python tools/io_sync/perturb.py --out sweep-5.3.0.json --check
       - name: Golden files
         run: python tools/io_sync/golden.py
+      - name: Differential chaos, quick (240 one-edit mutants; the nightly runs 960 on every Blender line)
+        run: python tools/chaos/differential.py --seeds tests/golden --per-seed 20 --rng 7 --out chaos --no-schematron --fail-on-crash
       - name: Every judge fails its planted fault (tools/oracles/plants.json; Loom laws 19 and 44)
         # a judge is trusted only once it has failed a wrong implementation of the kind it claims to catch
         run: |
@@ -284,6 +286,10 @@ jobs:
           python tools/oracles/plant.py make translation-axes-swapped plants/metamorphic
           X3D_ADDON_SOURCE=plants/metamorphic/source python tools/oracles/plant.py expect-fail translation-axes-swapped -- \
             python .github/scripts/run_tests_in_blender.py -- test_metamorphic_bpy
+          python tools/oracles/plant.py make import-bool-crash plants/chaos
+          X3D_ADDON_SOURCE=plants/chaos/source python tools/oracles/plant.py expect-fail import-bool-crash -- \
+            python tools/chaos/differential.py --seeds tests/golden --per-seed 20 --rng 7 --out plants/chaos-out \
+            --no-schematron --fail-on-crash
       - uses: actions/upload-artifact@v7
         if: always()
         with:
