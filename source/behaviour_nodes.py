@@ -243,6 +243,7 @@ def transform_of(graph, obj, name=None):
 
 def apply(graph, scene, name="X3D Behaviour"):
     """Show ``graph`` as the scene's behaviour node tree (replacing the nodes of the tree the scene already has)."""
+    _ensure_scene_property()
     tree = scene.x3d_behaviour_tree or bpy.data.node_groups.new(name, TREE_IDNAME)
     tree.nodes.clear()
     positions = bg.layout(graph)
@@ -401,18 +402,34 @@ classes = (X3DFieldValue, *SOCKET_CLASSES, X3DBehaviourTree, *BEHAVIOUR_CLASSES.
            X3DBehaviourCarried, X3D_MT_behaviour_add)
 
 
-def register():
+def _ensure_scene_property():
+    """Define ``Scene.x3d_behaviour_tree`` when it is missing. Another copy of the add-on being disabled (a factory
+    reset with the extension installed, while a development copy is also loaded) deletes the property; the node classes
+    stay, so ``apply`` and ``import_graph`` put it back."""
+    if not hasattr(bpy.types.Scene, "x3d_behaviour_tree"):
+        bpy.types.Scene.x3d_behaviour_tree = PointerProperty(
+            type=bpy.types.NodeTree, name="X3D Behaviour",
+            description="The node tree whose sensors, timers, interpolators and ROUTEs are exported with this scene",
+            poll=lambda self, tree: tree.bl_idname == TREE_IDNAME)
+
+
+def ensure_registered():
+    """Register whatever of this module is not registered now (classes and the scene property); safe to call again."""
     for cls in classes:
-        bpy.utils.register_class(cls)
-    bpy.types.Scene.x3d_behaviour_tree = PointerProperty(
-        type=bpy.types.NodeTree, name="X3D Behaviour",
-        description="The node tree whose sensors, timers, interpolators and ROUTEs are exported with this scene",
-        poll=lambda self, tree: tree.bl_idname == TREE_IDNAME)
+        if not getattr(cls, "is_registered", False):
+            bpy.utils.register_class(cls)
+    _ensure_scene_property()
+
+
+def register():
+    ensure_registered()
     bpy.types.NODE_MT_add.append(_add_menu)
 
 
 def unregister():
     bpy.types.NODE_MT_add.remove(_add_menu)
-    del bpy.types.Scene.x3d_behaviour_tree
+    if hasattr(bpy.types.Scene, "x3d_behaviour_tree"):
+        del bpy.types.Scene.x3d_behaviour_tree
     for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+        if getattr(cls, "is_registered", False):
+            bpy.utils.unregister_class(cls)

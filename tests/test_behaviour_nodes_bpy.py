@@ -44,9 +44,11 @@ class BehaviourNodeTests(unittest.TestCase):
         bpy.ops.wm.read_factory_settings(use_empty=True)
         self.scene = bpy.context.scene
         import importlib
-        package = next(name for name in sys.modules if name.endswith("behaviour_nodes") and "." in name).rsplit(".", 1)[0]
-        self.bn = importlib.import_module(package + ".behaviour_nodes")
-        self.bg = importlib.import_module(package + ".behaviour_graph")
+        self.bn = importlib.import_module("io_scene_x3d.behaviour_nodes")
+        self.bg = importlib.import_module("io_scene_x3d.behaviour_graph")
+        # With the extension also installed (CI), a factory reset disables that copy, which takes the scene property
+        # and possibly the node classes with it; put back whatever is missing.
+        self.bn.ensure_registered()
 
     def _cube(self, name, x=0.0):
         bpy.ops.mesh.primitive_cube_add(location=(x, 0, 0))
@@ -209,7 +211,7 @@ class BehaviourNodeTests(unittest.TestCase):
 
     def test_import_is_off_by_default(self):
         bpy.ops.import_scene.x3d(filepath=str(ROUTE_DEMO))
-        self.assertIsNone(self.scene.x3d_behaviour_tree)
+        self.assertIsNone(getattr(self.scene, "x3d_behaviour_tree", None))
         self.assertEqual(bpy.data.objects["DoorButton"].get("x3d_trigger"), "click")
 
     def test_import_builds_the_graph_of_a_real_file(self):
