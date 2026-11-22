@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Planted fault for the structure judge: a USE that comes before its DEF. EXPECT: USE -->
+<X3D profile="Immersive" version="4.0">
+  <head><meta name="title" content="schematron-use-before-def.x3d"/></head>
+  <Scene>
+    <Shape><Appearance USE="Look"/><Box/></Shape>
+    <Shape><Appearance DEF="Look"><Material/></Appearance><Sphere/></Shape>
+  </Scene>
+</X3D>

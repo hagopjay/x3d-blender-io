@@ -1,0 +1,23 @@
+<X3D profile='Immersive' version='4.0'>
+ <head>
+  <component level='2' name='Shape'/>
+  <meta content='sha256=4f53cda18c2baa0c0354bb5f9a3ecbe5 dropped=0 approximated=0 clamped=0 schema=x3d-blender-io.loss-receipt/1' name='x3d-blender-io.receipt'/>
+ </head>
+ <Scene>
+  <NavigationInfo headlight='false' type='"EXAMINE" "ANY"'/>
+  <Transform DEF='OB_Grid' rotation='-1 0 0 1.5708' scale='1 1 1' translation='0 0 0'>
+   <Shape>
+    <Appearance DEF='APP_Grid'>
+     <PhysicalMaterial DEF='MA_Grid' baseColor='0.5 0.5 0.5' metallic='0' roughness='0.5'/>
+    </Appearance>
+    <IndexedFaceSet DEF='ME_GridMesh' coordIndex='0 1 2 3 -1 1 4 5 2 -1 4 6 7 5 -1 6 8 9 7 -1 3 2 10 11 -1 2 5 12 10 -1 5 7 13 12 -1 7 9 14 13 -1 11 10 15 16 -1 10 12 17 15 -1 12 13 18 17 -1 13 14 19 18 -1 16 15 20 21 -1 15 17 22 20 -1 17 18 23 22 -1 18 19 24 23 -1' solid='false'>
+     <Coordinate point='-2 -2 0 -1 -2 0 -1 -1 0 -2 -1 0 0 -2 0 0 -1 0 1 -2 0 1 -1 0 2 -2 0 2 -1 0 -1 0 0 -2 0 0 0 0 0 1 0 0 2 0 0 -1 1 0 -2 1 0 0 1 0 1 1 0 2 1 0 -1 2 0 -2 2 0 0 2 0 1 2 0 2 2 0'/>
+     <TextureCoordinate point='0 0 0.25 0 0.25 0.25 0 0.25 0.5 0 0.5 0.25 0.75 0 0.75 0.25 1 0 1 0.25 0.25 0.5 0 0.5 0.5 0.5 0.75 0.5 1 0.5 0.25 0.75 0 0.75 0.5 0.75 0.75 0.75 1 0.75 0.25 1 0 1 0.5 1 0.75 1 1 1'/>
+    </IndexedFaceSet>
+   </Shape>
+  </Transform>
+  <Transform DEF='OB_Key' rotation='-0.70625 0.64191 0.2986 1.16486' scale='1 1 1' translation='4 6 4'>
+   <DirectionalLight DEF='LA_Key' ambientIntensity='0' color='1 1 1' direction='0 0 -1' global='true' intensity='0.8' shadows='true'/>
+  </Transform>
+ </Scene>
+</X3D>

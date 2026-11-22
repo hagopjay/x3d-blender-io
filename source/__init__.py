@@ -6,7 +6,7 @@ bl_info = {
     "name": "X3D Blender I/O",
     "description": "Import-Export X3D, Import VRML2",
     "author": "HagopJay; upstream maintainer: Bujus_Krachus",
-    "version": (2, 6, 4),
+    "version": (2, 7, 0),
     "blender": (4, 2, 0),
     "location": "",
     "warning": "",
@@ -274,7 +274,7 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
              "Everything in 4.0 plus the draft GaussianSplats node for splat point clouds. "
              "No shipping browser renders the node yet"),
         ),
-        default='X3D33',
+        default='X3D40',   # robustness plan v3, decision 1: X3D 4.0 is the default from 2.7.0
     )
     color_space: EnumProperty(
         name=translate(lang, "export_color_space"),
@@ -547,6 +547,13 @@ class ExportX3D(bpy.types.Operator, ExportHelper):
                ),
     )
 
+    use_receipt: BoolProperty(
+        name="Loss receipt",
+        description="Also write <file>.receipt.json: every value this X3D 4.0 export dropped, approximated or clamped, "
+                    "with its mapping row (the head always carries the receipt's hash line)",
+        default=False,
+    )
+
     def _meta_license_custom_update(self, context):
         if self.file_unit != 'CUSTOM':
             return
@@ -698,6 +705,9 @@ def export_ui_meta_data(layout, operator):
         sub = body.row(align=True)
         sub.enabled = operator.meta_license == 'CUSTOM'
         sub.prop(operator, "meta_license_custom")
+        sub = body.row(align=True)
+        sub.enabled = operator.x3d_version in {'X3D40', 'X3D41'}
+        sub.prop(operator, "use_receipt")
 
 
 class IO_FH_X3D(bpy.types.FileHandler):

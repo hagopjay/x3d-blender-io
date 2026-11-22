@@ -134,9 +134,20 @@ jobs:
             --python .github/scripts/check_extension_enabled.py
 
       - name: Run the unit tests inside Blender's Python
+        # includes tests/test_metamorphic_bpy.py (6 relations x 12 frozen scenes) and the loss-receipt tests
         run: |
           "$BLENDER_DIR/blender" -b --python-exit-code 1 \
             --python .github/scripts/run_tests_in_blender.py
+
+      - name: Contract - perturbation sweep against the mapping table (silent-loss oracle)
+        # tools/io_sync/perturb.py: one property at a time, 3 starting states, judged against source/mapping/blender_rna.json
+        # (undeclared, silent_loss, stale_row, receipt_disagrees all fail). Rows with "before" overrides cover 4.x.
+        run: |
+          "$BLENDER_DIR/blender" -b --factory-startup -noaudio --python tools/io_sync/perturb.py -- \
+            --out "sweep-${{ matrix.blender }}.json" --check
+
+      - name: Oracles - golden files (12 frozen scenes in canonical form, tests/golden)
+        run: '"$BLENDER_DIR/blender" -b --factory-startup -noaudio --python tools/io_sync/golden.py'
 
       - uses: actions/upload-artifact@v7
         if: always()
@@ -146,13 +157,24 @@ jobs:
           if-no-files-found: ignore
 
   suite:
-    name: Export conformance suite (Blender 5.1.2)
+    name: Export conformance suite and round trip (Blender ${{ matrix.blender }})
     runs-on: ubuntu-latest
     needs: unit
+    strategy:
+      fail-fast: false
+      matrix:
+        # both LTS lines carry the round-trip gate (v3 plan Gate 2); 5.1.2 is the first Python 3.13 release
+        blender: ["4.5.14", "5.1.2", "5.2.2"]
     env:
-      BLENDER_DIR: ${{ github.workspace }}/.blender/5.1.2
+      BLENDER_DIR: ${{ github.workspace }}/.blender/${{ matrix.blender }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install the judges' Python packages
+        # x3d (x3d.py) for the X3D half of the mapping table; saxonche for the Web3D Schematron (tools/schematron)
+        run: python -m pip install --quiet x3d==4.0.65.8 saxonche==13.1.1
 
       - name: Runtime libraries for headless Blender
         run: |
@@ -161,16 +183,16 @@ jobs:
             libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 \
             libgl1 libegl1 libglx-mesa0 xz-utils
 
-      - name: Cache Blender 5.1.2
+      - name: Cache Blender ${{ matrix.blender }}
         id: cache-blender
         uses: actions/cache@v6
         with:
           path: ${{ env.BLENDER_DIR }}
-          key: blender-linux-x64-5.1.2
+          key: blender-linux-x64-${{ matrix.blender }}
 
-      - name: Download Blender 5.1.2
+      - name: Download Blender ${{ matrix.blender }}
         if: steps.cache-blender.outputs.cache-hit != 'true'
-        run: bash .github/scripts/install_blender.sh "5.1.2" "$BLENDER_DIR"
+        run: bash .github/scripts/install_blender.sh "${{ matrix.blender }}" "$BLENDER_DIR"
 
       - name: Build the 195-case scene and export it with this checkout
         # --repo registers <checkout>/source as the exporter, so the suite tests the code under review.
@@ -189,15 +211,84 @@ jobs:
         # --budget: the first trip (E0 -> E1) may not lose anything new either (tools/io_sync/first_trip_budget.json)
         run: python3 tools/io_sync/fixed_point.py suite-out io-sync-out --blender "$BLENDER_DIR/blender" --budget tools/io_sync/first_trip_budget.json
 
+      - name: Round-trip invariants (faces, world bbox, materials, lights, viewpoints, instancing, ROUTEs, textures)
+        # tools/io_sync/invariant_budget.json lists what one round trip breaks today; a new or different break fails
+        if: always()
+        run: python3 tools/io_sync/invariants.py --fixed-point io-sync-out --suite suite-out --budget tools/io_sync/invariant_budget.json --out io-sync-out/invariants.json
+
+      - name: Mapping table - every exported attribute has a row; the X3D half is current
+        if: always()
+        run: |
+          python3 tools/io_sync/check_parity.py --fields mapping/x3d_fields.json suite-out/x3d_suite_main.x3d suite-out/x3d_suite_crease.x3d suite-out/x3d_suite_x41.x3d
+          python3 tools/mapping/build_mapping.py suite-out --check
+
+      - name: Cache the compiled Web3D Schematron (keyed by the vendored files)
+        uses: actions/cache@v6
+        with:
+          path: .cache/schematron
+          key: schematron-${{ hashFiles('tools/schematron/vendor/*') }}-saxonche-13.1.1
+
+      - name: Structure - Web3D X3D Schematron (planted faults first, then the suite against disagreements.json)
+        if: always()
+        run: |
+          python3 tools/schematron/schematron.py --plants
+          python3 tools/schematron/schematron.py --gate suite-out --out io-sync-out/schematron.json
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: export-suite-report
+          name: export-suite-report-${{ matrix.blender }}
           path: |
             suite-out/report.html
             suite-out/x3d_suite_manifest.json
             io-sync-out/summary.txt
             io-sync-out/summary.json
+            io-sync-out/invariants.json
+            io-sync-out/schematron.json
+          if-no-files-found: ignore
+
+  contract:
+    name: Contract and oracles with their planted faults (bpy 5.3.0)
+    runs-on: ubuntu-latest
+    needs: unit
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Runtime libraries for bpy
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1 libglx-mesa0
+      - name: Install bpy and x3d
+        run: python -m pip install --quiet bpy==5.3.0 x3d==4.0.65.8
+      - name: Perturbation sweep against the mapping table
+        run: python tools/io_sync/perturb.py --out sweep-5.3.0.json --check
+      - name: Golden files
+        run: python tools/io_sync/golden.py
+      - name: Every judge fails its planted fault (tools/oracles/plants.json; Loom laws 19 and 44)
+        # a judge is trusted only once it has failed a wrong implementation of the kind it claims to catch
+        run: |
+          set -e
+          for plant in roughness-dropped spot-blend-carried receipt-forgets-clamp; do
+            python tools/oracles/plant.py make "$plant" "plants/$plant"
+            python tools/oracles/plant.py expect-fail "$plant" -- \
+              python tools/io_sync/perturb.py --source "plants/$plant/source" --out "plants/$plant.json" --check
+          done
+          python tools/oracles/plant.py make roughness-dropped-golden plants/golden
+          python tools/oracles/plant.py expect-fail roughness-dropped-golden -- \
+            python tools/io_sync/golden.py --source plants/golden/source
+          python tools/oracles/plant.py make translation-axes-swapped plants/metamorphic
+          X3D_ADDON_SOURCE=plants/metamorphic/source python tools/oracles/plant.py expect-fail translation-axes-swapped -- \
+            python .github/scripts/run_tests_in_blender.py -- test_metamorphic_bpy
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: contract-sweep
+          path: sweep-5.3.0.json
           if-no-files-found: ignore
 
   fidelity-gate:
@@ -249,6 +340,16 @@ jobs:
           else
             python gate.py --scenes scenes-gate-ci.json --label ci --jobs 2 --strict-fingerprint
           fi
+      - name: Same renderer, two exporters (X_ITE on the add-on's X3D vs X_ITE on Blender's own glb)
+        if: always()
+        working-directory: tools/fidelity_rig
+        # same-renderer-baseline.json holds per-scene tolerances written from a calibration run before this gate existed;
+        # the planted fault (red and blue of baseColor swapped) must push lit_cube over its tolerance
+        run: |
+          python same_renderer.py --out out/same
+          python ../oracles/plant.py make basecolour-channels-swapped out/plant-bc
+          python ../oracles/plant.py expect-fail basecolour-channels-swapped -- \
+            python same_renderer.py --source out/plant-bc/source --out out/same-plant
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -261,4 +362,7 @@ jobs:
             tools/fidelity_rig/out/ci/*/reexp/*.png
             tools/fidelity_rig/out/ci/*/reexp/roundtrip.x3d
             tools/fidelity_rig/out/ci/*/scene.glb.validation.json
+            tools/fidelity_rig/out/same/results.json
+            tools/fidelity_rig/out/same/*/*/xite.png
+            tools/fidelity_rig/out/same/*/diff_x4.png
           if-no-files-found: warn   # a job killed before gate.py wrote gate_results.json must not look like a clean upload

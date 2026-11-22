@@ -1,0 +1,92 @@
+{
+ "schema": "x3d-blender-io.schematron-disagreements/1",
+ "about": "Errors the Web3D X3D Schematron reports on the export suite's files where another judge disagrees. Each names the judge suspected of being wrong. A count may only shrink; a new error, or more of a listed one, fails the build (tools/schematron/schematron.py --gate).",
+ "measured_on": {
+  "rules_sha256": "9e728c7a640e0745fca009d8334ab2693e090e3fc8410390f23dfa722a812b29",
+  "saxon": "SaxonC-HE 13.1.1",
+  "corpus": "tests/suite/x3d_test_suite.py --export, x3d-blender-io main 47ed742 + this change, bpy 5.3.0"
+ },
+ "disagreements": [
+  {
+   "profile": "crease",
+   "template": "<HAnimJoint DEF=\u2026 name=\u2026 USE=\u2026/> with parent HAnimJoint needs containerField=\u2026",
+   "count": 6,
+   "suspect": "schematron",
+   "grade": "Likely",
+   "reason": "X3D 4.0 gives HAnimJoint the default containerField 'children' (x3d.py 4.0.65.8 declares it), so a nested joint without the attribute is legal; the rule (vendor .sch lines 3811, 4353, 4797) tests for the attribute itself. x3d.py strict validation passes the file and X_ITE 16.7.1 draws the rig (fidelity gate scene set).",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "crease",
+   "template": "<HAnimJoint USE=\u2026/> was not defined within a local <HAnimHumanoid DEF=\u2026 name=\u2026/> and instead is illegally referring to another HAnimHumanoid node",
+   "count": 8,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "The rule (vendor .sch line 3674) filters HAnimHumanoid[//*[@DEF=$USE][1]]: '//' inside the predicate is absolute, so it selects every humanoid of the scene and '!=' then fires whenever a scene holds two humanoids (the suite has Z14_rig and Z14_rig2). Each USE names a DEF inside its own humanoid's skeleton. Candidate upstream report, held until he says send.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "main",
+   "template": "<HAnimJoint DEF=\u2026 name=\u2026 USE=\u2026/> with parent HAnimJoint needs containerField=\u2026",
+   "count": 6,
+   "suspect": "schematron",
+   "grade": "Likely",
+   "reason": "X3D 4.0 gives HAnimJoint the default containerField 'children' (x3d.py 4.0.65.8 declares it), so a nested joint without the attribute is legal; the rule (vendor .sch lines 3811, 4353, 4797) tests for the attribute itself. x3d.py strict validation passes the file and X_ITE 16.7.1 draws the rig (fidelity gate scene set).",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "main",
+   "template": "<HAnimJoint USE=\u2026/> was not defined within a local <HAnimHumanoid DEF=\u2026 name=\u2026/> and instead is illegally referring to another HAnimHumanoid node",
+   "count": 8,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "The rule (vendor .sch line 3674) filters HAnimHumanoid[//*[@DEF=$USE][1]]: '//' inside the predicate is absolute, so it selects every humanoid of the scene and '!=' then fires whenever a scene holds two humanoids (the suite has Z14_rig and Z14_rig2). Each USE names a DEF inside its own humanoid's skeleton. Candidate upstream report, held until he says send.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "x41",
+   "template": "<GaussianSplats DEF=\u2026/> not handled correctly by X3D schematron rule, or else node name has unrecognized spelling that fails X3D DTD/Schema validation...",
+   "count": 1,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "GaussianSplats is an X3D 4.1 draft node the 21 Oct 2025 rules do not know; the 4.1 profile writes it on purpose.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "x41",
+   "template": "<HAnimJoint DEF=\u2026 name=\u2026 USE=\u2026/> with parent HAnimJoint needs containerField=\u2026",
+   "count": 6,
+   "suspect": "schematron",
+   "grade": "Likely",
+   "reason": "X3D 4.0 gives HAnimJoint the default containerField 'children' (x3d.py 4.0.65.8 declares it), so a nested joint without the attribute is legal; the rule (vendor .sch lines 3811, 4353, 4797) tests for the attribute itself. x3d.py strict validation passes the file and X_ITE 16.7.1 draws the rig (fidelity gate scene set).",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "x41",
+   "template": "<HAnimJoint USE=\u2026/> was not defined within a local <HAnimHumanoid DEF=\u2026 name=\u2026/> and instead is illegally referring to another HAnimHumanoid node",
+   "count": 8,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "The rule (vendor .sch line 3674) filters HAnimHumanoid[//*[@DEF=$USE][1]]: '//' inside the predicate is absolute, so it selects every humanoid of the scene and '!=' then fires whenever a scene holds two humanoids (the suite has Z14_rig and Z14_rig2). Each USE names a DEF inside its own humanoid's skeleton. Candidate upstream report, held until he says send.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "x41",
+   "template": "<component> name=\u2026 has invalid value for level=\u2026 (too high or undefined)",
+   "count": 1,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "component GaussianSplats level 1 is defined by the X3D 4.1 draft only.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  },
+  {
+   "profile": "x41",
+   "template": "Approved X3D versions are 3.0, 3.1, 3.2, 3.3, or 4.0",
+   "count": 1,
+   "suspect": "schematron",
+   "grade": "Confirmed",
+   "reason": "by design: the x41 profile writes the X3D 4.1 draft, which Web3D has not approved yet.",
+   "other_judges": "x3d.py 4.0.65.8 strict: 0 errors (the export validates every file before it is published)"
+  }
+ ]
+}

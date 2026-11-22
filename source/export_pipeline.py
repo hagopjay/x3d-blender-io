@@ -131,6 +131,8 @@ class ExportSettings:
     color_space: str = "AS_IS"
     # 'AUTO' (the scene's lighting model, else physical), 'CLASSIC' or 'PHYSICAL'; see extract.resolve_material_model
     material_model: str = "AUTO"
+    # Write the loss receipt's sidecar (<file>.receipt.json) beside an X3D 4.0/4.1 export (receipt.py)
+    use_receipt: bool = False
 
     @property
     def use_modern_path(self) -> bool:

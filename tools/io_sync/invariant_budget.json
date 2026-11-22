@@ -1,0 +1,68 @@
+{
+ "about": "Round-trip invariants (tools/io_sync/invariants.py) that break from E0 to E1 per suite profile, with their values. A listed invariant may stop breaking (remove it); a new one, or other values, fails CI.",
+ "profiles": {
+  "crease": {
+   "materials": {
+    "lost": {
+     "PhysicalMaterial(0.8, 0.8, 0.8, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0)": 2
+    },
+    "gained": {
+     "UnlitMaterial(0.0, 0.0, 0.0, 0.0)": 2,
+     "UnlitMaterial(1.0, 1.0, 1.0, 0.0)": 1
+    }
+   },
+   "instancing": {
+    "lost": {
+     "Group": 1
+    },
+    "gained": {
+     "Appearance": 5
+    }
+   }
+  },
+  "main": {
+   "materials": {
+    "lost": {
+     "PhysicalMaterial(0.8, 0.8, 0.8, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0)": 2
+    },
+    "gained": {
+     "UnlitMaterial(0.0, 0.0, 0.0, 0.0)": 2,
+     "UnlitMaterial(1.0, 1.0, 1.0, 0.0)": 1
+    }
+   },
+   "routes": {
+    "lost": {},
+    "gained": {
+     "PositionInterpolator.value_changed -> Transform.set_translation": 2,
+     "TimeSensor.fraction_changed -> PositionInterpolator.set_fraction": 2
+    }
+   },
+   "instancing": {
+    "lost": {
+     "Group": 1
+    },
+    "gained": {
+     "Appearance": 20
+    }
+   }
+  },
+  "x41": {
+   "materials": {
+    "lost": {
+     "PhysicalMaterial(0.8, 0.8, 0.8, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0)": 2
+    },
+    "gained": {
+     "UnlitMaterial(0.0, 0.0, 0.0, 0.0)": 2
+    }
+   },
+   "instancing": {
+    "lost": {
+     "Group": 1
+    },
+    "gained": {
+     "Appearance": 20
+    }
+   }
+  }
+ }
+}

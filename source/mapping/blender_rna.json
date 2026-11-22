@@ -1,0 +1,2467 @@
+{
+ "schema": "x3d-blender-io.mapping-blender/1",
+ "about": "The Blender half of the mapping table: every Blender property the perturbation sweep (tools/io_sync/perturb.py) changes, and what the X3D 4.0 export does with it. Classes: carried (written faithfully), approximated (written through a lossy conversion), clamped (written within a range, cut outside it), dropped (affects Blender's render or data, not written), editor_only (no effect on any render). A row with a receipt rule puts an entry in the loss receipt (source/receipt.py) whenever the rule fires for an exported datablock. Grades: Confirmed = the sweep observed the behaviour the class claims; Likely = observed inert, class by reading Blender's and X3D's documentation; Suspected = the probe cannot exercise it.",
+ "classes": {
+  "carried": "the export writes it, and a change changes the file",
+  "approximated": "the export writes it through a conversion that loses information",
+  "clamped": "the export writes it inside a range and cuts it outside",
+  "dropped": "it changes what Blender renders or stores, and the export does not write it",
+  "editor_only": "it changes no render: viewport, UI, selection, bookkeeping"
+ },
+ "versions": "a row's \"before\": {\"5.0\": {...}} replaces its fields on Blender versions before 5.0 (the sweep found world nodes switchable on 4.5 LTS and always on in 5.x)",
+ "receipt_rules": {
+  "neq": "an entry when the value differs from neutral (Blender's default)",
+  "gt": "an entry when the value is above value",
+  "always": "an entry for every exported datablock the row applies to",
+  "when": "the rule applies only when another property of the same datablock is in the list",
+  "unless_custom": "no entry when the datablock carries this custom property (the import kept the file's value)"
+ },
+ "probe": {
+  "instrument": "tools/io_sync/perturb.py",
+  "states": [
+   "factory",
+   "dim",
+   "pano"
+  ],
+  "measured_on": {
+   "blender": "5.3.0",
+   "python": "3.13.18",
+   "addon": "2.6.4",
+   "mapping": "nonexistent.json",
+   "mapping_sha256": null
+  },
+  "scope": "the probe's datablocks only (v3 plan stop rule): object, mesh, material and its Principled BSDF, camera, world and its Background, four light types"
+ },
+ "patterns": [
+  {
+   "match": [
+    "*:use_fake_user",
+    "*:use_extra_user",
+    "*:is_runtime_data",
+    "*:tag"
+   ],
+   "class": "editor_only",
+   "reason": "datablock bookkeeping",
+   "grade": "Confirmed"
+  },
+  {
+   "match": [
+    "*:show_*",
+    "*:display_*",
+    "*:hide_viewport",
+    "*:hide_select",
+    "*:hide_surface_pick",
+    "*:lock_*",
+    "object:empty_*",
+    "object:use_empty_image_alpha",
+    "object:active_*",
+    "object:use_shape_key_edit_mode",
+    "object:use_mesh_mirror_*",
+    "object:use_grease_pencil_lights",
+    "object:add_rest_position_attribute",
+    "object:use_simulation_cache"
+   ],
+   "class": "editor_only",
+   "reason": "viewport, selection, locking and editing aids",
+   "grade": "Confirmed"
+  },
+  {
+   "match": [
+    "mesh:remesh_*",
+    "mesh:use_remesh_*",
+    "mesh:use_mirror_*",
+    "mesh:radial_symmetry",
+    "mesh:use_paint_*",
+    "mesh:uv_layer_clone_index",
+    "mesh:uv_layer_stencil_index"
+   ],
+   "class": "editor_only",
+   "reason": "sculpt, remesh, symmetry and paint tool settings",
+   "grade": "Confirmed"
+  }
+ ],
+ "rows": [
+  {
+   "id": "camera:angle",
+   "class": "carried",
+   "x3d": "Viewpoint.fieldOfView",
+   "reason": "written as the Viewpoint's fieldOfView",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:angle_x",
+   "class": "carried",
+   "x3d": "Viewpoint.fieldOfView",
+   "reason": "written as the Viewpoint's fieldOfView",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:angle_y",
+   "class": "carried",
+   "x3d": "Viewpoint.fieldOfView",
+   "reason": "written as the Viewpoint's fieldOfView",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:central_cylindrical_radius",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:central_cylindrical_range_u_max",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:central_cylindrical_range_u_min",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:central_cylindrical_range_v_max",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:central_cylindrical_range_v_min",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:clip_end",
+   "class": "carried",
+   "x3d": "Viewpoint.farDistance",
+   "reason": "written as farDistance unless it is Blender's default",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:clip_start",
+   "class": "carried",
+   "x3d": "Viewpoint.nearDistance",
+   "reason": "written as nearDistance unless it is Blender's default",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:composition_guide_color",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport and UI display of the camera",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:custom_mode",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:fisheye_fov",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:fisheye_lens",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:fisheye_polynomial_k0",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:fisheye_polynomial_k1",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:fisheye_polynomial_k2",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:fisheye_polynomial_k3",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:fisheye_polynomial_k4",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:latitude_max",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:latitude_min",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:lens",
+   "class": "carried",
+   "x3d": "Viewpoint.fieldOfView",
+   "reason": "written as the Viewpoint's fieldOfView",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:lens_unit",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport and UI display of the camera",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:longitude_max",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:longitude_min",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:ortho_scale",
+   "class": "dropped",
+   "x3d": "OrthoViewpoint.fieldOfView",
+   "reason": "an orthographic camera is written as a perspective Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:panorama_type",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "panoramic and custom projections: X3D has no such Viewpoint",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through camera:type"
+  },
+  {
+   "id": "camera:passepartout_alpha",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport and UI display of the camera",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:sensor_fit",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "which sensor side the field of view spans: not read (the export uses the camera angle)",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": "AUTO"
+   }
+  },
+  {
+   "id": "camera:sensor_height",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "used only with sensor_fit VERTICAL",
+   "grade": "Likely",
+   "why_no_receipt": "reported through camera:sensor_fit"
+  },
+  {
+   "id": "camera:sensor_width",
+   "class": "carried",
+   "x3d": "Viewpoint.fieldOfView",
+   "reason": "written as the Viewpoint's fieldOfView",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "camera:shift_x",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "lens shift: an X3D Viewpoint has no off-axis projection",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "camera:shift_y",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "lens shift: an X3D Viewpoint has no off-axis projection",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "camera:type",
+   "class": "approximated",
+   "x3d": "Viewpoint",
+   "reason": "PERSP is a Viewpoint; ORTHO and PANO are also written as a perspective Viewpoint (X3D has OrthoViewpoint; not written)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": "PERSP"
+   }
+  },
+  {
+   "id": "light.area:color",
+   "class": "carried",
+   "x3d": "DirectionalLight.color",
+   "reason": "written as DirectionalLight.color (linear next to PhysicalMaterial)",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.area:cutoff_distance",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE clipping distance; a DirectionalLight has no radius",
+   "grade": "Likely",
+   "why_no_receipt": "renderer clipping setting"
+  },
+  {
+   "id": "light.area:diffuse_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.area:energy",
+   "class": "clamped",
+   "x3d": "DirectionalLight.intensity",
+   "reason": "intensity = energy / 1.75 W, capped at 1 for a light made in Blender (an imported light keeps its file intensity); above the cap brighter or dimmer writes the same file",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "gt",
+    "value": 1.75,
+    "unless_custom": "x3d_intensity"
+   }
+  },
+  {
+   "id": "light.area:exposure",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender scales the light by 2^exposure; not folded into intensity",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "light.area:normalize",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "power normalised by size; not read",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true
+   }
+  },
+  {
+   "id": "light.area:shadow_buffer_clip_start",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.area:shadow_filter_radius",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.area:shadow_jitter_overblur",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.area:shadow_maximum_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.area:shadow_soft_size",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.area:shape",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "area light geometry; X3D 4.0 has no area light",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.area:type"
+  },
+  {
+   "id": "light.area:size",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "area light geometry; X3D 4.0 has no area light",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.area:type"
+  },
+  {
+   "id": "light.area:size_y",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "area light geometry; X3D 4.0 has no area light",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.area:type"
+  },
+  {
+   "id": "light.area:specular_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.area:spread",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "area light geometry; X3D 4.0 has no area light",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.area:type"
+  },
+  {
+   "id": "light.area:temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "when": {
+     "prop": "use_temperature",
+     "in": [
+      true
+     ]
+    }
+   }
+  },
+  {
+   "id": "light.area:transmission_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.area:type",
+   "class": "approximated",
+   "x3d": "DirectionalLight",
+   "reason": "an area light is written as a DirectionalLight: X3D 4.0 has no area light; its shape, size and spread are lost",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "when": {
+     "prop": "type",
+     "in": [
+      "AREA"
+     ]
+    }
+   }
+  },
+  {
+   "id": "light.area:use_absolute_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.area:use_custom_distance",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE light clipping switch",
+   "grade": "Likely",
+   "why_no_receipt": "renderer clipping setting"
+  },
+  {
+   "id": "light.area:use_nodes",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a light node tree (emission shader, Cycles only) is not read; the toggle is deprecated in Blender 5.x and reads True on a new light",
+   "grade": "Likely",
+   "why_no_receipt": "deprecated toggle that does not stick when set"
+  },
+  {
+   "id": "light.area:use_shadow",
+   "class": "carried",
+   "x3d": "DirectionalLight.shadows",
+   "reason": "written as DirectionalLight.shadows",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.area:use_shadow_jitter",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.area:use_temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "colour temperature is not folded into the colour",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.area:temperature"
+  },
+  {
+   "id": "light.area:volume_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.point:color",
+   "class": "carried",
+   "x3d": "PointLight.color",
+   "reason": "written as PointLight.color (linear next to PhysicalMaterial)",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.point:cutoff_distance",
+   "class": "approximated",
+   "x3d": "PointLight.radius",
+   "reason": "written as radius even while use_custom_distance is off, when Blender does not clip the light",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "when": {
+     "prop": "use_custom_distance",
+     "in": [
+      false
+     ]
+    },
+    "unless_custom": "x3d_radius"
+   }
+  },
+  {
+   "id": "light.point:diffuse_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.point:energy",
+   "class": "clamped",
+   "x3d": "PointLight.intensity",
+   "reason": "intensity = energy / 1.75 W, capped at 1 for a light made in Blender (an imported light keeps its file intensity); above the cap brighter or dimmer writes the same file",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "gt",
+    "value": 1.75,
+    "unless_custom": "x3d_intensity"
+   }
+  },
+  {
+   "id": "light.point:exposure",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender scales the light by 2^exposure; not folded into intensity",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "light.point:normalize",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "power normalised by size; not read",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true
+   }
+  },
+  {
+   "id": "light.point:shadow_buffer_clip_start",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:shadow_filter_radius",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:shadow_jitter_overblur",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:shadow_maximum_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:shadow_soft_size",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:specular_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.point:temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "when": {
+     "prop": "use_temperature",
+     "in": [
+      true
+     ]
+    }
+   }
+  },
+  {
+   "id": "light.point:transmission_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.point:type",
+   "class": "carried",
+   "x3d": "PointLight",
+   "reason": "written as PointLight",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.point:use_absolute_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:use_custom_distance",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE light clipping switch; radius is written from cutoff_distance either way",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.point:cutoff_distance"
+  },
+  {
+   "id": "light.point:use_nodes",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a light node tree (emission shader, Cycles only) is not read; the toggle is deprecated in Blender 5.x and reads True on a new light",
+   "grade": "Likely",
+   "why_no_receipt": "deprecated toggle that does not stick when set"
+  },
+  {
+   "id": "light.point:use_shadow",
+   "class": "carried",
+   "x3d": "PointLight.shadows",
+   "reason": "written as PointLight.shadows",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.point:use_shadow_jitter",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:use_soft_falloff",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.point:use_temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "colour temperature is not folded into the colour",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.point:temperature"
+  },
+  {
+   "id": "light.point:volume_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.spot:color",
+   "class": "carried",
+   "x3d": "SpotLight.color",
+   "reason": "written as SpotLight.color (linear next to PhysicalMaterial)",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.spot:cutoff_distance",
+   "class": "approximated",
+   "x3d": "SpotLight.radius",
+   "reason": "written as radius even while use_custom_distance is off, when Blender does not clip the light",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "when": {
+     "prop": "use_custom_distance",
+     "in": [
+      false
+     ]
+    },
+    "unless_custom": "x3d_radius"
+   }
+  },
+  {
+   "id": "light.spot:diffuse_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.spot:energy",
+   "class": "clamped",
+   "x3d": "SpotLight.intensity",
+   "reason": "intensity = energy / 1.75 W, capped at 1 for a light made in Blender (an imported light keeps its file intensity); above the cap brighter or dimmer writes the same file",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "gt",
+    "value": 1.75,
+    "unless_custom": "x3d_intensity"
+   }
+  },
+  {
+   "id": "light.spot:exposure",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender scales the light by 2^exposure; not folded into intensity",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "light.spot:normalize",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "power normalised by size; not read",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true
+   }
+  },
+  {
+   "id": "light.spot:shadow_buffer_clip_start",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:shadow_filter_radius",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:shadow_jitter_overblur",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:shadow_maximum_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:shadow_soft_size",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:specular_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.spot:spot_blend",
+   "class": "dropped",
+   "x3d": "SpotLight.beamWidth",
+   "reason": "beamWidth ignores the blend for a spot made in Blender, so the cone's softness is lost",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "unless_custom": "x3d_intensity"
+   }
+  },
+  {
+   "id": "light.spot:spot_size",
+   "class": "approximated",
+   "x3d": "SpotLight.cutOffAngle/beamWidth",
+   "reason": "beamWidth = 0.37 x spot_size and cutOffAngle = min(1.3 x beamWidth, pi/2) for a spot made in Blender (an imported spot keeps its file cone)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "unless_custom": "x3d_intensity"
+   }
+  },
+  {
+   "id": "light.spot:temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "when": {
+     "prop": "use_temperature",
+     "in": [
+      true
+     ]
+    }
+   }
+  },
+  {
+   "id": "light.spot:transmission_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.spot:type",
+   "class": "carried",
+   "x3d": "SpotLight",
+   "reason": "written as SpotLight",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.spot:use_absolute_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:use_custom_distance",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE light clipping switch; radius is written from cutoff_distance either way",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.spot:cutoff_distance"
+  },
+  {
+   "id": "light.spot:use_nodes",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a light node tree (emission shader, Cycles only) is not read; the toggle is deprecated in Blender 5.x and reads True on a new light",
+   "grade": "Likely",
+   "why_no_receipt": "deprecated toggle that does not stick when set"
+  },
+  {
+   "id": "light.spot:use_shadow",
+   "class": "carried",
+   "x3d": "SpotLight.shadows",
+   "reason": "written as SpotLight.shadows",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.spot:use_shadow_jitter",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:use_soft_falloff",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.spot:use_square",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a square spot cone: X3D cones are round",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": false
+   }
+  },
+  {
+   "id": "light.spot:use_temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "colour temperature is not folded into the colour",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.spot:temperature"
+  },
+  {
+   "id": "light.spot:volume_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.sun:angle",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:color",
+   "class": "carried",
+   "x3d": "DirectionalLight.color",
+   "reason": "written as DirectionalLight.color (linear next to PhysicalMaterial)",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.sun:cutoff_distance",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE clipping distance; a DirectionalLight has no radius",
+   "grade": "Likely",
+   "why_no_receipt": "renderer clipping setting"
+  },
+  {
+   "id": "light.sun:diffuse_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.sun:energy",
+   "class": "clamped",
+   "x3d": "DirectionalLight.intensity",
+   "reason": "intensity = energy / 1 W, capped at 1 for a light made in Blender (an imported light keeps its file intensity); above the cap brighter or dimmer writes the same file",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "gt",
+    "value": 1.0,
+    "unless_custom": "x3d_intensity"
+   }
+  },
+  {
+   "id": "light.sun:exposure",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender scales the light by 2^exposure; not folded into intensity",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "light.sun:normalize",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "power normalised by size; not read",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true
+   }
+  },
+  {
+   "id": "light.sun:shadow_buffer_clip_start",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_cascade_count",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_cascade_exponent",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_cascade_fade",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_cascade_max_distance",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_filter_radius",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_jitter_overblur",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_maximum_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:shadow_soft_size",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:specular_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.sun:temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Blender tints the light by a blackbody colour; the export writes only the color",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always",
+    "when": {
+     "prop": "use_temperature",
+     "in": [
+      true
+     ]
+    }
+   }
+  },
+  {
+   "id": "light.sun:transmission_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "light.sun:type",
+   "class": "carried",
+   "x3d": "DirectionalLight",
+   "reason": "written as DirectionalLight",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.sun:use_custom_distance",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE light clipping switch",
+   "grade": "Likely",
+   "why_no_receipt": "renderer clipping setting"
+  },
+  {
+   "id": "light.sun:use_nodes",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a light node tree (emission shader, Cycles only) is not read; the toggle is deprecated in Blender 5.x and reads True on a new light",
+   "grade": "Likely",
+   "why_no_receipt": "deprecated toggle that does not stick when set"
+  },
+  {
+   "id": "light.sun:use_shadow",
+   "class": "carried",
+   "x3d": "DirectionalLight.shadows",
+   "reason": "written as DirectionalLight.shadows",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "light.sun:use_shadow_jitter",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "shadow softness and quality of Blender's renderers; X3D shadows is on or off",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "light.sun:use_temperature",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "colour temperature is not folded into the colour",
+   "grade": "Confirmed",
+   "why_no_receipt": "reported through light.sun:temperature"
+  },
+  {
+   "id": "light.sun:volume_factor",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-light contribution factors of Blender's renderers",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.0
+   }
+  },
+  {
+   "id": "material:alpha_threshold",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:blend_method",
+   "class": "carried",
+   "x3d": "Appearance.alphaMode",
+   "reason": "legacy blend mode; read with surface_render_method",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "material:diffuse_color",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:displacement_method",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "displacement is not written",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": "BUMP"
+   }
+  },
+  {
+   "id": "material:line_color",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Line Art (Grease Pencil) setting",
+   "grade": "Likely",
+   "why_no_receipt": "only used by a Line Art modifier"
+  },
+  {
+   "id": "material:line_priority",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Line Art (Grease Pencil) setting",
+   "grade": "Likely",
+   "why_no_receipt": "only used by a Line Art modifier"
+  },
+  {
+   "id": "material:max_vertex_displacement",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:metallic",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:paint_active_slot",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:paint_clone_slot",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:pass_index",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:preview_render_type",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:refraction_depth",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:roughness",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:show_transparent_back",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:specular_color",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:specular_intensity",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:surface_render_method",
+   "class": "carried",
+   "x3d": "Appearance.alphaMode",
+   "reason": "BLENDED becomes alpha blending on the Appearance",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "material:thickness_mode",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_backface_culling",
+   "class": "carried",
+   "x3d": "IndexedFaceSet.solid",
+   "reason": "written as the geometry's solid",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "material:use_backface_culling_lightprobe_volume",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_backface_culling_shadow",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_nodes",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:use_preview_world",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport display, preview or paint setting (materials render from their node tree in Blender 5.x)",
+   "grade": "Likely"
+  },
+  {
+   "id": "material:use_raytrace_refraction",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_screen_refraction",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_sss_translucency",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_thickness_from_shadow",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_transparency_overlap",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:use_transparent_shadow",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "material:volume_intersection_method",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE material render setting with no X3D counterpart",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality and sorting setting"
+  },
+  {
+   "id": "mesh.data:colour_attribute",
+   "class": "carried",
+   "x3d": "ColorRGBA.color",
+   "reason": "written as ColorRGBA",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "mesh.data:material_slot_2",
+   "class": "carried",
+   "x3d": "Shape",
+   "reason": "a second material splits the mesh into one Shape per material",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "mesh.data:shade_smooth",
+   "class": "carried",
+   "x3d": "IndexedFaceSet.creaseAngle/normal",
+   "reason": "smooth faces share normals; written as normals or creaseAngle",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "mesh.data:uv_layer",
+   "class": "carried",
+   "x3d": "TextureCoordinate.point",
+   "reason": "written as TextureCoordinate",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "mesh.data:vertex_position",
+   "class": "carried",
+   "x3d": "Coordinate.point",
+   "reason": "written as Coordinate",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "mesh:auto_texspace",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "generated texture space; only matters for Generated texture coordinates, which the export does not write",
+   "grade": "Likely",
+   "why_no_receipt": "no effect without a Generated-coordinate texture"
+  },
+  {
+   "id": "mesh:use_auto_texspace",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "generated texture space; only matters for Generated texture coordinates, which the export does not write",
+   "grade": "Likely",
+   "why_no_receipt": "no effect without a Generated-coordinate texture"
+  },
+  {
+   "id": "object:color",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport object colour (Workbench); renders ignore it",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:custom_property",
+   "class": "dropped",
+   "x3d": "MetadataString",
+   "reason": "a plain custom property on an object is not written; only Metadata the import recorded is carried (#70)",
+   "grade": "Confirmed",
+   "why_no_receipt": "v1 receipt rules read RNA values, not custom properties"
+  },
+  {
+   "id": "object:delta_location",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:delta_rotation_euler",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:delta_rotation_quaternion",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:delta_scale",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:dimensions",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:hide_probe_plane",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE light-probe capture",
+   "grade": "Confirmed",
+   "why_no_receipt": "EEVEE baking setting; no visible effect outside EEVEE"
+  },
+  {
+   "id": "object:hide_probe_sphere",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE light-probe capture",
+   "grade": "Confirmed",
+   "why_no_receipt": "EEVEE baking setting; no visible effect outside EEVEE"
+  },
+  {
+   "id": "object:hide_probe_volume",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE light-probe capture",
+   "grade": "Confirmed",
+   "why_no_receipt": "EEVEE baking setting; no visible effect outside EEVEE"
+  },
+  {
+   "id": "object:hide_render",
+   "class": "dropped",
+   "x3d": "Shape.visible",
+   "reason": "an object hidden in renders is still written, visible: only Switch children the import hid are written invisible (extract.py, by design)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": false
+   }
+  },
+  {
+   "id": "object:instance_faces_scale",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "vertex and face instancing: inert on the probe, which has no child objects to instance; not measured with children",
+   "grade": "Suspected",
+   "why_no_receipt": "not exercised by the probe"
+  },
+  {
+   "id": "object:instance_type",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "vertex and face instancing: inert on the probe, which has no child objects to instance; not measured with children",
+   "grade": "Suspected",
+   "why_no_receipt": "not exercised by the probe"
+  },
+  {
+   "id": "object:is_holdout",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": false,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "object:is_shadow_catcher",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": false,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "object:location",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:parent_bone_head_tail_factor",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "parenting and tracking options: their effect reaches the file through the evaluated matrix (the location and rotation rows); inert on the unparented probe",
+   "grade": "Likely"
+  },
+  {
+   "id": "object:parent_vertices",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "parenting and tracking options: their effect reaches the file through the evaluated matrix (the location and rotation rows); inert on the unparented probe",
+   "grade": "Likely"
+  },
+  {
+   "id": "object:pass_index",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "compositor object index; no effect on the rendered scene",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:rotation_axis_angle",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:rotation_euler",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:rotation_mode",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "the same orientation in another representation; the matrix is what is written",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:rotation_quaternion",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:scale",
+   "class": "carried",
+   "x3d": "Transform.translation/rotation/scale",
+   "reason": "baked into the Transform (translation, rotation, scale) from the evaluated matrix",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:shadow_terminator_geometry_offset",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Cycles shading offsets against low-poly shadow artefacts",
+   "grade": "Confirmed",
+   "why_no_receipt": "Cycles sampling setting"
+  },
+  {
+   "id": "object:shadow_terminator_normal_offset",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Cycles shading offsets against low-poly shadow artefacts",
+   "grade": "Confirmed",
+   "why_no_receipt": "Cycles sampling setting"
+  },
+  {
+   "id": "object:shadow_terminator_shading_offset",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "Cycles shading offsets against low-poly shadow artefacts",
+   "grade": "Confirmed",
+   "why_no_receipt": "Cycles sampling setting"
+  },
+  {
+   "id": "object:show_instancer_for_render",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "vertex and face instancing: inert on the probe, which has no child objects to instance; not measured with children",
+   "grade": "Suspected",
+   "why_no_receipt": "not exercised by the probe"
+  },
+  {
+   "id": "object:track_axis",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "parenting and tracking options: their effect reaches the file through the evaluated matrix (the location and rotation rows); inert on the unparented probe",
+   "grade": "Likely"
+  },
+  {
+   "id": "object:up_axis",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "parenting and tracking options: their effect reaches the file through the evaluated matrix (the location and rotation rows); inert on the unparented probe",
+   "grade": "Likely"
+  },
+  {
+   "id": "object:use_camera_lock_parent",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "parenting and tracking options: their effect reaches the file through the evaluated matrix (the location and rotation rows); inert on the unparented probe",
+   "grade": "Likely"
+  },
+  {
+   "id": "object:use_instance_faces_scale",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "vertex and face instancing: inert on the probe, which has no child objects to instance; not measured with children",
+   "grade": "Suspected",
+   "why_no_receipt": "not exercised by the probe"
+  },
+  {
+   "id": "object:use_instance_vertices_rotation",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "vertex and face instancing: inert on the probe, which has no child objects to instance; not measured with children",
+   "grade": "Suspected",
+   "why_no_receipt": "not exercised by the probe"
+  },
+  {
+   "id": "object:use_parent_final_indices",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "parenting and tracking options: their effect reaches the file through the evaluated matrix (the location and rotation rows); inert on the unparented probe",
+   "grade": "Likely"
+  },
+  {
+   "id": "object:visible_camera",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "object:visible_diffuse",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "object:visible_glossy",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "object:visible_raycast",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "object:visible_shadow",
+   "class": "carried",
+   "x3d": "Shape.castShadow",
+   "reason": "written as the Shape's castShadow",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "object:visible_transmission",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "object:visible_volume_scatter",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "per-object ray visibility of Blender's renderers; X3D has no per-ray visibility",
+   "grade": "Likely",
+   "receipt": {
+    "kind": "neq",
+    "neutral": true,
+    "when": {
+     "prop": "type",
+     "in": [
+      "MESH",
+      "CURVE",
+      "SURFACE",
+      "META",
+      "FONT",
+      "CURVES",
+      "POINTCLOUD",
+      "VOLUME"
+     ]
+    }
+   }
+  },
+  {
+   "id": "principled:Alpha",
+   "class": "carried",
+   "x3d": "PhysicalMaterial.transparency",
+   "reason": "written to PhysicalMaterial transparency",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "principled:Anisotropic",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Anisotropic Rotation",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Anisotropic is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Anisotropic"
+  },
+  {
+   "id": "principled:Base Color",
+   "class": "carried",
+   "x3d": "PhysicalMaterial.baseColor",
+   "reason": "written to PhysicalMaterial baseColor",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "principled:Coat IOR",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Coat Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Coat Weight"
+  },
+  {
+   "id": "principled:Coat Normal",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "an unlinked vector input has no effect; a linked normal map is read separately",
+   "grade": "Likely",
+   "why_no_receipt": "the unlinked value is unused by Blender too"
+  },
+  {
+   "id": "principled:Coat Roughness",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Coat Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Coat Weight"
+  },
+  {
+   "id": "principled:Coat Tint",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Coat Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Coat Weight"
+  },
+  {
+   "id": "principled:Coat Weight",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Diffuse Roughness",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Emission Color",
+   "class": "carried",
+   "x3d": "PhysicalMaterial.emissiveColor",
+   "reason": "written to PhysicalMaterial emissiveColor",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "principled:Emission Strength",
+   "class": "carried",
+   "x3d": "PhysicalMaterial.emissiveColor",
+   "reason": "written to PhysicalMaterial emissiveColor",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "principled:IOR",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 1.5
+   }
+  },
+  {
+   "id": "principled:Metallic",
+   "class": "carried",
+   "x3d": "PhysicalMaterial.metallic",
+   "reason": "written to PhysicalMaterial metallic",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "principled:Normal",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "an unlinked vector input has no effect; a linked normal map is read separately",
+   "grade": "Likely",
+   "why_no_receipt": "the unlinked value is unused by Blender too"
+  },
+  {
+   "id": "principled:Roughness",
+   "class": "carried",
+   "x3d": "PhysicalMaterial.roughness",
+   "reason": "written to PhysicalMaterial roughness",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "principled:Sheen Roughness",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Sheen Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Sheen Weight"
+  },
+  {
+   "id": "principled:Sheen Tint",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Sheen Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Sheen Weight"
+  },
+  {
+   "id": "principled:Sheen Weight",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Specular IOR Level",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.5
+   }
+  },
+  {
+   "id": "principled:Specular Tint",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "id": "principled:Subsurface Anisotropy",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Subsurface Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Subsurface Weight"
+  },
+  {
+   "id": "principled:Subsurface IOR",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Subsurface Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Subsurface Weight"
+  },
+  {
+   "id": "principled:Subsurface Radius",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Subsurface Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Subsurface Weight"
+  },
+  {
+   "id": "principled:Subsurface Scale",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Subsurface Weight is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Subsurface Weight"
+  },
+  {
+   "id": "principled:Subsurface Weight",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Tangent",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "an unlinked vector input has no effect; a linked normal map is read separately",
+   "grade": "Likely",
+   "why_no_receipt": "the unlinked value is unused by Blender too"
+  },
+  {
+   "id": "principled:Thin Film IOR",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Thin Film Thickness is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Thin Film Thickness"
+  },
+  {
+   "id": "principled:Thin Film Thickness",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Thin Wall",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": false
+   }
+  },
+  {
+   "id": "principled:Transmission Dispersion Abbe Number",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "only matters while Transmission Dispersion Scale is set, which has its own receipt entry",
+   "grade": "Likely",
+   "why_no_receipt": "reported through principled:Transmission Dispersion Scale"
+  },
+  {
+   "id": "principled:Transmission Dispersion Scale",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Transmission Weight",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": 0.0
+   }
+  },
+  {
+   "id": "principled:Weight",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "the node's mix weight socket, unused by a Principled BSDF wired to the output",
+   "grade": "Suspected"
+  },
+  {
+   "id": "world.background:Color",
+   "class": "carried",
+   "x3d": "Background.skyColor",
+   "reason": "Background skyColor = Color x Strength",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "world.background:Strength",
+   "class": "carried",
+   "x3d": "Background.skyColor",
+   "reason": "Background skyColor = Color x Strength",
+   "grade": "Confirmed"
+  },
+  {
+   "id": "world.background:Weight",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "mix weight socket of the Background node, unused when wired to the output",
+   "grade": "Suspected"
+  },
+  {
+   "id": "world:color",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "viewport world colour; read only when the world has no Background node",
+   "grade": "Likely",
+   "before": {
+    "5.0": {
+     "class": "carried",
+     "x3d": "Background.skyColor",
+     "grade": "Confirmed",
+     "reason": "Blender 4.x: with world nodes off the world colour is the background, written as skyColor"
+    }
+   }
+  },
+  {
+   "id": "world:probe_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:sun_angle",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:sun_shadow_filter_radius",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:sun_shadow_jitter_overblur",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:sun_shadow_maximum_resolution",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:sun_threshold",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:use_eevee_finite_volume",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:use_nodes",
+   "class": "editor_only",
+   "x3d": null,
+   "reason": "deprecated in Blender 5.x: worlds render from their node tree",
+   "grade": "Likely",
+   "before": {
+    "5.0": {
+     "class": "carried",
+     "x3d": "Background.skyColor",
+     "grade": "Confirmed",
+     "reason": "Blender 4.x: switches the background between the node tree and World.color"
+    }
+   }
+  },
+  {
+   "id": "world:use_sun_shadow",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "world:use_sun_shadow_jitter",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "EEVEE world lighting and shadow setting",
+   "grade": "Likely",
+   "why_no_receipt": "renderer quality setting"
+  }
+ ]
+}

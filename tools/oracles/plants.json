@@ -1,0 +1,71 @@
+{
+ "schema": "x3d-blender-io.plants/1",
+ "about": "Every judge ships with at least one wrong implementation or wrong file it must fail, in CI (v3 plan rule; Loom laws 19 and 44). Code plants copy source/ and make one edit; file plants are fixtures under tests/plants/.",
+ "plants": {
+  "roughness-dropped": {
+   "judge": "sweep",
+   "what": "the X3D 4.0 writer stops writing PhysicalMaterial roughness (a silent loss of a carried property)",
+   "file": "source/emit_x3d40.py",
+   "find": "            attrs.append(f'roughness=\"{_fmt(material.roughness)}\"')",
+   "replace": "            pass  # PLANTED FAULT roughness-dropped",
+   "must_say": [
+    "silent_loss",
+    "principled:Roughness"
+   ]
+  },
+  "spot-blend-carried": {
+   "judge": "sweep",
+   "what": "the writer starts deriving beamWidth from spot_blend while the table still says dropped (a stale row) and the receipt still names it",
+   "file": "source/extract.py",
+   "find": "            light.beam_width = float(data.spot_size) * 0.37",
+   "replace": "            light.beam_width = float(data.spot_size) * 0.37 * (1.0 - 0.5 * float(data.spot_blend))  # PLANTED",
+   "must_say": [
+    "stale_row",
+    "light.spot:spot_blend"
+   ]
+  },
+  "receipt-forgets-clamp": {
+   "judge": "receipt",
+   "what": "the receipt stops reporting clamped values (rules of kind gt never fire)",
+   "file": "source/receipt.py",
+   "find": "        return number is not None and number > float(rule[\"value\"]) + 1e-9",
+   "replace": "        return False  # PLANTED FAULT receipt-forgets-clamp",
+   "must_say": [
+    "receipt_disagrees",
+    "light.point:energy"
+   ]
+  },
+  "roughness-dropped-golden": {
+   "judge": "golden",
+   "what": "the same roughness-dropped edit, judged by the golden files instead of the sweep",
+   "file": "source/emit_x3d40.py",
+   "find": "            attrs.append(f'roughness=\"{_fmt(material.roughness)}\"')",
+   "replace": "            pass  # PLANTED FAULT roughness-dropped-golden",
+   "must_say": [
+    "DIFFERS",
+    "roughness"
+   ]
+  },
+  "translation-axes-swapped": {
+   "judge": "metamorphic",
+   "what": "the writer swaps a Transform's Y and Z translation (every scene still exports and validates)",
+   "file": "source/emit_x3d40.py",
+   "find": "    tx, ty, tz = instance.transform.translation",
+   "replace": "    tx, tz, ty = instance.transform.translation  # PLANTED FAULT translation-axes-swapped",
+   "must_say": [
+    "FAIL: test_r1_move"
+   ]
+  },
+  "basecolour-channels-swapped": {
+   "judge": "same-renderer",
+   "what": "the writer swaps red and blue of every PhysicalMaterial baseColor (valid X3D; only a picture shows it)",
+   "file": "source/emit_x3d40.py",
+   "find": "        attrs.append(f'baseColor=\"{_fmt3(_sfcolor(material.base_color))}\"')",
+   "replace": "        attrs.append(f'baseColor=\"{_fmt3(tuple(reversed(_sfcolor(material.base_color))))}\"')  # PLANTED FAULT",
+   "must_say": [
+    "OVER TOLERANCE",
+    "lit_cube"
+   ]
+  }
+ }
+}

@@ -138,7 +138,7 @@ class LineageOverBlenderScene(unittest.TestCase):
         bpy.context.scene["x3d_head_meta"] = [{"name": "x3dprov.step", "content": "7"}]
         path = Path(self.tmpdir) / "native.x3d"
         self.assertEqual(bpy.ops.export_scene.x3d(filepath=str(path), x3d_version="X3D40", use_selection=False), {"FINISHED"})
-        self.assertEqual([name for name, _ in _head(path)], ["generator", "filename"])
+        self.assertEqual([name for name, _ in _head(path)], ["generator", "filename", "x3d-blender-io.receipt"])
 
     def test_object_metadata_needs_no_import(self):
         import bpy

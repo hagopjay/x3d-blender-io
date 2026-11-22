@@ -34,6 +34,9 @@ except ImportError:  # pragma: no cover - standalone test fallback
     from splat_gltf import splat_glb_bytes
     from splat_io import sh0_to_rgb
 
+# The head meta name of the loss receipt's line (receipt.RECEIPT_META; tests/test_receipt.py checks they agree).
+RECEIPT_META = "x3d-blender-io.receipt"
+
 
 def _safe_name(name: str, fallback: str = "Node") -> str:
     clean = []
@@ -1139,8 +1142,8 @@ def head_meta(metadata: IRMetadata, generator: str, diagnostics=()) -> list[tupl
         pairs.append(("filename", metadata.filename))
     replaced = set()
     for name, content in imported:
-        if name == "filename" or by_this_exporter(name, content):
-            continue
+        if name in ("filename", RECEIPT_META) or by_this_exporter(name, content):
+            continue   # an imported receipt line describes the file it came from; this export writes its own
         if from_this_exporter and (name == "info" or (name == "license" and content == "NONE")):
             continue
         if name in _SINGLE_VALUED_META and name in dialog:
@@ -1248,7 +1251,7 @@ def with_display_colours(ir_scene: IRScene, colour_space: str) -> IRScene:
 
 
 def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d", version: str = "4.0",
-                    colour_space: str = "AS_IS") -> None:
+                    colour_space: str = "AS_IS", receipt_meta: str | None = None) -> None:
     """Write ``ir_scene`` as an X3D 4.0 (or 4.1 draft) XML document to ``file``.
 
     With ``version`` "4.1" Gaussian splats are written as the GaussianSplats
@@ -1288,6 +1291,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         write(f'    <component name="{name}" level="{level}" />\n')
     for name, content in head_meta(ir_scene.metadata, generator, diagnostics):
         write(_meta(name, content))
+    if receipt_meta:
+        write(_meta(RECEIPT_META, receipt_meta))   # the loss receipt's line (receipt.py): scene content only, stable
     write("  </head>\n")
     write("  <Scene>\n")
 

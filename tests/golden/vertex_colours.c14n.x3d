@@ -1,0 +1,23 @@
+<X3D profile='Immersive' version='4.0'>
+ <head>
+  <component level='2' name='Shape'/>
+  <meta content='sha256=4f53cda18c2baa0c0354bb5f9a3ecbe5 dropped=0 approximated=0 clamped=0 schema=x3d-blender-io.loss-receipt/1' name='x3d-blender-io.receipt'/>
+ </head>
+ <Scene>
+  <NavigationInfo headlight='false' type='"EXAMINE" "ANY"'/>
+  <Transform DEF='OB_Painted' rotation='-1 0 0 1.5708' scale='1 1 1' translation='0 0 0'>
+   <Shape>
+    <Appearance DEF='APP_Paint'>
+     <PhysicalMaterial DEF='MA_Paint' baseColor='0.8 0.8 0.8' metallic='0' roughness='0.5'/>
+    </Appearance>
+    <IndexedFaceSet DEF='ME_PaintMesh' coordIndex='0 1 2 3 -1 4 5 6 7 -1 0 4 7 1 -1 3 2 6 5 -1 0 3 5 4 -1 1 7 6 2 -1' solid='false'>
+     <Coordinate point='-0.75 -0.75 -0.75 -0.75 -0.75 0.75 -0.75 0.75 0.75 -0.75 0.75 -0.75 0.75 -0.75 -0.75 0.75 0.75 -0.75 0.75 0.75 0.75 0.75 -0.75 0.75'/>
+     <ColorRGBA color='0 0 0 1 1 0 0 1 1 1 0 1 0 1 0 1 0 0 1 1 0 1 1 1 1 1 1 1 1 0 1 1'/>
+    </IndexedFaceSet>
+   </Shape>
+  </Transform>
+  <Transform DEF='OB_Key' rotation='-0.70625 0.64191 0.2986 1.16486' scale='1 1 1' translation='4 6 4'>
+   <DirectionalLight DEF='LA_Key' ambientIntensity='0' color='1 1 1' direction='0 0 -1' global='true' intensity='0.8' shadows='true'/>
+  </Transform>
+ </Scene>
+</X3D>
