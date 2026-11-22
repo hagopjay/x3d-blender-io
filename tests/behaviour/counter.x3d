@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <meta name="title" content="Wire Lab: The Ripple Counter" />
+    <meta name="creator" content="x3d.demo Wire Lab" />
+    <meta name="generator" content="x3d-blender-io behaviour_graph scripting methods" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="true" />
+    <Background skyColor="0.02 0.03 0.07 0.07 0.09 0.18" skyAngle="1.6" groundColor="0.05 0.06 0.11" />
+    <Viewpoint DEF="View" description="Front" position="0 1.9 9.5" orientation="1 0 0 -0.03" />
+    <DirectionalLight direction="-0.4 -1 -0.6" intensity="2.2" />
+    <Transform translation="0 -0.05 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.10 0.12 0.18" emissiveColor="0 0 0" roughness="0.9" metallic="0.0" />
+        </Appearance>
+        <Box size="14 0.1 8" />
+      </Shape>
+    </Transform>
+    <Transform translation="3 0.8 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.3 0.32 0.4" emissiveColor="0 0 0" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Cylinder radius="0.07" height="1.6" />
+      </Shape>
+    </Transform>
+    <Transform translation="3 2 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.12 0.13 0.18" emissiveColor="0 0 0" roughness="0.3" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.42" />
+      </Shape>
+      <Transform DEF="Bit0" visible="false">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="1 0.75 0.2" emissiveColor="1 0.7 0.15" roughness="0.45" metallic="0.0" />
+          </Appearance>
+          <Sphere radius="0.5" />
+        </Shape>
+      </Transform>
+    </Transform>
+    <Transform translation="1 0.8 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.3 0.32 0.4" emissiveColor="0 0 0" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Cylinder radius="0.07" height="1.6" />
+      </Shape>
+    </Transform>
+    <Transform translation="1 2 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.12 0.13 0.18" emissiveColor="0 0 0" roughness="0.3" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.42" />
+      </Shape>
+      <Transform DEF="Bit1" visible="false">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="1 0.75 0.2" emissiveColor="1 0.7 0.15" roughness="0.45" metallic="0.0" />
+          </Appearance>
+          <Sphere radius="0.5" />
+        </Shape>
+      </Transform>
+    </Transform>
+    <Transform translation="-1 0.8 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.3 0.32 0.4" emissiveColor="0 0 0" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Cylinder radius="0.07" height="1.6" />
+      </Shape>
+    </Transform>
+    <Transform translation="-1 2 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.12 0.13 0.18" emissiveColor="0 0 0" roughness="0.3" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.42" />
+      </Shape>
+      <Transform DEF="Bit2" visible="false">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="1 0.75 0.2" emissiveColor="1 0.7 0.15" roughness="0.45" metallic="0.0" />
+          </Appearance>
+          <Sphere radius="0.5" />
+        </Shape>
+      </Transform>
+    </Transform>
+    <Transform translation="-3 0.8 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.3 0.32 0.4" emissiveColor="0 0 0" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Cylinder radius="0.07" height="1.6" />
+      </Shape>
+    </Transform>
+    <Transform translation="-3 2 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.12 0.13 0.18" emissiveColor="0 0 0" roughness="0.3" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.42" />
+      </Shape>
+      <Transform DEF="Bit3" visible="false">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="1 0.75 0.2" emissiveColor="1 0.7 0.15" roughness="0.45" metallic="0.0" />
+          </Appearance>
+          <Sphere radius="0.5" />
+        </Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF="Button" translation="0 0.45 2.2">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.9 0.15 0.2" emissiveColor="0.25 0 0" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Cylinder radius="0.55" height="0.3" />
+      </Shape>
+      <TouchSensor DEF="Press" description="add one" />
+    </Transform>
+    <BooleanToggle DEF="Flip0" />
+    <BooleanFilter DEF="Carry0" />
+    <BooleanToggle DEF="Flip1" />
+    <ROUTE fromNode="Press" fromField="isActive" toNode="Flip0" toField="set_boolean" />
+    <ROUTE fromNode="Flip0" fromField="toggle" toNode="Bit0" toField="visible" />
+    <ROUTE fromNode="Flip0" fromField="toggle" toNode="Carry0" toField="set_boolean" />
+    <ROUTE fromNode="Carry0" fromField="inputNegate" toNode="Flip1" toField="set_boolean" />
+    <ROUTE fromNode="Flip1" fromField="toggle" toNode="Bit1" toField="visible" />
+  </Scene>
+</X3D>

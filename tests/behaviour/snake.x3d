@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <meta name="title" content="Wire Lab: The Follower" />
+    <meta name="creator" content="x3d.demo Wire Lab" />
+    <meta name="generator" content="x3d-blender-io behaviour_graph scripting methods" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="true" />
+    <Background skyColor="0.02 0.03 0.07 0.07 0.09 0.18" skyAngle="1.6" groundColor="0.05 0.06 0.11" />
+    <Viewpoint DEF="View" description="Front" position="0 2.2 10" orientation="1 0 0 -0.02" />
+    <DirectionalLight direction="-0.4 -1 -0.6" intensity="2.2" />
+    <Transform translation="0 -0.05 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.10 0.12 0.18" emissiveColor="0 0 0" roughness="0.9" metallic="0.0" />
+        </Appearance>
+        <Box size="14 0.1 8" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Rig">
+      <Transform DEF="Head" translation="0 2.2 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="1 0.8 0.25" emissiveColor="0.5 0.35 0.05" roughness="0.45" metallic="0.0" />
+          </Appearance>
+          <Sphere radius="0.42" />
+        </Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF="Seg1" translation="-1.0 0.5 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.25 0.75 0.95" emissiveColor="0.02 0.05 0.12" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.34" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Seg2" translation="-2.0 0.5 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.3 0.6 0.95" emissiveColor="0.02 0.05 0.12" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.29" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Seg3" translation="-3.0 0.5 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.45 0.45 0.95" emissiveColor="0.02 0.05 0.12" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.24" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Seg4" translation="-4.0 0.5 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.6 0.35 0.9" emissiveColor="0.02 0.05 0.12" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.19" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Beacon" translation="4.6 3.6 -1" visible="false">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.4 1 0.5" emissiveColor="0.3 1 0.4" roughness="0.45" metallic="0.0" />
+        </Appearance>
+        <Sphere radius="0.25" />
+      </Shape>
+    </Transform>
+    <TimeSensor DEF="Clock" cycleInterval="7" loop="true" />
+    <PositionInterpolator DEF="Path" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 2.2 0 2.2 3.4 0 3.6 2.2 0 2.2 1 0 0 2.2 0 -2.2 3.4 0 -3.6 2.2 0 -2.2 1 0 0 2.2 0" />
+    <PositionDamper DEF="Follow1" initialDestination="-1 0.5 0" initialValue="-1 0.5 0" order="2" tau="0.25" />
+    <PositionDamper DEF="Follow2" initialDestination="-2 0.5 0" initialValue="-2 0.5 0" order="2" tau="0.25" />
+    <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Path" toField="set_fraction" />
+    <ROUTE fromNode="Path" fromField="value_changed" toNode="Head" toField="translation" />
+    <ROUTE fromNode="Head" fromField="translation" toNode="Follow1" toField="set_destination" />
+    <ROUTE fromNode="Follow1" fromField="value_changed" toNode="Seg1" toField="translation" />
+    <ROUTE fromNode="Seg1" fromField="translation" toNode="Follow2" toField="set_destination" />
+    <ROUTE fromNode="Follow2" fromField="value_changed" toNode="Seg2" toField="translation" />
+  </Scene>
+</X3D>
