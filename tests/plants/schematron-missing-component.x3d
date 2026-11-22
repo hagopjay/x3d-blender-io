@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Planted fault for the structure judge: an HAnimHumanoid in the Immersive profile with no HAnim component statement. EXPECT: component statements -->
+<X3D profile="Immersive" version="4.0">
+  <head><meta name="title" content="schematron-missing-component.x3d"/></head>
+  <Scene>
+    <HAnimHumanoid DEF="hanim_H" name="H" version="2.0">
+      <HAnimJoint DEF="hanim_humanoid_root" name="humanoid_root" containerField="skeleton"/>
+      <HAnimJoint USE="hanim_humanoid_root" containerField="joints"/>
+    </HAnimHumanoid>
+  </Scene>
+</X3D>

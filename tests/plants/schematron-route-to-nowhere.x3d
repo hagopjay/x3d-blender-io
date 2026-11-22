@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Planted fault for the structure judge: a ROUTE whose toNode names no DEF. EXPECT: ROUTE -->
+<X3D profile="Immersive" version="4.0">
+  <head><meta name="title" content="schematron-route-to-nowhere.x3d"/></head>
+  <Scene>
+    <TimeSensor DEF="Clock" loop="true"/>
+    <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Nobody" toField="set_fraction"/>
+  </Scene>
+</X3D>

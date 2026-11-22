@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Planted fault for the structure judge: a component level the standard does not define. EXPECT: level -->
+<X3D profile="Interchange" version="4.0">
+  <head>
+    <component name="Shape" level="9"/>
+    <meta name="title" content="schematron-component-level.x3d"/>
+  </head>
+  <Scene><Shape><Box/></Shape></Scene>
+</X3D>

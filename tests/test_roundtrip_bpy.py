@@ -1245,7 +1245,9 @@ class HeadMetaRoundTripTests(unittest.TestCase):
         first = os.path.join(tmpdir, "campus_1.x3d")
         head = self._export(first)
         self.assertEqual(head[:2], [("generator", head[0][1]), ("filename", "campus_1.x3d")])
-        self.assertEqual(head[2:], [
+        # the loss receipt's hash line comes last (receipt.py); an imported file's line would not be copied
+        self.assertEqual(head[-1][0], "x3d-blender-io.receipt")
+        self.assertEqual(head[2:-1], [
             ("title", "Blacksburg campus, local frame"),
             ("reference", "Terrain: USGS 3DEP lidar (public domain)."),
             ("reference", self.COPERNICUS),
@@ -1268,7 +1270,7 @@ class HeadMetaRoundTripTests(unittest.TestCase):
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.ops.mesh.primitive_cube_add(size=1.0)
         head = self._export(os.path.join(tmpdir, "cube.x3d"))
-        self.assertEqual([name for name, content in head], ["generator", "filename"])
+        self.assertEqual([name for name, content in head], ["generator", "filename", "x3d-blender-io.receipt"])
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")

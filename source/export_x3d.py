@@ -1991,6 +1991,7 @@ def save(context,
          animation_step=1,
          color_space='AUTO',
          material_model='AUTO',
+         use_receipt=False,
          ):
     from .export_pipeline import ExportSettings, export_filepath, save as pipeline_save
 
@@ -2028,6 +2029,7 @@ def save(context,
         animation_step=animation_step,
         color_space=resolve_export_colour_space(color_space, getattr(context, "scene", None)),
         material_model=material_model,
+        use_receipt=use_receipt,
     )
     logger.info("save: colour space %s", settings.color_space)
 
@@ -2064,9 +2066,15 @@ def save(context,
         _write_replacing(export_file, settings.use_compress, write)
 
     def _modern_writer(*, export_file, depsgraph, scene, view_layer, ir_scene, settings):
-        del depsgraph, scene, view_layer
+        del depsgraph, view_layer
         from .emit_x3d40 import export_ir_scene
         from .validate import validate_xml_file, validate_with_x3d_py
+        from . import receipt as loss_receipt
+
+        # The loss receipt (mapping/blender_rna.json rules): one stable line in the head always, the full receipt as a
+        # sidecar when asked for. Computed before the write so the line is part of the validated document.
+        receipt_entries = loss_receipt.for_export(ir_scene, scene)
+        receipt_meta = loss_receipt.receipt_line(receipt_entries)
 
         logger.info("Writing X3D %s to %r", settings.document_version, export_file)
         # Stage the document and its sidecars (splat glb) in a scratch folder beside the target, validate the staged
@@ -2080,7 +2088,8 @@ def save(context,
             staged = os.path.join(stage, os.path.basename(target))
             with (gzip_open_utf8(staged, 'w') if settings.use_compress else open(staged, 'w', encoding='utf-8')) as file:
                 export_ir_scene(file, ir_scene, generator=f"{bl_info_copy['name']} v{'.'.join(map(str, bl_info_copy['version']))}",
-                                version=settings.document_version, colour_space=settings.color_space)
+                                version=settings.document_version, colour_space=settings.color_space,
+                                receipt_meta=receipt_meta)
             for message in ir_scene.diagnostics:
                 logger.info("X3D 4.0 export note: %s", message)
 
@@ -2101,6 +2110,12 @@ def save(context,
                 if semantic.errors and os.environ.get("X3D_EXPORT_VALIDATION", "strict").lower() != "warn":
                     raise ValueError(f"X3D semantic validation failed for {export_file}: {'; '.join(semantic.errors[:5])}"
                                      " (set X3D_EXPORT_VALIDATION=warn to export anyway)")
+            if loss_receipt.sidecar_requested(getattr(settings, "use_receipt", False)):
+                loss_receipt.write_sidecar(staged + ".receipt.json", loss_receipt.build_receipt(
+                    receipt_entries, notes=ir_scene.diagnostics, subject=loss_receipt.subject_of(staged),
+                    tools={"addon": f"{bl_info_copy['name']} {'.'.join(map(str, bl_info_copy['version']))}",
+                           "blender": bpy.app.version_string, "x3d_version": settings.document_version},
+                    prev=loss_receipt.prev_from_meta(getattr(ir_scene.metadata, "entries", ()))))
             _publish_staged(stage, staged, target)
         finally:
             shutil.rmtree(stage, ignore_errors=True)

@@ -1,0 +1,81 @@
+{
+ "schema": "x3d-blender-io.same-renderer/1",
+ "about": "Tolerances for X_ITE on the add-on's X3D vs X_ITE on Blender's own glb, per frozen scene: measured mean |delta| x 1.5 + 2, written before the gate was used (calibration run).",
+ "measured_with": {
+  "blender": "5.3.0",
+  "gltf_lighting_mode": "COMPAT",
+  "x_ite": "16.7.1 (tools/fidelity_rig/package-lock.json)",
+  "gltf_exporter": "5.3.43"
+ },
+ "scenes": {
+  "lit_cube": {
+   "measured": 0.0,
+   "tolerance": 2.0,
+   "pixels_over_24": 0.0
+  },
+  "two_materials": {
+   "measured": 0.0,
+   "tolerance": 2.0,
+   "pixels_over_24": 0.0
+  },
+  "uv_grid": {
+   "measured": 0.0,
+   "tolerance": 2.0,
+   "pixels_over_24": 0.0
+  },
+  "vertex_colours": {
+   "measured": 10.19,
+   "tolerance": 17.29,
+   "pixels_over_24": 0.3214,
+   "why": "Confirmed: the add-on writes the 'Col' colour attribute as ColorRGBA and X_ITE multiplies it in; Blender's glTF exporter (default export_vertex_color MATERIAL) leaves it out because no material node reads it, so the glb cube is plain grey, as Blender itself renders it. Which one is right is a mapping-table question (mesh:colour_attribute is 'carried')."
+  },
+  "hierarchy": {
+   "measured": 2.03,
+   "tolerance": 5.04,
+   "pixels_over_24": 0.0003,
+   "why": "Same as cameras: two cubes with no material."
+  },
+  "four_lights": {
+   "measured": 4.93,
+   "tolerance": 9.39,
+   "pixels_over_24": 0.2053,
+   "why": "Confirmed: the area light is written by the add-on as a DirectionalLight (receipt: approximated) and left out of the glb (glTF has no area light); point and spot intensities differ in units (add-on X_ITE light units vs COMPAT W/4pi candela)."
+  },
+  "cameras": {
+   "measured": 3.88,
+   "tolerance": 7.82,
+   "pixels_over_24": 0.0,
+   "why": "Confirmed: an object with no material. The add-on writes Blender's default look (PhysicalMaterial 0.8 grey, roughness 0.5); the glb has no material, so X_ITE uses glTF's default (white, metallic 1, roughness 1)."
+  },
+  "smooth_torus": {
+   "measured": 0.26,
+   "tolerance": 2.39,
+   "pixels_over_24": 0.0033,
+   "why": "Suspected: smooth-shading normals: the add-on writes per-corner normals, the glb per-vertex; edges differ by a few levels."
+  },
+  "linked_instances": {
+   "measured": 0.0,
+   "tolerance": 2.0,
+   "pixels_over_24": 0.0
+  },
+  "keyframes": {
+   "measured": 3.88,
+   "tolerance": 7.82,
+   "pixels_over_24": 0.0,
+   "why": "Same as cameras: a cube with no material (frame 1 of the animation)."
+  },
+  "emissive_glass": {
+   "measured": 0.02,
+   "tolerance": 2.03,
+   "pixels_over_24": 0.0006,
+   "why": "Within 0.12 where drawn: emission and alpha blending agree."
+  },
+  "loose_edges": {
+   "measured": 0.69,
+   "tolerance": 3.04,
+   "pixels_over_24": 0.0051,
+   "why": "Confirmed: Blender's glTF exporter omits a mesh of loose edges only ('has no primitives and will be omitted'); the add-on writes an IndexedLineSet, so only the add-on's frame shows the hexagon."
+  }
+ },
+ "rig": "512 x 512 headless Chromium 157.0.8103.78 (Playwright's, SwiftShader), X_ITE 16.7.1, judge Viewpoint from same_renderer.judge_view"
+}

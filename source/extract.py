@@ -712,6 +712,13 @@ def _extract_face_geometries(mesh, *, name, material_slots, use_triangulate, use
             if color_at:
                 col = color_at(loop_index if color_domain == "CORNER" else vertex_index)
             nrm = normal_at(loop_index) if normal_at else None
+            if nrm is not None:
+                # Blender 4.5.14 gives a degenerate (zero-area) face of a text object a corner normal of length 4.8e-05;
+                # X3D normals are unit vectors and a re-import normalises it, so the round trip did not converge
+                # (E1 -> E2 on the suite's Z04_label). Write unit length; a zero vector stays as it is.
+                length = math.sqrt(sum(float(value) * float(value) for value in nrm))
+                if length > 0.0 and abs(length - 1.0) > 1e-6:
+                    nrm = tuple(float(value) / length for value in nrm)
             if uv is not None:
                 key.append(tuple(round(value, _ROUND) for value in uv))
             if col is not None:

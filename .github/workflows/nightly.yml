@@ -1,0 +1,94 @@
+name: Nightly robustness sweep
+
+# Long runs live on GitHub Actions (v3 plan, decision 6). Every night the slow judges run on every Blender line the
+# add-on supports, so a Blender point release or a judge's upstream drift shows up within a day, not at the next PR:
+#   - the perturbation sweep (silent-loss oracle) against the mapping table, all three starting states;
+#   - the golden files and the six metamorphic relations on the 12 frozen scenes;
+#   - the 195-case suite, its import/export fixed point, the round-trip invariants and the Web3D Schematron.
+# The same steps run on pull requests (ci.yml); this workflow adds the schedule and the full set of Blender versions in
+# one place. Runs on schedule and by hand (Actions tab, "Run workflow").
+
+on:
+  schedule:
+    - cron: "17 3 * * *"   # 03:17 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    name: Sweep, oracles and round trip (Blender ${{ matrix.blender }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        blender: ["4.5.14", "5.1.2", "5.2.2"]
+    env:
+      BLENDER_DIR: ${{ github.workspace }}/.blender/${{ matrix.blender }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install the judges' Python packages
+        run: python -m pip install --quiet x3d==4.0.65.8 saxonche==13.1.1
+      - name: Runtime libraries for headless Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 \
+            libgl1 libegl1 libglx-mesa0 xz-utils
+      - name: Cache Blender ${{ matrix.blender }}
+        id: cache-blender
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.BLENDER_DIR }}
+          key: blender-linux-x64-${{ matrix.blender }}
+      - name: Download Blender ${{ matrix.blender }}
+        if: steps.cache-blender.outputs.cache-hit != 'true'
+        run: bash .github/scripts/install_blender.sh "${{ matrix.blender }}" "$BLENDER_DIR"
+      - name: Perturbation sweep against the mapping table
+        run: |
+          mkdir -p nightly
+          "$BLENDER_DIR/blender" -b --factory-startup -noaudio --python tools/io_sync/perturb.py -- \
+            --out "nightly/sweep-${{ matrix.blender }}.json" --check
+      - name: Golden files
+        if: always()
+        run: '"$BLENDER_DIR/blender" -b --factory-startup -noaudio --python tools/io_sync/golden.py'
+      - name: Metamorphic relations and loss-receipt tests
+        if: always()
+        run: |
+          "$BLENDER_DIR/blender" -b --python-exit-code 1 --python .github/scripts/run_tests_in_blender.py -- \
+            test_metamorphic_bpy test_receipt_bpy
+      - name: Suite export
+        if: always()
+        run: |
+          "$BLENDER_DIR/blender" -b --factory-startup -noaudio --python-exit-code 1 \
+            --python tests/suite/x3d_test_suite.py -- --out suite-out --repo "$GITHUB_WORKSPACE" --export
+      - name: Fixed point and round-trip invariants
+        if: always()
+        run: |
+          python tools/io_sync/fixed_point.py suite-out nightly/io-sync --blender "$BLENDER_DIR/blender" \
+            --budget tools/io_sync/first_trip_budget.json
+          python tools/io_sync/invariants.py --fixed-point nightly/io-sync --suite suite-out \
+            --budget tools/io_sync/invariant_budget.json --out nightly/invariants.json
+      - name: Cache the compiled Web3D Schematron
+        uses: actions/cache@v6
+        with:
+          path: .cache/schematron
+          key: schematron-${{ hashFiles('tools/schematron/vendor/*') }}-saxonche-13.1.1
+      - name: Web3D Schematron
+        if: always()
+        run: python tools/schematron/schematron.py --gate suite-out --out nightly/schematron.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: nightly-${{ matrix.blender }}
+          path: |
+            nightly/sweep-${{ matrix.blender }}.json
+            nightly/invariants.json
+            nightly/schematron.json
+            nightly/io-sync/summary.txt
+          if-no-files-found: warn
