@@ -8,6 +8,10 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 | `source/behaviour_catalogue.py` | generated from the X3D Unified Object Model 4.0 by `tools/behaviour_catalogue_gen.py` (`--check` fails when stale): 45 behaviour node types with 303 fields, 32 target types |
 | `source/behaviour_graph.py` | the graph without Blender: parse from X3D, validate, edit, emit, weave into a document, compare, lay out, JSON; and the scripting methods (`Behaviour`, `add`, `target`, `>>`) |
 | `source/behaviour_nodes.py` | the Blender node tree `X3DBehaviourTree`: one node class per X3D node, one socket class per field type; `apply`, `read`, `target`, `import_graph` |
+| `source/behaviour_sim.py` | version 2: the event model in plain Python (`Simulation`): timers, interpolators, sequencers, event utilities, dampers, chasers, pointer events |
+| `source/behaviour_play.py` | version 2: `Player(scene)` runs the simulation on the scene's objects, materials and lights and restores them; the Play operator and the sidebar panel |
+| `tools/behaviour_sim_judge.cjs`, `tools/behaviour_sim_judge.py`, `tools/behaviour_probe.py` | record X_ITE's events, replay them through the simulator, compare; build the probe world |
+| `tests/test_behaviour_sim.py`, `tests/test_behaviour_play_bpy.py` | version 2: 20 plain-Python tests (4 replay X_ITE traces) and 15 Blender tests |
 | `tools/behaviour_roundtrip.py` | import a file with its graph, optionally set fields, export, print the graph difference |
 | `tools/behaviour_replay.cjs` | play the same real mouse clicks on two files in X_ITE and compare what the scene did |
 | `tests/test_behaviour_graph.py`, `tests/test_behaviour_nodes_bpy.py` | 23 plain-Python and 17 Blender tests |
@@ -51,12 +55,79 @@ bn.apply(b, bpy.context.scene)
 | counter.x3d | 5 | 0; all 4 nodes and 5 ROUTEs lost | 5; no difference |
 | snake.x3d | 6 | 2; all 4 nodes and 6 ROUTEs lost | 6; no difference |
 
-Behaviour replay with real clicks: door identical before and after the Blender trip; counter differs, because the importer
-does not read `visible` on a Transform (lamps that start hidden come back shown). That loss is not fixed here.
+Behaviour replay with real clicks (`tools/behaviour_replay.cjs`): door identical before and after the Blender trip. The
+counter differed in version 1, because the importer did not read `visible` on a Transform (lamps that start hidden came
+back shown). Version 2 reads it: 5 real clicks give the same lamp states before and after the trip.
+
+## Version 2: play it, edit it with real widgets, keep what is hidden
+
+### Play in the viewport
+
+`source/behaviour_sim.py` is the X3D event model in plain Python (no Blender, no browser): `Simulation(graph)`, then
+`start`, `step(now)`, and `press` / `release` / `drag` / `click` for the pointer. `source/behaviour_play.py` runs it on
+the scene: `Player(scene)` writes each value that reaches a target onto the Blender object, material or light it is
+bound to, and `stop()` puts everything back.
+
+In Blender: the **Play** button in the X3D Behaviour editor's header, or the 3D viewport's sidebar (N), tab **X3D**.
+While it plays, click or drag what a sensor senses; nodes glow as they send events; **Esc** stops and restores the scene.
+Nothing is keyframed and nothing is left changed.
+
+| Simulated | Not simulated (named in the sidebar, never silently skipped) |
+|---|---|
+| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor and PlaneSensor from the pointer | Coordinate, Normal, Spline and Squad interpolators, EaseInEaseOut, coordinate and texture-coordinate followers, CylinderSensor and SphereSensor drags, ProximitySensor, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
+
+Shown on Blender data: Transform translation, rotation, scale, visible; material baseColor / diffuseColor,
+emissiveColor, transparency, roughness, metallic; light color and on; Viewpoint set_bind (the scene camera). Anything
+else an event reaches is listed as "Not shown".
+
+**Axes.** The exporter writes a parentless object's Transform as `global_matrix @ matrix_world` and a child's as its
+matrix in its parent's space. The player turns each object into that Transform, changes the field the event set, and
+turns it back. So a value means in the viewport what it means in the file, and a child's values are already in Blender's
+axes.
+
+### The simulator is checked against X_ITE
+
+`tools/behaviour_sim_judge.cjs` records every event at every ROUTE source in X_ITE, with X_ITE's own time stamps, while
+real mouse clicks are made. `tools/behaviour_sim_judge.py` gives the simulator the same pointer events at the same
+times and compares each stream. Recorded 22 Nov 2026, X_ITE 16.7.1, headless Chromium with software GL; the traces are
+in `tests/behaviour/x_ite_traces/` and replayed by `tests/test_behaviour_sim.py` on every run.
+
+| File | Event streams | Agree | Worst gap |
+|---|---|---|---|
+| door.x3d (2 clicks) | 2 | 2 | 0.000001 |
+| counter.x3d (5 clicks) | 3 | 3 | 0 |
+| snake.x3d (8 s) | 6 | 6 | 0.0048 (followers) |
+| probe.x3d (2 clicks; every simulated kind, built by `tools/behaviour_probe.py`) | 25 | 25 | 0.0645 (followers) |
+
+Tolerances: 0.002 for everything exact, 0.08 for dampers and chasers and what they feed (X_ITE steps them by its frame
+rate, the simulator by the clock). Discrete streams must also have the same number of events. What the comparison
+taught, all now in the simulator: X_ITE's TimeTrigger and IntegerTrigger answer `true` only; a looping TimeSensor
+counts its cycles from `startTime`, not from when the world loaded; a follower chases where its destination was one
+frame ago; colours are mixed through HSV, in dampers too; a chaser's answer to a jump is eased (half a cosine), not a
+straight ramp. Not judged: the 2D followers and ColorChaser (same code as a judged one), and sensors the caller drives.
+
+### Typed field editors
+
+Each single-value field has a real widget (checkbox, number, seconds, colour swatch, vector, axis and angle). An
+interpolator's or sequencer's `key` and `keyValue` are one table, a row per key, with add and remove. A node shows its
+main fields and whatever has a value; the sidebar shows every field. The stored data is still the X3D text of the file:
+a widget reads and writes that text, and a value equal to the standard's default is not stored. **As X3D text** in the
+sidebar shows the raw text again.
+
+**Z up** in the editor's header shows places and turns in Blender's axes for nodes whose values reach only parentless
+objects (those are the values in the file's Y-up world axes). Only the display turns; the text does not. Values for a
+child object are in its parent's axes and are never turned.
+
+### visible="false"
+
+The importer now hides the objects made under a node whose `visible` is false (viewport and render) and marks them
+`x3d_visible_false`; the exporter writes `visible="false"` back for an object that is marked and still hidden.
+Unhiding it in Blender is the user's choice and is written as visible.
 
 ## Limits
 
-Nobody has looked at the editor on a real screen (all runs headless). Field values are X3D text in the file's axes.
-Nothing plays inside Blender. XML encoding only on import. Scripts and PROTOs are carried as XML, not edited. Targets are
-Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The importer's loss report
-still prints "ROUTE not imported" for ROUTEs the graph kept.
+Nobody has looked at the editor or the player on a real screen (all runs headless): the Play button, the pointer and the
+glow are untested by eye. The player uses the export dialog's default axes (-Z forward, Y up). Sensors that need a
+viewer's position are not simulated. XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
+played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
+importer's loss report still prints "ROUTE not imported" for ROUTEs the graph kept.

@@ -149,6 +149,7 @@ VIEWPOINT_DESCRIPTION_PROPERTY = "x3d_viewpoint_description"
 # Head meta statements read by the importer, kept on the scene as a list of {"name", "content"}.
 IMPORTED_ANIMATION_PROPERTY = "x3d_imported_animation"   # set on the scene when an X3D import made animation (interpolators, TimeSensors)
 SWITCH_HIDDEN_PROPERTY = "x3d_switch_hidden"   # set by the importer on the objects of a Switch choice that is not shown (and on their descendants)
+VISIBLE_FALSE_PROPERTY = "x3d_visible_false"   # set by the importer on the objects made under a node with visible="false"
 LOD_HIDDEN_PROPERTY = "x3d_lod_hidden"   # set by the importer on the objects of an LOD level the first Viewpoint does not see
 HEAD_META_PROPERTY = "x3d_head_meta"
 # A Shape's Metadata* node read by the importer, kept on the object as nested {"node", "name", "reference", "value"}.
@@ -1737,9 +1738,10 @@ def extract_scene(
             transform=_matrix_transform(local_matrix),
         )
         instance.transform_metadata = object_metadata(obj.get(TRANSFORM_METADATA_PROPERTY))
-        # only what the import hid for a Switch is written invisible; hide_render on any other object is a Blender-side
+        # only what the import hid (a Switch choice, visible="false") is written invisible; hide_render on any other object is a Blender-side
         # choice that does not reach the children, while visible="false" would hide the whole subtree
-        instance.visible = not (bool(getattr(obj, "hide_render", False)) and obj.get(SWITCH_HIDDEN_PROPERTY) is not None)
+        instance.visible = not (bool(getattr(obj, "hide_render", False)) and (
+            obj.get(SWITCH_HIDDEN_PROPERTY) is not None or obj.get(VISIBLE_FALSE_PROPERTY) is not None))
         if not name_prefix:
             objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
             instance.interaction = read_interaction(obj, ir_scene.diagnostics)

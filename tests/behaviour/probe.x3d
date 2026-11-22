@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <meta name="title" content="Behaviour simulator probe" />
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint position="0 0 10" />
+    <Transform DEF="Pad">
+      <Shape>
+        <Appearance>
+          <Material diffuseColor="0.2 0.3 0.5" />
+        </Appearance>
+        <Box size="12 4 0.2" />
+      </Shape>
+      <TouchSensor DEF="Touch" />
+    </Transform>
+    <Transform DEF="A" translation="-3 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="APaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="B" translation="-1.5 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="BPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="C" translation="0 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="CPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="D" translation="1.5 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="DPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="E" translation="3 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="EPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Switch DEF="Pick" whichChoice="-1">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Switch>
+    <TimeSensor DEF="Timer" cycleInterval="2" />
+    <TimeTrigger DEF="ByBool" />
+    <TimeSensor DEF="Short" cycleInterval="0.5" />
+    <IntegerTrigger DEF="Number" integerKey="7" />
+    <BooleanTrigger DEF="Yes" />
+    <BooleanToggle DEF="Flip" />
+    <BooleanFilter DEF="Sieve" />
+    <BooleanSequencer DEF="Blink" key="0 0.3 0.6" keyValue="true false true" />
+    <IntegerSequencer DEF="Count" key="0 0.25 0.5 0.75" keyValue="3 1 4 1" />
+    <ColorInterpolator DEF="Colour" key="0 0.5 1" keyValue="1 0 0 0 1 0 0.2 0.2 1" />
+    <OrientationInterpolator DEF="Turn" key="0 0.5 1" keyValue="0 1 0 0 0 1 0 2.5 1 0 0 1.2" />
+    <ScalarInterpolator DEF="Level" key="0 0.5 1" keyValue="0 0.8 0.1" />
+    <PositionInterpolator DEF="Hop" key="0 0.25 0.5 1" keyValue="-3 3 0 -3 4 0 -2 4 1 -3 3 0" />
+    <PositionDamper DEF="SoftPlace" initialDestination="-1.5 3 0" initialValue="-1.5 3 0" order="3" tau="0.2" />
+    <OrientationDamper DEF="SoftTurn" order="1" tau="0.2" />
+    <ColorDamper DEF="SoftColour" initialDestination="0.6 0.6 0.6" initialValue="0.6 0.6 0.6" order="2" tau="0.3" />
+    <ScalarDamper DEF="SoftLevel" order="1" tau="0.15" />
+    <PositionInterpolator DEF="Step" key="0 0.2 0.2 0.6 0.6 1" keyValue="0 3 0 0 3 0 0 4 0 0 4 0 1 3 0 1 3 0" />
+    <PositionChaser DEF="ChasePlace" duration="0.4" initialDestination="0 3 0" initialValue="0 3 0" />
+    <ScalarInterpolator DEF="LevelStep" key="0 0.3 0.3 1" keyValue="0 0 0.9 0.9" />
+    <ScalarChaser DEF="ChaseLevel" duration="0.5" />
+    <OrientationInterpolator DEF="TurnStep" key="0 0.4 0.4 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 1.5 0 0 1 1.5" />
+    <OrientationChaser DEF="ChaseTurn" duration="0.5" />
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Timer" toField="startTime" />
+    <ROUTE fromNode="Touch" fromField="isActive" toNode="ByBool" toField="set_boolean" />
+    <ROUTE fromNode="ByBool" fromField="triggerTime" toNode="Short" toField="startTime" />
+    <ROUTE fromNode="Touch" fromField="isActive" toNode="Number" toField="set_boolean" />
+    <ROUTE fromNode="Number" fromField="triggerValue" toNode="Pick" toField="whichChoice" />
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Yes" toField="set_triggerTime" />
+    <ROUTE fromNode="Yes" fromField="triggerTrue" toNode="Flip" toField="set_boolean" />
+    <ROUTE fromNode="Flip" fromField="toggle" toNode="Sieve" toField="set_boolean" />
+    <ROUTE fromNode="Sieve" fromField="inputTrue" toNode="A" toField="visible" />
+    <ROUTE fromNode="Sieve" fromField="inputFalse" toNode="B" toField="visible" />
+    <ROUTE fromNode="Sieve" fromField="inputNegate" toNode="C" toField="visible" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Blink" toField="set_fraction" />
+    <ROUTE fromNode="Blink" fromField="value_changed" toNode="D" toField="visible" />
+    <ROUTE fromNode="Short" fromField="fraction_changed" toNode="Count" toField="set_fraction" />
+    <ROUTE fromNode="Count" fromField="value_changed" toNode="Pick" toField="whichChoice" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Colour" toField="set_fraction" />
+    <ROUTE fromNode="Colour" fromField="value_changed" toNode="APaint" toField="diffuseColor" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Turn" toField="set_fraction" />
+    <ROUTE fromNode="Turn" fromField="value_changed" toNode="A" toField="rotation" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Level" toField="set_fraction" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="APaint" toField="transparency" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Hop" toField="set_fraction" />
+    <ROUTE fromNode="Hop" fromField="value_changed" toNode="A" toField="translation" />
+    <ROUTE fromNode="Hop" fromField="value_changed" toNode="SoftPlace" toField="set_destination" />
+    <ROUTE fromNode="SoftPlace" fromField="value_changed" toNode="B" toField="translation" />
+    <ROUTE fromNode="Turn" fromField="value_changed" toNode="SoftTurn" toField="set_destination" />
+    <ROUTE fromNode="SoftTurn" fromField="value_changed" toNode="B" toField="rotation" />
+    <ROUTE fromNode="Colour" fromField="value_changed" toNode="SoftColour" toField="set_destination" />
+    <ROUTE fromNode="SoftColour" fromField="value_changed" toNode="BPaint" toField="diffuseColor" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="SoftLevel" toField="set_destination" />
+    <ROUTE fromNode="SoftLevel" fromField="value_changed" toNode="BPaint" toField="transparency" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Step" toField="set_fraction" />
+    <ROUTE fromNode="Step" fromField="value_changed" toNode="ChasePlace" toField="set_destination" />
+    <ROUTE fromNode="ChasePlace" fromField="value_changed" toNode="C" toField="translation" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="LevelStep" toField="set_fraction" />
+    <ROUTE fromNode="LevelStep" fromField="value_changed" toNode="ChaseLevel" toField="set_destination" />
+    <ROUTE fromNode="ChaseLevel" fromField="value_changed" toNode="EPaint" toField="transparency" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="TurnStep" toField="set_fraction" />
+    <ROUTE fromNode="TurnStep" fromField="value_changed" toNode="ChaseTurn" toField="set_destination" />
+    <ROUTE fromNode="ChaseTurn" fromField="value_changed" toNode="E" toField="rotation" />
+  </Scene>
+</X3D>
