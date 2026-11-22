@@ -44,8 +44,10 @@ class ImportResourceBoundaryTests(unittest.TestCase):
         path.write_text('''<!DOCTYPE X3D [<!ENTITY e "expanded">]><X3D>
             <Scene><WorldInfo title="&e;"/><Shape><Box/></Shape></Scene></X3D>''')
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        with self.assertRaisesRegex(SAXException, "entity declarations"):
-            self.importer.load(bpy.context, str(path))
+        # since 2.7.3 the refusal is a clean cancel with the reason, not a SAXException out of the operator
+        self.assertEqual(self.importer.load(bpy.context, str(path)), {'CANCELLED'})
+        self.assertTrue(any("entity declarations" in message for message in self.importer.load_errors),
+                        self.importer.load_errors)
         self.assertEqual(len(bpy.context.scene.objects), 0)
 
     def test_actual_image_loader_callback_receives_shell_characters_literally(self):

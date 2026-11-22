@@ -251,7 +251,7 @@ jobs:
     name: Contract and oracles with their planted faults (bpy 5.3.0)
     runs-on: ubuntu-latest
     needs: unit
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -271,6 +271,12 @@ jobs:
         run: python tools/io_sync/golden.py
       - name: Differential chaos, quick (240 one-edit mutants; the nightly runs 960 on every Blender line)
         run: python tools/chaos/differential.py --seeds tests/golden --per-seed 20 --rng 7 --out chaos --no-schematron --fail-on-crash
+      - name: Hostile files (67 sandboxed cases; chaos round 2.7.3, docs/CHAOS.md)
+        # bombs, XXE, network, Inline cycles and fan-outs, broken bytes, huge numbers: each case in its own process
+        # under a 6 GB memory and 2 GB file limit; a traceback, a hang, a network hit or a disclosed file fails
+        run: python tools/chaos/hostile.py --out hostile --fail-on-finding
+      - name: Scene chaos, quick (46 cases; export, judges, re-import, fixed point; the nightly runs 276 x 2 seeds)
+        run: python tools/chaos/scene_chaos.py --out scene-chaos --per-op 2 --rng 7 --fail-on-crash
       - name: Every judge fails its planted fault (tools/oracles/plants.json; Loom laws 19 and 44)
         # a judge is trusted only once it has failed a wrong implementation of the kind it claims to catch
         run: |
@@ -290,11 +296,20 @@ jobs:
           X3D_ADDON_SOURCE=plants/chaos/source python tools/oracles/plant.py expect-fail import-bool-crash -- \
             python tools/chaos/differential.py --seeds tests/golden --per-seed 20 --rng 7 --out plants/chaos-out \
             --no-schematron --fail-on-crash
+          python tools/oracles/plant.py make import-malformed-traceback plants/hostile
+          X3D_ADDON_SOURCE=plants/hostile/source python tools/oracles/plant.py expect-fail import-malformed-traceback -- \
+            python tools/chaos/hostile.py --out plants/hostile-out --only truncated_mid_tag --only nul_bytes --fail-on-finding
+          python tools/oracles/plant.py make export-translation-drift plants/scene
+          X3D_ADDON_SOURCE=plants/scene/source python tools/oracles/plant.py expect-fail export-translation-drift -- \
+            python tools/chaos/scene_chaos.py --out plants/scene-out --per-op 1 --rng 7 --fail-on-crash
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: contract-sweep
-          path: sweep-5.3.0.json
+          path: |
+            sweep-5.3.0.json
+            hostile/results.json
+            scene-chaos/summary.json
           if-no-files-found: ignore
 
   fidelity-gate:

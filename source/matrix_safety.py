@@ -20,9 +20,29 @@ multiplies back in for an Inline placeholder, whose children it does not write.
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import sys
 
 logger = logging.getLogger("import_x3d")
+
+DEEP_RECURSION_LIMIT = 50000
+
+
+@contextlib.contextmanager
+def recursion_headroom(limit: int = DEEP_RECURSION_LIMIT):
+    """Python's recursion limit raised to ``limit`` for one export, then put back.
+
+    The export walks the object hierarchy and the X3D tree by recursion, three or four frames per level, so 1,500
+    parented empties raised RecursionError (chaos round 2.7.3). Python 3.11 and later keep pure-Python frames off the
+    C stack, so the higher limit is safe there; the walk itself is unchanged."""
+    previous = sys.getrecursionlimit()
+    if previous < limit:
+        sys.setrecursionlimit(limit)
+    try:
+        yield
+    finally:
+        sys.setrecursionlimit(previous)
 
 # A parent whose world axes are scaled by less than 1e-6 or more than 1e6 has its scale moved to its children.
 # Blender's float32 Matrix.inverted_safe() is still exact to 1e-7 at 1e-12 and 1e12 and breaks at 1e-14 and 1e13;
@@ -158,3 +178,67 @@ def _relative_drift(a, b):
     b = np.array(b, dtype=np.float64)
     size = max(np.abs(a).max(), 1e-300)
     return float(np.abs(a - b).max() / size)
+
+
+def decompose_exact(matrix):
+    """``Matrix.decompose()`` computed in float64, with the same sign convention (a mirror negates all three scales).
+
+    An axis of length 0 has no direction: it is rebuilt from the other two, so the rotation stays orthonormal and
+    is the one the file gave. Blender's decompose() makes that axis up, so a scale='0 1 1' Transform's rotation
+    moved on every round trip (0.7653 rad, then 0.4832; chaos round 2.7.3)."""
+    import numpy as np
+    from mathutils import Matrix, Quaternion, Vector
+
+    values = np.array(matrix, dtype=np.float64)
+    linear = values[:3, :3]
+    scale = np.linalg.norm(linear, axis=0)
+    translation = Vector(values[:3, 3].tolist())
+    columns = [linear[:, i] / scale[i] if scale[i] > 0.0 else None for i in range(3)]
+    for i in range(3):
+        if columns[i] is None:
+            a, b = columns[(i + 1) % 3], columns[(i + 2) % 3]
+            if a is None or b is None:  # two axes of length 0: no rotation can be recovered
+                return translation, Quaternion(), Vector(scale.tolist())
+            columns[i] = np.cross(a, b)
+            columns[i] /= np.linalg.norm(columns[i])
+    rotation = np.stack(columns, axis=1)
+    if np.linalg.det(rotation) < 0.0:
+        rotation, scale = -rotation, -scale
+    return translation, Matrix(rotation.tolist()).to_quaternion(), Vector(scale.tolist())
+
+
+def has_flat_axis(matrix, tiny: float = 1e-30) -> bool:
+    """True when one of the matrix's linear axes has length 0 (a scale of 0 on that axis)."""
+    return any(s <= tiny for s in axis_scales(matrix))
+
+
+def set_basis_exact(obj, matrix) -> None:
+    """``obj.matrix_basis = matrix``, but through decompose_exact when an axis is flat, so the rotation survives."""
+    obj.matrix_basis = matrix
+    if has_flat_axis(matrix):
+        _exact_channels(obj, matrix)
+
+
+def _exact_channels(obj, matrix) -> None:
+    """Overwrite the location / rotation / scale Blender decomposed from ``matrix`` with decompose_exact's.
+
+    The matrix was assigned first, so the object's world matrix already holds it until the next depsgraph update,
+    which then rebuilds the same matrix from these channels."""
+    loc, rot, scale = decompose_exact(matrix)
+    obj.location = loc
+    mode = getattr(obj, "rotation_mode", "XYZ")
+    if mode == "QUATERNION":
+        obj.rotation_quaternion = rot
+    elif mode == "AXIS_ANGLE":
+        axis, angle = rot.to_axis_angle()
+        obj.rotation_axis_angle = (angle, *axis)
+    else:
+        obj.rotation_euler = rot.to_euler(mode)
+    obj.scale = scale
+
+
+def set_world_exact(obj, matrix) -> None:
+    """``obj.matrix_world = matrix`` for an object without a parent, flat axes kept exact (set_basis_exact)."""
+    obj.matrix_world = matrix
+    if obj.parent is None and has_flat_axis(matrix):
+        _exact_channels(obj, matrix)

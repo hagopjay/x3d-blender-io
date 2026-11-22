@@ -25,6 +25,8 @@ Measured 22 Nov 2026 from main 47ed742 plus this change, with bpy 5.3.0 and the 
 | Same renderer, two exporters | `tools/fidelity_rig/same_renderer.py` | X_ITE on this add-on's X3D vs X_ITE on Blender's own glb: within the calibrated tolerance? | `basecolour-channels-swapped` |
 | Structure | `tools/schematron/schematron.py --plants` | does the Schematron flag a ROUTE to nowhere, a USE before DEF, a wrong component level, a missing component? | `tests/plants/schematron-*.x3d` |
 | Differential chaos | `tools/chaos/differential.py --fail-on-crash` | does any one-edit mutant of the frozen scenes crash the import, the re-export or a validator? (docs/CHAOS.md) | `import-bool-crash` |
+| Scene chaos | `tools/chaos/scene_chaos.py --fail-on-crash` | does a broken Blender scene (22 edits: NaN vertices, odd names, zero scales, 1,500-deep parents, ...) crash the export, fail a validator, or move on a second round trip (import, export, import, export: the last two must agree)? (docs/CHAOS.md, 2.7.3) | `export-translation-drift` |
+| Hostile files | `tools/chaos/hostile.py --fail-on-finding` | do 67 hostile files (bombs, XXE, network URLs, Inline cycles and fan-outs, broken bytes, huge counts) end in a traceback, a hang, a network hit, a disclosed file or a full disk? Each runs in its own process under memory and file limits (docs/CHAOS.md, 2.7.3) | `import-malformed-traceback` |
 
 `python tools/oracles/plant.py list` prints every plant; `make NAME DIR` writes a copy of `source/` with the one edit,
 and `expect-fail NAME -- CMD` passes only when CMD fails and names the fault.

@@ -19,7 +19,9 @@ try:
     from .hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from .interaction import check_interactions, read_interaction, read_tour
     from .material import analyze_material
-    from .matrix_safety import axis_scales, inverted64, scale_to_children_matrix
+    from . import budget
+    from . import default_uv
+    from .matrix_safety import axis_scales, decompose_exact, inverted64, scale_to_children_matrix
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
@@ -28,7 +30,9 @@ except ImportError:  # pragma: no cover - standalone test fallback
     from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from interaction import check_interactions, read_interaction, read_tour
     from material import analyze_material
-    from matrix_safety import axis_scales, inverted64, scale_to_children_matrix
+    import budget
+    import default_uv
+    from matrix_safety import axis_scales, decompose_exact, inverted64, scale_to_children_matrix
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
@@ -419,7 +423,7 @@ def _uv_values(mesh):
     """Return a per-loop UV accessor for the active UV layer, or None."""
     uv_layers = getattr(mesh, "uv_layers", None)
     layer = uv_layers.active if uv_layers else None
-    if layer is None:
+    if layer is None or default_uv.is_unchanged_default(mesh, layer):
         return None
     uv_attr = getattr(layer, "uv", None)
     if uv_attr is not None and len(uv_attr) == len(mesh.loops):
@@ -955,10 +959,10 @@ def static_world_matrix(obj):
     ``matrix_basis`` and ``matrix_parent_inverse`` instead.
     """
     matrix = obj.matrix_basis.copy()
-    parent = obj.parent
-    if parent is None:
-        return matrix
-    return static_world_matrix(parent) @ obj.matrix_parent_inverse @ matrix
+    while obj.parent is not None:      # a loop: 1,500 parented empties raised RecursionError (chaos round 2.7.3)
+        matrix = obj.parent.matrix_basis @ obj.matrix_parent_inverse @ matrix
+        obj = obj.parent
+    return matrix
 
 
 # Matrix.decompose() squares the axis lengths in float32: beyond about 1e19 (or below about 1e-19) the square overflows
@@ -967,42 +971,39 @@ _DECOMPOSE_FLOAT32_LIMIT = 1e15
 
 
 def _decompose64(matrix):
-    """``Matrix.decompose()`` computed in float64, with the same sign convention (a mirror negates all three scales).
+    """matrix_safety.decompose_exact (kept under this name for the callers here)."""
+    return decompose_exact(matrix)
 
-    An axis of length 0 has no direction: it is rebuilt from the other two, so the rotation stays orthonormal."""
-    import numpy as np
-    from mathutils import Matrix, Quaternion, Vector
 
-    values = np.array(matrix, dtype=np.float64)
-    linear = values[:3, :3]
-    scale = np.linalg.norm(linear, axis=0)
-    translation = Vector(values[:3, 3].tolist())
-    columns = [linear[:, i] / scale[i] if scale[i] > 0.0 else None for i in range(3)]
-    for i in range(3):
-        if columns[i] is None:
-            a, b = columns[(i + 1) % 3], columns[(i + 2) % 3]
-            if a is None or b is None:  # two axes of length 0: no rotation can be recovered
-                return translation, Quaternion(), Vector(scale.tolist())
-            columns[i] = np.cross(a, b)
-            columns[i] /= np.linalg.norm(columns[i])
-    rotation = np.stack(columns, axis=1)
-    if np.linalg.det(rotation) < 0.0:
-        rotation, scale = -rotation, -scale
-    return translation, Matrix(rotation.tolist()).to_quaternion(), Vector(scale.tolist())
+def canonical_axis_angle(axis, angle) -> tuple[float, float, float, float]:
+    """One spelling for each rotation: angle in [0, pi], and at pi the axis whose first non-zero part is positive.
+
+    A half turn about A is the same rotation as a half turn about -A, and Blender's float32 quaternion picks either
+    one, so a light at rotation='0 0.70711 0.70711 3.14159' came back as '0 -0.70711 -0.70711 3.14159' after a round
+    trip (6 of 276 scene-chaos cases, chaos round 2.7.3)."""
+    x, y, z, a = float(axis[0]), float(axis[1]), float(axis[2]), float(angle)
+    if abs(a) < 1e-9:
+        return 0.0, 0.0, 1.0, 0.0
+    if a > math.pi:                               # (A, a) is (-A, 2 pi - a)
+        x, y, z, a = -x, -y, -z, 2.0 * math.pi - a
+    if abs(a - math.pi) < 1e-5:
+        first = next((c for c in (x, y, z) if abs(c) > 1e-6), 0.0)
+        if first < 0.0:
+            x, y, z = -x, -y, -z
+    return x, y, z, a
 
 
 def _matrix_transform(matrix) -> IRTransform:
-    if any(s > _DECOMPOSE_FLOAT32_LIMIT or 0.0 < s < 1.0 / _DECOMPOSE_FLOAT32_LIMIT for s in axis_scales(matrix)):
+    # an axis of length 0 too: Blender's decompose() makes up its direction, so a scale='0 1 1' Transform's rotation
+    # moved by 0.04 rad per round trip (chaos round 2.7.3); _decompose64 rebuilds it from the other two axes
+    if any(s > _DECOMPOSE_FLOAT32_LIMIT or s < 1.0 / _DECOMPOSE_FLOAT32_LIMIT for s in axis_scales(matrix)):
         loc, rot, scale = _decompose64(matrix)
     else:
         loc, rot, scale = matrix.decompose()
     axis, angle = rot.to_axis_angle()
-    if abs(angle) < 1e-9:
-        axis = (0.0, 0.0, 1.0)
-        angle = 0.0
     return IRTransform(
         translation=tuple(float(value) for value in loc[:3]),
-        rotation_axis_angle=(float(axis[0]), float(axis[1]), float(axis[2]), float(angle)),
+        rotation_axis_angle=canonical_axis_angle(axis, angle),
         scale=tuple(float(value) for value in scale[:3]),
     )
 
@@ -1412,7 +1413,15 @@ def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, f
         return [], None
     fps = scene.render.fps / scene.render.fps_base
     current = scene.frame_current
-    frames = list(range(frame_start, frame_end + 1, max(1, int(frame_step))))
+    step = max(1, int(frame_step))
+    limit = budget.export_sample_limit()
+    if (frame_end - frame_start) // step + 1 > limit:
+        # a round trip made 48 keys into 1,048,574 (chaos round 2.7.3): the import fits the timeline to cycleInterval
+        wider = -(-(frame_end - frame_start) // (limit - 1))
+        logger.warning("The timeline has %d frames; sampling every %d frames to stay within %d samples (set %s)",
+                       frame_end - frame_start + 1, wider, limit, budget.MAX_EXPORT_SAMPLES_ENV)
+        step = max(step, wider)
+    frames = list(range(frame_start, frame_end + 1, step))
     if frames[-1] != frame_end:
         frames.append(frame_end)
     samples: dict[str, list] = {name: [] for name in objects_by_name}

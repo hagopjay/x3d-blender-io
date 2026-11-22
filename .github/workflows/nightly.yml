@@ -5,7 +5,8 @@ name: Nightly robustness sweep
 #   - the perturbation sweep (silent-loss oracle) against the mapping table, all three starting states;
 #   - the golden files and the six metamorphic relations on the 12 frozen scenes;
 #   - the 195-case suite, its import/export fixed point, the round-trip invariants and the Web3D Schematron;
-#   - differential chaos: one-edit mutants of the frozen scenes through the validators, the import and the re-export.
+#   - differential chaos: one-edit mutants of the frozen scenes through the validators, the import and the re-export;
+#   - scene chaos (edits to the Blender scene, then export and the fixed point) and the hostile-file battery (2.7.3).
 # The same steps run on pull requests (ci.yml); this workflow adds the schedule and the full set of Blender versions in
 # one place. Runs on schedule and by hand (Actions tab, "Run workflow").
 
@@ -93,6 +94,16 @@ jobs:
               --python tools/chaos/differential.py -- --seeds tests/golden --per-seed 80 --rng "$rng" \
               --out "nightly/chaos-$rng" --no-schematron --fail-on-crash
           done
+      - name: Scene chaos (276 scene edits x 2 seeds; export, judges, re-import, fixed point; tools/chaos/scene_chaos.py)
+        if: always()
+        run: |
+          for rng in 7 ${{ github.run_number }}; do
+            "$BLENDER_DIR/blender" -b --factory-startup -noaudio --python-exit-code 1 \
+              --python tools/chaos/scene_chaos.py -- --out "nightly/scene-$rng" --per-op 12 --rng "$rng" --fail-on-crash
+          done
+      - name: Hostile files (67 sandboxed cases, each in its own Blender; tools/chaos/hostile.py)
+        if: always()
+        run: python tools/chaos/hostile.py --out nightly/hostile --blender "$BLENDER_DIR/blender" --fail-on-finding
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -103,4 +114,6 @@ jobs:
             nightly/schematron.json
             nightly/io-sync/summary.txt
             nightly/chaos-*/summary.json
+            nightly/scene-*/summary.json
+            nightly/hostile/results.json
           if-no-files-found: warn
