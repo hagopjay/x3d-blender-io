@@ -182,6 +182,14 @@ def _coerce_field(value: str, declaration):
         if text not in ("true", "false"):
             raise ValueError(f"{value!r} is not an SFBool (true or false)")
         return text == "true"
+    if field_type == "MFBool":
+        # MFBool was read as numbers, so every MetadataBoolean (value='true false') failed the semantic check with
+        # "could not convert string to float: 'true'" and the export was refused (receipt-to-rule engine, 23 Nov 2026)
+        tokens = text.replace(",", " ").split()
+        bad = [token for token in tokens if token not in ("true", "false")]
+        if bad:
+            raise ValueError(f"{bad[0]!r} is not an MFBool value (true or false)")
+        return [token == "true" for token in tokens]
     if field_type == "SFString":
         return value
     if field_type == "MFString":

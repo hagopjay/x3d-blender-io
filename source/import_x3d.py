@@ -1982,6 +1982,12 @@ def importMesh_ApplyColors(bpymesh, geom, ancestry):
         rgb_len = len(rgb)
         vertices_len = len(bpymesh.vertices)
         loops_len = len(bpymesh.loops)
+        if rgb_len < vertices_len and rgb_len != loops_len:
+            # colours are per vertex in the triangle sets; a vertex past them (an index past the points adds one)
+            # is white, as pad_values does for IndexedFaceSet, instead of the colours going on by corner
+            logger.warning("Color has %d values for %d vertices; the rest are white", rgb_len, vertices_len)
+            rgb = list(rgb) + [[1.0, 1.0, 1.0, 1.0]] * (vertices_len - rgb_len)
+            rgb_len = vertices_len
         # usually we want an exact length match, however some files are corrupted
         # having more color values is not critical, but we need to ensure that neither verts nor loops are exact matches
         if rgb_len >= vertices_len and rgb_len != loops_len:
@@ -2016,10 +2022,18 @@ def importMesh_ApplyNormals(bpymesh, geom, ancestry):
 
     per_vertex = geom.getFieldAsBool('normalPerVertex', True, ancestry)
     vectors = normals.getFieldAsArray('vector', 0, ancestry)
-    if per_vertex:
-        bpymesh.vertices.foreach_set("normal", vectors)
-    else:
-        bpymesh.polygons.foreach_set("normal", vectors)
+    target = bpymesh.vertices if per_vertex else bpymesh.polygons
+    need = 3 * len(target)
+    if len(vectors) != need:
+        # a short or long Normal list (or vertices added for an index past the points): foreach_set needs the exact
+        # length, so pad with +Z or cut, with a warning
+        logger.warning("Normal has %d values for %d %s; padded or cut to fit", len(vectors) // 3, len(target),
+                       "vertices" if per_vertex else "faces")
+        vectors = (list(vectors) + [0.0, 0.0, 1.0] * len(target))[:need]
+    try:
+        target.foreach_set("normal", vectors)
+    except (AttributeError, RuntimeError, TypeError):   # read-only normals in this Blender: Blender computes them
+        pass
 
 
 # Reads the standard Coordinate object - common for all mesh elements
@@ -2034,8 +2048,12 @@ def importMesh_ReadVertices(bpymesh, geom, ancestry):
     # We want points here as a flat array, but the caching logic in
     # IndexedFaceSet presumes a 2D one.
     # The case for caching is stronger over there.
-    coord = geom.getChildBySpec('Coordinate')
+    coord = _coordinate_of(geom)
+    if coord is None:
+        logger.warning("%s has no Coordinate; it has no vertices", geom.getSpec())
+        return
     points = coord.getFieldAsArray('point', 0, ancestry, conversion_scale)
+    points = points[:len(points) - len(points) % 3]
     bpymesh.vertices.add(len(points) // 3)
     bpymesh.vertices.foreach_set("co", points)
 
@@ -2055,6 +2073,8 @@ def importMesh_ApplyUVs(bpymesh, geom, ancestry):
     if not uvs:
         return
 
+    # a vertex past the texture coordinates (an index past the points adds one) reads (0, 0)
+    uvs = pad_values(uvs, len(bpymesh.vertices), (0.0, 0.0), 'TextureCoordinate')
     d = bpymesh.uv_layers.new().data
     uvs = [i for poly in bpymesh.polygons
            for vidx in poly.vertices
@@ -2175,167 +2195,178 @@ def validate_points_field(coord_index, points):
 # Now specific geometry importers
 
 
+COORDINATE_SPECS = ['Coordinate', 'CoordinateDouble']   # CoordinateDouble: the same points in double precision
+
+
+def _coordinate_of(geom):
+    """The geometry's Coordinate or CoordinateDouble child, or None (2.7.3 read only Coordinate, so a triangle set
+    with CoordinateDouble raised AttributeError: two real files in the project, receipt-to-rule engine, 23 Nov 2026)."""
+    return geom.getChildBySpec(COORDINATE_SPECS)
+
+
+def _fan_strip_runs(index):
+    """An index list split at -1 into its fans or strips; a run shorter than three makes no triangle and is dropped."""
+    runs, run = [], []
+    for value in index:
+        if value == -1:
+            if run:
+                runs.append(run)
+            run = []
+        else:
+            run.append(value)
+    if run:
+        runs.append(run)
+    return [r for r in runs if len(r) >= 3]
+
+
+def _strip_triangles(run, cw):
+    """The triangles of one strip, every other one turned so that they all face the same way."""
+    out = []
+    for j in range(len(run) - 2):
+        odd = (j + cw) % 2
+        out += [run[j + odd], run[j + 1 - odd], run[j + 2]]
+    return out
+
+
+def _fan_triangles(run, cw):
+    out = []
+    for j in range(1, len(run) - 1):
+        out += [run[0], run[j + cw], run[j + 1 - cw]]
+    return out
+
+
+def _set_triangles(bpymesh, corners, what):
+    """Give ``bpymesh`` one triangle per three entries of ``corners`` (vertex indices).
+
+    An index past the vertices, or negative, gets one added vertex at the origin, as validate_points_field does for
+    IndexedFaceSet, so the triangle count and order stay as the file says. 2.7.3 passed such an index to Blender
+    as it was, and the colour and texture-coordinate passes then read past their lists (IndexError: the
+    receipt-to-rule engine's replay, 23 Nov 2026)."""
+    corners = corners[:len(corners) - len(corners) % 3]
+    count = len(bpymesh.vertices)
+    added = {}
+    for k, v in enumerate(corners):
+        if 0 <= v < count:
+            continue
+        if v not in added:
+            added[v] = count + len(added)
+        corners[k] = added[v]
+    if added:
+        logger.warning("%s: %d index value(s) outside the %d points (largest %d); each is read as a vertex at the "
+                       "origin", what, len(added), count, max(added))
+        bpymesh.vertices.add(len(added))
+    num_polys = len(corners) // 3
+    bpymesh.loops.add(num_polys * 3)
+    bpymesh.polygons.add(num_polys)
+    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
+    bpymesh.polygons.foreach_set("vertices", corners)
+
+
+def _triangle_set_index(geom, ancestry, what):
+    return clean_index_field(geom.getFieldAsArray('index', 0, ancestry), what + ' index')
+
+
 def importMesh_IndexedTriangleSet(geom, ancestry):
     # Ignoring solid
     # colorPerVertex is always true
+    if _coordinate_of(geom) is None:
+        return None
     ccw = geom.getFieldAsBool('ccw', True, ancestry)
 
     bpymesh = bpy.data.meshes.new(name="XXX")
     importMesh_ReadVertices(bpymesh, geom, ancestry)
 
-    # Read the faces
-    index = geom.getFieldAsArray('index', 0, ancestry)
-    num_polys = len(index) // 3
-    if not ccw:
-        index = [index[3 * i + j] for i in range(num_polys) for j in (1, 0, 2)]
-
-    bpymesh.loops.add(num_polys * 3)
-    bpymesh.polygons.add(num_polys)
-    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
-    bpymesh.polygons.foreach_set("vertices", index)
-
+    # Read the faces; -1 has no meaning in an IndexedTriangleSet, so a triangle that has one is dropped
+    index = _triangle_set_index(geom, ancestry, 'IndexedTriangleSet')
+    triangles = [index[3 * i:3 * i + 3] for i in range(len(index) // 3)]
+    triangles = [t for t in triangles if -1 not in t]
+    corners = [t[j] for t in triangles for j in ((0, 1, 2) if ccw else (1, 0, 2))]
+    _set_triangles(bpymesh, corners, 'IndexedTriangleSet')
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
 def importMesh_IndexedTriangleStripSet(geom, ancestry):
     # Ignoring solid
     # colorPerVertex is always true
+    if _coordinate_of(geom) is None:
+        return None
     cw = 0 if geom.getFieldAsBool('ccw', True, ancestry) else 1
     bpymesh = bpy.data.meshes.new(name="IndexedTriangleStripSet")
     importMesh_ReadVertices(bpymesh, geom, ancestry)
-
-    # Read the faces
-    index = geom.getFieldAsArray('index', 0, ancestry)
-    while index and index[-1] == -1:
-        del index[-1]
-    ngaps = sum(1 for i in index if i == -1)
-    num_polys = len(index) - 2 - 3 * ngaps
-    bpymesh.loops.add(num_polys * 3)
-    bpymesh.polygons.add(num_polys)
-    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
-
-    def triangles():
-        i = 0
-        odd = cw
-        while True:
-            yield index[i + odd]
-            yield index[i + 1 - odd]
-            yield index[i + 2]
-            odd = 1 - odd
-            i += 1
-            if i + 2 >= len(index):
-                return
-            if index[i + 2] == -1:
-                i += 3
-                odd = cw
-    bpymesh.polygons.foreach_set("vertices", [f for f in triangles()])
+    runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleStripSet'))
+    _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'IndexedTriangleStripSet')
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
 def importMesh_IndexedTriangleFanSet(geom, ancestry):
     # Ignoring solid
     # colorPerVertex is always true
+    if _coordinate_of(geom) is None:
+        return None
     cw = 0 if geom.getFieldAsBool('ccw', True, ancestry) else 1
     bpymesh = bpy.data.meshes.new(name="IndexedTriangleFanSet")
     importMesh_ReadVertices(bpymesh, geom, ancestry)
-
-    # Read the faces
-    index = geom.getFieldAsArray('index', 0, ancestry)
-
-    # remove trailing -1 values , normally there should only be 0 or 1 of these
-    while index and index[-1] == -1:
-        del index[-1]
-
-    ngaps = sum(1 for i in index if i == -1)
-    num_polys = len(index) - 2 - 3 * ngaps
-    bpymesh.loops.add(num_polys * 3)
-    bpymesh.polygons.add(num_polys)
-    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
-
-    def triangles():
-        i = 0
-        j = 1
-        while True:
-            yield index[i]
-            yield index[i + j + cw]
-            yield index[i + j + 1 - cw]
-            j += 1
-            if i + j + 1 >= len(index):
-                return
-            if index[i + j + 1] == -1:
-                i = j + 2
-                j = 1
-    bpymesh.polygons.foreach_set("vertices", [f for f in triangles()])
+    # 2.7.3 restarted the third fan and every later one at the wrong index (i = j + 2, not i + j + 2), so a set of
+    # three or more fans asked Blender for more corners than it had made (RuntimeError, receipt-to-rule engine)
+    runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleFanSet'))
+    _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'IndexedTriangleFanSet')
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
+
+
+def _counted_runs(counts, n, what):
+    """stripCount / fanCount as runs of consecutive vertex indices; a count under 3 makes no triangle, and counts
+    that run past the vertices stop at the last one (a count of two billion must not build a two-billion list)."""
+    runs, start = [], 0
+    for count in clean_index_field(counts, what):
+        if count < 0:
+            continue
+        run = list(range(min(start, n), min(start + count, n)))
+        start += count
+        if len(run) >= 3:
+            runs.append(run)
+    if start > n:
+        logger.warning("%s adds up to %d vertices but there are %d; the strips or fans stop at the last one",
+                       what, start, n)
+    return runs
 
 
 def importMesh_TriangleSet(geom, ancestry):
     # Ignoring solid
     # colorPerVertex is always true
+    if _coordinate_of(geom) is None:
+        return None
     ccw = geom.getFieldAsBool('ccw', True, ancestry)
     bpymesh = bpy.data.meshes.new(name="TriangleSet")
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     n = len(bpymesh.vertices)
-    num_polys = n // 3
-    bpymesh.loops.add(num_polys * 3)
-    bpymesh.polygons.add(num_polys)
-    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
-
-    if ccw:
-        fv = [i for i in range(n)]
-    else:
-        fv = [3 * i + j for i in range(n // 3) for j in (1, 0, 2)]
-    bpymesh.polygons.foreach_set("vertices", fv)
-
+    corners = [3 * i + j for i in range(n // 3) for j in ((0, 1, 2) if ccw else (1, 0, 2))]
+    _set_triangles(bpymesh, corners, 'TriangleSet')
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
 def importMesh_TriangleStripSet(geom, ancestry):
     # Ignoring solid
     # colorPerVertex is always true
+    if _coordinate_of(geom) is None:
+        return None
     cw = 0 if geom.getFieldAsBool('ccw', True, ancestry) else 1
     bpymesh = bpy.data.meshes.new(name="TriangleStripSet")
     importMesh_ReadVertices(bpymesh, geom, ancestry)
-    counts = geom.getFieldAsArray('stripCount', 0, ancestry)
-    num_polys = sum([n - 2 for n in counts])
-    bpymesh.loops.add(num_polys * 3)
-    bpymesh.polygons.add(num_polys)
-    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
-
-    def triangles():
-        b = 0
-        for i in range(0, len(counts)):
-            for j in range(0, counts[i] - 2):
-                yield b + j + (j + cw) % 2
-                yield b + j + 1 - (j + cw) % 2
-                yield b + j + 2
-            b += counts[i]
-    bpymesh.polygons.foreach_set("vertices", [x for x in triangles()])
-
+    runs = _counted_runs(geom.getFieldAsArray('stripCount', 0, ancestry), len(bpymesh.vertices), 'stripCount')
+    _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'TriangleStripSet')
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
 def importMesh_TriangleFanSet(geom, ancestry):
     # Ignoring solid
     # colorPerVertex is always true
+    if _coordinate_of(geom) is None:
+        return None
     cw = 0 if geom.getFieldAsBool('ccw', True, ancestry) else 1
-    bpymesh = bpy.data.meshes.new(name="TriangleStripSet")
+    bpymesh = bpy.data.meshes.new(name="TriangleFanSet")
     importMesh_ReadVertices(bpymesh, geom, ancestry)
-    counts = geom.getFieldAsArray('fanCount', 0, ancestry)
-    num_polys = sum([n - 2 for n in counts])
-    bpymesh.loops.add(num_polys * 3)
-    bpymesh.polygons.add(num_polys)
-    bpymesh.polygons.foreach_set("loop_start", range(0, num_polys * 3, 3))
-
-    def triangles():
-        b = 0
-        for i in range(0, len(counts)):
-            for j in range(1, counts[i] - 1):
-                yield b
-                yield b + j + cw
-                yield b + j + 1 - cw
-            b += counts[i]
-    bpymesh.polygons.foreach_set("vertices", [x for x in triangles()])
+    runs = _counted_runs(geom.getFieldAsArray('fanCount', 0, ancestry), len(bpymesh.vertices), 'fanCount')
+    _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'TriangleFanSet')
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2350,7 +2381,7 @@ def importMesh_IndexedFaceSet(geom, ancestry):
     # for each mesh, only leave vertices that are used for faces.
 
     ccw = geom.getFieldAsBool('ccw', True, ancestry)
-    coord = geom.getChildBySpec('Coordinate')
+    coord = _coordinate_of(geom)
 
     if coord is None:
         return None
@@ -2380,6 +2411,7 @@ def importMesh_IndexedFaceSet(geom, ancestry):
 
     faces = []
     face = []
+    past_points = 0
     # Generate faces. Cull the vertices if necessary,
     for i in index:
         if i == -1:
@@ -2389,7 +2421,13 @@ def importMesh_IndexedFaceSet(geom, ancestry):
         else:
             if cull is not None:
                 if not (i in cull):
-                    culled_points.append(points[i])
+                    # an index past the points is one vertex at the origin, as validate_points_field reads it on the
+                    # uncut path (2.7.3 raised IndexError here: the receipt-to-rule engine's replay, 23 Nov 2026)
+                    if i < len(points):
+                        culled_points.append(points[i])
+                    else:
+                        culled_points.append((0.0, 0.0, 0.0))
+                        past_points += 1
                     cull[i] = new_index
                     uncull.append(i)
                     i = new_index
@@ -2400,6 +2438,9 @@ def importMesh_IndexedFaceSet(geom, ancestry):
     if face:
         faces.append(flip(face, ccw))  # The last face
 
+    if past_points:
+        logger.warning("%d coordIndex value(s) past the %d points; each is read as a vertex at the origin",
+                       past_points, len(points))
     if cull:
         points = culled_points
 
@@ -3046,7 +3087,9 @@ def _coloured_line_mesh(name, polylines):
 
 def importMesh_LineSet(geom, ancestry):
     # TODO: line display properties are ignored
-    coord = geom.getChildBySpec('Coordinate')
+    coord = _coordinate_of(geom)
+    if coord is None:
+        return None
     src_points = coord.getFieldAsArray('point', 3, ancestry, conversion_scale)
     colours, kind = x3d_point_colours(geom, ancestry)
     counts = [int(n) for n in geom.getFieldAsArray('vertexCount', 0, ancestry)]
@@ -3121,7 +3164,7 @@ def _indexed_line_colours(geom, ancestry, points, lines, colours):
 def importMesh_IndexedLineSet(geom, ancestry):
     # VRML not x3d
     # coord = geom.getChildByName('coord') # 'Coordinate'
-    coord = geom.getChildBySpec('Coordinate')  # works for x3d and vrml
+    coord = _coordinate_of(geom)  # works for x3d and vrml
     if coord:
         points = coord.getFieldAsArray('point', 3, ancestry, conversion_scale)
     else:
@@ -3177,7 +3220,7 @@ def importMesh_IndexedLineSet(geom, ancestry):
 
 def importMesh_PointSet(geom, ancestry):
     # VRML not x3d
-    coord = geom.getChildBySpec('Coordinate')  # works for x3d and vrml
+    coord = _coordinate_of(geom)  # works for x3d and vrml
     if coord:
         points = coord.getFieldAsArray('point', 3, ancestry, conversion_scale)
     else:
@@ -4561,7 +4604,7 @@ def _quad_mesh(name, geom, ancestry, index=None):
     """CADGeometry quads: every four indices (IndexedQuadSet) or coordinates (QuadSet) make one quad; a remainder,
     and a quad naming a missing coordinate, are skipped. Colours, normals and texture coordinates are per vertex, as
     for the triangle sets."""
-    if geom.getChildBySpec('Coordinate') is None:
+    if _coordinate_of(geom) is None:
         return None
     bpymesh = bpy.data.meshes.new(name=name)
     importMesh_ReadVertices(bpymesh, geom, ancestry)
@@ -6846,7 +6889,7 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
     if geom is None:
         logger.warning("HAnim skin Shape without IndexedFaceSet is not supported; skipped")
         return
-    coord = geom.getChildBySpec('Coordinate')
+    coord = _coordinate_of(geom)
     points = skin_points
     if coord is not None:
         if coord.reference and coord.getRealNode().parsed:
