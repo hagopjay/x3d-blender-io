@@ -10,7 +10,9 @@ import os
 from typing import Callable
 
 import bpy
-from bpy_extras.io_utils import path_reference, path_reference_copy
+from bpy_extras.io_utils import path_reference
+
+from .file_safety import path_reference_copy   # only regular files, within a byte budget (2.7.3)
 
 try:
     from .extract import extract_scene
@@ -231,7 +233,7 @@ def save(context, settings: ExportSettings, writer: Callable[..., None]):
             settings=settings,
         )
         if copy_set:
-            path_reference_copy(copy_set)
+            path_reference_copy(copy_set, report=logger.warning)
 
     base_dir = os.path.dirname(filepath)
     # "scene.x3dz" -> "scene" (replacing ".x3d" first left "scenez"); "scene.x3d.x3dz" from ensure_ext -> "scene"

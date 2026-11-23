@@ -15,6 +15,9 @@ import shlex
 import math
 import re
 import mathutils
+
+from . import budget
+from . import default_uv
 from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
@@ -539,22 +542,22 @@ class vrmlNode(object):
 
 
     def getProtoDict(self):
-        if self.PROTO_NAMESPACE is not None:
-            return self.PROTO_NAMESPACE
-        else:
-            return self.parent.getProtoDict()
+        node = self           # a loop, not recursion: 5,000 nested VRML Groups hit RecursionError (2.7.3)
+        while node.PROTO_NAMESPACE is None:
+            node = node.parent
+        return node.PROTO_NAMESPACE
 
     def getDefDict(self):
-        if self.DEF_NAMESPACE is not None:
-            return self.DEF_NAMESPACE
-        else:
-            return self.parent.getDefDict()
+        node = self           # a loop, not recursion: 5,000 nested VRML Groups hit RecursionError (2.7.3)
+        while node.DEF_NAMESPACE is None:
+            node = node.parent
+        return node.DEF_NAMESPACE
 
     def getRouteIpoDict(self):
-        if self.ROUTE_IPO_NAMESPACE is not None:
-            return self.ROUTE_IPO_NAMESPACE
-        else:
-            return self.parent.getRouteIpoDict()
+        node = self           # a loop, not recursion: 5,000 nested VRML Groups hit RecursionError (2.7.3)
+        while node.ROUTE_IPO_NAMESPACE is None:
+            node = node.parent
+        return node.ROUTE_IPO_NAMESPACE
 
     def setRoot(self, filename):
         self.filename = filename
@@ -800,10 +803,15 @@ class vrmlNode(object):
             return default
 
         try:
-            return float(f[0]) * scale_factor
+            value = float(f[0]) * scale_factor
         except:
             logger.warning('value "%s" could not be used as a float for field "%s"' % (f[0], field))
             return default
+        if not math.isfinite(value):
+            # the parse-time sanitiser (2.7.3): NaN and INF stop here, not in each node's own maths
+            logger.warning('value "%s" of field "%s" is not finite; using the default %r' % (f[0], field, default))
+            return default
+        return value
 
     def getFieldAsFloatTuple(self, field, default, ancestry, scale_factor=1.0):
         self_real = self.getRealNode()  # in case we're an instance
@@ -825,6 +833,9 @@ class vrmlNode(object):
                 except:
                     break  # quit of first non float, perhaps its a new field name on the same line? - if so we are going to ignore it :/ TODO
 
+        if ret and not all(math.isfinite(v) for v in ret):
+            logger.warning('value "%s" of field "%s" is not finite; using the default' % (f, field))
+            return default
         if ret:
             # check integrity of the result compared to default expected value. If corrupted, discard to ensure further working
             if default:
@@ -890,13 +901,22 @@ class vrmlNode(object):
         def array_as_number(array_string):
             array_data = []
             try:
-                array_data = [int(val, 0) for val in array_string]
+                # base 10 first: int('010', 0) raises (an octal-looking zero pad), which made a whole coordIndex
+                # floats; base 0 still reads PixelTexture's 0xRRGGBB
+                array_data = [int(val) if val[-1:].isdigit() and 'x' not in val.lower() else int(val, 0)
+                              for val in array_string]
             except:
                 try:
                     array_data = [float(val) for val in array_string]
                 except:
                     logger.warning('Could not parse array data from field')
-
+                    return array_data
+                # the parse-time sanitiser (2.7.3): a NaN or INF in a point list or a key list is read as 0 here,
+                # once for every node, instead of a guard in each node that reads numbers
+                bad = sum(1 for v in array_data if not math.isfinite(v))
+                if bad:
+                    logger.warning('field "%s" has %d values that are not finite; read as 0' % (field, bad))
+                    array_data = [v if math.isfinite(v) else 0.0 for v in array_data]
             return array_data
 
         self_real = self.getRealNode()  # in case we're an instance
@@ -1128,11 +1148,10 @@ class vrmlNode(object):
         url_ls = []
 
         if self.node_type == NODE_NORMAL and self.getSpec() == 'Inline':
-            ancestry = []  # Warning! - PROTO's using this wont work at all.
-            url = self.getFieldAsMFStringArray('url', None, ancestry)
-            if url:
-                url_ls = [(url, None)]
-            del ancestry
+            # An Inline is loaded by importInline, as for XML (with its cycle guard and load budget). Read here as
+            # well, it came in twice; before 2.7.3 this branch raised TypeError for every ClassicVRML Inline (the url
+            # list itself went to os.path.exists), so no file ever loaded both ways.
+            pass
 
         elif self.getExternprotoName():
             # externproto
@@ -1176,9 +1195,13 @@ class vrmlNode(object):
                 if not url_found:
                     logger.warning('Inline URL could not be found: %s' % url)
                 else:
-                    if url == self.getFilename():
-                        logger.warning('Can\'t Inline yourself recursively: %s' % url)
+                    resolved = os.path.realpath(url)
+                    if url == self.getFilename() or resolved in _VRML_INLINE_STACK \
+                            or resolved == os.path.realpath(self.getFilename() or ""):
+                        # a inlines b and b inlines a recursed until Python's stack ran out (chaos round 2.7.3)
+                        logger.warning('Can\'t Inline a file that is already being read: %s' % url)
                     else:
+                        _VRML_INLINE_STACK.append(resolved)
 
                         try:
                             data = gzipOpen(url)
@@ -1224,6 +1247,7 @@ class vrmlNode(object):
 
                             # Watch it! - restore lines
                             lines[:] = lines_old
+                        _VRML_INLINE_STACK.pop()
 
         return new_i
 
@@ -1416,6 +1440,9 @@ class vrmlNode(object):
 
 
 
+_VRML_INLINE_STACK = []   # ClassicVRML files being inlined right now (resolved paths), to stop a -> b -> a
+
+
 def gzipOpen(path):
     """The file's text, gunzipped when it is gzip, within the decompressed source budget (import_resources); None when
     it cannot be read, with the reason logged."""
@@ -1442,6 +1469,7 @@ def vrml_parse(path):
     if data is None:
         return None, 'Failed to open file: ' + path
 
+    _note_protos('PROTO' in data)
     # Stripped above
     lines[:] = vrmlFormat(data)
 
@@ -1592,6 +1620,59 @@ def _make_sax_parser():
     return make_x3d_sax_parser()
 
 
+def _parse_bytes(raw, make_parser, path):
+    """``(document, None)`` or ``(None, why)``. The parser gets bytes, so expat honours a UTF-16 BOM and the
+    encoding declaration. A file that is not well-formed is refused with the parser's reason instead of ending the
+    import with a traceback (chaos round 2.7.3: a cut-off file, an entity declaration, a NUL byte). A file that is
+    not UTF-8 and declares no other encoding (Latin-1 or Windows-1252 bytes in a name) is read once more as
+    Windows-1252, with a warning. ``make_parser`` returns a fresh SAX parser: one cannot be reused."""
+    import io
+    import xml.dom.minidom
+    import xml.sax
+    from xml.parsers.expat import ExpatError
+
+    errors = (xml.sax.SAXException, ExpatError, ValueError, UnicodeError, LookupError)
+    declared = re.match(rb"""^(\xef\xbb\xbf)?<\?xml[^>]*?encoding\s*=\s*(['"])([^'"]*)\2""", raw)
+    if declared:
+        import codecs
+        try:
+            codecs.lookup(declared.group(3).decode('ascii', 'replace'))
+        except LookupError:
+            # an encoding name Python does not know (a fuzzed "UTF1e309"): read the bytes as UTF-8, which the str
+            # parser before 2.7.3 did by ignoring the declaration
+            logger.warning("%s declares the unknown encoding %r; reading it as UTF-8", os.path.basename(path),
+                           declared.group(3).decode('ascii', 'replace'))
+            raw = raw[:declared.start(3)] + b'UTF-8' + raw[declared.end(3):]
+    if raw.startswith((b'\xff\xfe', b'\xfe\xff')):
+        # UTF-16 with a BOM: expat refuses it when the declaration says UTF-8, which an editor that saved the file
+        # as UTF-16 leaves in place. The BOM decides; the text goes on as UTF-8.
+        try:
+            text = raw.decode('utf-16')
+            raw = re.sub(r"""^(<\?xml[^>]*?encoding\s*=\s*)(['"])[^'"]*\2""", r"\1\2UTF-8\2", text).encode('utf-8')
+        except UnicodeError:
+            pass
+    try:
+        return xml.dom.minidom.parse(io.BytesIO(raw), make_parser()), None
+    except errors as exc:
+        first = exc
+    try:
+        raw.decode('utf-8')
+        undecodable = False
+    except UnicodeDecodeError:
+        undecodable = not raw.startswith((b'\xff\xfe', b'\xfe\xff'))
+    declaration = raw[:200].split(b'?>')[0].lower()
+    declares_other = re.search(rb"encoding\s*=\s*['\"](?!utf-8['\"])", declaration) is not None
+    if undecodable and not declares_other:
+        try:
+            doc = xml.dom.minidom.parse(io.BytesIO(raw.decode('cp1252', errors='replace').encode('utf-8')),
+                                        make_parser())
+            logger.warning("%s is not UTF-8; read it as Windows-1252", os.path.basename(path))
+            return doc, None
+        except errors:
+            pass
+    return None, f'Not a well-formed X3D file, not importing {os.path.basename(path)}: {first}'
+
+
 def x3d_parse(path):
     """
     Sets up the root node and returns it so load_web3d() can deal with the blender side of things.
@@ -1601,13 +1682,17 @@ def x3d_parse(path):
     import xml.sax
     from xml.sax import handler
 
-    # Could add a try/except here, but a console error is more useful.
-    data = gzipOpen(path)
+    from .import_resources import ResourceLimitError, read_source_bytes
 
-    if data is None:
-        return None, 'Failed to open file: ' + path
-    if not data.strip():  # minidom raises TypeError on an empty document
-        return None, 'File is empty: ' + path
+    try:
+        raw = read_source_bytes(path)
+    except ResourceLimitError as exc:
+        return None, f'Not importing {path}: {exc}'
+    except OSError as exc:
+        return None, f'Failed to open file: {path} ({exc})'
+    text = raw.decode('utf-8', errors='replace').lstrip('\ufeff')
+    if not text.strip() or not raw.strip(b'\x00\xef\xbb\xbf\xfe\xff \t\r\n'):
+        return None, 'File is empty: ' + path   # minidom raises TypeError on an empty document
 
     # Enable line number reporting in the parser - kinda brittle
     def set_content_handler(dom_handler):
@@ -1620,20 +1705,35 @@ def x3d_parse(path):
         dom_handler.startElementNS = startElementNS
         orig_set_content_handler(dom_handler)
 
-    parser = _make_sax_parser()
-    orig_set_content_handler = parser.setContentHandler
-    parser.setFeature(handler.feature_external_ges, False)
-    parser.setFeature(handler.feature_external_pes, False)
-    parser.setContentHandler = set_content_handler
+    parser = orig_set_content_handler = None
 
-    doc = xml.dom.minidom.parseString(data, parser)
+    def make_parser():
+        nonlocal parser, orig_set_content_handler
+        parser = _make_sax_parser()
+        orig_set_content_handler = parser.setContentHandler
+        parser.setFeature(handler.feature_external_ges, False)
+        parser.setFeature(handler.feature_external_pes, False)
+        parser.setContentHandler = set_content_handler
+        return parser
 
-    try:
-        x3dnode = doc.getElementsByTagName('X3D')[0]
-    except:
-        return None, 'Not a valid x3d document, cannot import'
+    _note_protos(b'ProtoDeclare' in raw or b'ProtoInstance' in raw or b'ExternProtoDeclare' in raw)
+    doc, why = _parse_bytes(raw, make_parser, path)
+    if doc is None:
+        return None, why
 
-    bpy.ops.object.select_all(action='DESELECT')
+    # the root element, without minidom's recursive getElementsByTagName (RecursionError on a deep file, which the
+    # bare except below read as "not a valid document": 1,500 nested Transforms, chaos round 2.7.3)
+    x3dnode = doc.documentElement
+    if x3dnode is None or x3dnode.tagName != 'X3D':
+        try:
+            x3dnode = doc.getElementsByTagName('X3D')[0]
+        except Exception:
+            return None, 'Not a valid x3d document, cannot import'
+
+    if not _INLINE_STACK:
+        # once per import, not once per Inline file: the operator walks every object in the scene, so an Inline
+        # fan-out paid it a thousand times over a growing scene (chaos round 2.7.3)
+        bpy.ops.object.select_all(action='DESELECT')
 
     root = x3dNode(None, NODE_NORMAL, x3dnode)
     root.setRoot(path)  # so images and Inline's we load have a relative path
@@ -1763,6 +1863,28 @@ def translateTexTransform(node, ancestry):
     return new_mat
 
 
+# Each node's own Transform matrix, read once per import. getFinalMatrix walks every ancestor for every node, so
+# 5,000 nested Transforms read 12.5 million Transforms and took minutes (chaos round 2.7.3). A file with PROTOs is
+# not cached: an IS field reads differently through a different ancestry.
+_transform_cache = {}
+_transform_cache_on = True
+
+
+def _transform_of(node_tx, ancestry):
+    if not _transform_cache_on:
+        return translateTransform(node_tx, ancestry)
+    mat = _transform_cache.get(node_tx)
+    if mat is None:
+        mat = _transform_cache[node_tx] = translateTransform(node_tx, ancestry)
+    return mat
+
+
+def _note_protos(has_protos):
+    global _transform_cache_on
+    if has_protos:
+        _transform_cache_on = False
+
+
 def getFinalMatrix(node, mtx, ancestry, global_matrix):
 
     transform_nodes = [node_tx for node_tx in ancestry if node_tx.getSpec() == 'Transform']
@@ -1774,7 +1896,7 @@ def getFinalMatrix(node, mtx, ancestry, global_matrix):
         mtx = Matrix()
 
     for node_tx in transform_nodes:
-        mat = translateTransform(node_tx, ancestry)
+        mat = _transform_of(node_tx, ancestry)
         mtx = mat @ mtx
 
     # worldspace matrix
@@ -2450,6 +2572,8 @@ def importMesh_IndexedFaceSet(geom, ancestry):
     importMesh_ApplyTextureToLoops(bpymesh, loops)
 
     bpymesh.validate(clean_customdata=False)
+    if not tex_coord and bpymesh.uv_layers.active is not None:
+        default_uv.mark(bpymesh, bpymesh.uv_layers.active)   # the export leaves it out again while untouched
 
     # Apply normals per vertex
     if normals and per_vertex:
@@ -2479,11 +2603,13 @@ def importMesh_IndexedFaceSet(geom, ancestry):
 
 def importMesh_ElevationGrid(geom, ancestry):
     height = geom.getFieldAsArray('height', 0, ancestry)
-    x_dim = geom.getFieldAsInt('xDimension', 0, ancestry)
+    x_dim = budget.count(geom.getFieldAsInt('xDimension', 0, ancestry), "ElevationGrid xDimension")
     x_spacing = geom.getFieldAsFloat('xSpacing', 1, ancestry)
-    z_dim = geom.getFieldAsInt('zDimension', 0, ancestry)
+    z_dim = budget.count(geom.getFieldAsInt('zDimension', 0, ancestry), "ElevationGrid zDimension")
     z_spacing = geom.getFieldAsFloat('zSpacing', 1, ancestry)
     ccw = geom.getFieldAsBool('ccw', True, ancestry)
+    if not budget.within(x_dim * z_dim, f"ElevationGrid {x_dim} x {z_dim}"):
+        return None
     if len(height) < x_dim * z_dim:
         # A grid whose heights come later (a Script or ROUTE into set_height) has none in the file. The missing
         # heights are 0, as X_ITE draws them, instead of the whole import stopping with an IndexError.
@@ -2605,10 +2731,12 @@ def importMesh_GeoElevationGrid(geom, ancestry):
     for ccw TRUE."""
     import numpy as np
     gs = geo_system_of(geom, ancestry)
-    x_dim = geom.getFieldAsInt('xDimension', 0, ancestry)
-    z_dim = geom.getFieldAsInt('zDimension', 0, ancestry)
+    x_dim = budget.count(geom.getFieldAsInt('xDimension', 0, ancestry), "GeoElevationGrid xDimension")
+    z_dim = budget.count(geom.getFieldAsInt('zDimension', 0, ancestry), "GeoElevationGrid zDimension")
     if x_dim < 2 or z_dim < 2:
         return None   # a grid with no cell has nothing to draw
+    if not budget.within(x_dim * z_dim, f"GeoElevationGrid {x_dim} x {z_dim}"):
+        return None
     height = geom.getFieldAsArray('height', 0, ancestry)
     if len(height) < x_dim * z_dim:
         logger.warning("GeoElevationGrid %d x %d has %d heights; the missing ones are 0", x_dim, z_dim, len(height))
@@ -4152,6 +4280,8 @@ def importMesh_Sphere(geom, ancestry):
     else:
         nr = ns = GLOBALS['CIRCLE_DETAIL']
         # used as both ring count and segment count
+    nr = budget.divisions(nr, GLOBALS['CIRCLE_DETAIL'], "Sphere")
+    ns = budget.divisions(ns, GLOBALS['CIRCLE_DETAIL'], "Sphere")
     lau = pi / nr  # Unit angle of latitude (rings) for the given tessellation
     lou = 2 * pi / ns  # Unit angle of longitude (segments)
 
@@ -4244,7 +4374,8 @@ def importMesh_Cylinder(geom, ancestry):
     side = geom.getFieldAsBool('side', True, ancestry)
     top = geom.getFieldAsBool('top', True, ancestry)
 
-    n = geom.getFieldAsInt('subdivision', GLOBALS['CIRCLE_DETAIL'], ancestry)
+    n = budget.divisions(geom.getFieldAsInt('subdivision', GLOBALS['CIRCLE_DETAIL'], ancestry),
+                         GLOBALS['CIRCLE_DETAIL'], "Cylinder")
 
     nn = n * 2
     yvalues = (height / 2, -height / 2)
@@ -4296,7 +4427,8 @@ def importMesh_Cylinder(geom, ancestry):
 def importMesh_Cone(geom, ancestry):
     # Solid ignored
     # Extra parameter subdivision="n" - how many faces to use
-    n = geom.getFieldAsInt('subdivision', GLOBALS['CIRCLE_DETAIL'], ancestry)
+    n = budget.divisions(geom.getFieldAsInt('subdivision', GLOBALS['CIRCLE_DETAIL'], ancestry),
+                         GLOBALS['CIRCLE_DETAIL'], "Cone")
     radius = geom.getFieldAsFloat('bottomRadius', 1.0 * conversion_scale, ancestry, conversion_scale)
     height = geom.getFieldAsFloat('height', 2.0 * conversion_scale, ancestry, conversion_scale)
     bottom = geom.getFieldAsBool('bottom', True, ancestry)
@@ -4698,6 +4830,11 @@ def appearance_LoadImageTextureFile(ima_urls, node):
         if f.startswith(('https://', 'http://', 'www.')): # url could be a web url > download image first
             f = download_image(f, os.path.dirname(current_file_path)) or f
         dirname = os.path.dirname(node.getFilename())
+        from .file_safety import special_file_reason
+        reason = special_file_reason(f if os.path.isabs(f) else os.path.join(dirname, f))
+        if reason:      # /dev/zero imported, and the COPY re-export then filled the disk (chaos round 2.7.3)
+            logger.warning("Not loading texture %r: %s", f, reason)
+            continue
         bpyima = image_utils.load_image(f, dirname,
                                         place_holder=False,
                                         recursive=False,
@@ -5311,7 +5448,14 @@ def appearance_LoadPixelTexture(pixelTexture, ancestry):
 
     image = pixelTexture.getFieldAsArray('image', 0, ancestry)
     # read width, height and plane_count value, assuming all are in one field called 'image' (singleline)
-    (w, h, plane_count) = image[0:3]
+    if len(image) < 3:
+        logger.warning("PixelTexture image has %d of its 3 header numbers; no texture", len(image))
+        return None
+    w = budget.count(image[0], "PixelTexture width")
+    h = budget.count(image[1], "PixelTexture height")
+    plane_count = budget.count(image[2], "PixelTexture components")
+    if w == 0 or h == 0 or not budget.within(w * h, f"PixelTexture {w} x {h}"):
+        return None
     has_alpha = plane_count in {2, 4}
     # get either hex color values (multiline) or regular color values (singleline)
     pixels = extract_pixel_colors(str(pixelTexture))  # converting to string may not be ideal, but works
@@ -5366,7 +5510,7 @@ def _set_world_matrix(bpyob, matrix):
     data = bpyob.data
     if (np.abs(np.array(nearest, dtype=np.float64) - target).max() <= 1e-6 * size
             or not hasattr(data, "transform") or not all(s != 0.0 for s in scale)):
-        bpyob.matrix_world = matrix
+        matrix_safety.set_world_exact(bpyob, matrix)   # a flat axis keeps the file's rotation (chaos round 2.7.3)
         return
     rest = Matrix((np.linalg.inv(np.array(nearest, dtype=np.float64)) @ target).tolist())
     _UNBAKED_DATA[bpyob.as_pointer()] = data
@@ -6177,7 +6321,7 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
     tag_x3d_identity(bpyob, node, ancestry)
     bpyob.select_set(True)
 
-    bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
+    matrix_safety.set_world_exact(bpyob, getFinalMatrix(node, mtx, ancestry, global_matrix))
     attenuation = None
     radius = 100.0
     frame = conversion_scale
@@ -6264,7 +6408,7 @@ def importViewpoint(bpycollection, node, ancestry, global_matrix):
     bpycollection.objects.link(bpyob)
     tag_x3d_identity(bpyob, node, ancestry)
     bpyob.select_set(True)
-    bpyob.matrix_world = getFinalMatrix(node, mtx, ancestry, global_matrix)
+    matrix_safety.set_world_exact(bpyob, getFinalMatrix(node, mtx, ancestry, global_matrix))
     global bound_view
     if bound_view is None and not _INLINE_STACK:   # the Viewpoint a browser binds first
         bound_view = bpyob
@@ -6302,7 +6446,7 @@ def importTransform(bpycollection, node, ancestry, global_matrix):
     keep_host_metadata(bpyob, node, TRANSFORM_METADATA_PROPERTY)
     bpyob.select_set(True)
 
-    bpyob.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
+    matrix_safety.set_world_exact(bpyob, getFinalMatrix(node, None, ancestry, global_matrix))
 
     # so they are not too annoying
     bpyob.empty_display_type = 'PLAIN_AXES'
@@ -6814,6 +6958,7 @@ def _hanim_joint_target(defDict, target_def):
 # Inline bridge (X3D, VRML, glTF, Gaussian-splat files) and the X3D 4.1 GaussianSplats node
 
 _INLINE_STACK = []  # files being inlined right now, to stop self-references
+_inline_loads = 0   # Inline files loaded by this import (budget.inline_limit)
 _GLTF_TO_BLENDER = None
 
 
@@ -6972,7 +7117,7 @@ def importGaussianSplats(bpycollection, node, ancestry, global_matrix):
         obj = _build_splat_object(bpycollection, name, splats)
         obj.data.name = mesh_name
         real.blendData = real.blendObject = obj
-    obj.matrix_world = getFinalMatrix(node, None, ancestry, global_matrix)
+    matrix_safety.set_world_exact(obj, getFinalMatrix(node, None, ancestry, global_matrix))
     node.blendData = node.blendObject = obj
     return obj
 
@@ -7018,6 +7163,15 @@ def importInline(bpycollection, node, ancestry, global_matrix, *, PREF_FLAT, PRE
         return empty
     if resolved in _INLINE_STACK or resolved == os.path.abspath(current_file_path or ""):
         logger.warning("Can't Inline a file that is already being loaded: %s", resolved)
+        return empty
+    global _inline_loads
+    _inline_loads += 1
+    if _inline_loads > budget.inline_limit():
+        # ten Inlines per level, five levels deep: 100,000 file loads ran past 90 s (chaos round 2.7.3)
+        if _inline_loads == budget.inline_limit() + 1:
+            logger.warning("More than %d Inline loads in one import; the rest are left as empties (set %s)",
+                           budget.inline_limit(), budget.MAX_INLINES_ENV)
+        empty["x3d_inline_skipped"] = True
         return empty
     empty["x3d_inline_resolved_path"] = mfstring.portable_path(resolved, os.path.dirname(current_file_path or ""))
     record_inline_source(empty.session_uid, empty["x3d_inline_url"], resolved)   # session only; the export rebases the url from it (D3)
@@ -7554,12 +7708,12 @@ def _parent_in_place(child, parent, world, parent_world):
     import numpy as np
     child.parent = parent
     local = _inverted(parent_world, parent.name) @ world
-    loc, rot, scale = local.decompose()
+    loc, rot, scale = matrix_safety.decompose_exact(local) if matrix_safety.has_flat_axis(local) else local.decompose()
     nearest = Matrix.LocRotScale(loc, rot, scale)
     size = max(float(np.abs(np.array(local, dtype=np.float64)).max()), 1e-30)
     if float(np.abs(np.array(nearest, dtype=np.float64) - np.array(local, dtype=np.float64)).max()) <= 1e-6 * size:
         child.matrix_parent_inverse = Matrix()
-        child.matrix_basis = nearest
+        matrix_safety.set_basis_exact(child, nearest)
     else:
         child.matrix_parent_inverse = _inverted(parent_world, parent.name)
         child.matrix_basis = world
@@ -7738,7 +7892,10 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
         # pointer nor the DEF's own ancestry describes all occurrences of an animated Transform.
         node.hierarchy_owners.append((owner, transforms[key][1]))
         by_node.setdefault(node, []).append(owner)
-    bpy.context.view_layer.update()
+    if not _INLINE_STACK:
+        # once, by the outermost file: a depsgraph update walks every object in the scene, so an Inline fan-out paid
+        # it once per Inline file over a growing scene (4.2 of 5.6 s at 300 Inlines, chaos round 2.7.3)
+        bpy.context.view_layer.update()
     return by_node
 
 
@@ -7872,6 +8029,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
                 pass
             bpyob.rotation_mode = 'QUATERNION'
 
+            union_keys = budget.thin_keys(sorted(union_keys), budget.MAX_IMPORT_KEYS, f"The animation of {bpyob.name}")
             for key in union_keys:
                 tx = _interpolate_channel(key_lists.get('translation'), value_lists.get('translation'), key, 'translation') or static_tx
                 rot = _interpolate_channel(key_lists.get('rotation'), value_lists.get('rotation'), key, 'rotation') or static_rot
@@ -8331,7 +8489,7 @@ def load_web3d(
 
     if not root_node:
         logger.warning(msg)
-        return
+        return msg
     if not _INLINE_STACK:  # the head of an inlined file describes that file, not the scene
         importHeadMeta(bpyscene, root_node)
 
@@ -8572,6 +8730,25 @@ def group_instances(objects, min_count=2):
     return groups
 
 
+def _load_one(context, file, divisions, global_scale, global_matrix, as_collection, solidify, solidify_value,
+              keep_hierarchy):
+    """One file of load(): None, or why it could not be read."""
+    return load_web3d(context, file,
+                      PREF_FLAT=True,
+                      PREF_CIRCLE_DIV=divisions,
+                      global_scale=global_scale,
+                      global_matrix=global_matrix,
+                      as_collection=as_collection,
+                      solidify=solidify,
+                      solidify_value=solidify_value,
+                      PREF_HIERARCHY=bool(keep_hierarchy)
+                      )
+
+
+# why the last load() could not read its files: the operator reports these when it cancels
+load_errors: list[str] = []
+
+
 def load(context,
          filepath,
          *,
@@ -8631,18 +8808,28 @@ def load(context,
     objects_before = {ob.name for ob in bpy.data.objects}
     actions_before = {action.name for action in bpy.data.actions}
     _derived_materials.clear()
+    load_errors.clear()
+    _VRML_INLINE_STACK.clear()
+    global _transform_cache_on
+    _transform_cache.clear()
+    _transform_cache_on = True
+    global _inline_loads
+    _inline_loads = 0
     for file in paths:
         # loadWithProfiler(operator, context, filepath, global_matrix)
-        load_web3d(context, file,
-                PREF_FLAT=True,
-                PREF_CIRCLE_DIV=divisions,
-                global_scale=global_scale,
-                global_matrix=global_matrix,
-                as_collection=as_collection,
-                solidify=solidify,
-                solidify_value=solidify_value,
-                PREF_HIERARCHY=bool(keep_hierarchy)
-                )
+        try:
+            failed = _load_one(context, file, divisions, global_scale, global_matrix, as_collection, solidify,
+                               solidify_value, keep_hierarchy)
+        except RecursionError:
+            # deeper than the recursion headroom (100,000 nested Groups): refuse the file, do not end Blender's
+            # operator with a traceback (chaos round 2.7.3)
+            failed = f"{os.path.basename(file)} is nested too deeply to import"
+            logger.error(failed)
+        if failed:
+            load_errors.append(failed)
+    if load_errors and len(load_errors) == len(paths):
+        # nothing could be read: say why and cancel, instead of FINISHED with an empty scene (chaos round 2.7.3)
+        return {'CANCELLED'}
     finalize_lod()
     settle_derived_material_names()
     new_objects = [ob for ob in bpy.data.objects if ob.name not in objects_before]

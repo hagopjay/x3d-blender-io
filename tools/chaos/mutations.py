@@ -8,7 +8,6 @@ disagreement is interesting either way.
 from __future__ import annotations
 
 import copy
-import random
 import re
 from xml.etree import ElementTree as ET
 

@@ -111,3 +111,119 @@ Measured with bpy 5.3.0, x3d.py 4.0.65.8, xmllint with the X3D 4.0 XSD that web3
   - zero rotation axes: only the Schematron objects;
   - head and Scene order: only the XSD checks it;
   - index values below -1: only x3d.py rejects them.
+
+## Second round (2.7.3, 22 Nov 2026): the export side, the round trip and hostile files
+
+The first round only mutated files. The second adds two more tools, a shrinker, and the guards they asked for.
+
+### The tools
+
+| Tool | What it does | Gate |
+|---|---|---|
+| `tools/chaos/scene_chaos.py` | Builds one of the 12 frozen scenes in bpy and applies one of 22 edits to the Blender scene (below). It exports with random options (version 3.3/4.0/4.1, units, scale, triangulation, path mode, ...), judges the file (own validator, x3d.py, XSD, nan/inf tokens), then imports it and checks the **fixed point**: import, export with defaults, import, export again. The last two exports, in canonical form, must agree. | contract job: 46 cases (`--per-op 2`); nightly: 276 x 2 seeds on every Blender line |
+| `tools/chaos/hostile.py` | 67 hostile files, each imported and re-exported in its own process under a 6 GB memory limit, a 2 GB file-size limit and a 90 s timeout. A local HTTP server counts network hits, and a sentinel file detects disclosure into names, custom properties or text blocks. A traceback, a hang, a network hit, a disclosure or more than 64 MB written fails the case. | contract job: all 67; nightly: all 67 in each Blender binary |
+| `tools/chaos/shrink.py` | Delta debugging: removes elements, then attributes, then halves of value lists, while the crash signature stays the same. `differential.py --shrink` shrinks one example per crash group. | the planted bool crash shrank from 1,884 to 248 bytes in 32 imports |
+
+The 22 scene edits: extreme vertices (NaN, INF, 1e30), all vertices at one point, an empty mesh, one vertex, odd names
+(Hebrew, empty, a byte-order mark, `a<b>&'"c`, 64-character), colliding names, many material slots, out-of-range
+material values, broken textures (no image, a folder, a missing file), extreme and zero scales, 200 or 1,500 parents
+deep, shape keys, modifiers, extreme cameras and lights, animation (fps 1/1000, long timelines), custom properties,
+attributes, other object types, collections, linked data and custom normals.
+
+The hostile files: expansion (billion laughs, quadratic blow-up, a 1.5 GB gzip bomb, gzip in gzip, an Inline fan-out
+of ten per level five levels deep), disclosure and network (XXE file, text and parameter entities, an external DTD,
+XInclude, Inline, ImageTexture and Script URLs on the network or on `/dev/zero`), recursion (Inline self and cycles,
+USE inside its own DEF, PROTO self and mutual instances, 5,000 and 100,000 nested Groups, 2,000 nested Transforms),
+broken bytes (truncated, UTF-16 declared as UTF-8, Latin-1, NUL bytes, a BOM only, a PNG renamed, not gzip, no X3D
+root, two Scenes), numbers (5,000-digit ints and floats, 1e999, a 1 MB name, a 100,000-character element name,
+100,000 attributes, 100,000 strings, 2 million points, a ROUTE flood), budgets (huge or negative ElevationGrid,
+Sphere/Cylinder subdivision 0 and huge, a huge or short PixelTexture, a 47,000 s animation, `08` as an index, NaN in
+points), and 11 classic VRML cases.
+
+### Classes
+
+Scene chaos: `export-crash`, `export-refused`, `judge-crash`, `export-invalid`, `export-bad-number` (a nan or inf
+token), a crash or refusal at each later step, `fixed-point-drift`, and `ok`. All of these are gated. Listed, not gated:
+
+- `float32-noise`: the last digit of a float32 moved (relative 1e-6, absolute 2e-5). Lines are aligned first (difflib),
+  so one added line is reported as itself.
+- `budget-resampled`: the export hit its animation sample budget and said so.
+- `float32-range`: a 1e30 or 1e-30 location or scale, or inf, which Blender's float32 matrices cannot carry through a
+  parent.
+- `info-meta-names`: the `info` meta lists Blender datablock names, which Blender suffixes on import (`.001`).
+
+### Measured
+
+bpy 5.3.0 unless named; x3d.py 4.0.65.8; xmllint with the X3D 4.0, 4.1 and 3.3 XSDs. The "before" rows ran the 2.7.2
+source (903c1e5) through the same judges (`X3D_ADDON_SOURCE`).
+
+| Run | Gated | Signatures |
+|---|---|---|
+| Scene chaos rng 7, 2.7.2 | 35 of 276 (7 export crashes, 1 NaN written, 27 drifts) | 9 |
+| Scene chaos rng 7 and 11, 2.7.3 | 0 of 552 | 0 |
+| Scene chaos rng 23 (a seed no fix was made from), first 2.7.3 build | 2 of 276 | 2, both fixed |
+| Scene chaos rng 7, 11 and 23, 2.7.3 final, with the XSD | 0 of 828; listed: 206 float32-noise, 3 budget-resampled, 2 info-meta-names, 1 float32-range | 0 |
+| Scene chaos rng 7 quick, Blender 4.5.14 and 5.2.2 | 0 of 46 each | 0 |
+| Hostile files, 2.7.2 on Blender 5.2.2 | 26 of 67 | 20 |
+| Hostile files, 2.7.3 on Blender 5.2.2 and on bpy 5.3.0 | 0 of 67 each (96 s for all 67; slowest 14 s) | 0 |
+
+**Ours, fixed in 2.7.3** (tests in `tests/test_chaos_round2_bpy.py` and `tests/test_chaos_round2.py`):
+
+1. **A texture on `/dev/zero` filled the disk.** The re-export with path mode COPY copied the image file, and
+   `bpy_extras.io_utils.path_reference_copy` (Blender core) copies a device forever; the first run filled a 50 GB disk.
+   `source/file_safety.py` now copies only regular files, in chunks, within 4 GiB per export
+   (`BLENDER_X3D_MAX_COPY_BYTES`). The import also refuses to read devices, pipes, sockets and folders.
+2. **Entity declarations ended the import with a traceback.** Billion laughs, the quadratic blow-up and the three XXE
+   files were refused (safely) by raising out of the operator. The import now cancels with the reason as a warning.
+3. **Broken bytes ended the import with a traceback**: truncated files, NUL bytes, a BOM only, a PNG renamed, gzip in
+   gzip. Now a clean cancel: "Not a well-formed X3D file, not importing ...".
+4. **UTF-16 and Latin-1 files did not import.** The XML is now read as bytes: a UTF-16 BOM is honoured, and bytes that
+   are not UTF-8 are read as cp1252, with a warning. An encoding name Python does not know is read as UTF-8.
+5. **Classic VRML**: an Inline was loaded twice and then raised TypeError, an Inline of itself or a cycle did not stop,
+   and 5,000 nested Groups raised RecursionError in the PROTO, DEF and ROUTE tables (now loops).
+6. **Deep files**: 100,000 nested Groups raised RecursionError (the import now runs with a recursion limit of 50,000),
+   and each node's world matrix was recomputed from the root, quadratic in depth (now cached).
+7. **Inline fan-out**: 100,000 Inline loads ran past 90 s. At most 1,000 per import load (`BLENDER_X3D_MAX_INLINES`); the
+   rest stay as marked empties. Each Inline file also deselected every object and updated the whole depsgraph; both now
+   happen once per import. 90 s or more became 6 s.
+8. **A count in the file set an allocation** (`source/budget.py`): ElevationGrid dimensions, Sphere/Cylinder/Cone
+   subdivision (0 divided by zero; 50,000,000 used 5 GB; 4,096 x 4,096 still crashed at 6 GB, so the clamp is
+   [3, 1,024]), PixelTexture width x height, and key counts. Over 16,777,216 elements a node is skipped with a warning
+   (`BLENDER_X3D_MAX_ELEMENTS`).
+9. **A long animation grew every round trip.** A 48-key, 47,000 s animation came back as 1,048,574 keys (48 MB), and
+   the next import did not finish in three minutes. The export samples at most 10,000 frames
+   (`BLENDER_X3D_MAX_ANIMATION_SAMPLES`), and the import keeps at most 65,536 keys per object.
+10. **Numbers**: a NaN or INF field value now gives the field's default with a warning, and `08` is read as 8 (it was
+    read as an octal literal and refused).
+11. **Export crashes** (7 in the rng 7 baseline, 2 more in other seeds):
+    - a material index past every slot (KeyError, X3D 3.3; now clamped to the last slot);
+    - a triangulated X3D 3.3 mesh with two materials (TypeError: the triangle loop ran past the face count);
+    - Metallic or Roughness outside [0, 1] (2.0, 1e6, 1e39): the export gate refused the file; now clamped;
+    - 1,500 parents deep (RecursionError in the world-matrix walk, now a loop);
+    - an Image Texture node with no image (AttributeError, X3D 3.3).
+12. **NaN and INF written into X3D 3.3 files**: a NaN vertex or a -inf scale was written as `nan` or `inf`, which x3d.py
+    accepts and no browser reads. The 3.3 writer now writes 0 and logs the count.
+13. **Round-trip drift, each now a fixed point:**
+    - an IndexedFaceSet without texture coordinates gained them after one round trip: the import makes the spec's default
+      ones, and the export wrote them back (20 of 276). The import marks them with a fingerprint
+      (`source/default_uv.py`); the export leaves them out while they are unchanged.
+    - a half turn about A is a half turn about -A, and float32 picked either (6 of 276). One spelling now: angle in
+      [0, pi], and at pi the axis whose first non-zero part is positive.
+    - a zero scale on one axis lost the rotation (0.7653 rad, then 0.4832): Blender's decompose() makes the flat axis up.
+      `matrix_safety.decompose_exact` rebuilds it from the other two, on import and on export.
+    - the 3.3 writer kept `<`, `>`, `&`, a byte-order mark and `-` in a DEF that the 4.0 writer spells `_`, so the name
+      changed on the next trip. Both writers now spell DEFs the same way.
+
+**Judges fixed:** the XSD judge now passes `--huge` to xmllint (a 1,500-deep export is past libxml2's default depth of
+256, which it reported as invalid).
+
+**Outside findings, recorded, not sent:**
+
+- Blender core `bpy_extras.io_utils.path_reference_copy` copies a non-regular file (`/dev/zero`) until the disk is full
+  (Confirmed through this add-on; Likely in every exporter that uses it with path mode COPY).
+- x3d.py 4.0.65.8 accepts `nan` in a Coordinate `point` (Confirmed).
+- On the bpy 5.3.0 wheel, 100,000 nested Groups raised RecursionError in 2.7.2; in the Blender 5.2.2 binary they did not
+  (a bigger default stack, Suspected).
+
+**Known, listed for 2.7.4:** depth is still quadratic in places (1,000 levels 1.3 s, 2,000 about 16 s, 5,000 about
+121 s); the remaining hot spots are the per-node ancestry scans in the importer and `exported_parent` in extract.

@@ -77,6 +77,28 @@
     "import-crash",
     "getFieldAsBool"
    ]
+  },
+  "export-translation-drift": {
+   "judge": "scene-chaos",
+   "what": "the X3D 4.0 writer scales every Transform's x translation by 1.001, so a value moves on every round trip (the scene chaos fixed-point judge must see the drift)",
+   "file": "source/emit_x3d40.py",
+   "find": "        f'translation=\"{_fmt3_length((tx, ty, tz))}\" '",
+   "replace": "        f'translation=\"{_fmt3_length((tx * 1.001, ty, tz))}\" '  # PLANTED FAULT export-translation-drift",
+   "must_say": [
+    "fixed-point-drift",
+    "Transform"
+   ]
+  },
+  "import-malformed-traceback": {
+   "judge": "hostile",
+   "what": "the XML reader lets a parse error escape again, so a file cut off mid-tag ends the import with a traceback instead of a clean cancel (the 2.7.3 hostile-file battery must see it)",
+   "file": "source/import_x3d.py",
+   "find": "    except errors as exc:\n        first = exc\n    try:\n        raw.decode('utf-8')",
+   "replace": "    except errors as exc:\n        raise  # PLANTED FAULT import-malformed-traceback\n    try:\n        raw.decode('utf-8')",
+   "must_say": [
+    "FINDING",
+    "truncated_mid_tag"
+   ]
   }
  }
 }

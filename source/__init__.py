@@ -6,7 +6,7 @@ bl_info = {
     "name": "X3D Blender I/O",
     "description": "Import-Export X3D, Import VRML2",
     "author": "HagopJay; upstream maintainer: Bujus_Krachus",
-    "version": (2, 7, 2),
+    "version": (2, 7, 3),
     "blender": (4, 2, 0),
     "location": "",
     "warning": "",
@@ -196,7 +196,13 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
                                         ).to_4x4()
         keywords["global_matrix"] = global_matrix
 
-        result = import_x3d.load(context, **keywords)
+        from .matrix_safety import recursion_headroom
+        with recursion_headroom():      # the tree is walked by recursion: deep files need the headroom (2.7.3)
+            result = import_x3d.load(context, **keywords)
+        if 'CANCELLED' in result:
+            for message in import_x3d.load_errors:
+                self.report({'WARNING'}, message)       # ERROR would raise in a script that calls the operator
+            return result
         if self.use_behaviour_graph and 'FINISHED' in result:
             for message in behaviour_nodes.import_graph(context.scene, self.filepath):
                 self.report({'INFO'}, message)

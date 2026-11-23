@@ -9,6 +9,7 @@
 
 import logging
 import os
+import re
 
 logger = logging.getLogger("export_x3d")
 
@@ -24,6 +25,9 @@ from .material_node_search import (analyze_material, imageTexture_in_material, g
                                    get_vector_mapping_properties, get_movie_texture_properties)
 from . import bl_info_copy
 from .viewpoint_fov import render_size, x3d_field_of_view
+from . import matrix_safety
+from . import default_uv
+from .extract import canonical_axis_angle
 from .matrix_safety import inverted64
 from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, is_lod_hidden, light_attenuation,
                       light_colour, light_intensity, light_radius, resolve_export_colour_space)
@@ -61,7 +65,7 @@ def bool_as_str(value):
     return ('false', 'true')[bool(value)]
 
 
-def clean_def(txt):
+def _clean_def_table(txt):
     # see report [#28256]
     if not txt:
         txt = "None"
@@ -116,7 +120,22 @@ def clean_def(txt):
         0x5c: "_",  # \
         0x7b: "_",  # {
         0x7d: "_",  # }
+        # < > & as well, as the X3D 4.0 writer does: a DEF of MA_a<b>&__c was written escaped, read back as that name,
+        # and spelled MA_a_b____c by the next export (a fixed-point drift, chaos round 2.7.3)
+        0x3c: "_",  # <
+        0x3e: "_",  # >
+        0x26: "_",  # &
     })
+
+
+def clean_def(txt):
+    """A DEF spelt as the X3D 4.0 writer spells it (emit_x3d40._safe_name): letters, digits and "_" only.
+
+    The two writers spelt names differently, so a Blender name the 3.3 writer kept (a byte-order mark, "a<b>&c",
+    "a-b") came back from the 3.3 file as itself, and the 4.0 export of that import renamed it; the next round trip
+    changed the receipt's hash (a fixed-point drift, chaos round 2.7.3)."""
+    txt = _clean_def_table(txt)
+    return "".join(char if char.isalnum() or char == "_" else "_" for char in txt)
 
 
 def _bulk_tuples(collection, prop, width):
@@ -414,7 +433,7 @@ def export(file,
 
         loc, rot, scale = matrix.decompose()
         rot = rot.to_axis_angle()
-        rot = (*rot[0].normalized(), rot[1])
+        rot = canonical_axis_angle(rot[0].normalized(), rot[1])
 
         ident_step = ident + (' ' * (-len(ident) +
                                      fw('%s<Viewpoint ' % ident)))
@@ -459,9 +478,10 @@ def export(file,
         else:
             fw('\n')
 
-        loc, rot, sca = matrix.decompose()
+        loc, rot, sca = (matrix_safety.decompose_exact(matrix) if matrix_safety.has_flat_axis(matrix)
+                         else matrix.decompose())
         rot = rot.to_axis_angle()
-        rot = (*rot[0], rot[1])
+        rot = canonical_axis_angle(rot[0], rot[1])
 
         fw(ident_step + 'translation="%s"\n' % _fmt3_length(loc[:]))
         # fw(ident_step + 'center="%.6f %.6f %.6f"\n' % (0, 0, 0))
@@ -713,7 +733,8 @@ def export(file,
             fw('%s<Group DEF=%s>\n' % (ident, mesh_id_group))
             ident += '\t'
 
-            is_uv = bool(mesh.uv_layers.active)
+            # the default texture coordinates the import made up stay out, as the file had them (default_uv)
+            is_uv = bool(mesh.uv_layers.active) and not default_uv.is_unchanged_default(mesh, mesh.uv_layers.active)
             # is_col, defined for each material
 
             is_coords_written = False
@@ -734,8 +755,10 @@ def export(file,
                     polygons_groups[material_index] = []
 
                 if polygons_groups:
+                    last = len(mesh.materials) - 1
                     for i, material_index in enumerate(mesh_polygons_materials):
-                        polygons_groups[material_index].append(i)
+                        # an index past the slots draws with the last slot in Blender; it raised KeyError (2.7.3)
+                        polygons_groups[min(max(material_index, 0), last)].append(i)
             else: # object has no material, unusual but may happen.
                 polygons_groups[0] = list(range(len(mesh_polygons)))
 
@@ -908,7 +931,9 @@ def export(file,
                         assert (len(face_tri_list) == len(mesh.loop_triangles))
 
                         fw(ident_step + 'index="')
-                        for x3d_f in face_tri_list:
+                        # only this material group's triangles: the list is sized for the whole mesh, and the rows of
+                        # the other groups stayed None (TypeError for a triangulated two-material mesh, chaos 2.7.3)
+                        for x3d_f in face_tri_list[:totface]:
                             fw('%i %i %i ' % (x3d_f[0][2], x3d_f[1][2], x3d_f[2][2]))
                         fw('"\n')
 
@@ -1430,6 +1455,8 @@ def export(file,
         """ Write image or movie texture with texture transform to x3d, path mode is user dependant """
 
         image=imageTextureNode.image
+        if image is None:                       # an Image Texture node with no image: nothing to write (chaos 2.7.3)
+            return
         image_id = quoteattr(unique_name(image, IM_ + image.name, uuid_cache_image, clean_func=clean_def, sep="_"))
         logger.info("write ImageTexture X3D node for %r format %r filepath %r" % (image.name, image.file_format, image.filepath ))
 
@@ -1835,8 +1862,9 @@ def export(file,
 
     if copy_set:
         for c in copy_set:
-            logger.info("copy_set item %r" % copy_set)
-        bpy_extras.io_utils.path_reference_copy(copy_set)
+            logger.info("copy_set item %r" % (c,))
+        from .file_safety import path_reference_copy   # bpy_extras' copy follows /dev/zero forever (2.7.3)
+        path_reference_copy(copy_set, report=logger.warning)
     else:
         logger.info("no items in copy_set")
 
@@ -1879,6 +1907,41 @@ def gzip_open_utf8(filepath, mode, header_name=None):
     file.write = write_wrap
 
     return file
+
+
+_NUMBER_CHUNK = re.compile(r"^[\s0-9eE+\-.,naifNAIF]*$")
+_NON_FINITE = re.compile(r"(?<![\w.])-?(?:nan|inf)(?![\w.])", re.IGNORECASE)
+# a quoted attribute value made of number characters only, e.g. scale="0.010000 0.010000 inf" (a -inf object scale)
+_NUMBER_VALUE = re.compile(r"""(=)(["'])([\s0-9eE+\-.,naifNAIF]*)\2""")
+
+
+class _FiniteNumbers:
+    """The legacy (X3D 3.3) writer's file, with ``nan`` and ``inf`` in its number runs written as 0.
+
+    The X3D 3.3 writer has no export gate and formats Blender's floats with ``%f``: a NaN vertex became
+    ``point="nan ..."``, which x3d.py accepts and no browser reads (chaos round 2.7.3). Only a chunk made of nothing
+    but number characters is touched, so a DEF or a text named "nan" is left alone. ``replaced`` counts the repairs."""
+
+    def __init__(self, file):
+        self._file = file
+        self.replaced = 0
+
+    def write(self, data):
+        if "nan" in data or "inf" in data:
+            if _NUMBER_CHUNK.match(data):
+                data, count = _NON_FINITE.subn("0", data)
+                self.replaced += count
+            else:                               # whole attributes, as the Transform writer writes them
+                data = _NUMBER_VALUE.sub(self._value, data)
+        return self._file.write(data)
+
+    def _value(self, match):
+        value, count = _NON_FINITE.subn("0", match.group(3))
+        self.replaced += count
+        return f"{match.group(1)}{match.group(2)}{value}{match.group(2)}"
+
+    def __getattr__(self, attribute):
+        return getattr(self._file, attribute)
 
 
 class _NamedAs:
@@ -2038,6 +2101,7 @@ def save(context,
         logger.info("Export orchestration active; delegating current write to legacy emitter for %r", export_file)
         # Written to a temporary file and renamed, so a failure half way never truncates the previous document.
         def write(file):
+            file = _FiniteNumbers(file)
             export(
                 file,
                 settings.global_matrix or mathutils.Matrix(),
@@ -2062,6 +2126,8 @@ def save(context,
                 meta_license=settings.meta_license,
                 color_space=settings.color_space,
             )
+            if file.replaced:
+                logger.warning("The X3D 3.3 export wrote %d non-finite numbers (NaN or INF) as 0", file.replaced)
 
         _write_replacing(export_file, settings.use_compress, write)
 
@@ -2121,6 +2187,7 @@ def save(context,
             shutil.rmtree(stage, ignore_errors=True)
 
     writer = _modern_writer if settings.use_modern_path else _legacy_writer
-    result = pipeline_save(context, settings, writer)
+    with matrix_safety.recursion_headroom():
+        result = pipeline_save(context, settings, writer)
     logger.info("Export completed")
     return result

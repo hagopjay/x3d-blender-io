@@ -89,7 +89,7 @@ def judge_xsd(paths: list[Path], xsd: Path) -> dict[str, dict]:
     verdicts: dict[str, dict] = {}
     for start in range(0, len(paths), 200):
         chunk = paths[start:start + 200]
-        proc = subprocess.run(["xmllint", "--noout", "--nonet", "--schema", str(xsd), *map(str, chunk)],
+        proc = subprocess.run(["xmllint", "--noout", "--nonet", "--huge", "--schema", str(xsd), *map(str, chunk)],
                               capture_output=True, text=True)
         errors: dict[str, list[str]] = defaultdict(list)
         for line in proc.stderr.splitlines():
@@ -189,6 +189,7 @@ def main(argv=None) -> int:
     ap.add_argument("--schematron-cache", default=str(REPO / ".cache" / "schematron"))
     ap.add_argument("--no-schematron", action="store_true")
     ap.add_argument("--no-import", action="store_true")
+    ap.add_argument("--shrink", action="store_true", help="shrink one example of each crash (tools/chaos/shrink.py)")
     ap.add_argument("--fail-on-crash", action="store_true",
                     help="exit 1 when the import, the re-export or a validator raised on any mutant")
     args = ap.parse_args(argv)
@@ -264,6 +265,16 @@ def main(argv=None) -> int:
         if g["class"] != "agree":
             print(f"[chaos] {g['class']:24s} {g['verdicts']} {g['op']:18s} x{g['count']:<4d} {g['signature']}  e.g. {g['example']}")
     crashes = sum(n for c, n in counts.items() if "crash" in c)
+    if args.shrink and crashes and not args.no_import:
+        from shrink import shrink_file
+
+        for g in summary["groups"]:
+            if "crash" in g["class"] and g["class"] != "judge-crash":
+                small = shrink_file(judge, out / "mutants" / g["example"], out / "shrunk")
+                g["shrunk"] = small
+                print(f"[chaos] shrunk {g['example']}: {small['before']} -> {small['after']} bytes "
+                      f"({small['tests']} imports) {small['path']}")
+        (out / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     if args.fail_on_crash and crashes:
         print(f"[chaos] FAIL: {crashes} mutant(s) crashed a judge, the import or the re-export")
         return 1

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import re
 
 try:
@@ -276,6 +277,20 @@ def _resolve_rgba_socket(socket, fallback, visited=None):
             return resolved
 
     return fallback
+
+
+def _unit_interval(value, default, name, material_name):
+    """A PhysicalMaterial factor in [0, 1]: Blender's soft limits let a script set Metallic 2.0 or Roughness 10^6,
+    and the export gate then refused the file (chaos round 2.7.3). None stays None (no Principled BSDF)."""
+    if value is None:
+        return None
+    if not math.isfinite(value):
+        logger.warning("Material %r: %s is %r; written as %r", material_name, name, value, default)
+        return default
+    clamped = min(max(value, 0.0), 1.0)
+    if clamped != value:
+        logger.warning("Material %r: %s %r is outside [0, 1]; written as %r", material_name, name, value, clamped)
+    return clamped
 
 
 def _resolve_float_socket(socket, fallback, visited=None):
@@ -567,6 +582,9 @@ def analyze_material(material):
         alpha_mode = "BLEND"
     elif getattr(material, "blend_method", "") == "CLIP":
         alpha_mode = "MASK"
+
+    metallic = _unit_interval(metallic, 0.0, "Metallic", material.name)
+    roughness = _unit_interval(roughness, 0.5, "Roughness", material.name)
 
     pbr = IRPBRMaterial(
         name=material.name,

@@ -41,7 +41,15 @@ def read_source_bytes(path, limit=None):
     """The bytes of an X3D / VRML file, gunzipped when they are gzip (by content, so .x3dz, .wrz and a gzipped .x3dv
     all load), never more than ``limit`` after decompression: a few kilobytes of gzip can expand to gigabytes."""
     import gzip
+    try:
+        from .file_safety import special_file_reason
+    except ImportError:          # imported as a plain module (the tests)
+        from file_safety import special_file_reason
+
     limit = source_byte_limit() if limit is None else limit
+    reason = special_file_reason(path)
+    if reason:          # /dev/zero, a FIFO: never ends or never answers (chaos round 2.7.3)
+        raise ResourceLimitError(f"{os.path.basename(path)} is not read: {reason}")
     with open(path, "rb") as raw:
         gzipped = raw.read(2) == b"\x1f\x8b"
     opener = gzip.open if gzipped else open
