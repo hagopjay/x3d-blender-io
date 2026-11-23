@@ -229,6 +229,34 @@ def make_cases(out: Path, port: int) -> list[dict]:
         _vrml(vquad.replace("0 1 2 3 -1", "0 1 2 " + "9" * 5000 + " -1")), ".x3dv")
     add("vrml_comment_only", "vrml", "a ClassicVRML file that is one long comment", _vrml("#" + "c" * 10 ** 6), ".x3dv")
 
+    # -- replay: the rules the receipt-to-rule engine (x3d.loom kit/loomkit/r2r) found still live in 2.7.3 --------
+    grid = " ".join(f"{x} {y} 0" for y in range(5) for x in range(5))
+    red = " ".join("1 0 0" for _ in range(25))
+    uvs = " ".join(f"{x / 4} {y / 4}" for y in range(5) for x in range(5))
+    sq = "0 0 0 1 0 0 1 1 0 0 1 0"
+
+    def shape(node, fields, kids):
+        return f"<Shape><{node} {fields}>{kids}</{node}></Shape>"
+    add("r2r_coordinate_double", "replay", "triangle sets and a face set on CoordinateDouble (AttributeError)",
+        _x3d("".join(shape(n, f, f"<CoordinateDouble point='{sq}'/>") for n, f in (
+            ("IndexedTriangleSet", "index='0 1 2 0 2 3'"), ("IndexedTriangleStripSet", "index='0 1 3 2'"),
+            ("IndexedTriangleFanSet", "index='0 1 2 3'"), ("IndexedFaceSet", "coordIndex='0 1 2 3 -1'")))))
+    add("r2r_metadata_boolean", "replay", "a MetadataBoolean, which the export's semantic check refused",
+        _x3d(f"<WorldInfo title='t'><MetadataBoolean containerField='metadata' name='f' value='true false'/>"
+             f"</WorldInfo>{QUAD}"))
+    add("r2r_its_color_huge", "replay", "an IndexedTriangleSet index of 2147483647 with Color (IndexError)",
+        _x3d(shape("IndexedTriangleSet", "index='0 2147483647 2 3 4 5'",
+                   f"<Coordinate point='{grid}'/><Color color='{red}'/>")))
+    add("r2r_itss_uv_huge", "replay", "an IndexedTriangleStripSet index past the points with TextureCoordinate",
+        _x3d(shape("IndexedTriangleStripSet", "index='0 1 2 19311470'",
+                   f"<Coordinate point='{grid}'/><TextureCoordinate point='{uvs}'/>")))
+    add("r2r_itfs_three_fans", "replay", "an IndexedTriangleFanSet of three fans (RuntimeError)",
+        _x3d(shape("IndexedTriangleFanSet", "index='0 1 2 3 -1 5 6 7 -1 10 11 12 13 -1'",
+                   f"<Coordinate point='{grid}'/>")))
+    add("r2r_ifs_cull_huge", "replay", "an IndexedFaceSet on the vertex-cull path with an index past the points",
+        _x3d(shape("IndexedFaceSet", "creaseAngle='1' coordIndex='0 2147483638 2 3 -1'",
+                   f"<Coordinate point='{grid}'/>")))
+
     rows = []
     for name, family, why, data in cases:
         path = out / name

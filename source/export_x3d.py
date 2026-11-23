@@ -49,6 +49,12 @@ def clamp_color(col):
     return tuple([max(min(c, 1.0), 0.0) for c in col])
 
 
+def _unit_interval(value, default):
+    """``value`` clamped to [0, 1]; NaN gives ``default``."""
+    value = float(value)
+    return default if math.isnan(value) else max(0.0, min(1.0, value))
+
+
 def matrix_direction_neg_z(matrix):
     return (matrix.to_3x3() @ mathutils.Vector((0.0, 0.0, -1.0))).normalized()[:]
 
@@ -1156,6 +1162,11 @@ def export(file,
             specColor = display_colour(specColor, color_space)
             emitColor = display_colour(emitColor, color_space)
             transp = 1.0 - diffuse_color[3] # alpha only works from principled bsdf, so checking diffuse return is enough
+            # transparency and shininess are [0, 1] in X3D; an Alpha of 1e39 (float32 max in Blender) wrote
+            # transparency="-340282346638528859811704183484516925440.000", which x3d.py refuses, and this writer has
+            # no export gate (scene chaos rng 11, chaos round 3, 23 Nov 2026). NaN reads as the default.
+            transp = _unit_interval(transp, 0.0)
+            shininess = _unit_interval(shininess, 0.2)
 
             # ~ if material.use_shadeless:
             # ~ ambient = 1.0

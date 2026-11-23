@@ -227,3 +227,47 @@ source (903c1e5) through the same judges (`X3D_ADDON_SOURCE`).
 
 **Known, listed for 2.7.4:** depth is still quadratic in places (1,000 levels 1.3 s, 2,000 about 16 s, 5,000 about
 121 s); the remaining hot spots are the per-node ancestry scans in the importer and `exported_parent` in extract.
+
+## Third round (2.7.4, 23 Nov 2026): the rules the receipt-to-rule engine found still live
+
+This round had no new mutator. The receipt-to-rule engine (x3d.loom `kit/loomkit/r2r`, loom #164) read the 2.7.1
+crash receipts, induced 28 candidate rules ("an IndexedTriangleSet index past the points with a Color child crashes"),
+and replayed them on 2.7.3. Six rules still crashed, and its sweep of 514 real files found two more failing files.
+Each was reproduced on 2.7.3 main (8e56437), fixed, and kept as a `replay` case in `tools/chaos/hostile.py` (so the
+contract job gates it) and a test in `tests/test_chaos_round3_bpy.py`.
+
+| Rule (grade from the engine) | 2.7.3 signature | Fix in 2.7.4 |
+|---|---|---|
+| A triangle set on CoordinateDouble (2 real files) | AttributeError at `importMesh_ReadVertices` | Every geometry reads Coordinate or CoordinateDouble (`COORDINATE_SPECS`); one with neither has no vertices, with a warning |
+| A MetadataBoolean (1 real file; the engine also explained it as "a USE before its DEF", Suspected, the same file) | the export refused: `could not convert string to float: 'true'` | The semantic check (`validate._coerce_field`) reads MFBool as true/false; it read it as numbers, so every MetadataBoolean and BooleanSequencer keyValue was refused |
+| An IndexedTriangleSet index past the points, with Color | IndexError at `importMesh_ApplyColors` | Each distinct out-of-range index is one added vertex at the origin (as `validate_points_field` does for IndexedFaceSet); a vertex past the colours is white |
+| The same in an IndexedTriangleStripSet, with Color or TextureCoordinate | IndexError at `ApplyColors` / `ApplyUVs` | Same, and texture coordinates are padded with (0, 0) |
+| An IndexedTriangleFanSet of three or more fans | RuntimeError at `importMesh_IndexedTriangleFanSet` | The third fan restarted at the wrong index (`i = j + 2`, not `i + j + 2`); strips and fans are now split at -1, and a run under three indices is dropped |
+| An IndexedFaceSet with few indices and many points (the vertex cull path) and an index past the points | IndexError at `importMesh_IndexedFaceSet` | The cull path reads such an index as one vertex at the origin, as the uncut path does |
+
+Also: the triangle sets clean their index field (`clean_index_field`), an IndexedTriangleSet drops a triangle that has
+-1, a stripCount or fanCount past the vertices stops at the last one (a count of two billion no longer builds a list
+that long), and a Normal list of the wrong length is padded or cut instead of failing `foreach_set`.
+
+### Measured
+
+bpy 5.3.0; the "before" column ran the 2.7.3 source through the same judge (`X3D_ADDON_SOURCE`).
+
+| Run | 2.7.3 | 2.7.4 |
+|---|---|---|
+| The 8 repro files (6 rules, 2 real files), import then re-export, each under a 6 GB limit | 8 of 8 crash | 0 of 8 (Confirmed) |
+| The 6 `replay` hostile cases | 6 of 6 findings (the three-fan case also took 35 s and 4.4 GB before raising) | 0 of 6 (Confirmed) |
+| All hostile files (67 from round 2 plus the 6 `replay` cases) | | 0 of 73 (Confirmed) |
+| Scene chaos rng 7 and 23, per-op 2 | | 0 gated of 46 each (Confirmed) |
+| Scene chaos rng 11, per-op 2, first 2.7.4 build | | 1 gated of 46: `export-invalid`, fixed below; then 0 of 46 (Confirmed) |
+| Full bpy test suite with strict validation | 1,075 tests | 1,082 tests, OK (Confirmed) |
+
+**One more, from scene chaos (rng 11).** An Alpha of 1e39 on a Principled BSDF (Blender stores float32 max) wrote
+`transparency="-340282346638528859811704183484516925440.000"` in the X3D 3.3 writer, which x3d.py refuses
+(`assertZeroToOne`) and which has no export gate. The 3.3 writer now clamps transparency and shininess to [0, 1], NaN
+giving the default. The X3D 4 writer was already gated.
+
+**What the engine taught this round** (Likely): a rule replayed on the next release is a regression test that writes
+itself. Five of the six live rules were one fault each; the sixth (MetadataBoolean) was also explained, at Suspected,
+by a second rule on the same single file ("a USE before its DEF"), which the fix closed too. One file behind a rule is
+not enough to tell which of its features is the cause; the engine said so by grading it Suspected.
