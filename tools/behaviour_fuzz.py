@@ -46,6 +46,7 @@ import signal
 import sys
 import time
 import warnings
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "source"))
@@ -350,6 +351,7 @@ def schedule(rng, graph, hostile):
     ids = list(graph.nodes)
     pointing = [n.id for n in graph.nodes.values() if n.node_type in bs.POINTING]
     proximity = [n.id for n in graph.nodes.values() if n.node_type == "ProximitySensor"]
+    colliders = [n.id for n in graph.nodes.values() if n.node_type == "CollisionSensor"]
     behaviours = [n for n in graph.nodes.values() if n.role == bg.BEHAVIOUR]
     if not hostile:
         behaviours = [n for n in behaviours if n.node_type in bs.SIMULATED] or behaviours
@@ -383,8 +385,9 @@ def schedule(rng, graph, hostile):
 
     for _ in range(rng.randint(8, 40) if not hostile else rng.randint(8, 50)):
         op = rng.choice(["step", "step", "step", "click", "press", "drag", "release", "hover", "send", "send", "post",
-                         "viewer"])
-        if not hostile and ((op in POINTER_OPS and not pointing) or (op == "viewer" and not proximity)):
+                         "viewer", "contact"])
+        if not hostile and ((op in POINTER_OPS and not pointing) or (op == "viewer" and not proximity)
+                            or (op == "contact" and not colliders)):
             op = "step"                                         # a normal schedule only asks a node for what it can do
         now = tick()
         if op == "step":
@@ -404,6 +407,13 @@ def schedule(rng, graph, hostile):
                 calls.append(["release", node, now])
             else:
                 calls.append(["hover", node, rng.random() < 0.5, now])
+        elif op == "contact":             # what a physics engine says: touching or not, and which nodes
+            node = rng.choice(colliders) if colliders and (not hostile or rng.random() < 0.85) else rng.choice(ids)
+            names = [rng.choice(_WORDS) for _ in range(rng.randint(0, 3))]
+            if hostile and rng.random() < 0.2:
+                names = rng.choice([None, "AB", [1, 2], [None], names + [math.nan]])
+            calls.append(["contact", node, rng.random() < 0.5 if not hostile or rng.random() < 0.8 else rng.choice([1, None, "yes"]),
+                          names, names if rng.random() < 0.7 else [], now])
         elif op == "viewer":
             node = rng.choice(proximity) if proximity and rng.random() < 0.9 else rng.choice(ids)
             calls.append(["viewer", node, list(_vector(rng, hostile)), list(_vector(rng, hostile, 4)), now,
@@ -501,7 +511,35 @@ def _apply_call(sim, call):
     if name in ("send", "post"):
         node, field_name, value, now = args
         return getattr(sim, name)(node, field_name, value, now)
+    if name == "contact":
+        return sim.contact(*args[:3], args[3], args[4])
     raise ValueError(name)
+
+
+def _chaos_handler(node, hostile):
+    """A Python handler for a Script that sends random values from its declared outputs (typed: any, when hostile, also
+    wrong ones, undeclared names, NaN, a request for a later call, and now and then an exception). Deterministic: what it
+    does for the n-th call is a function of the node, the field and n."""
+    outputs = [row for row in node.declared if row[2] in ("outputOnly", "inputOutput") and row[1] not in bg.NODE_FIELD_TYPES]
+    count = [0]
+
+    def handler(field, value, time, state):
+        count[0] += 1
+        rng = random.Random(f"{node.id}:{field}:{count[0]}")
+        sent = []
+        for _ in range(rng.randint(0, 3)):
+            if outputs and (not hostile or rng.random() < 0.7):
+                name, kind, _access = rng.choice(outputs)
+                sent.append((name, _event_value(rng, kind, hostile)))
+            elif hostile:
+                sent.append(rng.choice([("nothing", 1), (None, None), "x", (bs.CALLED_AT, rng.uniform(-1, 30)), (bs.CALLED_AT, math.nan),
+                                        ("url", ["a"]), (1, 2, 3)]))
+        if hostile and rng.random() < 0.04:
+            raise RuntimeError("a handler failed")
+        if hostile and rng.random() < 0.03:
+            return 5                                                  # not a list at all
+        return sent
+    return handler
 
 
 def run_case(graph, calls, hostile, *, call_seconds=2.0, graph_seconds=20):
@@ -524,6 +562,9 @@ def run_case(graph, calls, hostile, *, call_seconds=2.0, graph_seconds=20):
             return [("a-no-exception", f"construction: BehaviourError {error}")], digest, stats
         except Exception as error:                                      # noqa: BLE001 - this is what we look for
             return [("a-no-exception", f"construction: {type(error).__name__}: {error}")], digest, stats
+        for node in graph.nodes.values():          # half of the Scripts get a handler that sends whatever it is told to
+            if node.node_type == "Script" and node.id in sim.machines and zlib.crc32(f"{node.id}{len(graph.routes)}".encode()) % 2 == 0:
+                sim.host(node.id, _chaos_handler(node, hostile))
         simulated = {n.id for n in graph.nodes.values() if n.role == bg.BEHAVIOUR and n.node_type in bs.SIMULATED}
         listed = {entry.split(" ", 1)[1] for entry in sim.not_simulated}
         for node in graph.nodes.values():

@@ -26,12 +26,13 @@ import math
 import time
 
 import bpy
-from bpy.props import EnumProperty
+from bpy.props import EnumProperty, StringProperty
 from bpy_extras.io_utils import axis_conversion
 from mathutils import Matrix, Quaternion, Vector
 
 from . import behaviour_activity
 from . import behaviour_graph as bg
+from . import behaviour_hosted
 from . import behaviour_nodes
 from . import behaviour_presets
 from .behaviour_sim import POINTING, Simulation
@@ -236,6 +237,10 @@ class Player:
         self._colours = {}
         self._maps = {}              # material name -> the Mapping nodes Play drives for a TextureTransform, and how to undo them
         self._burst = {}             # node id -> when its current run of events began (for the glow)
+        self.hosting = []            # what hosted nodes (Script, CollisionSensor) were given or refused, as lines for the panel
+        self._collision = {}         # CollisionSensor id -> the names it watches (None: every body), when Blender's rigid body world is read
+        self._host_scripts()
+        self._host_collision()
 
     # -- what can be clicked ------------------------------------------------------------------------------------
 
@@ -269,13 +274,84 @@ class Player:
     def start(self, now=0.0):
         self.now = now
         self._note("start", None, now)
-        self._apply(self.sim.start(now))
+        started = self.sim.start(now)
+        self._apply(started + self._read_bodies(now))
 
     def step(self, now):
         self.now = now
         self._note("step", None, now)
-        self._apply(self.sim.step(now))
+        self._apply(self._read_bodies(now) + self.sim.step(now))
         self._flash_nodes()
+
+    # -- hosted nodes ---------------------------------------------------------------------------------------------
+
+    def _host_scripts(self):
+        """Give each Script the Python handler the person enabled for it in this session (``behaviour_hosted``), if the text
+        is still the one they enabled and is not linked from a library. A Script without one is wired, and says so."""
+        for node in self.graph.nodes.values():
+            if node.role != bg.BEHAVIOUR or node.node_type != "Script":
+                continue
+            found = behaviour_hosted.REGISTRY.binding(self.scene.name, node.id)
+            if found is None:
+                continue
+            text = bpy.data.texts.get(found[0])
+            try:
+                if text is None:
+                    raise behaviour_hosted.HostedRefused(f"Script {node.id}: the text {found[0]!r} is gone")
+                if text.library is not None:
+                    raise behaviour_hosted.HostedRefused(f"Script {node.id}: {found[0]!r} is linked from a library and is not run")
+                self.sim.host(node.id, behaviour_hosted.build_handler(self.scene.name, node.id, found[0], text.as_string()))
+                self.hosting.append(f"Script {node.id}: handler {found[0]!r} runs")
+            except behaviour_hosted.HostedRefused as error:
+                self.hosting.append(f"{error}; the Script is not run")
+
+    def _host_collision(self):
+        """A CollisionSensor reads Blender's rigid body world when the scene has one. What is read: which objects have a rigid
+        body, where they are now (the evaluated world matrix, so the solver's frame), their bound boxes and collision
+        margins; two bodies touch when their boxes, grown by the margins, meet. Not read: the solver's contact points,
+        impulses and manifolds (Blender's Python API does not give them), collision shapes (a convex hull or mesh is a box
+        here), friction and bounce, and nothing of the X3D CollisionCollection's fields. The bodies a sensor watches are the
+        collidables its own content names (by DEF or USE, matched to an object's name or ``x3d_def``); a sensor that names
+        none watches every body of the world. Without a rigid body world the sensor is wired and not run."""
+        sensors = [n for n in self.graph.nodes.values() if n.role == bg.BEHAVIOUR and n.node_type == "CollisionSensor"]
+        world = getattr(self.scene, "rigidbody_world", None)
+        for node in sensors:
+            if world is None or world.collection is None:
+                self.hosting.append(f"CollisionSensor {node.id}: the scene has no rigid body world; hosted, not run")
+                continue
+            names = behaviour_hosted.collidable_names(node.content)
+            self._collision[node.id] = set(names) if names else None
+            self.hosting.append(f"CollisionSensor {node.id}: reads Blender's rigid body world (positions, bound boxes, margins; "
+                                f"not contact points) for {', '.join(names) if names else 'every body'}")
+
+    def _body_boxes(self):
+        """{name: (low, high, margin)} for each object of the rigid body world: its world-space bound box."""
+        boxes, collection = {}, self.scene.rigidbody_world.collection
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        for obj in collection.objects if collection is not None else ():
+            if obj.rigid_body is None:
+                continue
+            evaluated = obj.evaluated_get(depsgraph)
+            corners = [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
+            margin = obj.rigid_body.collision_margin if obj.rigid_body.use_margin else 0.0
+            name = obj.get("x3d_def") or obj.name
+            boxes[name] = (tuple(min(c[i] for c in corners) for i in range(3)),
+                           tuple(max(c[i] for c in corners) for i in range(3)), margin)
+            boxes.setdefault(obj.name, boxes[name])
+        return boxes
+
+    def _read_bodies(self, now):
+        """The contact stimulus for every CollisionSensor that reads the rigid body world: what touches now."""
+        if not self._collision:
+            return []
+        changes, boxes = [], self._body_boxes()
+        for node_id, watched in self._collision.items():
+            contacts, intersections = behaviour_hosted.touching(boxes, watched)
+            machine = self.sim.machines[node_id]
+            if bool(contacts) or machine.active or not machine.fed:
+                self._note("contact", node_id, now, active=bool(contacts), contacts=contacts, intersections=intersections)
+                changes += self.sim.contact(node_id, bool(contacts), contacts, intersections, now)
+        return changes
 
     # -- the keyboard ---------------------------------------------------------------------------------------------
 
@@ -1019,6 +1095,89 @@ class X3D_OT_behaviour_stop(bpy.types.Operator):
         return {"FINISHED"}
 
 
+# ---------------------------------------------------------------------------------------------------------------
+# Hosted Script handlers: the person enables a Python text for a Script, in this session (see behaviour_hosted)
+# ---------------------------------------------------------------------------------------------------------------
+
+class X3D_OT_behaviour_enable_handler(bpy.types.Operator):
+    """Use the Python in a text datablock as this Script's handler while Play runs. The code runs with all of Blender's rights: enable only a text you wrote or have read. The choice lasts until another file is loaded and is not saved in any file"""
+    bl_idname = "x3d.behaviour_enable_handler"
+    bl_label = "Enable Handler"
+    bl_options = {"INTERNAL"}
+
+    script: StringProperty(name="Script", options={"SKIP_SAVE"})
+    text: StringProperty(name="Text", description="A text datablock defining handle(field, value, time, state)", options={"SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return not is_playing()
+
+    def invoke(self, context, event):
+        found = behaviour_hosted.REGISTRY.binding(context.scene.name, self.script)
+        self.text = found[0] if found else ""
+        return context.window_manager.invoke_props_dialog(self, width=460)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text=f"Script {self.script}: run Python as its handler", icon="ERROR")
+        layout.label(text="The text runs with all of Blender's rights. Enable only text you wrote or read.")
+        layout.label(text="The Script's own JavaScript is never run. Changing the text turns this off again.")
+        layout.prop_search(self, "text", bpy.data, "texts")
+
+    def execute(self, context):
+        text = bpy.data.texts.get(self.text)
+        if text is None:
+            self.report({"ERROR"}, "Choose a text datablock")
+            return {"CANCELLED"}
+        if text.library is not None:
+            self.report({"ERROR"}, "A text linked from a library is not run; make it local first")
+            return {"CANCELLED"}
+        source = text.as_string()
+        behaviour_hosted.REGISTRY.enable(context.scene.name, self.script, text.name, source)
+        self.report({"INFO"}, f"Script {self.script}: {text.name!r} is enabled for this session (sha256 "
+                              f"{behaviour_hosted.digest(source)[:12]})")
+        return {"FINISHED"}
+
+
+class X3D_OT_behaviour_disable_handler(bpy.types.Operator):
+    """Stop using a text as this Script's handler"""
+    bl_idname = "x3d.behaviour_disable_handler"
+    bl_label = "Disable Handler"
+    bl_options = {"INTERNAL"}
+
+    script: StringProperty(name="Script", options={"SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return not is_playing()
+
+    def execute(self, context):
+        behaviour_hosted.REGISTRY.disable(context.scene.name, self.script)
+        return {"FINISHED"}
+
+
+def _draw_scripts(layout, context, tree):
+    """One row per Script of the graph: whether a handler is enabled for it (this session) and the buttons."""
+    scripts = [item.x3d_def or item.name for item in tree.nodes if getattr(item, "x3d_type", "") == "Script"]
+    if not scripts:
+        return
+    box = layout.box()
+    box.label(text="Script handlers (Python, this session)")
+    for script in scripts:
+        found = behaviour_hosted.REGISTRY.binding(context.scene.name, script)
+        row = box.row(align=True)
+        row.label(text=f"{script}: " + (f"{found[0]}" if found else "not run"))
+        row.operator(X3D_OT_behaviour_enable_handler.bl_idname, text="Enable...").script = script
+        if found:
+            row.operator(X3D_OT_behaviour_disable_handler.bl_idname, text="", icon="X").script = script
+
+
+@bpy.app.handlers.persistent
+def _forget_handlers(*_args):
+    """Another file was loaded: nothing it carries may arrive already enabled, so nothing stays enabled."""
+    behaviour_hosted.REGISTRY.clear()
+
+
 def _draw_buttons(layout, context):
     if is_playing():
         layout.operator(X3D_OT_behaviour_stop.bl_idname, icon="PAUSE")
@@ -1058,6 +1217,8 @@ class X3D_PT_behaviour_play(bpy.types.Panel):
         if axes_matrix(context.scene.x3d_play_forward, context.scene.x3d_play_up) is None:
             layout.label(text="Forward and Up share an axis: -Z / Y is used", icon="ERROR")
         behaviour_activity.draw_options(layout, context)
+        if not is_playing():
+            _draw_scripts(layout, context, tree)
         player = _running["player"]
         if player is not None:
             layout.label(text=f"{len(player.sensed_objects())} object(s) answer the pointer")
@@ -1065,11 +1226,18 @@ class X3D_PT_behaviour_play(bpy.types.Panel):
                 layout.label(text=f"Not played: {label}", icon="ERROR")
             for label in player.not_applied:
                 layout.label(text=f"Not shown: {label}", icon="INFO")
+            for label in player.sim.hosted_not_run():
+                layout.label(text=f"Not run: {label} (hosted, wired)", icon="ERROR")
+            for line in player.hosting:
+                layout.label(text=line, icon="INFO")
+            if player.sim.faults:
+                layout.label(text=f"A handler or node failed: {player.sim.faults[-1][:80]}", icon="ERROR")
         else:
             layout.label(text="Click what a sensor senses. Esc stops.")
 
 
-classes = (X3D_OT_behaviour_play, X3D_OT_behaviour_stop, X3D_PT_behaviour_play)
+classes = (X3D_OT_behaviour_play, X3D_OT_behaviour_stop, X3D_OT_behaviour_enable_handler,
+           X3D_OT_behaviour_disable_handler, X3D_PT_behaviour_play)
 
 
 def ensure_axes_properties():
@@ -1092,6 +1260,8 @@ def register():
         if not getattr(cls, "is_registered", False):
             bpy.utils.register_class(cls)
     bpy.types.NODE_HT_header.append(_node_header)
+    if _forget_handlers not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_forget_handlers)
 
 
 def unregister():
@@ -1100,6 +1270,9 @@ def unregister():
         _running["player"].stop()
         _running["player"] = None
     bpy.types.NODE_HT_header.remove(_node_header)
+    if _forget_handlers in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_forget_handlers)
+    behaviour_hosted.REGISTRY.clear()
     for name in ("x3d_play_forward", "x3d_play_up"):
         if hasattr(bpy.types.Scene, name):
             delattr(bpy.types.Scene, name)

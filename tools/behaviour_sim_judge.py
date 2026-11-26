@@ -12,7 +12,8 @@
 The trace is X_ITE's own account: every event at every ROUTE source, with X_ITE's time stamp. The replay gives the
 simulator the same pointer events (whatever the pointing sensors sent) at the same times, steps it at X_ITE's own frame
 times, and compares every other event stream, source by source. Key sensors (KeySensor, StringSensor) are run from the raw keys the trace logged ("keys": X_ITE's time stamp, key, which,
-charCode, keyCode) and judged like any other node; a Script is run by X_ITE only, so its streams are listed under
+charCode, keyCode) and judged like any other node; a Script is run by X_ITE only unless ``judge(..., handlers={DEF: handler})``
+gives it a Python handler (see tools/behaviour_hosted_probe.py), so without one its streams are listed under
 "not_simulated_sources" instead of compared. Followers use the frame time, so they are compared with
 a looser tolerance than everything else (X_ITE takes its step from the frame rate, the simulator from the clock).
 A held press needs nothing more: the press and the release are two events of the sensor (isActive true, then false) at
@@ -212,10 +213,12 @@ def _gap(a, b, x3d_type):
     return max((abs(x - y) for x, y in zip(a, b)), default=0.0)
 
 
-def judge(x3d_path, trace, centre=PIXEL_CENTRE):
+def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None):
     x3d_text = pathlib.Path(x3d_path).read_text(encoding="utf-8")
     graph = bg.Behaviour.from_x3d(x3d_text)
     sim = bs.Simulation(graph, log_size=10 ** 7)
+    for script_id, handler in (handlers or {}).items():      # Python handlers for Scripts: judged against X_ITE's JavaScript
+        sim.host(script_id, handler)
     pointing = {node.id for node in graph.nodes.values() if node.node_type in bs.POINTING}
     # drag sensors with a recorded pointer are run by the simulator from the pointer's ray and judged, not replayed
     actions = _drag_actions(graph, x3d_text, trace, centre) if trace.get("pointer") else []
@@ -303,7 +306,8 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
     streams, agree, not_simulated_sources = [], True, []
     for node_id, field_name in [tuple(pair) for pair in sources_of(graph) if pair[0] not in pointing or pair[0] in driven]:
         node = graph.nodes[node_id]
-        if node.node_type == "Script":          # X_ITE runs a Script; the simulator does not (it is listed, not compared)
+        if node.node_type == "Script" and not (handlers and node_id in handlers):
+            # X_ITE runs a Script; the simulator runs it only when it was given a handler (it is listed, not compared)
             not_simulated_sources.append({"source": f"{node_id}.{field_name}", "node": node.node_type,
                                           "x_ite_events": len(theirs.get((node_id, field_name), []))})
             continue

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <component name="RigidBodyPhysics" level="2"/>
+    <meta name="title" content="probe-collision.x3d"/>
+    <meta name="description" content="A ball that falls onto a floor, and two CollisionSensors (one disabled). X_ITE's physics decides when they touch; the simulator is told (tools/behaviour_hosted_probe.py)."/>
+  </head>
+  <Scene>
+    <Viewpoint position="0 1 12"/>
+    <RigidBodyCollection DEF="Physics" gravity="0 -9.8 0">
+      <RigidBody DEF="Floor" containerField="bodies" fixed="true" position="0 -1 0">
+        <CollidableShape DEF="FloorShape" containerField="geometry"><Shape containerField="shape"><Box size="10 0.2 4"/></Shape></CollidableShape>
+        <Box containerField="massDensityModel" size="10 0.2 4"/>
+      </RigidBody>
+      <RigidBody DEF="Ball" containerField="bodies" position="0 60 0" mass="1">
+        <CollidableShape DEF="BallShape" containerField="geometry"><Shape containerField="shape"><Sphere radius="0.5"/></Shape></CollidableShape>
+        <Sphere containerField="massDensityModel" radius="0.5"/>
+      </RigidBody>
+      <CollisionCollection DEF="Rules" containerField="collider">
+        <CollidableShape USE="FloorShape" containerField="collidables"/>
+        <CollidableShape USE="BallShape" containerField="collidables"/>
+      </CollisionCollection>
+    </RigidBodyCollection>
+    <CollisionSensor DEF="Hit"><CollisionCollection USE="Rules" containerField="collider"/></CollisionSensor>
+    <CollisionSensor DEF="Off" enabled="false"><CollisionCollection USE="Rules" containerField="collider"/></CollisionSensor>
+  </Scene>
+</X3D>

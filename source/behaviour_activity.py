@@ -150,14 +150,29 @@ def perform(sim, entry, parent_of=None):
                           test_position=args.get("test_position"))
     if call == "post":
         return sim.post(node, args["field"], args["value"], now)
+    if call == "contact":
+        return sim.contact(node, args["active"], args.get("contacts", ()), args.get("intersections", ()), now)
     raise ValueError(f"unknown call {call!r}")
 
 
-def replay(sim, stimulus, activity=None, parent_of=None):
+def replay(sim, stimulus, activity=None, parent_of=None, script_outputs=None):
     """Run a recorded stimulus on a (fresh) Simulation, feeding ``activity`` after every call when given. The same
-    graph and the same stimulus give the same events: that is how a recording is checked."""
+    graph and the same stimulus give the same events: that is how a recording is checked.
+
+    ``script_outputs`` is the recording's optional ``"script_outputs"`` block, ``[time, Script, field, value]`` for each
+    event a Python handler sent. A Script of ``sim`` that has no handler of its own sends them again, each after the
+    recorded call that is at its time (or the first later one), so a replay without the handler reproduces the run: what
+    reaches the targets is the same, the order inside one moment may differ."""
+    pending = sorted((tuple(e) for e in script_outputs or () if e[1] in sim.machines and getattr(sim.machines[e[1]], "handler", 0) is None),
+                     key=lambda e: e[0])
     for entry in stimulus:
         perform(sim, entry, parent_of)
+        while pending and pending[0][0] <= entry["time"]:
+            when, node, field, value = pending.pop(0)
+            kind = sim.machines[node].ports.get(field, ("",))[0]
+            if isinstance(value, list):       # JSON has no tuples: a vector is a tuple, a multiple field a list of them
+                value = [_tuples(v) for v in value] if kind.startswith("MF") else _tuples(value)
+            sim.post(node, field, value, when)
         if activity is not None:
             activity.feed_log(sim.log, sim.now)
 
@@ -198,6 +213,7 @@ class Activity:
         self.travel = travel
         self.record, self.world = bool(record), world
         self.graph = None                    # set by from_simulation: lets a pointer call name its object
+        self.hosted = None                   # set by from_simulation: what Python handlers of Scripts sent (a recording carries it)
         self._out = {}
         self._routes = {}
         types = types or {}
@@ -224,6 +240,7 @@ class Activity:
         if not isinstance(sim.log, CountingLog):
             sim.log = CountingLog(sim.log, maxlen=sim.log.maxlen)
         activity.graph = sim.graph
+        activity.hosted = getattr(sim, "hosted_outputs", None)
         activity._seen = sim.log.appended
         # The simulation lets each ROUTE carry one event per ``post`` (it forgets which ROUTEs fired at the start of every
         # post, and a press or a drag makes several). So what a post delivered is fed as its own batch: the batches are
@@ -470,6 +487,7 @@ class Activity:
                       "type": e.type, "value": value_text(e.value), "count": e.count, "per_second": e.rate}
                      for e in self.ring],
             "trace": self.trace, "trace_truncated": self.trace_truncated, "stimulus": self.stimulus,
+            **({"script_outputs": plain(list(self.hosted))} if self.record and self.hosted else {}),
         }
 
     def to_json(self, now=None, indent=None):
