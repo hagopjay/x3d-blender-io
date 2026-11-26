@@ -1610,9 +1610,12 @@
    "id": "object:custom_property",
    "class": "dropped",
    "x3d": "MetadataString",
-   "reason": "a plain custom property on an object is not written; only Metadata the import recorded is carried (#70)",
+   "reason": "a plain custom property on an object is not written; only Metadata the import recorded is carried (#70); the receipt counts the ones lost",
    "grade": "Confirmed",
-   "why_no_receipt": "v1 receipt rules read RNA values, not custom properties"
+   "receipt": {
+    "kind": "neq",
+    "neutral": null
+   }
   },
   {
    "id": "object:delta_location",
@@ -2134,10 +2137,14 @@
   },
   {
    "id": "principled:Emission Strength",
-   "class": "carried",
+   "class": "clamped",
    "x3d": "PhysicalMaterial.emissiveColor",
-   "reason": "written to PhysicalMaterial emissiveColor",
-   "grade": "Confirmed"
+   "reason": "Blender multiplies Emission Color by Emission Strength; X3D 4.0 has no strength field, so channels above 1 are scaled down together (emit_x3d40._sfcolor): the hue is kept, the intensity above 1 is lost (crossing census)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "gt",
+    "value": 1.0
+   }
   },
   {
    "id": "principled:IOR",
@@ -2466,6 +2473,70 @@
    "reason": "EEVEE world lighting and shadow setting",
    "grade": "Likely",
    "why_no_receipt": "renderer quality setting"
+  },
+  {
+   "id": "principled:Base Color link",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a node other than an image texture drives Base Color: the export writes the input's own value; procedural textures are not baked (crossing census)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": null
+   }
+  },
+  {
+   "id": "principled:Roughness link",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a node other than an image texture drives Roughness: the export writes the input's own value; procedural textures are not baked (crossing census)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": null
+   }
+  },
+  {
+   "id": "principled:Metallic link",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a node other than an image texture drives Metallic: the export writes the input's own value; procedural textures are not baked (crossing census)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": null
+   }
+  },
+  {
+   "id": "principled:Emission Color link",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "a node other than an image texture drives Emission Color: the export writes the input's own value; procedural textures are not baked (crossing census)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "neq",
+    "neutral": null
+   }
+  },
+  {
+   "id": "object.skipped:type",
+   "class": "dropped",
+   "x3d": null,
+   "reason": "an object of a type the X3D 4.0 path does not write (Grease Pencil, volumes, point clouds and the like) is left out of the file (crossing census)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always"
+   }
+  },
+  {
+   "id": "object.animation:animation_data",
+   "class": "dropped",
+   "x3d": "TimeSensor",
+   "reason": "the Animation option is off, so objects that move (an action, a driver, or shape keys) are written at the current frame; one entry per export, its value the number of moving objects; with the option on, the motion becomes interpolators (crossing census)",
+   "grade": "Confirmed",
+   "receipt": {
+    "kind": "always"
+   }
   }
  ]
 }

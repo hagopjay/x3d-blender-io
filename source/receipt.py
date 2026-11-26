@@ -233,8 +233,20 @@ def sidecar_requested(option: bool | None = None) -> bool:
 
 # ---------------------------------------------------------------- Blender side
 
+def _user_properties(datablock):
+    """The datablock's own custom properties: not the add-on's x3d_* bookkeeping, not internal (_*) or render-engine
+    groups. None when there are none, so a rule with neutral None fires only when something would be lost."""
+    try:
+        keys = sorted(k for k in datablock.keys() if not k.startswith(("x3d_", "_")) and k not in ("cycles", "cycles_visibility"))
+    except Exception:
+        return None
+    return keys or None
+
+
 def _rna_owner(group, datablock, node=None):
     def get(prop):
+        if prop == "custom_property":
+            return _user_properties(datablock)
         return _plain(getattr(datablock, prop))
 
     def custom(name):
@@ -247,6 +259,16 @@ def _rna_owner(group, datablock, node=None):
 
 def _socket_owner(group, datablock, tree_node, node=None):
     def get(name):
+        if name.endswith(" link"):
+            # "<input> link": the node that drives the input when it is one the export cannot carry (an image texture
+            # crosses as an ImageTexture; a procedural node is flattened to the input's default value)
+            sock = tree_node.inputs.get(name[: -len(" link")])
+            if sock is None:
+                raise KeyError(name)
+            if not sock.is_linked:
+                return None
+            source = sock.links[0].from_node
+            return None if source.type == "TEX_IMAGE" else source.bl_idname
         sock = tree_node.inputs.get(name)
         if sock is None:
             raise KeyError(name)
@@ -293,6 +315,16 @@ def collect_owners(ir_scene, scene) -> list[Owner]:
             bsdf = next((n for n in tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
             if bsdf is not None:
                 add(("principled", mat.name), _socket_owner("principled", mat, bsdf, node="PhysicalMaterial"))
+    for name, kind in getattr(ir_scene, "skipped_objects", ()):
+        add(("object.skipped", name), Owner(group="object.skipped", datablock=name,
+                                            get=lambda prop, kind=kind: kind if prop == "type" else None))
+    moving = len(getattr(ir_scene, "unsampled_animation", ()))
+    if moving:
+        # an export-level choice, not a property of one object: one entry whose value is how many objects move, so
+        # renaming an object leaves the receipt alone (metamorphic relation r2) while adding a moving one changes it
+        add(("object.animation", "Animation option"),
+            Owner(group="object.animation", datablock="Animation option",
+                  get=lambda prop: moving if prop == "animation_data" else None, node="TimeSensor"))
     world = getattr(scene, "world", None)
     if world is not None:
         add(("world", world.name), _rna_owner("world", world, node="Background"))
