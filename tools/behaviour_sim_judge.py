@@ -31,6 +31,9 @@ import behaviour_sim as bs            # noqa: E402
 import behaviour_world as bw          # noqa: E402
 
 EXACT, FOLLOWER = 2e-3, 8e-2
+# What a pointing sensor works out from the pointer's events instead of being told (a GeoTouchSensor's hit point in its
+# geoSystem): the simulator is given the pointer's events and the stream is judged
+DERIVED = ("hitGeoCoord_changed",)
 PIXEL_CENTRE = 0.0       # drag rays: X_ITE uses the pointer as given (getPointerFromEvent); the press point comes from its pick
 
 
@@ -88,7 +91,7 @@ def _viewer_actions(graph, x3d_text, trace):
     if not drivers:
         return set(), []
     driver = sorted(drivers)[0]
-    others = [n.id for n in graph.nodes.values() if n.node_type == "ProximitySensor" and n.id not in drivers]
+    others = [n.id for n in graph.nodes.values() if n.node_type in bs.PROXIMITY and n.id not in drivers]
     chains = {sensor: _transform_chain(x3d_text, graph.nodes[sensor].parent) if graph.nodes[sensor].parent else []
               for sensor in others}
     pose = {field: _numbers_of(value) for d, field, value in trace.get("initial", []) if d == driver}
@@ -234,13 +237,31 @@ def _gap(a, b, x3d_type):
     return max((abs(x - y) for x, y in zip(a, b)), default=0.0)
 
 
+GEO_NODES = ("GeoPositionInterpolator", "GeoProximitySensor", "GeoTouchSensor")
+
+
+def _gap_to_text_resolution(theirs, ours):
+    """The gap of two single precision vectors in X_ITE's text: it writes an SFVec3f with seven significant digits, so a value in
+    the millions (a geocentric coordinate) is given to a metre or to half of one, and a component is allowed one unit of its own
+    seventh digit before it counts as a gap. The raw gap is reported beside it (``worst_raw_gap``)."""
+    a, b = _numbers(theirs), _numbers(ours)
+    if len(a) != len(b):
+        return float("inf")
+    worst = 0.0
+    for x, y in zip(a, b):
+        magnitude = max(abs(x), abs(y))
+        unit = 10.0 ** (math.floor(math.log10(magnitude)) - 6) if magnitude > 0 else 0.0
+        worst = max(worst, abs(x - y) - unit)
+    return max(0.0, worst)
+
+
 def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=False):
     x3d_text = pathlib.Path(x3d_path).read_text(encoding="utf-8")
     graph = bg.Behaviour.from_x3d(x3d_text)
     sim = bs.Simulation(graph, log_size=10 ** 7, world=bw.World.from_x3d(x3d_text))     # the world the sensors read
     for script_id, handler in (handlers or {}).items():      # Python handlers for Scripts: judged against X_ITE's JavaScript
         sim.host(script_id, handler)
-    pointing = {node.id for node in graph.nodes.values() if node.node_type in bs.POINTING}
+    pointing = {node.id for node in graph.nodes.values() if node.node_type in bs.POINTING or node.node_type in bs.GEO_POINTING}
     # drag sensors with a recorded pointer are run by the simulator from the pointer's ray and judged, not replayed
     actions = _drag_actions(graph, x3d_text, trace, centre) if trace.get("pointer") else []
     driven = {sensor for _when, sensor, _action, _args in actions}
@@ -259,7 +280,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
         by_view = {}
     for d, field_name, value in trace.get("initial", []):      # start where X_ITE was when recording began
         machine = sim.machines.get(d)
-        if machine is not None and machine.node_type == "ProximitySensor" and d not in drivers:
+        if machine is not None and machine.node_type in bs.PROXIMITY and d not in drivers:
             if field_name == "isActive":
                 machine.active = value is True or str(value) == "true"
             elif field_name in ("position_changed", "orientation_changed", "centerOfRotation_changed"):
@@ -292,6 +313,8 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
     # the recording where X_ITE was (what it held when recording began)
     for d, field_name, value in trace.get("initial", []):
         machine = sim.machines.get(d)
+        if machine is not None and machine.node_type == "GeoProximitySensor" and field_name == "isActive":
+            machine.active = value is True or str(value) == "true"      # an ``enabled`` event in the pre-roll may have moved it
         if isinstance(machine, bs._WorldSensor):
             if field_name == "isActive":
                 machine.active = value is True or str(value) == "true"
@@ -328,7 +351,8 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
             sim.now = when
             sim.view(position, orientation, when, center_of_rotation=center, test_position=drawn)
         for _when, node_id, field_name, value in by_time.get(when, ()):
-            if node_id in pointing and node_id not in driven and not (world_viewer and node_id in drivers):
+            if node_id in pointing and node_id not in driven and not (world_viewer and node_id in drivers) \
+                    and field_name not in DERIVED:
                 x3d_type = bg.resolve_field(graph.nodes[node_id].node_type, field_name, "out", graph.nodes[node_id].declared)[1]
                 sim.now = when
                 machine = sim.machines[node_id]
@@ -340,12 +364,13 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
             sim.step(when)
     theirs, ours = {}, {}
     for when, node_id, field_name, value in events:
-        if node_id not in pointing or node_id in driven:
+        if node_id not in pointing or node_id in driven or field_name in DERIVED:
             theirs.setdefault((node_id, field_name), []).append((when, value))
     for when, node_id, field_name, value in sim.log:
         ours.setdefault((node_id, field_name), []).append((when, value))
     streams, agree, not_simulated_sources = [], True, []
-    for node_id, field_name in [tuple(pair) for pair in sources_of(graph) if pair[0] not in pointing or pair[0] in driven]:
+    for node_id, field_name in [tuple(pair) for pair in sources_of(graph)
+                                if pair[0] not in pointing or pair[0] in driven or pair[1] in DERIVED]:
         node = graph.nodes[node_id]
         if node.node_type == "Script" and not (handlers and node_id in handlers):
             # X_ITE runs a Script; the simulator runs it only when it was given a handler (it is listed, not compared)
@@ -371,6 +396,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
                             "worst_gap": round(worst, 6), "tolerance": EXACT, "agree": ok, "matched": "in order"})
             continue
         index, worst, compared, unmatched = {round(when, 6): value for when, value in b}, 0.0, 0, 0
+        worst_raw = 0.0
         a = list({round(when, 6): (when, value) for when, value in a}.values())   # two events in one frame: the last stands
         discrete = x3d_type in ("SFBool", "SFInt32", "SFTime", "SFString") or \
             node.node_type.endswith(("Sequencer", "Trigger", "Toggle", "Filter"))
@@ -392,6 +418,9 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
                 continue
             compared += 1
             gap = 0.0 if time_like and abs(float(value) - float(mine)) < 0.05 else _gap(value, mine, x3d_type)
+            if x3d_type == "SFVec3f" and node.node_type in GEO_NODES:
+                worst_raw = max(worst_raw, gap)
+                gap = _gap_to_text_resolution(value, mine)
             worst = max(worst, gap)
         extra = len({round(when, 6) for when, _ in b} - {round(when, 6) for when, _ in a})
         ok = compared > 0 and worst <= tolerance and unmatched == 0 if a else not b
@@ -401,7 +430,8 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
         streams.append({"source": f"{node_id}.{field_name}", "node": node.node_type, "type": x3d_type,
                         "x_ite_events": len(a), "simulator_events": len(b), "compared": compared,
                         "x_ite_only": unmatched, "simulator_only": extra, "worst_gap": round(worst, 6),
-                        "tolerance": tolerance, "agree": ok})
+                        "tolerance": tolerance, "agree": ok,
+                        **({"worst_raw_gap": round(worst_raw, 6)} if node.node_type in GEO_NODES and x3d_type == "SFVec3f" else {})})
     return {"file": trace["file"], "browser": trace["browser"], "clicks": trace["clicks"],
             "holds": trace.get("holds", []), "frames": len(trace["frames"]), "not_simulated": sim.not_simulated,
             "streams": streams, "not_simulated_sources": not_simulated_sources, "agree": agree}

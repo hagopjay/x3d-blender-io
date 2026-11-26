@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: geospatial (GeoTouchSensor)" />
+    <meta name="generator" content="x3d-blender-io tests/behaviour (recorded with tools/behaviour_sim_judge.cjs on X_ITE 16.8.1)" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint DEF="Eye" position="0 0 10" />
+    <GeoOrigin DEF="Paris" geoSystem='"GD" "WE"' geoCoords="48.7 2.2 0" rotateYUp="true" />
+    <GeoOrigin DEF="ParisFlat" geoCoords="48.7 2.2 0" />
+    <GeoOrigin DEF="Sydney" geoSystem='"GD" "BR" "longitude_first"' geoCoords="151.1 -34.0 40" rotateYUp="true" />
+    <GeoOrigin DEF="UtmOrigin" geoSystem='"UTM" "Z31"' geoCoords="5410000 450000 0" rotateYUp="true" />
+    <Script DEF="Sink">
+      <field name="b" type="SFBool" accessType="inputOnly" />
+      <field name="t" type="SFTime" accessType="inputOnly" />
+      <field name="f" type="SFVec3f" accessType="inputOnly" />
+      <field name="d" type="SFVec3d" accessType="inputOnly" />
+      <field name="v" type="SFVec2f" accessType="inputOnly" />
+      <![CDATA[ecmascript:
+function b(x) { } function t(x) { } function f(x) { } function d(x) { } function v(x) { }
+]]>
+    </Script>
+    <!-- six boxes in a row near the top of the picture, each under a GeoTouchSensor in another geoSystem or frame -->
+    <Transform translation="-5.5 3 0" >
+      <Shape><Appearance><Material diffuseColor="0.8 0.5 0.3" /></Appearance><Box size="1.8 1.8 1.8" /></Shape>
+      <GeoTouchSensor DEF="TouchParis" geoSystem='"GD" "WE"'><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoTouchSensor>
+    </Transform>
+    <Transform translation="-3.3 3 0" >
+      <Shape><Appearance><Material diffuseColor="0.8 0.5 0.3" /></Appearance><Box size="1.8 1.8 1.8" /></Shape>
+      <GeoTouchSensor DEF="TouchFlat" geoSystem='"GD" "WE"'><GeoOrigin USE="ParisFlat" containerField="geoOrigin" /></GeoTouchSensor>
+    </Transform>
+    <Transform translation="-1.1 3 0" >
+      <Shape><Appearance><Material diffuseColor="0.8 0.5 0.3" /></Appearance><Box size="1.8 1.8 1.8" /></Shape>
+      <GeoTouchSensor DEF="TouchUtm" geoSystem='"UTM" "Z31"'><GeoOrigin USE="UtmOrigin" containerField="geoOrigin" /></GeoTouchSensor>
+    </Transform>
+    <Transform translation="1.1 3 0" >
+      <Shape><Appearance><Material diffuseColor="0.8 0.5 0.3" /></Appearance><Box size="1.8 1.8 1.8" /></Shape>
+      <GeoTouchSensor DEF="TouchBare" geoSystem='"GD" "WE"'></GeoTouchSensor>
+    </Transform>
+    <Transform translation="3.3 3 0" >
+      <Shape><Appearance><Material diffuseColor="0.8 0.5 0.3" /></Appearance><Box size="1.8 1.8 1.8" /></Shape>
+      <GeoTouchSensor DEF="TouchGc" geoSystem='"GC"'><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoTouchSensor>
+    </Transform>
+    <Transform translation="5.5 3 0" rotation="0 1 0 0.5" scale="0.8 1 1">
+      <Shape><Appearance><Material diffuseColor="0.8 0.5 0.3" /></Appearance><Box size="1.8 1.8 1.8" /></Shape>
+      <GeoTouchSensor DEF="TouchMoved" geoSystem='"GD" "BR" "longitude_first"'><GeoOrigin USE="Sydney" containerField="geoOrigin" /></GeoTouchSensor>
+    </Transform>
+    <ROUTE fromNode="TouchParis" fromField="isOver" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchParis" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchParis" fromField="touchTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="TouchParis" fromField="hitPoint_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchParis" fromField="hitNormal_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchParis" fromField="hitTexCoord_changed" toNode="Sink" toField="v" />
+    <ROUTE fromNode="TouchParis" fromField="hitGeoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="TouchFlat" fromField="isOver" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchFlat" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchFlat" fromField="touchTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="TouchFlat" fromField="hitPoint_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchFlat" fromField="hitNormal_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchFlat" fromField="hitTexCoord_changed" toNode="Sink" toField="v" />
+    <ROUTE fromNode="TouchFlat" fromField="hitGeoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="TouchUtm" fromField="isOver" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchUtm" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchUtm" fromField="touchTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="TouchUtm" fromField="hitPoint_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchUtm" fromField="hitNormal_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchUtm" fromField="hitTexCoord_changed" toNode="Sink" toField="v" />
+    <ROUTE fromNode="TouchUtm" fromField="hitGeoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="TouchBare" fromField="isOver" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchBare" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchBare" fromField="touchTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="TouchBare" fromField="hitPoint_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchBare" fromField="hitNormal_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchBare" fromField="hitTexCoord_changed" toNode="Sink" toField="v" />
+    <ROUTE fromNode="TouchBare" fromField="hitGeoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="TouchGc" fromField="isOver" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchGc" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchGc" fromField="touchTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="TouchGc" fromField="hitPoint_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchGc" fromField="hitNormal_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchGc" fromField="hitTexCoord_changed" toNode="Sink" toField="v" />
+    <ROUTE fromNode="TouchGc" fromField="hitGeoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="TouchMoved" fromField="isOver" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchMoved" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="TouchMoved" fromField="touchTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="TouchMoved" fromField="hitPoint_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchMoved" fromField="hitNormal_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="TouchMoved" fromField="hitTexCoord_changed" toNode="Sink" toField="v" />
+    <ROUTE fromNode="TouchMoved" fromField="hitGeoCoord_changed" toNode="Sink" toField="d" />
+  </Scene>
+</X3D>

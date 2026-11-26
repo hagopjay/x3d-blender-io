@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: geospatial (GeoPositionInterpolator, GeoProximitySensor)" />
+    <meta name="generator" content="x3d-blender-io tests/behaviour (recorded with tools/behaviour_sim_judge.cjs on X_ITE 16.8.1)" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint DEF="Eye" position="0 1.6 12" />
+    <Transform translation="0 -0.05 0"><Shape><Appearance><Material diffuseColor="0.25 0.27 0.3" /></Appearance><Box size="40 0.1 40" /></Shape></Transform>
+
+    <!-- the origins every node below points at -->
+    <GeoOrigin DEF="Paris" geoSystem='"GD" "WE"' geoCoords="48.7 2.2 0" rotateYUp="true" />
+    <GeoOrigin DEF="ParisFlat" geoCoords="48.8 2.3 0" />
+    <GeoOrigin DEF="Sydney" geoSystem='"GD" "BR" "longitude_first"' geoCoords="151.1 -34.0 40" rotateYUp="true" />
+    <GeoOrigin DEF="UtmOrigin" geoSystem='"UTM" "Z31"' geoCoords="5410000 450000 0" rotateYUp="true" />
+    <GeoOrigin DEF="UtmOrigin2" geoSystem='"UTM" "Z33" "easting_first"' geoCoords="500000 5500000 0" />
+    <GeoOrigin DEF="MarsOrigin" geoSystem='"GD" "MARS"' geoCoords="9 19 0" rotateYUp="true" />
+    <GeoOrigin DEF="Pole" geoSystem='"GD" "WE"' geoCoords="90 0 0" rotateYUp="true" />
+
+    <!-- the viewer: flight and look, reported by a ProximitySensor of size -1 (the judge reads the camera from it) -->
+    <TimeSensor DEF="Flight" cycleInterval="12" loop="true" />
+    <PositionInterpolator DEF="FlightPath" key="0 0.15 0.3 0.45 0.6 0.75 0.9 1"
+      keyValue="0 1.6 12  0 1.6 -2  0 1.6 -5.8  0 1.6 -3  0 1.6 6  6 1.6 6  6 1.6 12  0 1.6 12" />
+    <OrientationInterpolator DEF="FlightLook" key="0 0.15 0.3 0.45 0.6 0.75 0.9 1"
+      keyValue="0 1 0 0  0 1 0 0  0 1 0 0  0 1 0 3.14159  0 1 0 3.14159  0 1 0 4.7  0 1 0 6.28318  0 1 0 6.28318" />
+    <ProximitySensor DEF="Cam" size="-1 -1 -1" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightPath" toField="set_fraction" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightLook" toField="set_fraction" />
+    <ROUTE fromNode="FlightPath" fromField="value_changed" toNode="Eye" toField="position" />
+    <ROUTE fromNode="FlightLook" fromField="value_changed" toNode="Eye" toField="orientation" />
+
+    <!-- where every stream ends: a Script with a typed port for each kind of value -->
+    <Script DEF="Sink">
+      <field name="b" type="SFBool" accessType="inputOnly" />
+      <field name="t" type="SFTime" accessType="inputOnly" />
+      <field name="f" type="SFVec3f" accessType="inputOnly" />
+      <field name="d" type="SFVec3d" accessType="inputOnly" />
+      <field name="r" type="SFRotation" accessType="inputOnly" />
+      <![CDATA[ecmascript:
+function b(v) { } function t(v) { } function f(v) { } function d(v) { } function r(v) { }
+]]>
+    </Script>
+
+    <!-- GeoPositionInterpolator: one clock, fifteen interpolators (systems, ellipsoids, origins, key edge cases) -->
+    <TimeSensor DEF="Fly" cycleInterval="7" loop="true" />
+    <GeoPositionInterpolator DEF="GpiParis" geoSystem='"GD" "WE"' key="0 0.4 1" keyValue="48.8 2.3 0  48.85 2.35 300  48.9 2.4 0"><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiFlat" geoSystem='"GD" "WE"' key="0 1" keyValue="48.8 2.3 0  48.9 2.4 100"><GeoOrigin USE="ParisFlat" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiFar" geoSystem='"GD" "WE"' key="0 1" keyValue="48.8 2.3 0  -33.9 151.2 50"></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiSydney" geoSystem='"GD" "BR" "longitude_first"' key="0 0.5 1" keyValue="151.2 -33.9 40  151.25 -33.85 200  151.3 -33.8 40"><GeoOrigin USE="Sydney" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiUtmN" geoSystem='"UTM" "Z31"' key="0 0.5 1" keyValue="5411000 452000 0  5412500 453500 100  5413000 455000 0"><GeoOrigin USE="UtmOrigin" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiUtmS" geoSystem='"UTM" "Z56" "S"' key="0 0.5 1" keyValue="6250000 334000 0  6252000 336000 120  6255000 340000 0"></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiUtmE" geoSystem='"UTM" "Z33" "easting_first"' key="0 1" keyValue="500000 5500000 0  510000 5510000 50"><GeoOrigin USE="UtmOrigin2" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiGc" geoSystem='"GC"' key="0 0.5 1" keyValue="4205000 170000 4776000  4205200 170200 4776300  4205400 170400 4776000"><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiMars" geoSystem='"GD" "MARS"' key="0 0.5 1" keyValue="10 20 0  10.5 20.5 500  11 21 0"><GeoOrigin USE="MarsOrigin" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiPole" geoSystem='"GD" "WE"' key="0 1" keyValue="89.9 10 0  89.95 20 200"><GeoOrigin USE="Pole" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiOne" geoSystem='"GD" "WE"' key="0.5" keyValue="48.8 2.3 10"><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiShort" geoSystem='"GD" "WE"' key="0 0.3 0.6 1" keyValue="48.8 2.3 0  48.85 2.35 300"><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiEmpty" geoSystem='"GD" "WE"' key="0 1" keyValue=""><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiWindow" geoSystem='"GD" "WE"' key="0.25 0.75" keyValue="48.8 2.3 0  48.9 2.4 100"><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiRf" geoSystem='"GD" "RF"' key="0 1" keyValue="48.8 2.3 0  48.8 2.3 1000"><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoPositionInterpolator>
+    <GeoPositionInterpolator DEF="GpiCentre" geoSystem='"GC"' key="0 1" keyValue="0 1.6 -6  0 1.6 6" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiParis" toField="set_fraction" />
+    <ROUTE fromNode="GpiParis" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiParis" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiFlat" toField="set_fraction" />
+    <ROUTE fromNode="GpiFlat" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiFlat" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiFar" toField="set_fraction" />
+    <ROUTE fromNode="GpiFar" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiFar" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiSydney" toField="set_fraction" />
+    <ROUTE fromNode="GpiSydney" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiSydney" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiUtmN" toField="set_fraction" />
+    <ROUTE fromNode="GpiUtmN" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiUtmN" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiUtmS" toField="set_fraction" />
+    <ROUTE fromNode="GpiUtmS" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiUtmS" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiUtmE" toField="set_fraction" />
+    <ROUTE fromNode="GpiUtmE" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiUtmE" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiGc" toField="set_fraction" />
+    <ROUTE fromNode="GpiGc" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiGc" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiMars" toField="set_fraction" />
+    <ROUTE fromNode="GpiMars" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiMars" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiPole" toField="set_fraction" />
+    <ROUTE fromNode="GpiPole" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiPole" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiOne" toField="set_fraction" />
+    <ROUTE fromNode="GpiOne" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiOne" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiShort" toField="set_fraction" />
+    <ROUTE fromNode="GpiShort" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiShort" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiEmpty" toField="set_fraction" />
+    <ROUTE fromNode="GpiEmpty" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiEmpty" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiWindow" toField="set_fraction" />
+    <ROUTE fromNode="GpiWindow" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiWindow" fromField="geovalue_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiRf" toField="set_fraction" />
+    <ROUTE fromNode="GpiRf" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="GpiRf" fromField="geovalue_changed" toNode="Sink" toField="d" />
+
+    <!-- GeoProximitySensor: boxes the viewer flies through, in several geoSystems and frames, one switched off and on -->
+    <GeoProximitySensor DEF="ProxParis" geoSystem='"GD" "WE"' size="6 4 8" center="0 1.6 -3" ><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoProximitySensor>
+    <GeoProximitySensor DEF="ProxFlat" geoSystem='"GD" "WE"' size="6 4 8" center="0 1.6 -3" ><GeoOrigin USE="ParisFlat" containerField="geoOrigin" /></GeoProximitySensor>
+    <GeoProximitySensor DEF="ProxUtm" geoSystem='"UTM" "Z31"' size="4 4 12" center="0 1.6 3" ><GeoOrigin USE="UtmOrigin" containerField="geoOrigin" /></GeoProximitySensor>
+    <GeoProximitySensor DEF="ProxBare" geoSystem='"GD" "WE"' size="6 4 8" center="0 1.6 -3" ></GeoProximitySensor>
+    <Transform translation="1 0 -2" rotation="0 1 0 0.8" scale="1 2 1"><GeoProximitySensor DEF="ProxMoved" geoSystem='"GD" "BR"' size="5 3 5" center="0 0 0" ><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoProximitySensor></Transform>
+    <GeoProximitySensor DEF="ProxGeoCenter" geoSystem='"GD" "WE"' size="6 6 6" center="0 0 0" geoCenter="48.8 2.3 0"><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoProximitySensor>
+    <GeoProximitySensor DEF="ProxCentre" geoSystem='"GC"' size="6 4 6" center="0 1.6 6" ><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoProximitySensor>
+    <GeoProximitySensor DEF="ProxSwitched" geoSystem='"GD" "WE"' size="20 20 40" center="0 0 0" ><GeoOrigin USE="Paris" containerField="geoOrigin" /></GeoProximitySensor>
+    <TimeSensor DEF="Toggle" cycleInterval="13" loop="true" />
+    <BooleanSequencer DEF="Off" key="0 0.31 0.625 1" keyValue="true false true true" />
+    <ROUTE fromNode="Toggle" fromField="fraction_changed" toNode="Off" toField="set_fraction" />
+    <ROUTE fromNode="Off" fromField="value_changed" toNode="ProxSwitched" toField="enabled" />
+    <ROUTE fromNode="ProxParis" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxParis" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxParis" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxParis" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxParis" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxParis" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxParis" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxFlat" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxFlat" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxFlat" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxFlat" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxFlat" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxFlat" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxFlat" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxUtm" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxUtm" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxUtm" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxUtm" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxUtm" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxUtm" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxUtm" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxBare" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxBare" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxBare" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxBare" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxBare" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxBare" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxBare" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxMoved" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxMoved" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxMoved" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxMoved" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxMoved" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxMoved" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxMoved" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxCentre" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxCentre" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxCentre" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxCentre" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxCentre" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxCentre" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxCentre" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxSwitched" fromField="isActive" toNode="Sink" toField="b" />
+    <ROUTE fromNode="ProxSwitched" fromField="enterTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxSwitched" fromField="exitTime" toNode="Sink" toField="t" />
+    <ROUTE fromNode="ProxSwitched" fromField="geoCoord_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxSwitched" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxSwitched" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="ProxSwitched" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="Cam" fromField="position_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="Cam" fromField="orientation_changed" toNode="Sink" toField="r" />
+    <ROUTE fromNode="Cam" fromField="centerOfRotation_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="Fly" fromField="fraction_changed" toNode="GpiCentre" toField="set_fraction" />
+    <ROUTE fromNode="GpiCentre" fromField="geovalue_changed" toNode="ProxGeoCenter" toField="set_geoCenter" />
+    <ROUTE fromNode="GpiCentre" fromField="value_changed" toNode="Sink" toField="f" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="geoCenter_changed" toNode="Sink" toField="d" />
+    <ROUTE fromNode="ProxGeoCenter" fromField="center_changed" toNode="Sink" toField="d" />
+  </Scene>
+</X3D>

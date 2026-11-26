@@ -2143,6 +2143,14 @@ except ImportError:  # imported as a plain module: tests, tools/
     import behaviour_pick as _pick
 _MACHINES.update(_pick.machines(_Machine, _WorldSensor))
 _SCENE_MACHINES = _media.SCENE_MACHINES
+# Class C (another coordinate system: GeoPositionInterpolator, GeoProximitySensor, GeoTouchSensor) lives in behaviour_geo_machines
+try:
+    from . import behaviour_geo_machines as _geo
+except ImportError:  # imported as a plain module: tests, tools/
+    import behaviour_geo_machines as _geo
+_MACHINES.update(_geo.MACHINES)
+PROXIMITY = _geo.PROXIMITY           # the sensors Simulation.viewer and Simulation.view feed
+GEO_POINTING = _geo.TOUCHING         # pointing sensors that are not in POINTING (the Player and the fuzzer feed POINTING only)
 SIMULATED = tuple(sorted({*_MACHINES, "AudioClip", "MovieTexture"}))
 # Event nodes that are scene content (catalogue IN_PLACE: the graph names them, the scene keeps them) and that the
 # simulation runs anyway, from the World. They are not machines and not in SIMULATED.
@@ -2341,6 +2349,10 @@ class Simulation:
             self.now = self._time(now)
         self._fired = set()              # something outside the graph happened: that is a new moment
         self._emit(node_id, field_name, value)
+        posted = getattr(self.machines.get(node_id), "posted", None)      # a node that sends more because of this (GeoTouchSensor)
+        if posted is not None:
+            for more_field, more_value in self._try(node_id, "post", posted, field_name, value, self.now):
+                self._emit(node_id, more_field, more_value)
         self._drain()
         return self._collect()
 
@@ -2402,7 +2414,7 @@ class Simulation:
         ``test_position``, when given, is the position the box test uses (X_ITE tests the camera as it was drawn, one
         frame behind a viewpoint that a ROUTE moves, and reports where it is now)."""
         machine = self.machines.get(node_id)
-        if machine is None or machine.node_type != "ProximitySensor":
+        if machine is None or machine.node_type not in PROXIMITY:
             raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a ProximitySensor in this graph")
         return self._proximity(machine, position, orientation, center_of_rotation, now, test_position)
 
@@ -2432,7 +2444,7 @@ class Simulation:
         self.world.set_viewer(position, orientation, center_of_rotation, **frustum)
         changes = []
         for machine in self.machines.values():
-            if machine.node_type != "ProximitySensor":
+            if machine.node_type not in PROXIMITY:
                 continue
             if machine.id not in self.world.sensors:
                 self.noted["no-frame"] = self.noted.get("no-frame", 0) + 1
@@ -2456,7 +2468,7 @@ class Simulation:
 
     def _sensor(self, node_id):
         machine = self.machines.get(node_id)
-        if machine is None or machine.node_type not in POINTING:
+        if machine is None or (machine.node_type not in POINTING and machine.node_type not in GEO_POINTING):
             raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a pointing sensor in this graph")
         return machine
 
@@ -2466,6 +2478,20 @@ class Simulation:
             return []
         sensor.over = bool(over)
         return self.post(node_id, "isOver", sensor.over, now)
+
+    def hit(self, node_id, point, now):
+        """Where on the sensor's shapes the pointer is, in the sensor's own coordinates: the sensor sends ``hitPoint_changed``
+        (and a GeoTouchSensor its ``hitGeoCoord_changed`` after it), while the pointer is over it (``hover``) and the sensor is
+        enabled. Other sensors' hit points are not simulated: this is how a caller gives one."""
+        sensor = self._sensor(node_id)
+        if not sensor.f.get("enabled", True) or not sensor.over:
+            return []
+        point = tuple(point) if isinstance(point, (tuple, list)) else point
+        if not _fits(point, "SFVec3f") or not _finite(point):
+            self.dropped["non-finite" if _fits(point, "SFVec3f") else "mismatch"] = \
+                self.dropped.get("non-finite" if _fits(point, "SFVec3f") else "mismatch", 0) + 1
+            return []
+        return self.post(node_id, "hitPoint_changed", point, now)
 
     def press(self, node_id, now, point=(0.0, 0.0, 0.0), ray=None, eye=None, follow=True, screen=None):
         """The pointer button goes down on the sensor's shapes. ``point`` is where, in the sensor's own coordinates.
@@ -2541,7 +2567,7 @@ class Simulation:
             return []
         sensor.pressed = False
         changes = self.post(node_id, "isActive", False, now)
-        if sensor.node_type == "TouchSensor" and sensor.over:
+        if sensor.node_type in ("TouchSensor", "GeoTouchSensor") and sensor.over:
             changes += self.post(node_id, "touchTime", now, now)
         if sensor.node_type in ("CylinderSensor", "SphereSensor") and getattr(sensor, "geometry", False):
             finish = sensor.cylinder_release if sensor.node_type == "CylinderSensor" else sensor.sphere_release
