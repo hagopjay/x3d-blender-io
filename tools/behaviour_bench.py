@@ -4,7 +4,7 @@
 
 """How the behaviour simulator and the Blender player scale: synthetic graphs, timed.
 
-Six shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a seventh that is asked for by name:
+Eight shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a ninth that is asked for by name:
 
   fan     one looping TimeSensor drives N PositionInterpolators, each into its own Transform
   chains  N independent chains: TimeSensor (loop) -> PositionInterpolator -> PositionDamper -> Transform
@@ -22,6 +22,9 @@ Six shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), an
   world   N sensors that read a World of 5 N volumes (N / 2 TransformSensors each aiming at a Transform that one
           interpolator moves, N / 4 VisibilitySensors, N / 4 Collision groups of 4 boxes), with the viewer flown past
           by the same interpolator (``world_for`` builds the World, which the simulation reads once per step)
+  geo     N GeoPositionInterpolators (WGS 84 geodetic, one shared rotateYUp GeoOrigin, three keys) fed by one looping
+          TimeSensor, each routing geovalue_changed and value_changed to a sink; N / 4 GeoProximitySensors in the same
+          origin that the viewer is flown through, and N / 4 GeoTouchSensors clicked at one per 10 copies (class C)
 
 For each case the benchmark times ``Simulation(graph)``, ``start()`` and 300 steps of 1/60 s, and reports the median
 and 95th percentile of a step, the events sent per step, and the peak memory (tracemalloc). With ``--bpy`` (needs the
@@ -53,7 +56,7 @@ import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
 import behaviour_world as bw      # noqa: E402
 
-SHAPES = ("fan", "chains", "mixed", "hosted", "media", "world", "pick")
+SHAPES = ("fan", "chains", "mixed", "hosted", "media", "world", "pick", "geo")
 OPT_IN_SHAPES = ("lists",)         # run when named; not in the default sweep, and not timed in the player (no Transform to move)
 POINTS = 100                       # points per list in the "lists" shape
 SIZES = (10, 100, 1000, 5000)
@@ -118,6 +121,8 @@ def build(shape: str, n: int) -> bg.Behaviour:
         return bg.Behaviour.from_x3d(media_world(n))
     elif shape == "pick":
         return bg.Behaviour.from_x3d(pick_world(n))
+    elif shape == "geo":
+        return bg.Behaviour.from_x3d(geo_world(n))
     elif shape == "world":
         clock = b.add("TimeSensor", "Clock", cycleInterval=8, loop=True)
         move = b.add("PositionInterpolator", "Move", key=[0, 0.5, 1], keyValue=[(-8, 1, 6), (8, 1, 6), (-8, 1, 6)])
@@ -198,6 +203,34 @@ def media_world(n: int) -> str:
             + "".join(body) + "".join(routes) + "</Scene></X3D>")
 
 
+def geo_world(n: int) -> str:
+    """The "geo" shape as X3D text. The viewer (Viewpoint Eye) is flown by a PositionInterpolator through the sensors' boxes."""
+    body = ['<GeoOrigin DEF="Home" geoSystem=\'"GD" "WE"\' geoCoords="48.7 2.2 0" rotateYUp="true"/>',
+            '<Viewpoint DEF="Eye" position="0 1.6 12"/>', '<TimeSensor DEF="Clock" cycleInterval="4" loop="true"/>',
+            '<PositionInterpolator DEF="Move" key="0 0.5 1" keyValue="-20 1.6 0 20 1.6 0 -20 1.6 0"/>',
+            '<Script DEF="SinkS"><field name="g" type="SFVec3d" accessType="inputOnly"/>'
+            '<field name="v" type="SFVec3f" accessType="inputOnly"/><field name="b" type="SFBool" accessType="inputOnly"/></Script>']
+    routes = ['<ROUTE fromNode="Move" fromField="value_changed" toNode="Eye" toField="set_position"/>',
+              '<ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Move" toField="set_fraction"/>']
+    for i in range(n):
+        key = " ".join(f"{48.5 + 0.001 * i + 0.1 * k:.4f} {2.0 + 0.1 * k:.4f} {100 * k}" for k in range(3))
+        body.append(f'<GeoPositionInterpolator DEF="Gpi{i}" geoSystem=\'"GD" "WE"\' key="0 0.5 1" keyValue="{key}">'
+                    f'<GeoOrigin USE="Home" containerField="geoOrigin"/></GeoPositionInterpolator>')
+        routes.append(f'<ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Gpi{i}" toField="set_fraction"/>'
+                      f'<ROUTE fromNode="Gpi{i}" fromField="geovalue_changed" toNode="SinkS" toField="g"/>'
+                      f'<ROUTE fromNode="Gpi{i}" fromField="value_changed" toNode="SinkS" toField="v"/>')
+    for i in range(max(1, n // 4)):
+        body.append(f'<Transform translation="{(i % 20) * 3.0 - 30.0} 0 {-(i // 20) * 3.0}"><GeoProximitySensor DEF="Prox{i}" '
+                    f'geoSystem=\'"GD" "WE"\' size="4 4 4"><GeoOrigin USE="Home" containerField="geoOrigin"/></GeoProximitySensor></Transform>')
+        routes.append(f'<ROUTE fromNode="Prox{i}" fromField="geoCoord_changed" toNode="SinkS" toField="g"/>'
+                      f'<ROUTE fromNode="Prox{i}" fromField="isActive" toNode="SinkS" toField="b"/>')
+        body.append(f'<Transform><Shape><Box/></Shape><GeoTouchSensor DEF="Click{i}" geoSystem=\'"GD" "WE"\'>'
+                    f'<GeoOrigin USE="Home" containerField="geoOrigin"/></GeoTouchSensor></Transform>')
+        routes.append(f'<ROUTE fromNode="Click{i}" fromField="hitGeoCoord_changed" toNode="SinkS" toField="g"/>')
+    return ('<?xml version="1.0" encoding="UTF-8"?><X3D profile="Full" version="4.0"><head/><Scene>'
+            + "".join(body) + "".join(routes) + "</Scene></X3D>")
+
+
 def resources_for(shape: str):
     """What the "media" shape's URLs do (the others load nothing): seven tones, each ready 0.05 s on and 1 s long."""
     if shape != "media":
@@ -209,6 +242,8 @@ def world_for(shape: str, n: int):
     """The World a shape's simulation reads (None for the shapes that need none). Deterministic."""
     if shape == "pick":
         return bw.World.from_x3d(pick_world(n))
+    if shape == "geo":
+        return bw.World.from_x3d(geo_world(n))
     if shape != "world":
         return None
     world = bw.World()
@@ -235,12 +270,12 @@ def world_for(shape: str, n: int):
 
 def clicks(shape: str, n: int, steps: int = STEPS) -> dict[int, list[int]]:
     """step number (1-based) -> the copies clicked at that step; only "mixed" has any: one per 10 copies."""
-    if shape != "mixed":
+    if shape not in ("mixed", "geo"):
         return {}
-    wanted = max(1, n // 10)
+    wanted = max(1, n // 10) if shape == "mixed" else max(1, n // 40)
     when: dict[int, list[int]] = {}
     for j in range(wanted):
-        when.setdefault(2 + (j * (steps - 4)) // wanted, []).append(10 * j if n >= 10 else 0)
+        when.setdefault(2 + (j * (steps - 4)) // wanted, []).append((10 * j if n >= 10 else 0) if shape == "mixed" else 4 * j)
     return when
 
 
@@ -510,7 +545,7 @@ def main(argv=None):
             receipt["simulation"].append(measure_sim(shape, n, args.budget))
             print(f"sim {shape} {n}: {receipt['simulation'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)
     if args.bpy:
-        for shape in (x for x in args.shapes if x not in ("media", "pick") and x not in OPT_IN_SHAPES):       # the Player applies no sound or points: nothing to time
+        for shape in (x for x in args.shapes if x not in ("media", "pick", "geo") and x not in OPT_IN_SHAPES):       # the Player applies no sound or points: nothing to time
             for n in args.sizes:
                 receipt["player"].append(measure_player(shape, n, args.budget, args.tree_limit))
                 print(f"player {shape} {n}: {receipt['player'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)

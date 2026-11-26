@@ -425,6 +425,7 @@ class World:
         self.sensors = {}                # DEF of a sensor -> the frame it sits in (None: the scene root)
         self.targets = {}                # DEF of a node -> the frame its matrix is (a Transform: its own)
         self.sensor_target = {}          # DEF of a TransformSensor -> DEF of its targetObject
+        self.geo_origins = {}            # DEF of a GeoOrigin -> behaviour_geo.GeoOrigin (a Geo node's ``USE`` of it names one)
         self.collisions = {}             # DEF of a Collision -> {"enabled": bool, "shapes": [Volume]}
         self.viewpoint = None            # DEF of the bound Viewpoint (its fields change through ``apply``)
         self.viewer = Viewer(aspect=aspect)
@@ -481,6 +482,7 @@ class World:
             world.pick = behaviour_pick.build(scene, by_def, walker.frame_of)
         except Exception:                # noqa: BLE001 - a document the pick reader cannot follow still gives a World
             world.note("pick-scene-failed")
+        world.geo_origins = _geo_origins(scene)
         return world
 
     # -- the Transform hierarchy --------------------------------------------------------------------------------
@@ -760,6 +762,14 @@ _LOOKS = (((1.0, 0.0, 0.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0)), ((-1.0, 0.0, 0.0)
           ((0.0, 1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0)), ((0.0, -1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, -1.0)))
 
 
+def _geo_origins(scene):
+    try:
+        import behaviour_geo
+    except ImportError:      # imported inside the add-on package
+        from . import behaviour_geo
+    return behaviour_geo.origins_in(scene)
+
+
 def _local(tag):
     return tag.rsplit("}", 1)[-1]
 
@@ -774,7 +784,7 @@ def _numbers(text, count, default):
 
 _GROUPING = {"Group", "Transform", "Switch", "Anchor", "Billboard", "Collision", "LOD", "StaticGroup", "CADAssembly",
              "CADLayer", "CADPart", "CADFace", "ViewpointGroup"}
-_SENSORS = {"ProximitySensor", "VisibilitySensor", "TransformSensor"}
+_SENSORS = {"ProximitySensor", "VisibilitySensor", "TransformSensor", "GeoProximitySensor"}
 
 
 class _Walker:

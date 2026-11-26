@@ -87,12 +87,15 @@ PLAYED = frozenset({
     "TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "KeySensor", "StringSensor",
     "CoordinateChaser", "CoordinateDamper", "TexCoordChaser2D", "TexCoordDamper2D",   # points are listed as "Not shown"
     "Script", "CollisionSensor",     # hosted: the Player runs a handler the person enabled, and reads the rigid body world
+    "GeoPositionInterpolator",       # a clock-driven interpolator: geovalue_changed is for Scripts, value_changed reaches a target
+    "GeoProximitySensor", "GeoTouchSensor",   # fed the viewer (view) and a hit point on a press; hover has none (listed as not applied)
     "LoadSensor", "AudioClip", "MovieTexture",     # their clocks and events run; sound, picture and loading are listed as not applied
 })
 NOT_PLAYED = frozenset({"VisibilitySensor", "TransformSensor", "Collision", "LinePickSensor", "PointPickSensor",
                         "PrimitivePickSensor", "VolumePickSensor"})    # simulated from a World the Player does not fill for them (listed as "not fed")
-PLAYER_FEEDS = {"POINTING": "from .behaviour_sim import POINTING", "KEY_SENSORS": 'KEY_SENSORS = ("KeySensor", "StringSensor")',
-                "ProximitySensor": '"ProximitySensor"', "Script": "behaviour_hosted.build_handler",
+PLAYER_FEEDS = {"POINTING": "POINTING, PROXIMITY, Simulation", "KEY_SENSORS": 'KEY_SENSORS = ("KeySensor", "StringSensor")',
+                "ProximitySensor": '"ProximitySensor"', "GeoProximitySensor": '"GeoProximitySensor"',
+                "GeoTouchSensor": "GEO_POINTING", "Script": "behaviour_hosted.build_handler",
                 "CollisionSensor": "def _read_bodies"}      # strings that must stay in source/behaviour_play.py
 
 

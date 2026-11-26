@@ -36,7 +36,7 @@ from . import behaviour_hosted
 from . import behaviour_nodes
 from . import behaviour_presets
 from . import behaviour_world
-from .behaviour_sim import POINTING, Simulation
+from .behaviour_sim import GEO_POINTING, POINTING, PROXIMITY, Simulation
 
 SWITCH_PROPERTY = "x3d_switch"     # set by the importer on an object under a DEF'd Switch (import_x3d.SWITCH_BRANCH_PROPERTY)
 EXPORT_AXES = axis_conversion(to_forward='-Z', to_up='Y').to_4x4()      # the export dialog's default: -Z forward, Y up
@@ -208,7 +208,7 @@ class _JointState:
         pose.rotation_axis_angle = axis_angle
 
 
-WORLD_SENSORS = ("ProximitySensor",)          # the environmental sensors Play gives a frame (and a viewer) to
+WORLD_SENSORS = ("ProximitySensor", "GeoProximitySensor")          # the environmental sensors Play gives a frame (and a viewer) to
 UNFED_SENSORS = ("VisibilitySensor", "TransformSensor", "LinePickSensor", "PointPickSensor", "PrimitivePickSensor",
                  "VolumePickSensor")   # simulated from a World, which Play does not fill for them (the pick sensors need the scene's shapes)
 
@@ -250,6 +250,9 @@ class Player:
         self.not_applied = []          # "Type.field" an event reached but the player does not show
         self.not_applied += [f"{node.node_type} {node.id}: Play does not feed it a world" for node in self.graph.nodes.values()
                              if node.role == bg.BEHAVIOUR and node.node_type in UNFED_SENSORS]
+        self.not_applied += [f"{node.node_type} {node.id}: hover gives no hit point, so hitGeoCoord_changed comes only with a press"
+                             for node in self.graph.nodes.values()
+                             if node.role == bg.BEHAVIOUR and node.node_type in GEO_POINTING]
         self.now = 0.0
         self._transforms, self._hidden, self._materials, self._lights, self._camera = {}, {}, {}, {}, scene.camera
         self._switches, self._choices = {}, {}    # Switch DEF -> [(object, tags)]; Switch DEF -> the whichChoice it was last given
@@ -257,7 +260,7 @@ class Player:
         self._over, self._held, self._plane = [], [], {}
         self._sensors = {}             # Blender object name (None: the scene root) -> [sensor id, ...]
         for node in self.graph.nodes.values():
-            if node.role == bg.BEHAVIOUR and node.node_type in POINTING:
+            if node.role == bg.BEHAVIOUR and (node.node_type in POINTING or node.node_type in GEO_POINTING):
                 self._sensors.setdefault(node.parent, []).append(node.id)
         self._keys = [node_id for node_id, node in self.graph.nodes.items()
                       if node.role == bg.BEHAVIOUR and node.node_type in KEY_SENSORS]
@@ -435,7 +438,7 @@ class Player:
         return shown
 
     def proximity_sensors(self):
-        return [node_id for node_id, node in self.graph.nodes.items() if node.node_type == "ProximitySensor"]
+        return [node_id for node_id, node in self.graph.nodes.items() if node.node_type in PROXIMITY]
 
     def view(self, eye, pivot, now):
         """The viewer for every ProximitySensor: ``eye`` is the camera's matrix in Blender world (looking down its -Z,
@@ -490,6 +493,8 @@ class Player:
                                  tuple((inverse.to_3x3() @ Vector(eye[1])).normalized()))}
             self._note("press", sensor, now, point=tuple(point), **extra)
             self._apply(self.sim.press(sensor, now, tuple(point), **extra))
+            if location is not None and self.graph.nodes[sensor].node_type in GEO_POINTING:     # where on it: hitGeoCoord_changed
+                self._apply(self.sim.hit(sensor, tuple(point), now))
         return bool(self._held)
 
     def drag(self, origin, direction, now):
