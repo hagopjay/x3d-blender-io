@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="probe-script.x3d"/>
+    <meta name="description" content="Two Scripts, a counter and a threshold, that X_ITE runs as JavaScript and the simulator runs as Python handlers (tools/behaviour_hosted_probe.py)."/>
+  </head>
+  <Scene>
+    <Viewpoint position="0 0 10"/>
+    <Transform DEF="Pad"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.5"/></Appearance><Box size="12 4 0.2"/></Shape><TouchSensor DEF="Touch"/></Transform>
+    <Transform DEF="Marker" translation="0 3 0"><Shape><Sphere radius="0.2"/></Shape></Transform>
+    <Switch DEF="Pick" whichChoice="-1"><Shape><Sphere radius="0.1"/></Shape></Switch>
+    <TimeSensor DEF="Timer" cycleInterval="2"/>
+    <ScalarInterpolator DEF="Ramp" key="0 0.5 1" keyValue="0 1 0"/>
+    <Script DEF="Counter">
+      <field name="bump" type="SFTime" accessType="inputOnly"/>
+      <field name="rearm" type="SFBool" accessType="inputOutput" value="true"/>
+      <field name="step" type="SFInt32" accessType="initializeOnly" value="2"/>
+      <field name="count" type="SFInt32" accessType="outputOnly"/>
+      <field name="label" type="SFString" accessType="outputOnly"/>
+      <field name="history" type="MFFloat" accessType="outputOnly"/>
+<![CDATA[ecmascript:
+var n = 0, hist = [];
+function initialize() { label = 'ready'; }
+function bump(value, time) {
+  if (!rearm) { return; }
+  n += step; count = n; label = 'n=' + n;
+  hist.push(n); if (hist.length > 3) { hist.shift(); }
+  history = new MFFloat(...hist);
+}
+function set_rearm(value, time) { if (value) { n = 0; hist = []; count = 0; } }
+]]>
+    </Script>
+    <Script DEF="Threshold">
+      <field name="level" type="SFFloat" accessType="inputOnly"/>
+      <field name="hits" type="SFInt32" accessType="inputOnly"/>
+      <field name="note" type="SFString" accessType="inputOnly"/>
+      <field name="history" type="MFFloat" accessType="inputOnly"/>
+      <field name="limit" type="SFFloat" accessType="inputOutput" value="0.5"/>
+      <field name="over" type="SFBool" accessType="outputOnly"/>
+      <field name="crossings" type="SFInt32" accessType="outputOnly"/>
+      <field name="at" type="SFVec3f" accessType="outputOnly"/>
+<![CDATA[ecmascript:
+var above = false, c = 0;
+function level(value, time) {
+  at = new SFVec3f(value, value * 2, 0);
+  var now = value > limit;
+  if (now != above) { above = now; c++; over = now; crossings = c; }
+}
+function hits(value, time) { crossings = c * 1000 + value; }
+function note(value, time) { }
+function history(value, time) { }
+]]>
+    </Script>
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Counter" toField="bump"/>
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Timer" toField="startTime"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Ramp" toField="set_fraction"/>
+    <ROUTE fromNode="Ramp" fromField="value_changed" toNode="Threshold" toField="level"/>
+    <ROUTE fromNode="Counter" fromField="count" toNode="Threshold" toField="hits"/>
+    <ROUTE fromNode="Counter" fromField="label" toNode="Threshold" toField="note"/>
+    <ROUTE fromNode="Counter" fromField="history" toNode="Threshold" toField="history"/>
+    <ROUTE fromNode="Threshold" fromField="over" toNode="Counter" toField="set_rearm"/>
+    <ROUTE fromNode="Threshold" fromField="at" toNode="Marker" toField="set_translation"/>
+    <ROUTE fromNode="Threshold" fromField="crossings" toNode="Pick" toField="set_whichChoice"/>
+  </Scene>
+</X3D>

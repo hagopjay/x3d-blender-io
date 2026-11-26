@@ -4,12 +4,14 @@
 
 """How the behaviour simulator and the Blender player scale: synthetic graphs, timed.
 
-Three shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them):
+Four shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them):
 
   fan     one looping TimeSensor drives N PositionInterpolators, each into its own Transform
   chains  N independent chains: TimeSensor (loop) -> PositionInterpolator -> PositionDamper -> Transform
   mixed   N copies of the door world's graph (TouchSensor -> TimeSensor -> PositionInterpolator -> Transform), and
           one click per 10 copies spread over the run
+  hosted  N Scripts with Python handlers fed by one looping TimeSensor, each into its own Transform, and a
+          CollisionSensor for every fifth one, told every step whether it touches (class E)
 
 For each case the benchmark times ``Simulation(graph)``, ``start()`` and 300 steps of 1/60 s, and reports the median
 and 95th percentile of a step, the events sent per step, and the peak memory (tracemalloc). With ``--bpy`` (needs the
@@ -40,7 +42,7 @@ sys.path.insert(0, str(ROOT / "source"))
 import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
 
-SHAPES = ("fan", "chains", "mixed")
+SHAPES = ("fan", "chains", "mixed", "hosted")
 SIZES = (10, 100, 1000, 5000)
 STEPS = 300
 DT = 1 / 60
@@ -77,9 +79,38 @@ def build(shape: str, n: int) -> bg.Behaviour:
             click.touchTime >> timer.startTime
             timer.fraction_changed >> slide.set_fraction
             slide.value_changed >> _lift(b, f"Door{i}").translation
+    elif shape == "hosted":
+        # class E: n Scripts, each with a Python handler, fed by one looping clock; every fifth unit also has a CollisionSensor
+        # that is told every step whether it touches (alternating each frame)
+        clock = b.add("TimeSensor", "Clock", cycleInterval=4, loop=True)
+        for i in range(n):
+            script = b.add("Script", f"Script{i}", declared=[("level", "SFFloat", "inputOnly"), ("place", "SFVec3f", "outputOnly")])
+            clock.fraction_changed >> script.level
+            script.place >> _lift(b, f"Thing{i}").translation
+            if i % 5 == 0:
+                b.add("CollisionSensor", f"Hit{i}")
     else:
         raise ValueError(f"unknown shape {shape!r}")
     return b
+
+
+def _place(field, value, time, state):
+    return [("place", (value, value * 0.5, 0.0))] if field == "level" else []
+
+
+def host(sim, shape):
+    """Give every Script of the "hosted" shape its handler (the other shapes have none)."""
+    if shape == "hosted":
+        for node in sim.graph.nodes.values():
+            if node.node_type == "Script":
+                sim.host(node.id, _place)
+
+
+def touch(sim, shape, n, k, now):
+    """The "hosted" shape's contact stimulus for step ``k``: each CollisionSensor touches on odd frames."""
+    if shape == "hosted":
+        for i in range(0, n, 5):
+            sim.contact(f"Hit{i}", bool(k % 2), ["A|B"] if k % 2 else (), ["A"] if k % 2 else (), now)
 
 
 def clicks(shape: str, n: int, steps: int = STEPS) -> dict[int, list[int]]:
@@ -96,12 +127,14 @@ def clicks(shape: str, n: int, steps: int = STEPS) -> dict[int, list[int]]:
 def run_sim(sim: bs.Simulation, shape: str, n: int, steps: int = STEPS, times: list | None = None) -> list:
     """Start ``sim`` and step it; returns every step's changes. ``times`` collects each step's seconds."""
     when = clicks(shape, n, steps)
+    host(sim, shape)
     out = list(sim.start(0.0))
     for k in range(1, steps + 1):
         now = k * DT
         began = time.perf_counter()
         for i in when.get(k, ()):
             out.extend(sim.click(f"Click{i}", now))
+        touch(sim, shape, n, k, now)
         out.extend(sim.step(now))
         if times is not None:
             times.append(time.perf_counter() - began)
@@ -140,6 +173,7 @@ def measure_sim(shape: str, n: int, budget: float) -> dict:
     began = time.perf_counter()
     sim = bs.Simulation(graph)
     construct = time.perf_counter() - began
+    host(sim, shape)
     began = time.perf_counter()
     sim.start(0.0)
     start = time.perf_counter() - began
@@ -152,6 +186,7 @@ def measure_sim(shape: str, n: int, budget: float) -> dict:
         began = time.perf_counter()
         for i in when.get(k, ()):
             sim.click(f"Click{i}", now)
+        touch(sim, shape, n, k, now)
         sim.step(now)
         steps.append(time.perf_counter() - began)
         if time.perf_counter() - total > budget:

@@ -105,7 +105,8 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual({row[0]: row[1:3] for row in cat.TARGETS["AudioClip"]}["isActive"], ("SFBool", "outputOnly"))
 
     def test_none_of_the_twelve_is_simulated_yet(self):
-        self.assertFalse((NINE | IN_PLACE) & set(bs.SIMULATED))
+        # the hosted two (Script, CollisionSensor) now are: Simulation.host and Simulation.contact (tests/test_behaviour_hosted.py)
+        self.assertFalse(((NINE | IN_PLACE) - {"Script", "CollisionSensor"}) & set(bs.SIMULATED))
 
     def test_every_node_that_is_placed_in_the_scene_is_listed_as_placed(self):
         self.assertLessEqual({"GeoProximitySensor", "GeoTouchSensor", "LinePickSensor", "PointPickSensor",

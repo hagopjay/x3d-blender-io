@@ -106,6 +106,72 @@ third-party asset) so X_ITE's real loading can be compared.
 A hosted node counts as wired and, with a handler or stimulus, simulated. It is never counted as judged unless a
 probe with a handler agrees with X_ITE.
 
+### Hosted, as built (P6)
+
+**Script.** `Simulation.host(def_name, handler)` gives a Script a Python handler, `handler(field, value, time, state) ->
+[(field, value), ...]`. It is called for every event that reaches an inputOnly or inputOutput port (`field` is the port's
+own name, as a script's function of that name is; X_ITE 16.8.1 calls `set_x` for an inputOutput `x`, and not `x`), and the
+values it returns leave the Script's outputOnly or inputOutput ports in the same cascade. `state` is a dict that lives with
+the Script and starts with the value of every declared field that holds one (an inputOutput or initializeOnly field's
+`value`, or the zero of its type). The handler also gets one call `("initialize", None, time, state)` when the simulation
+starts, as a Script's `initialize()`; it may return `(CALLED_AT, t)` to be called again at the first step at or after `t`
+as `(CALLED_AT, t, now, state)`, the only timer there is (X_ITE's `eventsProcessed`, `shutdown`, `setTimeout` and `Browser`
+calls are not run). Events into a Script without a handler are counted in `Simulation.noted["hosted-not-run"]`, kept in the
+machine's `received`, and the Script is listed by `Simulation.hosted_not_run()` (the Player prints it).
+
+X_ITE edge behaviours found with the probe (X_ITE 16.8.1, `tools/behaviour_sim_judge.cjs`, Chromium, software GL) and followed:
+a function that assigns an output field several times sends one event, the last value, in the place of the field's first
+assignment (`b = 1; a = 2; b = 3` sends b 3, then a 2); an inputOutput field sends its `_changed` event before the function
+runs; an integer field assigned a float keeps its whole part (7.9 is 7); a vector may be a list. Not followed, and counted in
+`Simulation.dropped["mismatch"]` or `["non-finite"]`: a string assigned to an SFFloat is NaN in X_ITE, which sends it; the
+simulator never sends a NaN (rule 3).
+
+Judged: `tests/behaviour/probe-script.x3d` has two Scripts in JavaScript (a counter and a threshold) that talk to each other
+and to the world; X_ITE runs them; `tools/behaviour_hosted_probe.py` holds the same two as Python handlers; the judge
+(`handlers=`) compares six Script streams and the two interpolator streams that feed them, and they agree
+(`tests/test_behaviour_hosted.py`; a handler changed by one count is caught). With no handler a Script's streams are listed
+in the judge's `not_simulated_sources`, never compared.
+
+**The add-on never runs JavaScript, and never runs code that came from an imported file.** A test reads every module of
+`source/` and requires that `exec`, `eval` and `compile` appear in one place only, `behaviour_hosted.build_handler`, which
+asks the registry before it runs anything. The one thing that runs is Python the person chose: a text datablock, enabled for
+one Script in the sidebar (X3D tab, "Script handlers"; the Enable button opens a dialog that says what it means and shows
+the sha256 of the text). Threat considered: a file that runs code on a person who only opened or imported it (a hostile
+`.x3d`; a `.blend` or a linked library with a text datablock named like a Script and custom properties pre-set to
+"enabled"). Enforcement: (1) the enablement lives in `behaviour_hosted.REGISTRY`, process memory, and nowhere else: no
+scene, object, node, text or window-manager property, nothing in the `.blend`, nothing in the `.x3d`, so there is nothing a
+file can set; (2) it is cleared on every file load (`load_post`), so a file opened later never inherits an earlier
+"enabled"; (3) it is bound to the SHA-256 of the text as it was when the person enabled it, so a text edited or replaced
+afterwards, or a same-named one that arrived with another file, is not enabled; (4) a text linked from a library is refused;
+(5) the operator is not a property a file can pre-fill (`SKIP_SAVE`), and the Player never enables anything. Tests:
+`tests/test_behaviour_hosted.py` (registry, source scan, hostile Script text) and `tests/test_behaviour_hosted_bpy.py`
+(properties on every datablock a file could set, a hostile `.x3d` imported and played, a changed and a replaced text, a
+linked text, a saved and reopened `.blend`). Not defended: a person who enables text they did not read (Python cannot be
+sandboxed; the handler has all of Blender's rights), and Python already running in the session.
+
+Recordings: a full recording (`x3d.activity/1` with `record`) of a run that had handlers gains an optional
+`"script_outputs"` block, `[time, Script, field, value]` per event a handler sent, and the stimulus gains the `contact` call.
+`behaviour_activity.replay(sim, stimulus, script_outputs=...)` posts the recorded outputs for any Script that has no handler,
+after the call at their time, so a replay without the handler reproduces what reached the targets (the order inside one
+moment may differ).
+
+**CollisionSensor.** `Simulation.contact(node_id, active, contacts, intersections, now)`, or the stimulus
+`{"call": "contact", "node": DEF, "active": bool, "contacts": [...], "intersections": [...]}`, says what a physics engine
+found; `isActive` follows `active`, `contacts` and `intersections` (names) are sent while it is active, and a disabled sensor
+sends nothing (X_ITE 16.8.1: `isActive` on change; `contacts` and `intersections` every frame while touching; X_ITE counts a
+contact when either body of the pair is one of the sensor's collidables). **This is a consistency check, not a judgement.**
+`tests/behaviour/consistency/probe-collision.json` is X_ITE's physics (Ammo.js) dropping a ball onto a floor; the contact
+stimulus is taken from X_ITE's own `isActive` events; the simulator, stepped at 60 Hz, applies each at the next step and its
+`isActive` times are within two frames (0.0335 s) of X_ITE's (worst 0.0067 s on this recording). The stimulus is X_ITE's own
+output, so the node is **simulated, not judged**, and the recording is kept outside `x_ite_traces/` so the table cannot count
+it. In Blender the Player reads the scene's rigid body world when it has one. Read: which objects have a rigid body, where
+they are now (evaluated world matrix), their bound boxes and collision margins; two bodies touch when their boxes, each grown
+by its margin, meet; the sensor watches the collidables its own content names (by DEF or USE, matched to an object's name or
+`x3d_def`) or, when it names none, every body. Not read: Blender's solver contacts, contact points and impulses (the Python
+API does not give them), collision shapes (a convex hull or a mesh is its box here), friction and bounce, the X3D
+CollisionCollection's own fields, and the rigid body simulation itself is Blender's: it only moves when the timeline plays.
+Without a rigid body world the sensor is wired and listed as hosted, not run.
+
 ## Rules that hold for every new node
 
 1. X_ITE decides. Where the standard's text and X_ITE 16.8.1 differ, the simulator follows X_ITE and the difference
@@ -137,7 +203,7 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 ## Coverage
 
 <!-- coverage:begin (generated by tools/behaviour_coverage.py; do not edit by hand) -->
-57 event nodes: **57 wired, 39 simulated, 38 judged, 38 played**. Instrument: `tools/behaviour_coverage.py` over `tools/behaviour_event_nodes.json` (X3DUOM 4.0, sha256 `7e426a238656`), `source/behaviour_catalogue.py`, `source/behaviour_sim.py` (`SIMULATED`) and the traces in `tests/behaviour/x_ite_traces/` and `tests/behaviour/demos/*/x_ite.json`. Judged means the node sends on a ROUTE in a world recorded on X_ITE and the simulator agrees stream for stream; the probes column names where (first two). Played is hand-kept in the tool (see its comment); the test pins it.
+57 event nodes: **57 wired, 41 simulated, 39 judged, 40 played**. Instrument: `tools/behaviour_coverage.py` over `tools/behaviour_event_nodes.json` (X3DUOM 4.0, sha256 `7e426a238656`), `source/behaviour_catalogue.py`, `source/behaviour_sim.py` (`SIMULATED`) and the traces in `tests/behaviour/x_ite_traces/` and `tests/behaviour/demos/*/x_ite.json`. Judged means the node sends on a ROUTE in a world recorded on X_ITE and the simulator agrees stream for stream; the probes column names where (first two). Played is hand-kept in the tool (see its comment); the test pins it.
 
 | component | nodes | wired | simulated | judged | played |
 |---|---:|---:|---:|---:|---:|
@@ -151,8 +217,8 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | Networking | 1 | 1 | 0 | 0 | 0 |
 | Picking | 4 | 4 | 0 | 0 | 0 |
 | PointingDeviceSensor | 4 | 4 | 4 | 4 | 4 |
-| RigidBodyPhysics | 1 | 1 | 0 | 0 | 0 |
-| Scripting | 1 | 1 | 0 | 0 | 0 |
+| RigidBodyPhysics | 1 | 1 | 1 | 0 | 1 |
+| Scripting | 1 | 1 | 1 | 1 | 1 |
 | Sound | 1 | 1 | 0 | 0 | 0 |
 | Texturing | 1 | 1 | 0 | 0 | 0 |
 | Time | 1 | 1 | 1 | 1 | 1 |
@@ -194,7 +260,7 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | OrientationInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-hanim.x3d` and 3 more |
 | PositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 9 more |
 | PositionInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-shader.x3d` |
-| ScalarInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/piano`, `probe-hanim.x3d` and 4 more |
+| ScalarInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/piano`, `probe-hanim.x3d` and 5 more |
 | SplinePositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
 | SplinePositionInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
 | SplineScalarInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
@@ -210,10 +276,10 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | CylinderSensor | PointingDeviceSensor | pure | yes | yes | yes | yes | `demos/workbench`, `probe-drag.x3d` |
 | PlaneSensor | PointingDeviceSensor | pure | yes | yes | yes | yes | `demos/workbench` |
 | SphereSensor | PointingDeviceSensor | pure | yes | yes | yes | yes | `demos/workbench`, `probe-drag.x3d` |
-| TouchSensor | PointingDeviceSensor | pure | yes | yes | yes | yes | `counter.x3d`, `demos/hello-switch` and 13 more |
-| CollisionSensor | RigidBodyPhysics | E | yes | - | - | - | - |
-| Script | Scripting | E | yes | - | - | - | - |
+| TouchSensor | PointingDeviceSensor | pure | yes | yes | yes | yes | `counter.x3d`, `demos/hello-switch` and 14 more |
+| CollisionSensor | RigidBodyPhysics | E | yes | yes | - | yes | - |
+| Script | Scripting | E | yes | yes | yes | yes | `demos/piano`, `probe-script.x3d` |
 | AudioClip | Sound | D | yes | - | - | - | - |
 | MovieTexture | Texturing | D | yes | - | - | - | - |
-| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 12 more |
+| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 13 more |
 <!-- coverage:end -->

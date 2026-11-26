@@ -32,6 +32,7 @@ from __future__ import annotations
 import bisect
 import colorsys
 import math
+import xml.etree.ElementTree as ET
 from collections import deque
 
 try:
@@ -1599,6 +1600,151 @@ class _PlaneSensor(_Sensor):
             self._send("translation_changed", moved, always and any(self.start_offset))
 
 
+# ---------------------------------------------------------------------------------------------------------------
+# Hosted nodes (class E): code and engines the graph cannot run. Their ports are typed from the node's own declarations;
+# what they send comes from a Python handler registered by name, or from the caller's stimulus.
+# ---------------------------------------------------------------------------------------------------------------
+
+CALLED_AT = "@called-at"        # a handler's way to ask for a later call (see _Script), and the field that call is made with
+INITIALIZE = "initialize"       # the field of the one call a handler gets when the simulation starts (a Script's initialize())
+
+
+def _declared_values(node):
+    """{field name: value} of the <field value="..."> a Script's content gives its declared fields (a field with no value
+    is the zero of its type). The source text is never looked at except as markup, and never run."""
+    given = {}
+    if node.content and "<field" in node.content:
+        try:
+            root = ET.fromstring(f"<c>{node.content}</c>")
+        except ET.ParseError:
+            root = None
+        for element in root if root is not None else ():
+            if element.tag.rpartition("}")[2] == "field" and element.get("value") is not None:
+                given[element.get("name")] = element.get("value")
+    values = {}
+    for name, kind, access in node.declared:
+        if kind in bg.NODE_FIELD_TYPES or access == "inputOnly":
+            continue
+        try:
+            value = parse_value(given.get(name), kind, strict=True)
+        except (ValueError, OverflowError):
+            value = parse_value("", kind)
+        values[name] = value if _finite(value) else parse_value("", kind)
+    return values
+
+
+def _as_field_value(value, kind):
+    """What a handler returned as a value of field type ``kind``, or None when it is not one. Follows X_ITE (16.8.1): an
+    integer field takes a number's whole part (7.9 is 7); a vector may be a list."""
+    if kind == "SFInt32" and isinstance(value, float) and math.isfinite(value) and abs(value) < 2 ** 31:
+        return int(value)
+    if isinstance(value, list) and not kind.startswith("MF") and kind[2:] in _SIZES:
+        value = tuple(value)
+    return value if _fits(value, kind) else None
+
+
+class _Script(_Machine):
+    """A Script. Its ``<field>`` declarations are its ports, typed. ``Simulation.host(def_name, handler)`` gives it a Python
+    handler, ``handler(field, value, time, state) -> [(field, value), ...]``: it is called for every event that reaches an
+    inputOnly or inputOutput port (``field`` is the port's name, as a Script's function of that name is) and sends the
+    returned values from its outputOnly or inputOutput ports in the same cascade. ``state`` is a dict that lives as long as
+    the Script and starts with the value of every declared field that holds one (what the script's variables would be).
+    The handler is also called once as ``handler("initialize", None, time, state)`` when the simulation starts (a Script's
+    initialize()). It may ask to be called again at a later time by returning ``(CALLED_AT, time)``: at the first step at
+    or after that time it is called as ``handler(CALLED_AT, time, now, state)`` (a Script's timer). Like X_ITE's, a
+    call sends one event per field however often it assigned it (the last value, in the order the fields were first
+    assigned). Events into a Script that has no handler are counted in ``Simulation.noted["hosted-not-run"]`` and
+    kept in ``received``. The Script's own text (JavaScript) is never run."""
+    ticks = True
+
+    def setup(self):
+        node = self.sim.graph.nodes[self.id]
+        self.ports = {name: (kind, access) for name, kind, access in node.declared}
+        self.state = _declared_values(node)
+        self.handler, self.wake = None, None
+        self.received = deque(maxlen=200)
+
+    def host(self, handler):
+        self.handler, self.wake = handler, None
+
+    def start(self, now):
+        if self.handler is not None:
+            self._call(INITIALIZE, None, now)
+
+    def receive(self, name, value, now):
+        port = self.ports.get(name)
+        if port is None:
+            return super().receive(name, value, now)
+        kind, access = port
+        if access == "inputOutput":
+            self.state[name] = value
+            self.emit(name, value)
+        if self.handler is None:
+            self.sim.noted["hosted-not-run"] = self.sim.noted.get("hosted-not-run", 0) + 1
+            self.received.append((now, name, value))
+        else:
+            self._call(name, value, now)
+
+    def tick(self, now, dt):
+        if self.wake is not None and now >= self.wake and self.handler is not None:
+            asked, self.wake = self.wake, None
+            self._call(CALLED_AT, asked, now)
+
+    def _call(self, field, value, now):
+        sent = self.handler(field, value, now, self.state)
+        sim, collected = self.sim, {}
+        for item in sent or ():
+            try:
+                name, out = item
+            except (TypeError, ValueError):
+                sim.dropped["mismatch"] = sim.dropped.get("mismatch", 0) + 1
+                continue
+            if name == CALLED_AT:
+                if isinstance(out, (int, float)) and not isinstance(out, bool) and math.isfinite(out):
+                    self.wake = out
+                continue
+            port = self.ports.get(name)
+            if port is None or port[1] not in ("outputOnly", "inputOutput"):
+                sim.dropped["mismatch"] = sim.dropped.get("mismatch", 0) + 1       # not an output the Script declares
+                continue
+            fitted = _as_field_value(out, port[0])
+            if fitted is None:
+                sim.dropped["mismatch"] = sim.dropped.get("mismatch", 0) + 1
+            else:
+                collected[name] = fitted           # a field assigned twice is sent once, in the place of its first assignment
+        for name, out in collected.items():
+            if _finite(out):
+                self.state[name] = out
+                sim.hosted_outputs.append((now, self.id, name, out))
+            self.emit(name, out)
+
+
+class _CollisionSensor(_Machine):
+    """A CollisionSensor. There is no physics engine here: ``Simulation.contact(node_id, active, contacts, intersections)``
+    says what the engine (X_ITE's, Blender's, or a recording) found. ``isActive`` follows ``active``; ``contacts`` and
+    ``intersections`` (names of the nodes involved) are sent while it is active. A disabled sensor sends nothing."""
+
+    def setup(self):
+        self.active, self.fed = False, False
+
+    def contact(self, active, contacts, intersections, now):
+        self.fed = True
+        if not self.f.get("enabled", True):
+            return
+        if active and contacts:
+            self.emit("contacts", list(contacts))
+        if active and intersections:
+            self.emit("intersections", list(intersections))
+        if active != self.active:
+            self.active = active
+            self.emit("isActive", active)
+
+    def changed(self, name, now):
+        if name == "enabled" and not self.f["enabled"] and self.active:
+            self.active = False                  # a sensor that is switched off while touching ends its contact
+            self.emit("isActive", False)
+
+
 _MACHINES = {
     "TimeSensor": _TimeSensor,
     "ScalarInterpolator": _Interpolator, "PositionInterpolator": _Interpolator, "PositionInterpolator2D": _Interpolator,
@@ -1617,6 +1763,7 @@ _MACHINES = {
     "OrientationChaser": _OrientationChaser,
     "TouchSensor": _Sensor, "PlaneSensor": _PlaneSensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
     "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _KeySensor, "StringSensor": _StringSensor,
+    "Script": _Script, "CollisionSensor": _CollisionSensor,
 }
 
 # sensors the caller can drive with press / release / drag; the others only through post()
@@ -1636,6 +1783,7 @@ class Simulation:
         # ``faults`` names each node that raised and was left out of that event (none, for a legal graph).
         self.dropped, self.faults = {}, []
         self.noted = {}                  # oddities that lose nothing: "bad-count" (a keyValue that is not a whole number of lists)
+        self.hosted_outputs = deque(maxlen=log_size)    # (time, Script id, field, value) of what Python handlers sent
         self.machines, self.not_simulated = {}, []
         for node in graph.nodes.values():
             if node.role == bg.BEHAVIOUR and node.node_type in _MACHINES:
@@ -1783,13 +1931,48 @@ class Simulation:
         machine = self.machines.get(node_id)
         if machine is None:
             raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a node this simulation runs")
-        name, kind = bg.resolve_field(machine.node_type, field_name, "in")
+        name, kind = bg.resolve_field(machine.node_type, field_name, "in", self.graph.nodes[node_id].declared)
         if not _fits(value, kind) or not _finite(value):
             raise bg.BehaviourError("bad-value", f"{value!r} is not a value of {machine.node_type}.{name} ({kind})")
         self._fired = set()
         self._try(node_id, "receive", machine.receive, name, value, self.now if self.now is not None else 0.0)
         self._drain()
         return self._collect()
+
+    # hosted nodes: a Script's handler, a CollisionSensor's contacts
+
+    def host(self, def_name, handler):
+        """Give the Script ``def_name`` a Python handler (see ``_Script``); ``None`` takes it away. Call it before ``start``
+        for the handler to get its initialize call."""
+        machine = self.machines.get(def_name)
+        if not isinstance(machine, _Script):
+            raise bg.BehaviourError("unknown-def", f"{def_name!r} is not a Script this simulation runs")
+        if handler is not None and not callable(handler):
+            raise bg.BehaviourError("bad-handler", "a handler is a function (field, value, time, state) -> [(field, value)]")
+        machine.host(handler)
+
+    def contact(self, node_id, active, contacts=(), intersections=(), now=None):
+        """What a physics engine found for the CollisionSensor ``node_id``: it touches something (``active``), the names of
+        the contacts and of the intersecting collidables. The stimulus ``{"call": "contact", "node": DEF, "active": bool,
+        "contacts": [...]}`` makes this call."""
+        machine = self.machines.get(node_id)
+        if not isinstance(machine, _CollisionSensor):
+            raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a CollisionSensor this simulation runs")
+        names = (list(contacts), list(intersections)) if isinstance(contacts, (list, tuple)) and isinstance(intersections, (list, tuple)) else None
+        if not isinstance(active, bool) or names is None or not all(isinstance(n, str) for n in names[0] + names[1]):
+            raise bg.BehaviourError("bad-value", "contact takes a bool and lists of names")
+        if now is not None:
+            self.now = self._time(now)
+        self._fired = set()
+        self._try(node_id, "contact", machine.contact, active, names[0], names[1], self.now if self.now is not None else 0.0)
+        self._drain()
+        return self._collect()
+
+    def hosted_not_run(self):
+        """The hosted nodes that have nothing to run them: a Script with no handler, a CollisionSensor no contact has been
+        told to ("Script Brain", "CollisionSensor Hit"). The Player lists them; they are wired and say so."""
+        return [f"{m.node_type} {m.id}" for m in self.machines.values()
+                if (isinstance(m, _Script) and m.handler is None) or (isinstance(m, _CollisionSensor) and not m.fed)]
 
     # pointing sensors: the caller is the pointer
 

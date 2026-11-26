@@ -563,14 +563,16 @@ class XiteAgreementTests(unittest.TestCase):
 
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
-        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord")))
+        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord", "probe-script")))
         judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
         used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
-        # and one interpolator that share their code with a judged one
-        self.assertEqual(unjudged, ["VisibilitySensor"])
+        # and one interpolator that share their code with a judged one. CollisionSensor is simulated from a contact
+        # stimulus and checked for timing against a recording of X_ITE's physics (tests/test_behaviour_hosted.py), which
+        # is a consistency check and not a judgement: X_ITE's own output is the stimulus.
+        self.assertEqual(unjudged, ["CollisionSensor", "VisibilitySensor"])
 
 
 DEMOS = WORLDS / "demos"
