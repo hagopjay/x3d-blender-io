@@ -1111,6 +1111,18 @@ def _gap(a, b, size):
     return math.sqrt(max(map(sum, zip(*[squares[i::size] for i in range(size)]))))
 
 
+def _within(a, b, size, tolerance):
+    """``_gap(a, b, size) < tolerance``, but the first point is looked at before the rest: a follower still on its way is
+    usually not within tolerance at its first point, and then no other point needs to be read. The first point alone can only
+    say "no" (its distance is not under the tolerance, or is not a number, which ``_gap`` would also have answered with)."""
+    if len(a) != len(b) or len(a) < size:
+        return _gap(a, b, size) < tolerance
+    head = sum([(x - y) * (x - y) for x, y in zip(a[:size], b[:size])])
+    if not math.sqrt(head) < tolerance:
+        return False
+    return _gap(a, b, size) < tolerance
+
+
 class _ListMixin:
     """What both kinds of list follower share: the size of their vectors, how a list is kept inside, and the cap."""
     size = 3
@@ -1182,7 +1194,7 @@ class _ListChaser(_ListMixin, _BufferChaser):
         return [o + (a - b) * t for o, a, b in zip(output, value1, value2)]
 
     def close(self, a, b):
-        return _gap(a, b, self.size) < self.TOLERANCE
+        return _within(a, b, self.size, self.TOLERANCE)
 
     def tick(self, now, dt):
         if self.f["duration"] > 0:
@@ -1272,7 +1284,7 @@ class _ListDamper(_ListMixin, _Machine):
             for i in range(last):
                 buffer[i + 1] = _blend(buffer[i], buffer[i + 1], alpha)
             self.emit("value_changed", self.points(buffer[last], floats=True))
-            if not _gap(buffer[last], buffer[0], self.size) < self.tolerance():
+            if not _within(buffer[last], buffer[0], self.size, self.tolerance()):
                 return
         else:
             self.emit("value_changed", self.points(buffer[0]))

@@ -41,7 +41,33 @@ def old_separated(axes, points1, points2):
     return False
 
 
+def old_gap(a, b, size):
+    if len(a) != len(b):
+        return math.inf
+    if not a:
+        return 0.0
+    squares = [(d := x - y) * d for x, y in zip(a, b)]
+    return math.sqrt(max(map(sum, zip(*[squares[i::size] for i in range(size)]))))
+
+
 class ArithmeticIsTheSameTests(unittest.TestCase):
+
+    def test_within_says_what_the_gap_under_tolerance_says(self):
+        rng = random.Random(10)
+        special = (math.nan, math.inf, -math.inf, 0.0, 1e154, 1e-9)
+        for size in (3, 2):
+            for _ in range(20000):
+                n = rng.choice((0, 1, 1, 2, 5, 30))
+                a = [rng.choice((rng.uniform(-3, 3), rng.uniform(-1e-5, 1e-5))) for _ in range(n * size)]
+                b = [x + rng.choice((0.0, 0.0, rng.uniform(-1e-6, 1e-6), rng.uniform(-2, 2))) for x in a]
+                if a and rng.random() < 0.15:
+                    a[rng.randrange(len(a))] = rng.choice(special)
+                if a and rng.random() < 0.1:
+                    b[rng.randrange(len(b))] = rng.choice(special)
+                if rng.random() < 0.05:
+                    b = b[:-size] if b else b + [0.0] * size            # another length
+                tolerance = rng.choice((1e-4, 1e-8, 1.0, 0.0, math.inf))
+                self.assertEqual(bs._within(a, b, size, tolerance), old_gap(a, b, size) < tolerance, (a, b, tolerance))
 
     def test_the_unrolled_matrix_product_has_the_same_bits(self):
         rng = random.Random(7)
