@@ -7726,10 +7726,39 @@ def import_loss_records(all_nodes, rebuilt=None):
     return losses
 
 
-def report_import_losses(all_nodes, bpycontext):
+defer_routes_to_caller = False     # set by load(defer_route_losses=...)
+deferred_route_losses = []     # "ROUTE not imported" records that load(defer_route_losses=True) left to its caller
+
+
+def report_deferred_route_losses(bpycontext, kept=None):
+    """Report the deferred ROUTE losses the caller's behaviour graph did not keep (``kept(record)`` is true for those
+    it did) exactly as report_import_losses does: log, scene property, ``X3D_IMPORT_STRICT=1``."""
+    import json
+    losses = [r for r in deferred_route_losses if not (kept and kept(r))]
+    deferred_route_losses.clear()
+    if not losses:
+        return losses
+    for record in losses:
+        logger.warning("X3D import loss: %s %s: %s", record["kind"], record["node"], record["detail"])
+    try:
+        raw = bpycontext.scene.get("x3d_import_losses")
+        bpycontext.scene["x3d_import_losses"] = json.dumps((json.loads(raw) if raw else []) + losses)
+    except Exception:  # pragma: no cover - a scene that cannot hold a property
+        pass
+    if os.environ.get("X3D_IMPORT_STRICT", "").lower() in ("1", "true", "yes"):
+        raise ValueError(f"X3D import lost {len(losses)} behaviour record(s) (X3D_IMPORT_STRICT=1): "
+                         + "; ".join(f"{r['kind']} {r['node']}" for r in losses[:5]))
+    return losses
+
+
+def report_import_losses(all_nodes, bpycontext, defer_routes=False):
     """Log the loss records, store them on the scene, and raise under ``X3D_IMPORT_STRICT=1``."""
     import json
     losses = import_loss_records(all_nodes, rebuild_interaction(all_nodes))
+    deferred_route_losses.clear()
+    if defer_routes:
+        deferred_route_losses.extend(r for r in losses if r["kind"] == "route" and r["detail"] == "ROUTE not imported")
+        losses = [r for r in losses if not any(r is d for d in deferred_route_losses)]
     if not losses:
         return losses
     for record in losses:
@@ -8642,7 +8671,7 @@ def load_web3d(
         keep_scene_metadata(bpyscene, all_nodes)
     except Exception as exc:  # metadata must never stop an import
         logger.error("Scene-level Metadata not kept: %s", exc, exc_info=True)
-    report_import_losses(all_nodes, bpycontext)
+    report_import_losses(all_nodes, bpycontext, defer_routes_to_caller)
 
     # Switch: every child is imported, so nothing is lost on the way back out, but only the chosen one is shown; the others
     # are hidden in the viewport and the render, as an X3D browser draws them
@@ -8806,7 +8835,8 @@ def load(context,
          color_space=None,
          light_units=None,
          gpu_instances=None,
-         keep_hierarchy=True
+         keep_hierarchy=True,
+         defer_route_losses=False
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
@@ -8817,7 +8847,8 @@ def load(context,
     writes EXT_mesh_gpu_instancing (also on when BLENDER_X3D_GPU_INSTANCES is 1; see group_instances).
     keep_hierarchy: parent objects as the file's Transforms nest them (rebuild_hierarchy); False imports every object
     at its world matrix without parents, as before."""
-    global colour_space, lighting_units, navigation_headlight, bound_view, default_view
+    global colour_space, lighting_units, navigation_headlight, bound_view, default_view, defer_routes_to_caller
+    defer_routes_to_caller = bool(defer_route_losses)
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
     colour_space = resolve_colour_space(color_space)
