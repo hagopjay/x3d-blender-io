@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 18: Newton's cradle" />
+    <meta name="description" content="Click a ball to choose how many lift: the far end kicks out as many. Physics faked by keyframes." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-18-newtons-cradle/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.05 0.06 0.1" />
+    <Viewpoint DEF="View" description="Front" position="0 2.6 11.5" orientation="1 0 0 -0.06" />
+    <DirectionalLight direction="-0.3 -0.5 -1" intensity="1.0" />
+    <PointLight location="0 5 6" color="1 0.95 0.9" intensity="90" radius="25" />
+    <Transform translation="0 -0.4 0"><Shape><Appearance><PhysicalMaterial baseColor="0.14 0.15 0.2" roughness="0.9" /></Appearance><Box size="30 0.2 14" /></Shape></Transform>
+    <Transform translation="0 -0.15 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Box size="10.6 0.3 3.0" /></Shape></Transform>
+    <Transform translation="0 4.25 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Box size="10.0 0.3 0.3" /></Shape></Transform>
+    <Transform translation="0 4.25 0.9"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Box size="10.0 0.2 0.2" /></Shape></Transform>
+    <Transform translation="0 4.25 -0.9"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Box size="10.0 0.2 0.2" /></Shape></Transform>
+    <Transform translation="-4.9 2.12 -0.9"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Cylinder radius="0.12" height="4.40" /></Shape></Transform>
+    <Transform translation="-4.9 2.12 0.9"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Cylinder radius="0.12" height="4.40" /></Shape></Transform>
+    <Transform translation="4.9 2.12 -0.9"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Cylinder radius="0.12" height="4.40" /></Shape></Transform>
+    <Transform translation="4.9 2.12 0.9"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.28 0.14" roughness="0.8" /></Appearance><Cylinder radius="0.12" height="4.40" /></Shape></Transform>
+    <Transform DEF="Pivot0" translation="-2.50 4.1 0">
+      <Transform translation="0 -1.250 0.40" rotation="1 0 0 0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform><Transform translation="0 -1.250 -0.40" rotation="1 0 0 -0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform>
+      <Transform DEF="Ball0" translation="0 -3.0 0">
+        <TouchSensor DEF="Touch0" description="Click to lift 1 from the left" />
+        <Shape><Appearance><PhysicalMaterial baseColor="0.9 0.2 0.15" emissiveColor="0.32 0.07 0.05" metallic="0.6" roughness="0.25" /></Appearance><Sphere radius="0.5" /></Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF="Pivot1" translation="-1.50 4.1 0">
+      <Transform translation="0 -1.250 0.40" rotation="1 0 0 0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform><Transform translation="0 -1.250 -0.40" rotation="1 0 0 -0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform>
+      <Transform DEF="Ball1" translation="0 -3.0 0">
+        <TouchSensor DEF="Touch1" description="Click to lift 2 from the left" />
+        <Shape><Appearance><PhysicalMaterial baseColor="0.95 0.55 0.1" emissiveColor="0.33 0.19 0.03" metallic="0.6" roughness="0.25" /></Appearance><Sphere radius="0.5" /></Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF="Pivot2" translation="-0.50 4.1 0">
+      <Transform translation="0 -1.250 0.40" rotation="1 0 0 0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform><Transform translation="0 -1.250 -0.40" rotation="1 0 0 -0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform>
+      <Transform DEF="Ball2" translation="0 -3.0 0">
+        <TouchSensor DEF="Touch2" description="Click to lift 3 from the left" />
+        <Shape><Appearance><PhysicalMaterial baseColor="0.95 0.85 0.2" emissiveColor="0.33 0.30 0.07" metallic="0.6" roughness="0.25" /></Appearance><Sphere radius="0.5" /></Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF="Pivot3" translation="0.50 4.1 0">
+      <Transform translation="0 -1.250 0.40" rotation="1 0 0 0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform><Transform translation="0 -1.250 -0.40" rotation="1 0 0 -0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform>
+      <Transform DEF="Ball3" translation="0 -3.0 0">
+        <TouchSensor DEF="Touch3" description="Click to lift 3 from the right" />
+        <Shape><Appearance><PhysicalMaterial baseColor="0.3 0.75 0.3" emissiveColor="0.10 0.26 0.10" metallic="0.6" roughness="0.25" /></Appearance><Sphere radius="0.5" /></Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF="Pivot4" translation="1.50 4.1 0">
+      <Transform translation="0 -1.250 0.40" rotation="1 0 0 0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform><Transform translation="0 -1.250 -0.40" rotation="1 0 0 -0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform>
+      <Transform DEF="Ball4" translation="0 -3.0 0">
+        <TouchSensor DEF="Touch4" description="Click to lift 2 from the right" />
+        <Shape><Appearance><PhysicalMaterial baseColor="0.15 0.65 0.8" emissiveColor="0.05 0.23 0.28" metallic="0.6" roughness="0.25" /></Appearance><Sphere radius="0.5" /></Shape>
+      </Transform>
+    </Transform>
+    <Transform DEF="Pivot5" translation="2.50 4.1 0">
+      <Transform translation="0 -1.250 0.40" rotation="1 0 0 0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform><Transform translation="0 -1.250 -0.40" rotation="1 0 0 -0.3097"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.8"  /></Appearance><Cylinder radius="0.02" height="2.625" /></Shape></Transform>
+      <Transform DEF="Ball5" translation="0 -3.0 0">
+        <TouchSensor DEF="Touch5" description="Click to lift 1 from the right" />
+        <Shape><Appearance><PhysicalMaterial baseColor="0.3 0.35 0.9" emissiveColor="0.10 0.12 0.32" metallic="0.6" roughness="0.25" /></Appearance><Sphere radius="0.5" /></Shape>
+      </Transform>
+    </Transform>
+    <Transform translation="-2.50 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="-1.62 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="-1.38 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="-0.74 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="-0.50 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="-0.26 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="0.26 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="0.50 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="0.74 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="1.38 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="1.62 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform translation="2.50 0.02 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" emissiveColor="0.3 0.3 0.3"  /></Appearance><Cylinder radius="0.08" height="0.04" /></Shape></Transform>
+    <Transform DEF="Chosen0" translation="-2.50 0.03 0.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.2" emissiveColor="1 0.8 0.1"  /></Appearance><Cylinder radius="0.38" height="0.04" /></Shape></Transform>
+    <Transform DEF="Chosen1" translation="-1.50 0.03 0.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.2" emissiveColor="1 0.8 0.1"  /></Appearance><Cylinder radius="0.38" height="0.04" /></Shape></Transform>
+    <Transform DEF="Chosen2" translation="-0.50 0.03 0.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.2" emissiveColor="1 0.8 0.1"  /></Appearance><Cylinder radius="0.38" height="0.04" /></Shape></Transform>
+    <Transform DEF="Chosen3" translation="0.50 0.03 0.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.2" emissiveColor="1 0.8 0.1"  /></Appearance><Cylinder radius="0.38" height="0.04" /></Shape></Transform>
+    <Transform DEF="Chosen4" translation="1.50 0.03 0.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.2" emissiveColor="1 0.8 0.1"  /></Appearance><Cylinder radius="0.38" height="0.04" /></Shape></Transform>
+    <Transform DEF="Chosen5" translation="2.50 0.03 0.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.2" emissiveColor="1 0.8 0.1"  /></Appearance><Cylinder radius="0.38" height="0.04" /></Shape></Transform>
+    <Transform DEF="Gap0" translation="-2.00 1.10 0.55" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.9 0.3"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Gap1" translation="-1.00 1.10 0.55" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.9 0.3"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Gap2" translation="0.00 1.10 0.55" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.9 0.3"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Gap3" translation="1.00 1.10 0.55" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.9 0.3"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Gap4" translation="2.00 1.10 0.55" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.9 0.3"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Ready" translation="-3.6 0.05 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.9 0.3" emissiveColor="0.1 0.7 0.2"  /></Appearance><Cylinder radius="0.18" height="0.05" /></Shape></Transform>
+    <Transform DEF="RoundA" translation="3.3 0.05 1.25" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.4 0.9" emissiveColor="0.6 0.2 0.6"  /></Appearance><Cylinder radius="0.14" height="0.05" /></Shape></Transform>
+    <Transform DEF="RoundB" translation="3.8 0.05 1.25"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.7 0.95" emissiveColor="0.2 0.4 0.6"  /></Appearance><Cylinder radius="0.14" height="0.05" /></Shape></Transform>
+    <BooleanToggle DEF="Round" />
+    <BooleanFilter DEF="RoundF" />
+    <TimeSensor DEF="RunL1" cycleInterval="8.0" />
+    <BooleanFilter DEF="PressL1" />
+    <TimeTrigger DEF="GoL1" />
+    <BooleanFilter DEF="BusyL1" />
+    <ROUTE fromNode="Touch0" fromField="isActive" toNode="PressL1" toField="set_boolean" />
+    <ROUTE fromNode="PressL1" fromField="inputTrue" toNode="GoL1" toField="set_boolean" />
+    <ROUTE fromNode="GoL1" fromField="triggerTime" toNode="RunL1" toField="startTime" />
+    <ROUTE fromNode="RunL1" fromField="isActive" toNode="BusyL1" toField="set_boolean" />
+    <ROUTE fromNode="BusyL1" fromField="inputTrue" toNode="Round" toField="set_boolean" />
+    <ROUTE fromNode="BusyL1" fromField="inputNegate" toNode="Ready" toField="visible" />
+    <ROUTE fromNode="RunL1" fromField="isActive" toNode="Chosen0" toField="visible" />
+    <ROUTE fromNode="BusyL1" fromField="inputNegate" toNode="RunL2" toField="enabled" />
+    <ROUTE fromNode="BusyL1" fromField="inputNegate" toNode="RunL3" toField="enabled" />
+    <ROUTE fromNode="BusyL1" fromField="inputNegate" toNode="RunR3" toField="enabled" />
+    <ROUTE fromNode="BusyL1" fromField="inputNegate" toNode="RunR2" toField="enabled" />
+    <ROUTE fromNode="BusyL1" fromField="inputNegate" toNode="RunR1" toField="enabled" />
+    <TimeSensor DEF="RunL2" cycleInterval="8.0" />
+    <BooleanFilter DEF="PressL2" />
+    <TimeTrigger DEF="GoL2" />
+    <BooleanFilter DEF="BusyL2" />
+    <ROUTE fromNode="Touch1" fromField="isActive" toNode="PressL2" toField="set_boolean" />
+    <ROUTE fromNode="PressL2" fromField="inputTrue" toNode="GoL2" toField="set_boolean" />
+    <ROUTE fromNode="GoL2" fromField="triggerTime" toNode="RunL2" toField="startTime" />
+    <ROUTE fromNode="RunL2" fromField="isActive" toNode="BusyL2" toField="set_boolean" />
+    <ROUTE fromNode="BusyL2" fromField="inputTrue" toNode="Round" toField="set_boolean" />
+    <ROUTE fromNode="BusyL2" fromField="inputNegate" toNode="Ready" toField="visible" />
+    <ROUTE fromNode="RunL2" fromField="isActive" toNode="Chosen1" toField="visible" />
+    <ROUTE fromNode="BusyL2" fromField="inputNegate" toNode="RunL1" toField="enabled" />
+    <ROUTE fromNode="BusyL2" fromField="inputNegate" toNode="RunL3" toField="enabled" />
+    <ROUTE fromNode="BusyL2" fromField="inputNegate" toNode="RunR3" toField="enabled" />
+    <ROUTE fromNode="BusyL2" fromField="inputNegate" toNode="RunR2" toField="enabled" />
+    <ROUTE fromNode="BusyL2" fromField="inputNegate" toNode="RunR1" toField="enabled" />
+    <TimeSensor DEF="RunL3" cycleInterval="8.0" />
+    <BooleanFilter DEF="PressL3" />
+    <TimeTrigger DEF="GoL3" />
+    <BooleanFilter DEF="BusyL3" />
+    <ROUTE fromNode="Touch2" fromField="isActive" toNode="PressL3" toField="set_boolean" />
+    <ROUTE fromNode="PressL3" fromField="inputTrue" toNode="GoL3" toField="set_boolean" />
+    <ROUTE fromNode="GoL3" fromField="triggerTime" toNode="RunL3" toField="startTime" />
+    <ROUTE fromNode="RunL3" fromField="isActive" toNode="BusyL3" toField="set_boolean" />
+    <ROUTE fromNode="BusyL3" fromField="inputTrue" toNode="Round" toField="set_boolean" />
+    <ROUTE fromNode="BusyL3" fromField="inputNegate" toNode="Ready" toField="visible" />
+    <ROUTE fromNode="RunL3" fromField="isActive" toNode="Chosen2" toField="visible" />
+    <ROUTE fromNode="BusyL3" fromField="inputNegate" toNode="RunL1" toField="enabled" />
+    <ROUTE fromNode="BusyL3" fromField="inputNegate" toNode="RunL2" toField="enabled" />
+    <ROUTE fromNode="BusyL3" fromField="inputNegate" toNode="RunR3" toField="enabled" />
+    <ROUTE fromNode="BusyL3" fromField="inputNegate" toNode="RunR2" toField="enabled" />
+    <ROUTE fromNode="BusyL3" fromField="inputNegate" toNode="RunR1" toField="enabled" />
+    <TimeSensor DEF="RunR3" cycleInterval="8.0" />
+    <BooleanFilter DEF="PressR3" />
+    <TimeTrigger DEF="GoR3" />
+    <BooleanFilter DEF="BusyR3" />
+    <ROUTE fromNode="Touch3" fromField="isActive" toNode="PressR3" toField="set_boolean" />
+    <ROUTE fromNode="PressR3" fromField="inputTrue" toNode="GoR3" toField="set_boolean" />
+    <ROUTE fromNode="GoR3" fromField="triggerTime" toNode="RunR3" toField="startTime" />
+    <ROUTE fromNode="RunR3" fromField="isActive" toNode="BusyR3" toField="set_boolean" />
+    <ROUTE fromNode="BusyR3" fromField="inputTrue" toNode="Round" toField="set_boolean" />
+    <ROUTE fromNode="BusyR3" fromField="inputNegate" toNode="Ready" toField="visible" />
+    <ROUTE fromNode="RunR3" fromField="isActive" toNode="Chosen3" toField="visible" />
+    <ROUTE fromNode="BusyR3" fromField="inputNegate" toNode="RunL1" toField="enabled" />
+    <ROUTE fromNode="BusyR3" fromField="inputNegate" toNode="RunL2" toField="enabled" />
+    <ROUTE fromNode="BusyR3" fromField="inputNegate" toNode="RunL3" toField="enabled" />
+    <ROUTE fromNode="BusyR3" fromField="inputNegate" toNode="RunR2" toField="enabled" />
+    <ROUTE fromNode="BusyR3" fromField="inputNegate" toNode="RunR1" toField="enabled" />
+    <TimeSensor DEF="RunR2" cycleInterval="8.0" />
+    <BooleanFilter DEF="PressR2" />
+    <TimeTrigger DEF="GoR2" />
+    <BooleanFilter DEF="BusyR2" />
+    <ROUTE fromNode="Touch4" fromField="isActive" toNode="PressR2" toField="set_boolean" />
+    <ROUTE fromNode="PressR2" fromField="inputTrue" toNode="GoR2" toField="set_boolean" />
+    <ROUTE fromNode="GoR2" fromField="triggerTime" toNode="RunR2" toField="startTime" />
+    <ROUTE fromNode="RunR2" fromField="isActive" toNode="BusyR2" toField="set_boolean" />
+    <ROUTE fromNode="BusyR2" fromField="inputTrue" toNode="Round" toField="set_boolean" />
+    <ROUTE fromNode="BusyR2" fromField="inputNegate" toNode="Ready" toField="visible" />
+    <ROUTE fromNode="RunR2" fromField="isActive" toNode="Chosen4" toField="visible" />
+    <ROUTE fromNode="BusyR2" fromField="inputNegate" toNode="RunL1" toField="enabled" />
+    <ROUTE fromNode="BusyR2" fromField="inputNegate" toNode="RunL2" toField="enabled" />
+    <ROUTE fromNode="BusyR2" fromField="inputNegate" toNode="RunL3" toField="enabled" />
+    <ROUTE fromNode="BusyR2" fromField="inputNegate" toNode="RunR3" toField="enabled" />
+    <ROUTE fromNode="BusyR2" fromField="inputNegate" toNode="RunR1" toField="enabled" />
+    <TimeSensor DEF="RunR1" cycleInterval="8.0" />
+    <BooleanFilter DEF="PressR1" />
+    <TimeTrigger DEF="GoR1" />
+    <BooleanFilter DEF="BusyR1" />
+    <ROUTE fromNode="Touch5" fromField="isActive" toNode="PressR1" toField="set_boolean" />
+    <ROUTE fromNode="PressR1" fromField="inputTrue" toNode="GoR1" toField="set_boolean" />
+    <ROUTE fromNode="GoR1" fromField="triggerTime" toNode="RunR1" toField="startTime" />
+    <ROUTE fromNode="RunR1" fromField="isActive" toNode="BusyR1" toField="set_boolean" />
+    <ROUTE fromNode="BusyR1" fromField="inputTrue" toNode="Round" toField="set_boolean" />
+    <ROUTE fromNode="BusyR1" fromField="inputNegate" toNode="Ready" toField="visible" />
+    <ROUTE fromNode="RunR1" fromField="isActive" toNode="Chosen5" toField="visible" />
+    <ROUTE fromNode="BusyR1" fromField="inputNegate" toNode="RunL1" toField="enabled" />
+    <ROUTE fromNode="BusyR1" fromField="inputNegate" toNode="RunL2" toField="enabled" />
+    <ROUTE fromNode="BusyR1" fromField="inputNegate" toNode="RunL3" toField="enabled" />
+    <ROUTE fromNode="BusyR1" fromField="inputNegate" toNode="RunR3" toField="enabled" />
+    <ROUTE fromNode="BusyR1" fromField="inputNegate" toNode="RunR2" toField="enabled" />
+    <ROUTE fromNode="Round" fromField="toggle" toNode="RoundA" toField="visible" />
+    <ROUTE fromNode="Round" fromField="toggle" toNode="RoundF" toField="set_boolean" />
+    <ROUTE fromNode="RoundF" fromField="inputNegate" toNode="RoundB" toField="visible" />
+    <OrientationInterpolator DEF="LiftL1" key="0 0.0312 0.0625 0.0938 0.125 0.1562 0.1875 0.2188 0.25 0.5 0.5312 0.5625 0.5938 0.625 0.6562 0.6875 0.7188 0.75 1" keyValue="0 0 1 -0.0000 0 0 1 -0.2220 0 0 1 -0.4101 0 0 1 -0.5359 0 0 1 -0.5800 0 0 1 -0.5359 0 0 1 -0.4101 0 0 1 -0.2220 0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.1221 0 0 1 -0.2256 0 0 1 -0.2947 0 0 1 -0.3190 0 0 1 -0.2947 0 0 1 -0.2256 0 0 1 -0.1221 0 0 1 -0.0000 0 0 1 -0.0000" />
+    <OrientationInterpolator DEF="KickL1" key="0 0.25 0.2812 0.3125 0.3438 0.375 0.4062 0.4375 0.4688 0.5 0.75 0.7812 0.8125 0.8438 0.875 0.9062 0.9375 0.9688 1" keyValue="0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.2220 0 0 1 0.4101 0 0 1 0.5359 0 0 1 0.5800 0 0 1 0.5359 0 0 1 0.4101 0 0 1 0.2220 0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.0666 0 0 1 0.1230 0 0 1 0.1608 0 0 1 0.1740 0 0 1 0.1608 0 0 1 0.1230 0 0 1 0.0666 0 0 1 0.0000" />
+    <ROUTE fromNode="RunL1" fromField="fraction_changed" toNode="LiftL1" toField="set_fraction" />
+    <ROUTE fromNode="RunL1" fromField="fraction_changed" toNode="KickL1" toField="set_fraction" />
+    <ROUTE fromNode="LiftL1" fromField="value_changed" toNode="Pivot0" toField="rotation" />
+    <ROUTE fromNode="KickL1" fromField="value_changed" toNode="Pivot5" toField="rotation" />
+    <BooleanSequencer DEF="SparkL1a" key="0 0.25 0.3 0.75 0.8 1" keyValue="false true false true false false" />
+    <BooleanSequencer DEF="SparkL1b" key="0 0.5 0.55 1" keyValue="false true false false" />
+    <ROUTE fromNode="RunL1" fromField="fraction_changed" toNode="SparkL1a" toField="set_fraction" />
+    <ROUTE fromNode="RunL1" fromField="fraction_changed" toNode="SparkL1b" toField="set_fraction" />
+    <ROUTE fromNode="SparkL1a" fromField="value_changed" toNode="Gap0" toField="visible" />
+    <ROUTE fromNode="SparkL1b" fromField="value_changed" toNode="Gap4" toField="visible" />
+    <OrientationInterpolator DEF="LiftL2" key="0 0.0312 0.0625 0.0938 0.125 0.1562 0.1875 0.2188 0.25 0.5 0.5312 0.5625 0.5938 0.625 0.6562 0.6875 0.7188 0.75 1" keyValue="0 0 1 -0.0000 0 0 1 -0.2220 0 0 1 -0.4101 0 0 1 -0.5359 0 0 1 -0.5800 0 0 1 -0.5359 0 0 1 -0.4101 0 0 1 -0.2220 0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.1221 0 0 1 -0.2256 0 0 1 -0.2947 0 0 1 -0.3190 0 0 1 -0.2947 0 0 1 -0.2256 0 0 1 -0.1221 0 0 1 -0.0000 0 0 1 -0.0000" />
+    <OrientationInterpolator DEF="KickL2" key="0 0.25 0.2812 0.3125 0.3438 0.375 0.4062 0.4375 0.4688 0.5 0.75 0.7812 0.8125 0.8438 0.875 0.9062 0.9375 0.9688 1" keyValue="0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.2220 0 0 1 0.4101 0 0 1 0.5359 0 0 1 0.5800 0 0 1 0.5359 0 0 1 0.4101 0 0 1 0.2220 0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.0666 0 0 1 0.1230 0 0 1 0.1608 0 0 1 0.1740 0 0 1 0.1608 0 0 1 0.1230 0 0 1 0.0666 0 0 1 0.0000" />
+    <ROUTE fromNode="RunL2" fromField="fraction_changed" toNode="LiftL2" toField="set_fraction" />
+    <ROUTE fromNode="RunL2" fromField="fraction_changed" toNode="KickL2" toField="set_fraction" />
+    <ROUTE fromNode="LiftL2" fromField="value_changed" toNode="Pivot0" toField="rotation" />
+    <ROUTE fromNode="LiftL2" fromField="value_changed" toNode="Pivot1" toField="rotation" />
+    <ROUTE fromNode="KickL2" fromField="value_changed" toNode="Pivot4" toField="rotation" />
+    <ROUTE fromNode="KickL2" fromField="value_changed" toNode="Pivot5" toField="rotation" />
+    <BooleanSequencer DEF="SparkL2a" key="0 0.25 0.3 0.75 0.8 1" keyValue="false true false true false false" />
+    <BooleanSequencer DEF="SparkL2b" key="0 0.5 0.55 1" keyValue="false true false false" />
+    <ROUTE fromNode="RunL2" fromField="fraction_changed" toNode="SparkL2a" toField="set_fraction" />
+    <ROUTE fromNode="RunL2" fromField="fraction_changed" toNode="SparkL2b" toField="set_fraction" />
+    <ROUTE fromNode="SparkL2a" fromField="value_changed" toNode="Gap1" toField="visible" />
+    <ROUTE fromNode="SparkL2b" fromField="value_changed" toNode="Gap3" toField="visible" />
+    <OrientationInterpolator DEF="LiftL3" key="0 0.0312 0.0625 0.0938 0.125 0.1562 0.1875 0.2188 0.25 0.5 0.5312 0.5625 0.5938 0.625 0.6562 0.6875 0.7188 0.75 1" keyValue="0 0 1 -0.0000 0 0 1 -0.2220 0 0 1 -0.4101 0 0 1 -0.5359 0 0 1 -0.5800 0 0 1 -0.5359 0 0 1 -0.4101 0 0 1 -0.2220 0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.1221 0 0 1 -0.2256 0 0 1 -0.2947 0 0 1 -0.3190 0 0 1 -0.2947 0 0 1 -0.2256 0 0 1 -0.1221 0 0 1 -0.0000 0 0 1 -0.0000" />
+    <OrientationInterpolator DEF="KickL3" key="0 0.25 0.2812 0.3125 0.3438 0.375 0.4062 0.4375 0.4688 0.5 0.75 0.7812 0.8125 0.8438 0.875 0.9062 0.9375 0.9688 1" keyValue="0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.2220 0 0 1 0.4101 0 0 1 0.5359 0 0 1 0.5800 0 0 1 0.5359 0 0 1 0.4101 0 0 1 0.2220 0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.0666 0 0 1 0.1230 0 0 1 0.1608 0 0 1 0.1740 0 0 1 0.1608 0 0 1 0.1230 0 0 1 0.0666 0 0 1 0.0000" />
+    <ROUTE fromNode="RunL3" fromField="fraction_changed" toNode="LiftL3" toField="set_fraction" />
+    <ROUTE fromNode="RunL3" fromField="fraction_changed" toNode="KickL3" toField="set_fraction" />
+    <ROUTE fromNode="LiftL3" fromField="value_changed" toNode="Pivot0" toField="rotation" />
+    <ROUTE fromNode="LiftL3" fromField="value_changed" toNode="Pivot1" toField="rotation" />
+    <ROUTE fromNode="LiftL3" fromField="value_changed" toNode="Pivot2" toField="rotation" />
+    <ROUTE fromNode="KickL3" fromField="value_changed" toNode="Pivot3" toField="rotation" />
+    <ROUTE fromNode="KickL3" fromField="value_changed" toNode="Pivot4" toField="rotation" />
+    <ROUTE fromNode="KickL3" fromField="value_changed" toNode="Pivot5" toField="rotation" />
+    <BooleanSequencer DEF="SparkL3a" key="0 0.25 0.3 0.5 0.55 0.75 0.8 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="RunL3" fromField="fraction_changed" toNode="SparkL3a" toField="set_fraction" />
+    <ROUTE fromNode="SparkL3a" fromField="value_changed" toNode="Gap2" toField="visible" />
+    <OrientationInterpolator DEF="LiftR3" key="0 0.0312 0.0625 0.0938 0.125 0.1562 0.1875 0.2188 0.25 0.5 0.5312 0.5625 0.5938 0.625 0.6562 0.6875 0.7188 0.75 1" keyValue="0 0 1 0.0000 0 0 1 0.2220 0 0 1 0.4101 0 0 1 0.5359 0 0 1 0.5800 0 0 1 0.5359 0 0 1 0.4101 0 0 1 0.2220 0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.1221 0 0 1 0.2256 0 0 1 0.2947 0 0 1 0.3190 0 0 1 0.2947 0 0 1 0.2256 0 0 1 0.1221 0 0 1 0.0000 0 0 1 0.0000" />
+    <OrientationInterpolator DEF="KickR3" key="0 0.25 0.2812 0.3125 0.3438 0.375 0.4062 0.4375 0.4688 0.5 0.75 0.7812 0.8125 0.8438 0.875 0.9062 0.9375 0.9688 1" keyValue="0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.2220 0 0 1 -0.4101 0 0 1 -0.5359 0 0 1 -0.5800 0 0 1 -0.5359 0 0 1 -0.4101 0 0 1 -0.2220 0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.0666 0 0 1 -0.1230 0 0 1 -0.1608 0 0 1 -0.1740 0 0 1 -0.1608 0 0 1 -0.1230 0 0 1 -0.0666 0 0 1 -0.0000" />
+    <ROUTE fromNode="RunR3" fromField="fraction_changed" toNode="LiftR3" toField="set_fraction" />
+    <ROUTE fromNode="RunR3" fromField="fraction_changed" toNode="KickR3" toField="set_fraction" />
+    <ROUTE fromNode="LiftR3" fromField="value_changed" toNode="Pivot3" toField="rotation" />
+    <ROUTE fromNode="LiftR3" fromField="value_changed" toNode="Pivot4" toField="rotation" />
+    <ROUTE fromNode="LiftR3" fromField="value_changed" toNode="Pivot5" toField="rotation" />
+    <ROUTE fromNode="KickR3" fromField="value_changed" toNode="Pivot0" toField="rotation" />
+    <ROUTE fromNode="KickR3" fromField="value_changed" toNode="Pivot1" toField="rotation" />
+    <ROUTE fromNode="KickR3" fromField="value_changed" toNode="Pivot2" toField="rotation" />
+    <BooleanSequencer DEF="SparkR3a" key="0 0.25 0.3 0.5 0.55 0.75 0.8 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="RunR3" fromField="fraction_changed" toNode="SparkR3a" toField="set_fraction" />
+    <ROUTE fromNode="SparkR3a" fromField="value_changed" toNode="Gap2" toField="visible" />
+    <OrientationInterpolator DEF="LiftR2" key="0 0.0312 0.0625 0.0938 0.125 0.1562 0.1875 0.2188 0.25 0.5 0.5312 0.5625 0.5938 0.625 0.6562 0.6875 0.7188 0.75 1" keyValue="0 0 1 0.0000 0 0 1 0.2220 0 0 1 0.4101 0 0 1 0.5359 0 0 1 0.5800 0 0 1 0.5359 0 0 1 0.4101 0 0 1 0.2220 0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.1221 0 0 1 0.2256 0 0 1 0.2947 0 0 1 0.3190 0 0 1 0.2947 0 0 1 0.2256 0 0 1 0.1221 0 0 1 0.0000 0 0 1 0.0000" />
+    <OrientationInterpolator DEF="KickR2" key="0 0.25 0.2812 0.3125 0.3438 0.375 0.4062 0.4375 0.4688 0.5 0.75 0.7812 0.8125 0.8438 0.875 0.9062 0.9375 0.9688 1" keyValue="0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.2220 0 0 1 -0.4101 0 0 1 -0.5359 0 0 1 -0.5800 0 0 1 -0.5359 0 0 1 -0.4101 0 0 1 -0.2220 0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.0666 0 0 1 -0.1230 0 0 1 -0.1608 0 0 1 -0.1740 0 0 1 -0.1608 0 0 1 -0.1230 0 0 1 -0.0666 0 0 1 -0.0000" />
+    <ROUTE fromNode="RunR2" fromField="fraction_changed" toNode="LiftR2" toField="set_fraction" />
+    <ROUTE fromNode="RunR2" fromField="fraction_changed" toNode="KickR2" toField="set_fraction" />
+    <ROUTE fromNode="LiftR2" fromField="value_changed" toNode="Pivot4" toField="rotation" />
+    <ROUTE fromNode="LiftR2" fromField="value_changed" toNode="Pivot5" toField="rotation" />
+    <ROUTE fromNode="KickR2" fromField="value_changed" toNode="Pivot0" toField="rotation" />
+    <ROUTE fromNode="KickR2" fromField="value_changed" toNode="Pivot1" toField="rotation" />
+    <BooleanSequencer DEF="SparkR2a" key="0 0.25 0.3 0.75 0.8 1" keyValue="false true false true false false" />
+    <BooleanSequencer DEF="SparkR2b" key="0 0.5 0.55 1" keyValue="false true false false" />
+    <ROUTE fromNode="RunR2" fromField="fraction_changed" toNode="SparkR2a" toField="set_fraction" />
+    <ROUTE fromNode="RunR2" fromField="fraction_changed" toNode="SparkR2b" toField="set_fraction" />
+    <ROUTE fromNode="SparkR2a" fromField="value_changed" toNode="Gap3" toField="visible" />
+    <ROUTE fromNode="SparkR2b" fromField="value_changed" toNode="Gap1" toField="visible" />
+    <OrientationInterpolator DEF="LiftR1" key="0 0.0312 0.0625 0.0938 0.125 0.1562 0.1875 0.2188 0.25 0.5 0.5312 0.5625 0.5938 0.625 0.6562 0.6875 0.7188 0.75 1" keyValue="0 0 1 0.0000 0 0 1 0.2220 0 0 1 0.4101 0 0 1 0.5359 0 0 1 0.5800 0 0 1 0.5359 0 0 1 0.4101 0 0 1 0.2220 0 0 1 0.0000 0 0 1 0.0000 0 0 1 0.1221 0 0 1 0.2256 0 0 1 0.2947 0 0 1 0.3190 0 0 1 0.2947 0 0 1 0.2256 0 0 1 0.1221 0 0 1 0.0000 0 0 1 0.0000" />
+    <OrientationInterpolator DEF="KickR1" key="0 0.25 0.2812 0.3125 0.3438 0.375 0.4062 0.4375 0.4688 0.5 0.75 0.7812 0.8125 0.8438 0.875 0.9062 0.9375 0.9688 1" keyValue="0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.2220 0 0 1 -0.4101 0 0 1 -0.5359 0 0 1 -0.5800 0 0 1 -0.5359 0 0 1 -0.4101 0 0 1 -0.2220 0 0 1 -0.0000 0 0 1 -0.0000 0 0 1 -0.0666 0 0 1 -0.1230 0 0 1 -0.1608 0 0 1 -0.1740 0 0 1 -0.1608 0 0 1 -0.1230 0 0 1 -0.0666 0 0 1 -0.0000" />
+    <ROUTE fromNode="RunR1" fromField="fraction_changed" toNode="LiftR1" toField="set_fraction" />
+    <ROUTE fromNode="RunR1" fromField="fraction_changed" toNode="KickR1" toField="set_fraction" />
+    <ROUTE fromNode="LiftR1" fromField="value_changed" toNode="Pivot5" toField="rotation" />
+    <ROUTE fromNode="KickR1" fromField="value_changed" toNode="Pivot0" toField="rotation" />
+    <BooleanSequencer DEF="SparkR1a" key="0 0.25 0.3 0.75 0.8 1" keyValue="false true false true false false" />
+    <BooleanSequencer DEF="SparkR1b" key="0 0.5 0.55 1" keyValue="false true false false" />
+    <ROUTE fromNode="RunR1" fromField="fraction_changed" toNode="SparkR1a" toField="set_fraction" />
+    <ROUTE fromNode="RunR1" fromField="fraction_changed" toNode="SparkR1b" toField="set_fraction" />
+    <ROUTE fromNode="SparkR1a" fromField="value_changed" toNode="Gap4" toField="visible" />
+    <ROUTE fromNode="SparkR1b" fromField="value_changed" toNode="Gap0" toField="visible" />
+  </Scene>
+</X3D>
