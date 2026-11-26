@@ -8342,6 +8342,27 @@ def switch_hides(node, ancestry):
     return False
 
 
+SWITCH_BRANCH_PROPERTY = "x3d_switch"      # on an object made under a DEF'd Switch: "DEF:branch:whichChoice" for each Switch above it
+
+
+def switch_branches(node, ancestry):
+    """"DEF:branch:whichChoice" for each DEF'd Switch above ``node``, outermost first, space-separated: the branch (index
+    among the Switch's children) ``node`` sits on and the Switch's own whichChoice in the file. The behaviour graph's Play
+    uses it to show and hide what a ROUTE to ``whichChoice`` chooses. A Switch with no DEF cannot be routed to, so is left out."""
+    chain = tuple(ancestry) + (node,)
+    entries = []
+    for i, anc in enumerate(ancestry):
+        if anc.getSpec() != 'Switch':
+            continue
+        real = anc.getRealNode()
+        name = real.getDefName()
+        kids = [c for c in real.children if _switch_child_counts(c)]
+        branch = next((n for n, kid in enumerate(kids) if kid is chain[i + 1]), None)
+        if name and branch is not None:
+            entries.append(f"{name}:{branch}:{anc.getFieldAsInt('whichChoice', -1, ancestry[:i])}")
+    return " ".join(entries)
+
+
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
 X3D_LOD_PROPERTY = "x3d_lod"                  # on the same object: "<LOD name>:<level>"
 
@@ -8579,6 +8600,7 @@ def load_web3d(
     # objects a Switch does not choose; collected as each is made, since a node under a USE'd Switch (or a USE'd Shape)
     # makes one object per instance and keeps only the last in node.blendObject
     switch_hidden = []
+    switch_members = []   # (object, "DEF:branch:choice ..."): which branch of which DEF'd Switch an object is on, for Play
     # objects made under a node whose visible field is false (X3D 4.0: X3DGroupingNode and X3DShapeNode have one)
     visible_false = []
 
@@ -8640,6 +8662,9 @@ def load_web3d(
         if node.blendObject is not None and node.blendObject is not made_before \
                 and any(anc.getSpec() == 'Switch' for anc in ancestry) and switch_hides(node, ancestry):
             switch_hidden.append(node.blendObject)
+        if node.blendObject is not None and node.blendObject is not made_before \
+                and any(anc.getSpec() == 'Switch' for anc in ancestry):
+            switch_members.append((node.blendObject, switch_branches(node, ancestry)))
         if node.blendObject is not None and node.blendObject is not made_before and not all(
                 item.getFieldAsBool('visible', True, chain) is not False
                 for item, chain in [(anc, ancestry[:i]) for i, anc in enumerate(ancestry)] + [(node, ancestry)]):
@@ -8682,6 +8707,9 @@ def load_web3d(
         except RuntimeError:  # not in the view layer
             bpyob.hide_viewport = True
         bpyob[SWITCH_HIDDEN_PROPERTY] = True
+    for bpyob, branches in switch_members:
+        if branches:
+            bpyob[SWITCH_BRANCH_PROPERTY] = branches
     # visible="false": drawn by no browser until an event says otherwise; hidden here the same way, and written back
     for bpyob in {o for ob in visible_false for o in [ob, *ob.children_recursive]}:
         bpyob.hide_render = True

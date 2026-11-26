@@ -48,6 +48,8 @@ BINDING_OF = {**{t: "transform" for t in TRANSFORM_TYPES}, **{t: "viewpoint" for
               # an H-Anim joint is the bone the importer made for it (named by the joint's name, found among the armatures);
               # a site or a segment is an object found by its DEF, and is "not applied" where the importer made none
               "HAnimJoint": "joint", "HAnimSite": "site", "HAnimSegment": "site",
+              # a Switch is the objects the importer made under its branches, found by the Switch's DEF (``x3d_switch``)
+              "Switch": "switch",
               }
 BINDING_OF["TextureTransform"] = "texture"      # bound to the material of the Appearance it sits in
 # Sensors that act on their siblings: where they sit in the scene graph is part of their meaning.

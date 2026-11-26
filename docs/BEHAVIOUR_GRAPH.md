@@ -511,6 +511,36 @@ nothing until a press has one. Not checked: a real Blender window; a humanoid wi
 beyond the two-armature case; a joint whose center is not in the armature's space (the importer's own assumption);
 Blender's exporter for joint ROUTEs.
 
+### Switch.whichChoice
+
+`whichChoice` (SFInt32, inputOutput) was in the catalogue; the binding kind is now `switch`, named by the Switch's DEF. The
+simulator delivers an index as it comes (an index past the last child and -1 are delivered, not clamped: X_ITE does the
+same) and keeps it in `values()`.
+
+What `Player` applies. The importer now tags every object it makes under a DEF'd Switch with `x3d_switch`, "DEF:branch:
+whichChoice-in-the-file" for each Switch above it (`import_x3d.switch_branches`; the only change to the importer: a custom
+property, nothing else reads it). When `whichChoice` arrives, each tagged object is shown when every Switch above it chooses
+its branch (a Switch that has not yet received an event counts as the file's own choice) and hidden otherwise, one object at
+a time (the objects under it have their own tags); `stop()` gives back each object's viewport, render and eye state. A Switch
+with no tagged object (a scripted graph naming a Switch the importer did not see) is listed "Switch.whichChoice (no object
+under Switch 'X')". Not applied: a Switch's `visible`; children that are not objects (a light group, a Script); a Switch
+under an Inline or a USE'd Switch's second instance (one object per instance is tagged only when the importer made it);
+showing a branch also overrides a `visible="false"` the importer applied to the same object. Import binds a Switch only when
+some object carries its tag; otherwise it is carried whole as before. Blender's exporter writes no Switch, so a ROUTE to one
+is dropped on export ("not in the exported file").
+
+Judged on X_ITE 16.8.1 (load average 0.4 to 5.8, another agent's browser tests ran at the same time): `probe-switch.x3d`
+(an IntegerSequencer 2, 1, -1, 5 into a Switch and the Switch echoed into a second one): the simulator agrees at all 3
+streams. Pair judge (3 repeats, one click): the file against a copy with only its title changed, **same** at both
+`whichChoice` streams; against a copy with the keyValue 2 1 -1 5 changed to 2 0 -1 5, **differs** at both. The judge
+watches the field's events; it does not look at which child X_ITE draws. Tests: `SwitchTargetTests` (3) in
+`tests/test_behaviour_graph.py`, two in `tests/test_behaviour_sim.py`, `SwitchPlayTests` (3, bpy 5.3.0: the importer's tags,
+one branch shown and then none, nothing found is listed) in `tests/test_behaviour_play_bpy.py`. Fuzz (Python 3.13.18,
+bpy 5.3.0): 2000 normal and 2000 hostile graphs of seed 1, and 100 Blender graphs, 0 failed, the same counts as above (the
+generated graphs are unchanged: Switch was already a target type). One pinned value changed on purpose: the digest of the node tree built from `probe.x3d` in `tests/test_behaviour_perf.py` (its
+Switch `Pick` was a carried node and is now a target node). Not checked: nested Switches (the code takes every Switch above an object into account; no
+test builds one), a Switch inside an Inline, X_ITE drawing.
+
 ## Hardening (26 Nov 2026)
 
 `tools/behaviour_fuzz.py` throws random graphs at the graph, the simulator and the X3D round trip, deterministic from
@@ -628,7 +658,7 @@ simulation, fan 5000, mixed 5000, chains between 1000 and 5000; the player, fan 
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
 eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
-played. Targets are Transform, Viewpoint, lights, materials, Text, HAnimJoint, HAnimSite and HAnimSegment (see Scene targets beyond Transform). Names survive only for what the graph touches. The
+played. Targets are Transform, Viewpoint, lights, materials, Text, Switch, HAnimJoint, HAnimSite and HAnimSegment (see Scene targets beyond Transform). Names survive only for what the graph touches. The
 importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on, and so do the "X3D import loss" log lines and `X3D_IMPORT_STRICT=1`: the importer holds its ROUTE losses back until the graph is built, then reports only those the graph could not keep. Losses that are not ROUTEs (event nodes, timers, sensor fields) are reported at once, as with the option off.
 
 ### Building the node tree

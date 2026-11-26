@@ -36,6 +36,7 @@ from . import behaviour_nodes
 from . import behaviour_presets
 from .behaviour_sim import POINTING, Simulation
 
+SWITCH_PROPERTY = "x3d_switch"     # set by the importer on an object under a DEF'd Switch (import_x3d.SWITCH_BRANCH_PROPERTY)
 EXPORT_AXES = axis_conversion(to_forward='-Z', to_up='Y').to_4x4()      # the export dialog's default: -Z forward, Y up
 
 # The export dialog's "Forward" and "Up" choices (same identifiers and names as the export operator's).
@@ -221,6 +222,7 @@ class Player:
         self.not_applied = []          # "Type.field" an event reached but the player does not show
         self.now = 0.0
         self._transforms, self._hidden, self._materials, self._lights, self._camera = {}, {}, {}, {}, scene.camera
+        self._switches, self._choices = {}, {}    # Switch DEF -> [(object, tags)]; Switch DEF -> the whichChoice it was last given
         self._joints, self._unfound = {}, {}      # bone name -> _JointState; name -> why a joint or a site was not found
         self._over, self._held, self._plane = [], [], {}
         self._sensors = {}             # Blender object name (None: the scene root) -> [sensor id, ...]
@@ -431,6 +433,9 @@ class Player:
                 if state is not None:
                     touched_joints[name] = state
                 continue
+            if kind == "switch":
+                self._switch(node, name, field_name, value)
+                continue
             if kind == "site":
                 found = self._site_object(node, name)
                 if found is None:
@@ -491,6 +496,42 @@ class Player:
             state.write()
         for state in touched_joints.values():
             state.write()
+
+    def _switch(self, node, name, field_name, value):
+        """``whichChoice`` of a Switch: every object the importer made under one of its branches (``x3d_switch`` on the
+        object, "DEF:branch:whichChoice-in-the-file" for each Switch above it) is shown when every Switch above it chooses its
+        branch and hidden when one does not. A Switch nothing was found under, and every other field, is listed."""
+        if field_name != "whichChoice":
+            self._skip(node, field_name)
+            return
+        members = self._switches.get(name)
+        if members is None:
+            members = []
+            for obj in self.scene.objects:
+                try:
+                    tags = [(d, int(b), int(i)) for d, b, i in (e.rsplit(":", 2) for e in str(obj.get(SWITCH_PROPERTY) or "").split())]
+                except ValueError:         # a property someone edited by hand
+                    continue
+                if any(tag[0] == name for tag in tags):
+                    members.append((obj, tags))
+            self._switches[name] = members
+        if not members:
+            self._skip(node, field_name, f"no object under Switch {name!r}")
+            return
+        self._choices[name] = int(value)
+        for obj, tags in members:
+            chosen = all(self._choices.get(def_name, initial) == branch for def_name, branch, initial in tags)
+            try:
+                self._show_one(obj, chosen)
+            except ReferenceError:         # deleted while playing
+                pass
+
+    def _show_one(self, obj, visible):
+        """Show or hide this one object (not what is under it: those objects have their own branches)."""
+        if obj.name not in self._hidden:
+            self._hidden[obj.name] = (obj.hide_viewport, obj.hide_render, self._eye(obj))
+        obj.hide_viewport = obj.hide_render = not visible
+        self._set_eye(obj, not visible)
 
     def _joint(self, node, name):
         """The state of the bone an HAnimJoint was made into, or None (``self._unfound[name]`` says why): the bone is found
@@ -777,6 +818,7 @@ class Player:
         self.scene.camera = self._camera
         self._transforms, self._hidden, self._materials, self._lights, self._colours = {}, {}, {}, {}, {}
         self._joints, self._unfound = {}, {}
+        self._switches, self._choices = {}, {}
         self._maps = {}
         self._burst, self._down = {}, {}
 

@@ -239,6 +239,44 @@ class HAnimTargetTests(unittest.TestCase):
         self.assertEqual(bg.difference(self.graph(), again)["routes_lost"], [])
 
 
+SWITCH_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><Scene>
+  <Switch DEF="Pick" whichChoice="0"><Shape><Box/></Shape><Shape><Sphere/></Shape></Switch>
+</Scene></X3D>
+"""
+
+
+class SwitchTargetTests(unittest.TestCase):
+
+    def graph(self):
+        b = bg.Behaviour()
+        steps = b.add("IntegerSequencer", "Steps", key=[0, 0.5], keyValue=[1, 0])
+        b.add("TimeSensor", "Timer", cycleInterval=2).fraction_changed >> steps.set_fraction
+        steps.value_changed >> b.target("Switch", "Pick").whichChoice
+        return b
+
+    def test_whichChoice_is_an_int32_target_bound_as_a_switch(self):
+        row = {r[0]: r for r in TARGETS["Switch"]}["whichChoice"]
+        self.assertEqual(row[1:3], ("SFInt32", "inputOutput"))
+        self.assertEqual(bg.BINDING_OF["Switch"], "switch")
+        self.assertEqual(self.graph().nodes["Pick"].binding, ("switch", "Pick"))
+
+    def test_a_float_is_not_a_choice(self):
+        b = bg.Behaviour()
+        weigh = b.add("ScalarInterpolator", "Weigh")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            weigh.value_changed >> b.target("Switch", "Pick").whichChoice
+        self.assertEqual(caught.exception.code, "type-mismatch")
+
+    def test_the_route_reads_from_a_file_and_writes_back_with_no_difference(self):
+        b = self.graph()
+        again = bg.Behaviour.from_x3d(b.weave(SWITCH_SCENE))
+        self.assertEqual(again.nodes["Pick"].binding, ("switch", "Pick"))
+        self.assertEqual(bg.difference(b, again),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(len(again.routes), 2)
+
+
 class DocumentTests(unittest.TestCase):
 
     def test_weave_puts_the_sensor_in_its_parent_and_the_rest_at_the_end(self):

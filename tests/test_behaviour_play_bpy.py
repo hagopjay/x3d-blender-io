@@ -368,6 +368,63 @@ class HAnimPlayTests(_Base):
         self.assertEqual(self.bn.read(scene).nodes["hanim_spine"].binding, ("joint", "spine"))
 
 
+class SwitchPlayTests(_Base):
+    """Switch.whichChoice as a target (tests/behaviour/probe-switch.x3d): the importer tags each object made under a DEF'd
+    Switch with its branch."""
+
+    def import_world(self):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        bpy.ops.import_scene.x3d(filepath=str(WORLDS / "probe-switch.x3d"), use_behaviour_graph=True)
+        return bpy.context.scene
+
+    def shown(self, scene):
+        bpy.context.view_layer.update()
+        return sorted(name for name in ("Red", "Green", "Blue") if scene.objects[name].visible_get() and not scene.objects[name].hide_render)
+
+    def test_the_importer_tags_each_branch_object_with_its_switch_branch_and_choice(self):
+        scene = self.import_world()
+        self.assertEqual({n: scene.objects[n].get("x3d_switch") for n in ("Red", "Green", "Blue")},
+                         {"Red": "Pick:0:0", "Green": "Pick:1:0", "Blue": "Pick:2:0"})
+        self.assertEqual(scene.objects["Pad"].get("x3d_switch"), None)
+        graph = self.bn.read(scene)
+        self.assertEqual(graph.nodes["Pick"].binding, ("switch", "Pick"))
+        self.assertEqual(graph.nodes["Echo"].binding, ("switch", "Echo"))   # the Echo's one Shape is tagged too ("Echo:0:-1")
+        self.assertEqual(self.bp.SWITCH_PROPERTY, importlib.import_module("io_scene_x3d.import_x3d").SWITCH_BRANCH_PROPERTY)
+
+    def test_a_choice_shows_one_branch_and_stop_puts_the_scene_back(self):
+        scene = self.import_world()
+        self.assertEqual(self.shown(scene), ["Red"])                       # whichChoice="0" in the file
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(0.2)                                                   # Steps sends 2 at fraction 0
+        self.assertEqual(self.shown(scene), ["Blue"])
+        player.step(1.0)                                                   # 1
+        self.assertEqual(self.shown(scene), ["Green"])
+        player.step(2.0)                                                   # -1: none
+        self.assertEqual(self.shown(scene), [])
+        player.step(2.8)                                                   # 5: past the last child, none
+        self.assertEqual(self.shown(scene), [])
+        self.assertNotIn("Switch.whichChoice", " ".join(player.not_applied))
+        player.stop()
+        self.assertEqual(self.shown(scene), ["Red"])
+
+    def test_a_switch_with_no_object_under_it_is_listed_not_guessed(self):
+        scene = self.import_world()
+        bg = importlib.import_module("io_scene_x3d.behaviour_graph")
+        graph = bg.Behaviour()
+        steps = graph.add("IntegerSequencer", "Steps", key=[0, 1], keyValue=[1, 0])
+        graph.add("TimeSensor", "Timer", cycleInterval=2, loop=True).fraction_changed >> steps.set_fraction
+        steps.value_changed >> graph.target("Switch", "Nowhere").whichChoice
+        player = self.bp.Player(scene, graph)
+        player.start(0.0)
+        player.step(0.5)
+        self.assertEqual(player.not_applied, ["Switch.whichChoice (no object under Switch 'Nowhere')"])
+        self.assertEqual(self.shown(scene), ["Red"])
+        player.stop()
+
+
 class FieldEditorTests(_Base):
 
     def test_a_typed_widget_reads_and_writes_the_x3d_text(self):

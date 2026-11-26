@@ -524,7 +524,7 @@ def rows_on_node(count, limit):
 
 
 MATERIAL_KINDS = ("material", "texture")      # bindings that name a Blender material rather than an object
-NAMED_KINDS = ("joint", "site")               # bindings that are a name the Player looks for (a bone, a site's object)
+NAMED_KINDS = ("joint", "site", "switch")     # bindings that are a name the Player looks for (a bone, a site's object, a Switch's DEF)
 
 
 class _TargetNode(_X3DNodeBase):
@@ -879,6 +879,12 @@ def import_graph(scene, filepath, new_actions=None):
 
     def resolver(def_name, node_type):
         kind = bg.BINDING_OF.get(node_type)
+        if kind == "switch":
+            # only where the importer tagged objects with this Switch's DEF: else the Switch stays what it was (carried
+            # whole, listed as not simulated), since Play would have nothing to show or hide
+            tagged = any(def_name == entry.rsplit(":", 2)[0] for obj in scene.objects
+                         for entry in str(obj.get("x3d_switch") or "").split())
+            return (kind, def_name) if tagged else None
         if kind in NAMED_KINDS:
             # kept whether or not Blender has it: Play finds the bone or object by this name, and says "not shown" when
             # it does not. A joint is the bone the importer named after the joint's ``name`` (else its DEF).

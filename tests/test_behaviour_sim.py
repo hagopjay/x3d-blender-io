@@ -489,6 +489,23 @@ class XiteAgreementTests(unittest.TestCase):
         sim.drag("Pan", (-1.9, 1.49, -2.31), 999994.532, ray=((-1.94, -1.0, -2.36), (1.51, -0.52, -2.69)))
         self.assertEqual(sim.faults, [])
 
+    def test_switch_whichChoice_is_delivered_and_echoed_as_in_x_ite(self):
+        # IntegerSequencer 2, 1, -1, 5 into Switch.whichChoice (an index past the last child, and -1, are delivered as
+        # they are), echoed from whichChoice_changed (tests/behaviour/probe-switch.x3d, X_ITE 16.8.1): 3 streams
+        self.agree("probe-switch", 3)
+
+    def test_switch_whichChoice_is_kept_in_values(self):
+        sim = bs.Simulation(world("probe-switch"))
+        sim.start(0.0)
+        sim.click("Touch", 0.1, held=0.0)
+        seen = []
+        for now in (0.2, 1.0, 2.0, 3.0):
+            sim.step(now)
+            seen.append(sim.values[("Pick", "whichChoice")])
+        self.assertEqual(seen, [2, 1, -1, 5])
+        self.assertEqual(sim.values[("Echo", "whichChoice")], 5)
+        self.assertEqual([e[3] for e in sim.log if e[1] == "Pick" and e[2] == "whichChoice"], [2, 1, -1, 5])
+
     def test_hanim_targets_hold_the_last_value_that_reached_them(self):
         graph = world("probe-hanim")
         sim = bs.Simulation(graph)
