@@ -219,9 +219,12 @@ def _lerp(a, b, t):
 
 def _distance(a, b):
     if isinstance(a, tuple):
-        if len(a) == 3 and len(b) == 3:         # sum() of a tuple, not of a generator: the same additions, in order
-            return math.sqrt(sum(((a[0] - b[0]) ** 2, (a[1] - b[1]) ** 2, (a[2] - b[2]) ** 2)))
-        return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+        try:
+            if len(a) == 3 and len(b) == 3:     # sum() of a tuple, not of a generator: the same additions, in order
+                return math.sqrt(sum(((a[0] - b[0]) ** 2, (a[1] - b[1]) ** 2, (a[2] - b[2]) ** 2)))
+            return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+        except OverflowError:                   # a square of a float past 1e154 raises in Python where X_ITE's is infinity
+            return math.hypot(*[x - y for x, y in zip(a, b)])
     return abs(a - b)
 
 
@@ -1036,7 +1039,7 @@ class _ColorChaser(_BufferChaser):
 
     @classmethod
     def close(cls, a, b):
-        return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b))) < cls.TOLERANCE
+        return _distance(a, b) < cls.TOLERANCE
 
 
 class _OrientationChaser(_BufferChaser):

@@ -210,14 +210,28 @@ class Regressions(unittest.TestCase):
         self.assertEqual(sim.faults, [])
 
     def test_a_node_that_raises_is_left_out_not_fatal(self):
-        """Magnitudes beyond about 1e154 overflow a distance: the damper is isolated and counted, the rest runs."""
+        """A machine that raises is isolated and counted, and the rest of the graph runs."""
+        from unittest import mock
+        b = bg.Behaviour()
+        b.add("PositionDamper", "D", initialValue="1 0 0", initialDestination="-1 0 0")
+        b.add("TimeSensor", "T", cycleInterval=1, loop=True)
+        with mock.patch.object(bs._Damper, "tick", side_effect=OverflowError("made to fail")):
+            sim = bs.Simulation(b)
+            sim.start(0.0)
+            sim.step(0.5)
+        self.assertTrue(sim.faults)
+        self.assertEqual(sim.outputs[("T", "fraction_changed")], 0.5)
+
+    def test_a_distance_past_the_square_root_of_the_largest_float_is_answered(self):
+        """Magnitudes beyond about 1e154 overflow a square in Python where JavaScript gives infinity: no fault now."""
         b = bg.Behaviour()
         b.add("PositionDamper", "D", initialValue="1e200 0 0", initialDestination="-1e200 0 0")
         b.add("TimeSensor", "T", cycleInterval=1, loop=True)
         sim = bs.Simulation(b)
         sim.start(0.0)
         sim.step(0.5)
-        self.assertTrue(sim.faults)
+        self.assertEqual(sim.faults, [])
+        self.assertEqual(bs._distance((1e200, 0.0, 0.0), (-1e200, 0.0, 0.0)), 2e200)
         self.assertEqual(sim.outputs[("T", "fraction_changed")], 0.5)
 
     def test_a_cycle_of_routes_stops_at_one_event_per_route(self):

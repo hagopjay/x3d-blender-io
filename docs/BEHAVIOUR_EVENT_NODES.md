@@ -489,11 +489,12 @@ line numbers of the tree before (`behaviour_sim.py`, 8e3ef8f) and what was done:
 | CylinderSensor | `_cylinder_track:1438` ValueError, ZeroDivisionError, `_interval` ValueError | a press on the cylinder's axis (radius 0), an infinity in the pointer | 0 (seeds 2 to 5: 1 each) | JavaScript's answers: x/0 is an infinity or NaN, `floor(NaN)` NaN, `inf % x` NaN; the NaN track is dropped |
 | Script | `_call:2051` TypeError | a handler that answers with a number | 1 | the answer is dropped, counted in `dropped["mismatch"]` |
 | Script | handler raises | the fuzzer's own handler, on purpose | 12 | contained as designed: left |
-| PositionChaser, PositionChaser2D, PositionDamper, PositionDamper2D, ColorDamper, ColorChaser | `_distance:211` / `:212` / `:1008` OverflowError | a destination or value of magnitude past 1e154 (the square of a float raises in Python where X_ITE's is an infinity) | 109 | **left**: `test_a_node_that_raises_is_left_out_not_fatal` in `tests/test_behaviour_fuzz.py` pins this as an isolated node. The fix is `math.hypot` on `OverflowError`; with it seed 1 has 12 faults (all the handler's), without it 121. |
+| PositionChaser, PositionChaser2D, PositionDamper, PositionDamper2D, ColorDamper, ColorChaser | `_distance:211` / `:212` / `:1008` OverflowError | a destination or value of magnitude past 1e154 (the square of a float raises in Python where X_ITE's is an infinity) | 109 | fixed at the join: `_distance` falls back to `math.hypot` on `OverflowError` (2e200 for 1e200 against -1e200; JavaScript's would be an infinity, and both are "not close", which is all the distance is asked), and the chaser's close test uses it. `test_a_node_that_raises_is_left_out_not_fatal` now makes a damper raise by a patch, and a second test pins the overflow answer. Hostile seeds 1 to 5 after the join (main with the pick and geo nodes): 13, 13, 13, 22 and 7 faults, every one the fuzzer's own Script handler raising on purpose |
 
-After: seed 1 has 121 faults (12 of them the fuzzer's handler, 109 the distance), seeds 2 to 5: 143, 120, 111, 113 (before 578, 509, 606,
-476). Fuzz: seeds 1 to 5, 2,000 normal and 2,000 hostile graphs each, and `--blender --count 100` on seeds 1 to 3: 0 failed graphs
-in all 13 runs (`tools/behaviour_fuzz.py`, Python 3.13.18, bpy 5.3.0 for the Blender runs).
+After the package: seed 1 had 121 faults (12 of them the fuzzer's handler, 109 the distance), seeds 2 to 5: 143, 120, 111, 113 (before 578, 509, 606,
+476). After the join with the distance fix: 13, 13, 13, 22 and 7, all the handler's. Fuzz on the joined tree: seeds 1 to 5, 2,000 normal and
+2,000 hostile graphs each, 0 failed graphs in all 10 runs; the package's own runs added `--blender --count 100` on seeds 1 to 3, 0 failed
+(`tools/behaviour_fuzz.py`, Python 3.13.18, bpy 5.3.0 for the Blender runs).
 
 #### The rotation half-turn warning
 
