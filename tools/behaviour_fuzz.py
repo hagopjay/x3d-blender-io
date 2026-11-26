@@ -10,7 +10,8 @@
 
 Deterministic from ``--seed``: graph ``k`` of a run is built from ``random.Random(seed * 1000003 + k)`` and nothing else.
 Every behaviour node type and every target type of ``behaviour_catalogue`` is used (graph ``k`` always contains node
-type ``k mod 45`` and target type ``k mod 32``). Plain Python; no Blender, no network, no model.
+type ``k mod len(NODES)`` and target type ``k mod len(TARGETS)``; a Script gets declared fields and random source, and the
+nodes that hold content get a picking geometry, a reference by USE or, when hostile, markup that is not XML). Plain Python; no Blender, no network, no model.
 
 Properties checked for every graph (``--properties`` names them in the receipt):
 
@@ -189,7 +190,22 @@ def hostile_field(rng, node_type, name, kind, n):
 # ---------------------------------------------------------------------------------------------------------------
 
 def _settable(rows):
-    return [row for row in rows if row[2] in ("inputOutput", "initializeOnly")]
+    """The rows a value may be given: not events, and not node-valued fields (those are content, never an attribute)."""
+    return [row for row in rows if row[2] in ("inputOutput", "initializeOnly") and row[1] not in bg.NODE_FIELD_TYPES]
+
+
+def _content(rng, node, index, hostile):
+    """What a node that holds content holds: a Script's source (text with the characters markup is made of), a pick
+    sensor's geometry or references, a bit of nothing. Hostile adds a reference to nothing and markup that is not XML."""
+    if node.node_type == "Script":
+        text = "".join(rng.choice(["a", " ", "<", "&", "]]>", "\n", "x=1;", "é", '"', "'"]) for _ in range(rng.randint(0, 12)))
+        return bg._markup_text(text) if text.strip() else ""
+    parts = []
+    if node.node_type.endswith("PickSensor") and rng.random() < 0.7:
+        parts.append(f'<Box DEF="Pick{index}" containerField="pickingGeometry"/>')
+    if hostile and rng.random() < 0.3:
+        parts.append(rng.choice(['<Group USE="Missing" containerField="pickTarget"/>', "<unclosed", "&bad;", "</x>"]))
+    return "".join(parts)
 
 
 def _ends(rows, outgoing):
@@ -231,6 +247,14 @@ def generate(rng, index, hostile):
         except bg.BehaviourError:                         # a name X3D does not allow is refused, with a clear error
             node = graph.add(node_type, f"N{i}", parent=parent).node
         rows = cat.NODES[node_type][1]
+        if node_type in bg.DECLARING_TYPES:                # a Script declares fields of its own, node types included
+            names = rng.sample(["go", "inA", "outB", "state", "pts", "things", "thing", "when"], rng.randint(0, 5))
+            kinds = rng.sample(sorted(bg.FIELD_TYPES | bg.NODE_FIELD_TYPES), len(names))
+            node.declared = tuple((n, k, rng.choice(["inputOutput", "inputOnly", "outputOnly", "initializeOnly"]))
+                                  for n, k in zip(names, kinds))
+        if node_type in bg.CONTENT_TYPES:
+            node.content = _content(rng, node, i, hostile)
+            node.inner = tuple(sorted(bg._use_names(node.content)[1]))
         count = rng.randint(1, 5) if not hostile else rng.choice([1, 2, 3, 4, 5, 8])
         for row in _settable(rows):
             if rng.random() < (0.55 if not hostile else 0.65):
@@ -244,7 +268,7 @@ def generate(rng, index, hostile):
     # ROUTEs: legal ones by type; hostile adds wrong ones
     sources, sinks = [], []
     for node in graph.nodes.values():
-        rows = cat.NODES[node.node_type][1] if node.role == bg.BEHAVIOUR else bg.node_rows(node)
+        rows = bg.node_rows(node)
         sources += [(node, row) for row in _ends(rows, True)]
         sinks += [(node, row) for row in _ends(rows, False)]
     routes = rng.randint(2, 14)
@@ -389,7 +413,7 @@ def schedule(rng, graph, hostile):
             if node is None:
                 calls.append([op, rng.choice(ids + ["Nowhere"]), "x", 1.0, now])
                 continue
-            rows = cat.NODES[node.node_type][1]
+            rows = bg.node_rows(node)
             if op == "send":
                 pool = _ends(rows, False) or rows
             else:

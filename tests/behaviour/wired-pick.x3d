@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="wired-pick.x3d"/>
+    <meta name="description" content="The four pick sensors, each with a picking geometry and pickTarget references by USE; their outputs ROUTEd to a Script and a BooleanToggle."/>
+  </head>
+  <Scene>
+    <Group DEF="World">
+      <Transform DEF="Ball" translation="0 0 3"><Shape DEF="BallShape"><Sphere/></Shape></Transform>
+      <Transform DEF="Crate" translation="2 0 3"><Shape DEF="CrateShape"><Box/></Shape></Transform>
+    </Group>
+    <Transform DEF="Gun">
+      <LinePickSensor DEF="Ray" objectType='"ALL"' intersectionType="GEOMETRY" sortOrder="ALL">
+        <IndexedLineSet DEF="RayGeometry" containerField="pickingGeometry" coordIndex="0 1 -1"><Coordinate point="0 0 0 0 0 10"/></IndexedLineSet>
+        <Group USE="World" containerField="pickTarget"/>
+      </LinePickSensor>
+      <PointPickSensor DEF="Dot" matchCriterion="MATCH_EVERY">
+        <PointSet containerField="pickingGeometry"><Coordinate point="0 0 1"/></PointSet>
+        <Shape USE="BallShape" containerField="pickTarget"/>
+        <Shape USE="CrateShape" containerField="pickTarget"/>
+      </PointPickSensor>
+      <PrimitivePickSensor DEF="Prim"><Sphere containerField="pickingGeometry" radius="0.5"/><Group USE="World" containerField="pickTarget"/></PrimitivePickSensor>
+      <VolumePickSensor DEF="Vol" intersectionType="BOUNDS"><Box containerField="pickingGeometry" size="3 3 3"/><Group USE="World" containerField="pickTarget"/></VolumePickSensor>
+    </Transform>
+    <Script DEF="Tally"><field name="points" type="MFVec3f" accessType="inputOnly"/><field name="normals" type="MFVec3f" accessType="inputOnly"/><field name="picked" type="MFNode" accessType="inputOnly"/><field name="shown" type="SFBool" accessType="outputOnly"/><![CDATA[ecmascript:
+function points(v) { if (v.length < 2 && v.length > 0) { shown = true; } }
+]]></Script>
+    <BooleanToggle DEF="Latch"/>
+    <ROUTE fromNode="Ray" fromField="pickedPoint" toNode="Tally" toField="points"/>
+    <ROUTE fromNode="Ray" fromField="pickedNormal" toNode="Tally" toField="normals"/>
+    <ROUTE fromNode="Ray" fromField="pickedGeometry" toNode="Tally" toField="picked"/>
+    <ROUTE fromNode="Dot" fromField="pickedPoint" toNode="Tally" toField="points"/>
+    <ROUTE fromNode="Prim" fromField="pickedGeometry" toNode="Tally" toField="picked"/>
+    <ROUTE fromNode="Vol" fromField="pickedGeometry" toNode="Tally" toField="picked"/>
+    <ROUTE fromNode="Ray" fromField="isActive" toNode="Latch" toField="set_boolean"/>
+    <ROUTE fromNode="Dot" fromField="isActive" toNode="Latch" toField="set_boolean"/>
+    <ROUTE fromNode="Prim" fromField="isActive" toNode="Latch" toField="set_boolean"/>
+    <ROUTE fromNode="Vol" fromField="isActive" toNode="Latch" toField="set_boolean"/>
+  </Scene>
+</X3D>

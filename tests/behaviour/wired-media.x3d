@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="wired-media.x3d"/>
+    <meta name="description" content="An AudioClip inside a Sound and a MovieTexture inside an Appearance, both kept in place, with ROUTEs to and from their clocks."/>
+  </head>
+  <Scene>
+    <Transform DEF="Screen"><Shape><Box size="2 1 0.1"/><Appearance><MovieTexture DEF="Film" url='"film.mp4"' loop="true"/></Appearance></Shape><TouchSensor DEF="Play"/></Transform>
+    <Transform DEF="Speaker"><Sound DEF="Horn" maxBack="10"><AudioClip DEF="Tone" url='"tone.wav"' description="a tone"/></Sound></Transform>
+    <TimeSensor DEF="Beat" cycleInterval="1" loop="true"/>
+    <BooleanToggle DEF="Switcher"/>
+    <ROUTE fromNode="Play" fromField="touchTime" toNode="Film" toField="set_startTime"/>
+    <ROUTE fromNode="Play" fromField="touchTime" toNode="Tone" toField="set_startTime"/>
+    <ROUTE fromNode="Film" fromField="duration_changed" toNode="Beat" toField="set_cycleInterval"/>
+    <ROUTE fromNode="Tone" fromField="isActive" toNode="Switcher" toField="set_boolean"/>
+    <ROUTE fromNode="Film" fromField="elapsedTime" toNode="Beat" toField="set_startTime"/>
+    <ROUTE fromNode="Switcher" fromField="toggle" toNode="Film" toField="set_loop"/>
+  </Scene>
+</X3D>
