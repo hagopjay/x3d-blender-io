@@ -83,7 +83,7 @@ Nothing is keyframed and nothing is left changed.
 
 | Simulated | Not simulated (named in the sidebar, never silently skipped) |
 |---|---|
-| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; the Coordinate, Coordinate2D and Normal interpolators; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer; ProximitySensor from the viewer | coordinate and texture-coordinate followers, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
+| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; the Coordinate, Coordinate2D and Normal interpolators; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; the Coordinate and TexCoord (2D) dampers and chasers (lists of points); TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer; ProximitySensor from the viewer | VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
 
 Shown on Blender data: Transform translation, rotation, scale, visible; material baseColor / diffuseColor,
 emissiveColor, transparency, roughness, metallic; light color and on; Viewpoint set_bind (the scene camera). Anything
@@ -149,6 +149,59 @@ value. Not judged: a change of `keyValue` while a fraction is held (X_ITE re-sen
 Through Blender nothing changes: a ROUTE into a Coordinate, TextureCoordinate or Normal has no Blender datablock to bind
 to, so Play shows it as "Not shown: Coordinate.point" as before (no change to `behaviour_play.py`); driving mesh vertices
 is not done.
+
+**Followers of lists: CoordinateChaser, CoordinateDamper, TexCoordChaser2D, TexCoordDamper2D (26 Nov 2026).**
+`probe-list-followers.x3d` (hand written): six pads (TouchSensors, clicked with the judge's click plan) start timers that
+drive a Coordinate and a Coordinate2D interpolator into `set_destination` of all four followers: 4 points, then from 4
+to 6 points, from 6 to 2, to no points at all (an interpolator whose `keyValue` is shorter than `key` sends `[]`), from
+none back to 4, and lists given to `set_value`. A looping TimeSensor turns a box so that X_ITE keeps drawing between the
+clicks. Recorded on X_ITE 16.8.1 (headless Chromium, software GL, Python 3.13.18 / Node as in the other traces; load
+average 3.5 to 5.6 by `uptime` around the recordings; 2,006 frames) and judged with `tools/behaviour_sim_judge_mf.py`:
+28 of 28 streams agree, among them the four `value_changed` streams (worst gaps: CoordinateDamper 0.022, TexCoordDamper2D
+0.041, the two chasers 0.000001; the follower tolerance is 0.08) and the four `isActive` streams (every event time
+matches, 131 to 138 events in X_ITE). All four nodes are therefore simulated. The judge was checked against four
+simulators that are wrong on purpose (a damper 25% too quick, a chaser 15% too quick, buffers not made as long as the
+destination, a missing point taken as the last point instead of zero): it rejects all four
+(`test_the_judge_rejects_wrong_list_followers`).
+
+What X_ITE 16.8.1 does with lists, read from its code and checked by recording (the simulator does the same):
+- Lists need not be as long as each other. A destination of another length first makes every buffer (a damper's 1 + order,
+  a chaser's 60) that long, cut or padded with zero vectors; a point one list lacks counts as the zero vector in every blend.
+- A follower's output is as long as the list it blends *from*, so a chaser that started from 1 point and was given 3 sends 1
+  point until its slots have shifted once; a damper sends the destination's length from its first step. At rest means the same
+  length and every point within tolerance (the largest point distance), so lists of different lengths are never at rest.
+- An empty list after an empty list is no event (X_ITE writes the list into `value_changed` point by point and cuts it to
+  length), but a list a follower is *given* (`set_value`, the initial value) is assigned whole and is an event even when empty.
+- Every `set_destination` or `set_value` wakes a damper, equal or not (the scalar damper wakes only for a different value).
+- `initialValue` and `initialDestination` default to one point at the origin for the Coordinate nodes and to no points for the
+  TexCoord nodes (the standard's defaults as X_ITE has them).
+Where the simulator differs on purpose: an `order` is clamped to 0..5 as X_ITE does, a `tau` of 0 or less jumps (X_ITE with a
+negative `tau` diverges), a chaser with `duration` 0 jumps (X_ITE's step time is then 0 and its output NaN), a clock that jumps
+to infinity does not make a chaser fault, and a list longer than 10,000 points is cut to that (counted in `sim.noted["capped"]`;
+memory is points times 60 slots). Not judged: `tau` or `duration` set at run time, a destination that changes length while
+the follower runs (only the stepwise changes above), a list in `set_value` while the follower runs a long chase.
+**What the probe cannot judge, found on the way.** X_ITE steps a damper it has just woken by 1 / (its measured frame rate), not
+by the time since the last frame, and takes the new destination in the frame that woke it. In a first recording whose
+destinations jumped by 1 to 3 at the length changes the 3D damper's worst gap was 0.11 and the 2D one's 0.068 (a damper
+that follows a destination already running agrees to 0.000); the probe's destinations are therefore continuous where the
+length changes and its new points small, and a first recording without the spinning box (X_ITE idle for a minute between
+clicks, so a large first step) gave gaps of 0.52 and 0.32. These are the frame timing of X_ITE under software GL, not the
+list rules, and they apply to the scalar dampers as well; they were not chased further.
+Through Blender nothing changes: a ROUTE into a Coordinate or TextureCoordinate has no datablock, so Play runs these nodes
+and lists "Not shown: Coordinate.point" / "TextureCoordinate.point" (`PlayerListsFollowerPointsTests`), and the importer
+leaves out a ROUTE that ends at a Coordinate. Speed: 1,000 CoordinateDampers of 100 points each on one timer
+(`tools/behaviour_bench.py --shapes lists --sizes 100 1000`, PYTHONHASHSEED=3, Python 3.13.18, Intel Xeon 2.10 GHz, load
+average 3.5 to 4.2 by `uptime`, 300 steps): median **246 ms per step** at 1,000 dampers (p95 335 ms; 2,021 events per step,
+peak 90 MB by tracemalloc) and 14.5 ms at 100 (p95 20.6 ms). That is over the 16.7 ms of a frame at 1,000 dampers: 100,000
+points a step, each blended three times, in pure Python. Profiled (cProfile, 100 dampers, 30 steps) the first version spent
+64% of its time in the generic field-shape test (`_fits`, called for every point of every list on every ROUTE) and 9% in
+`_finite`; it ran 51.7 ms per step at 100 dampers (bench tool, same settings, load 2.8). Fixed: a list of vectors is
+checked a point at a time in C (`set(map(type, ...))`), once per kind of field for one event instead of once per ROUTE,
+`_finite` takes a list of vectors through `math.isfinite` in C, and the followers keep a list as one flat list of floats
+(a blend is one comprehension, not a tuple per point). What is left is the blend itself (about 18 microseconds per list of
+100 points, three per damper per step), the gap test and the garbage collector (25% of a step: `gc.disable()` took a
+step from 185 to 141 ms in a trial). A faster step needs arrays (numpy), which the simulator does not depend on. The
+bench shape is opt-in (`--shapes lists`) and is not timed in the Player (there is no Blender data for the points).
 
 ### Two files against X_ITE, with their own noise floor
 

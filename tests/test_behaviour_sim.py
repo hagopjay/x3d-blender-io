@@ -13,11 +13,19 @@ clicks) and requires the simulator to send the same events::
 
 from __future__ import annotations
 
+import importlib
 import json
 import math
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+
+try:
+    import bpy  # noqa: F401
+    HAVE_BPY = True
+except Exception:  # pragma: no cover - plain Python
+    HAVE_BPY = False
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "source"))
@@ -243,9 +251,9 @@ class NodeTests(unittest.TestCase):
 
     def test_what_is_not_run_is_named(self):
         g = self.graph()
-        g.add("CoordinateDamper", "Mesh")
+        g.add("LoadSensor", "Mesh")                # CoordinateDamper was the example until the list followers were judged
         g.add("TimeSensor", "Clock")
-        self.assertEqual(bs.Simulation(g).not_simulated, ["CoordinateDamper Mesh"])
+        self.assertEqual(bs.Simulation(g).not_simulated, ["LoadSensor Mesh"])
 
     def _drag_world(self, kind, **fields):
         g = self.graph()
@@ -393,6 +401,206 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(sent(sim, "Slide", "value_changed"), [(1.0, 1.0), (1.0, 2.0)])
 
 
+class ListFollowerTests(unittest.TestCase):
+    """CoordinateChaser, CoordinateDamper, TexCoordChaser2D and TexCoordDamper2D (source/behaviour_sim.py): what X_ITE
+    16.8.1 does with lists, and what the simulator does with lists it should not have been given. The agreement with
+    X_ITE's own event trace is in XiteAgreementTests.test_followers_of_lists."""
+
+    KINDS = (("CoordinateChaser", 3), ("CoordinateDamper", 3), ("TexCoordChaser2D", 2), ("TexCoordDamper2D", 2))
+
+    def run_follower(self, kind, destination, seconds=9.0, **fields):
+        g = bg.Behaviour()
+        g.add(kind, "F", **fields)
+        sim = bs.Simulation(g, log_size=100_000)
+        sim.start(0.0)
+        sim.send("F", "set_destination", destination, 0.0)
+        t = 0.0
+        while t < seconds:
+            t += 1 / 60
+            sim.step(t)
+        return sim
+
+    def test_all_four_are_simulated(self):
+        for kind, _size in self.KINDS:
+            self.assertIn(kind, bs.SIMULATED)
+
+    def test_each_follower_arrives_at_its_destination_and_says_when_it_is_at_rest(self):
+        for kind, size in self.KINDS:
+            with self.subTest(kind=kind):
+                points = [tuple(float(i + j) for j in range(size)) for i in range(4)]
+                sim = self.run_follower(kind, points)
+                last = sent(sim, "F", "value_changed")
+                for got, want in zip(last, points):
+                    self.assertTrue(all(abs(a - b) < 1e-3 for a, b in zip(got, want)), (got, want))
+                self.assertEqual(len(last), 4)
+                self.assertEqual([e[3] for e in sim.log if e[2] == "isActive"], [True, False])
+                self.assertEqual(sim.dropped, {})
+
+    def test_a_destination_of_another_length_is_followed_with_zero_for_the_missing_points(self):
+        # X_ITE 16.8.1 (tools/behaviour_sim_judge.cjs, a world of its own): a point one list lacks is the zero vector, the
+        # damper's first output is as long as its destination, the chaser's as long as the value it started from
+        g = bg.Behaviour()
+        g.add("CoordinateDamper", "D", tau=1.5, initialValue=[(0, 0, 0)], initialDestination=[(1, 1, 1), (2, 2, 2), (3, 3, 3)])
+        g.add("CoordinateChaser", "C", duration=3, initialValue=[(0, 0, 0)], initialDestination=[(1, 1, 1), (2, 2, 2), (3, 3, 3)])
+        sim = bs.Simulation(g, log_size=100_000)
+        sim.start(0.0)
+        sim.step(1 / 60)
+        self.assertEqual(len(sent(sim, "D", "value_changed")), 3)
+        self.assertEqual(len(sent(sim, "C", "value_changed")), 1)
+        t = 1 / 60
+        while t < 30:                      # tau 1.5 and order 3: a long way to within 1e-4
+            t += 1 / 60
+            sim.step(t)
+        for name in ("D", "C"):
+            self.assertEqual([round(c) for p in sent(sim, name, "value_changed") for c in p], [1, 1, 1, 2, 2, 2, 3, 3, 3])
+            self.assertEqual([e[3] for e in sim.log if e[1] == name and e[2] == "isActive"][-1], False)
+
+    def test_an_empty_list_after_an_empty_list_is_no_event_but_a_set_value_always_is(self):
+        # X_ITE 16.8.1: what a follower works out is written point by point and cut to length, so nothing changes (and
+        # nothing is sent) for an empty list after an empty list; a list it is given, set_value, is assigned whole
+        for kind, size in self.KINDS:
+            with self.subTest(kind=kind):
+                g = bg.Behaviour()
+                g.add(kind, "F", initialDestination="", initialValue="")
+                sim = bs.Simulation(g)
+                sim.start(0.0)
+                self.assertEqual([e for e in sim.log if e[2] == "value_changed"], [(0.0, "F", "value_changed", [])])    # the initial value, whole
+                sim.log.clear()
+                sim.send("F", "set_destination", [], 0.1)
+                for k in range(1, 130):
+                    sim.step(0.1 + k / 60)
+                self.assertEqual([e[2:] for e in sim.log], [("isActive", True), ("isActive", False)])
+                sim.log.clear()
+                sim.send("F", "set_value", [], 3.0)
+                self.assertEqual([e[2:] for e in sim.log if e[2] == "value_changed"], [("value_changed", [])])
+
+    def test_a_list_that_is_not_a_list_of_vectors_is_refused_or_dropped_and_nothing_raises(self):
+        for kind, size in self.KINDS:
+            with self.subTest(kind=kind):
+                g = bg.Behaviour()
+                g.add(kind, "F")
+                sim = bs.Simulation(g)
+                sim.start(0.0)
+                for bad in (1.0, "x", None, [1.0, 2.0], [(1.0,)], [(1.0,) * (size + 1)], [(math.nan,) * size],
+                            [(math.inf,) * size], [(1.0,) * size, (2.0,)], ((1.0,) * size,), [[1.0] * size]):
+                    for field in ("set_destination", "set_value"):
+                        with self.assertRaises(bg.BehaviourError, msg=repr(bad)):
+                            sim.send("F", field, bad, 0.0)
+                for k in range(1, 30):
+                    sim.step(k / 60)
+                self.assertEqual((sim.faults, sim.dropped), ([], {}))
+
+    def test_the_same_through_a_route_is_counted_in_dropped(self):
+        g = bg.Behaviour()
+        g.add("CoordinateInterpolator", "Morph", key=[0, 1], keyValue=[(0, 0, 0), (1, 1, 1), (1, 1, 1), (2, 2, 2)])
+        g.add("TexCoordDamper2D", "Map")
+        g.add("CoordinateDamper", "Verts")
+        g.route("Morph", "value_changed", "Map", "set_destination", check=False)      # 3-vectors into a 2-vector list
+        g.route("Morph", "value_changed", "Verts", "set_destination")
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        sim.send("Morph", "set_fraction", 0.5, 0.1)
+        self.assertEqual(sim.dropped, {"mismatch": 1})
+        self.assertEqual(sim.faults, [])
+        self.assertEqual(sim.outputs[("Verts", "isActive")], True)
+
+    def test_a_huge_list_is_cut_to_the_cap_and_counted(self):
+        for kind, size in self.KINDS:
+            with self.subTest(kind=kind):
+                g = bg.Behaviour()
+                g.add(kind, "F")
+                sim = bs.Simulation(g)
+                sim.start(0.0)
+                sim.send("F", "set_destination", [(0.5,) * size] * (bs._MAX_POINTS + 7), 0.0)
+                sim.send("F", "set_value", [(0.25,) * size] * (bs._MAX_POINTS + 7), 0.0)
+                sim.step(0.5)
+                self.assertEqual(len(sent(sim, "F", "value_changed")), bs._MAX_POINTS)
+                self.assertGreaterEqual(sim.noted.get("capped", 0), 2)
+                self.assertEqual((sim.faults, sim.dropped), ([], {}))
+
+    def test_the_order_of_a_damper_is_clamped_to_0_to_5(self):
+        for order, stages in ((-4, 0), (0, 0), (2, 2), (5, 5), (6, 5), (10 ** 9, 5)):
+            g = bg.Behaviour()
+            g.add("CoordinateDamper", "D", order=order)
+            self.assertEqual(len(bs.Simulation(g).machines["D"].buffer) - 1, stages, order)
+        g = bg.Behaviour()
+        g.add("CoordinateDamper", "D", order=0, initialDestination=[(1, 2, 3)], initialValue=[(1, 2, 3)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        sim.send("D", "set_destination", [(4.0, 5.0, 6.0)], 0.0)
+        sim.step(1 / 60)
+        self.assertEqual(sent(sim, "D", "value_changed"), [(4.0, 5.0, 6.0)])           # order 0 does not follow: it jumps
+        self.assertEqual(sent(sim, "D", "isActive"), False)
+
+    def test_a_damper_with_no_tau_jumps_and_a_chaser_with_no_duration_arrives_at_once(self):
+        for kind in ("CoordinateDamper", "CoordinateChaser"):
+            g = bg.Behaviour()
+            g.add(kind, "F", **({"tau": 0} if kind == "CoordinateDamper" else {"duration": 0}))
+            sim = bs.Simulation(g)
+            sim.start(0.0)
+            sim.send("F", "set_destination", [(1.0, 2.0, 3.0)], 0.0)
+            for k in range(1, 5):
+                sim.step(k / 60)
+            self.assertEqual(sent(sim, "F", "value_changed"), [(1.0, 2.0, 3.0)], kind)
+            self.assertEqual(sent(sim, "F", "isActive"), False, kind)
+
+    def test_bad_field_text_is_replaced_by_the_default_and_counted(self):
+        g = bg.Behaviour()
+        g.add("CoordinateDamper", "D", initialValue="1 2", tau="nan", tolerance="inf", order="x")
+        g.add("TexCoordChaser2D", "C", initialDestination="1 2 3", duration="-inf")
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        for k in range(1, 30):
+            sim.step(k / 60)
+        self.assertEqual(sim.dropped, {"bad-field": 4})            # tau, tolerance, order, duration; a trailing odd number of a list is left off
+        self.assertEqual(sim.faults, [])
+
+    def test_the_player_lists_the_points_it_does_not_show(self):
+        # no Blender needed for the simulation half: the targets are reached, and are the targets the player has no
+        # datablock for (the Blender half is PlayerListsFollowerPointsTests)
+        graph = world("probe-list-followers")
+        sim = bs.Simulation(graph)
+        self.assertEqual(sim.not_simulated, [])
+        sim.start(0.0)
+        sim.click("TouchA", 1.0)
+        for k in range(1, 200):
+            sim.step(1.0 + k / 60)
+        self.assertEqual(sorted({(k[0], k[1]) for k in sim.values}),      # and the Spinner that keeps X_ITE drawing
+                         [("ChasedMap", "point"), ("ChasedVerts", "point"), ("DampedMap", "point"), ("DampedVerts", "point"),
+                          ("Spinner", "rotation")])
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available (this test plays the world in Blender's own Player)")
+class PlayerListsFollowerPointsTests(unittest.TestCase):
+    """The four list followers drive Coordinate.point and TextureCoordinate.point, which the Player has no datablock for:
+    they run, and each is listed as not shown (docs/BEHAVIOUR_GRAPH.md), as the points of the interpolators already were."""
+
+    def test_the_points_are_listed_as_not_shown(self):
+        sys.path.insert(0, str(ROOT / "tests"))
+        from test_roundtrip_bpy import _register_extension
+        _register_extension(tempfile.mkdtemp(prefix="x3d_list_followers_"))
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bn = importlib.import_module("io_scene_x3d.behaviour_nodes")
+        bp = importlib.import_module("io_scene_x3d.behaviour_play")
+        bn.ensure_registered()
+        bp.ensure_axes_properties()
+        bpy.ops.import_scene.x3d(filepath=str(WORLDS / "probe-list-followers.x3d"), use_behaviour_graph=True)
+        scene = bpy.context.scene
+        # the importer leaves a ROUTE that ends at a Coordinate out of the node tree ("neither a Blender object nor a
+        # top-level node"), so the graph is handed to the Player as the file wrote it
+        player = bp.Player(scene, world("probe-list-followers"))
+        self.assertEqual(player.sim.not_simulated, [])
+        player.start(0.0)
+        player.click(scene.objects["PadA"], 0.0, held=0.0)
+        player.step(1.5)
+        player.stop()
+        self.assertEqual(sorted(player.not_applied),
+                         ["Coordinate.point", "TextureCoordinate.point"])
+        self.assertEqual({key for key in player.sim.values}, {("ChasedVerts", "point"), ("DampedVerts", "point"),
+                                                               ("ChasedMap", "point"), ("DampedMap", "point"),
+                                                               ("Spinner", "rotation")})
+
+
 class XiteAgreementTests(unittest.TestCase):
     """The simulator against X_ITE 16.7.1's own event traces (headless Chromium, software GL, real mouse clicks)."""
 
@@ -445,6 +653,47 @@ class XiteAgreementTests(unittest.TestCase):
         # X_ITE sends and the simulator now sends too). Recorded on X_ITE 16.8.1 (tests/behaviour/probe-coord.x3d)
         # and judged with the MF-aware wrapper: the judge's own reader takes lists of numbers, not lists of vectors.
         self.agree("probe-coord", 6, judge_mf)
+
+    def test_followers_of_lists(self):
+        # CoordinateChaser, CoordinateDamper, TexCoordChaser2D, TexCoordDamper2D, each fed by a Coordinate or Coordinate2D
+        # interpolator: 4 points (and from 4 to 6 points, to 2, to none, back to 4, then lists given to set_value), the
+        # clicks and the timers on X_ITE 16.8.1 (tests/behaviour/probe-list-followers.x3d), judged with the MF-aware
+        # wrapper: the 4 value_changed streams and the 4 isActive streams, among 28
+        self.agree("probe-list-followers", 28, judge_mf)
+
+    def test_the_judge_rejects_wrong_list_followers(self):
+        # the same trace against simulators that are wrong on purpose: each must be refused, or the test above says nothing
+        name = "probe-list-followers"
+        trace = json.loads((WORLDS / "x_ite_traces" / f"{name}.json").read_text(encoding="utf-8"))
+
+        def refused():
+            result = judge_mf.judge(WORLDS / f"{name}.x3d", trace)
+            return sorted(s["source"] for s in result["streams"] if not s["agree"])
+
+        self.assertEqual(refused(), [])
+        damper, ramp, fitted, blend = bs._ListDamper.tick, bs._ListChaser.ramp, bs._ListMixin.fitted, bs._blend
+        try:
+            bs._ListDamper.tick = lambda self, now, dt: damper(self, now, dt * 1.25)          # a damper 25% too quick
+            self.assertIn("Damp3.value_changed", refused())
+            self.assertIn("Damp2.value_changed", refused())
+            bs._ListDamper.tick = damper
+            bs._ListChaser.ramp = lambda self, age: ramp(self, age * 1.15)                    # a chaser 15% too quick
+            self.assertIn("Chase3.value_changed", refused())
+            bs._ListChaser.ramp = ramp
+            bs._ListMixin.fitted = lambda self, flat, count: flat                             # buffers not made as long as the destination
+            self.assertIn("Chase3.value_changed", refused())
+            bs._ListMixin.fitted = fitted
+
+            def pad_with_the_last_point(source, target, t):                                   # a point one list lacks is not zero
+                spare = len(source) - len(target)
+                if spare > 0:
+                    target = target + (target[-3:] * (spare // 3) if spare % 3 == 0 else [0.0] * spare)
+                return [x + (y - x) * t for x, y in zip(source, target)]
+            bs._blend = pad_with_the_last_point
+            self.assertIn("Chase3.value_changed", refused())
+        finally:
+            bs._ListDamper.tick, bs._ListChaser.ramp, bs._ListMixin.fitted, bs._blend = damper, ramp, fitted, blend
+        self.assertEqual(refused(), [])
 
     def test_a_turn_written_as_0_pi_2pi_rocks_in_x_ite_and_in_the_simulator(self):
         # OrientationInterpolator, key 0 0.5 1, keyValue 0, pi, 2 pi about y (tests/behaviour/probe-turn.x3d, X_ITE 16.8.1):
@@ -563,7 +812,8 @@ class XiteAgreementTests(unittest.TestCase):
 
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
-        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord", "probe-script")))
+        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord",
+                                "probe-script", "probe-list-followers")))
         judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
         used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
