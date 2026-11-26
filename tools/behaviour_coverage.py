@@ -87,6 +87,7 @@ PLAYED = frozenset({
     "TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "KeySensor", "StringSensor",
     "CoordinateChaser", "CoordinateDamper", "TexCoordChaser2D", "TexCoordDamper2D",   # points are listed as "Not shown"
     "Script", "CollisionSensor",     # hosted: the Player runs a handler the person enabled, and reads the rigid body world
+    "LoadSensor", "AudioClip", "MovieTexture",     # their clocks and events run; sound, picture and loading are listed as not applied
 })
 NOT_PLAYED = frozenset({"VisibilitySensor"})    # simulated, but the Player has no way to say what the viewer can see
 PLAYER_FEEDS = {"POINTING": "from .behaviour_sim import POINTING", "KEY_SENSORS": 'KEY_SENSORS = ("KeySensor", "StringSensor")',
@@ -193,7 +194,8 @@ def judged_in(worlds):
     for label, graph in worlds:
         for route in graph.routes:
             node = graph.nodes[route.from_id]
-            if node.role == bg.BEHAVIOUR and node.node_type in bs.SIMULATED:
+            in_place = node.role == bg.TARGET and node.node_type in bg.IN_PLACE      # a clip of the scene sends too
+            if (node.role == bg.BEHAVIOUR or in_place) and node.node_type in bs.SIMULATED:
                 found.setdefault(node.node_type, set()).add(label)
     return {name: sorted(labels) for name, labels in found.items()}
 

@@ -25,7 +25,7 @@ import behaviour_coverage as cov   # noqa: E402
 X3DUOM = Path("/home/user/x3d.chess/vendor/x3d_mcp/src/validation/schemas/X3dUnifiedObjectModel-4.0.xml")
 
 # PINNED. Change these, and the document's table (tools/behaviour_coverage.py --write), together with the code.
-PINNED = {"nodes": 57, "wired": 57, "simulated": 45, "judged": 43, "played": 44}
+PINNED = {"nodes": 57, "wired": 57, "simulated": 48, "judged": 46, "played": 47}
 
 
 class TheFiftySevenTests(unittest.TestCase):

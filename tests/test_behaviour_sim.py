@@ -251,9 +251,15 @@ class NodeTests(unittest.TestCase):
 
     def test_what_is_not_run_is_named(self):
         g = self.graph()
-        g.add("LoadSensor", "Mesh")                # CoordinateDamper was the example until the list followers were judged
+        # the example is whichever wired behaviour node has no machine yet (the examples kept being simulated); when every
+        # node has one, a graph has nothing to name
+        import behaviour_catalogue as catalogue
+        import behaviour_graph as graph_module
+        left = sorted(name for name in catalogue.NODES if name not in bs.SIMULATED and name not in graph_module.IN_PLACE)
+        if left:
+            g.add(left[0], "Mesh")
         g.add("TimeSensor", "Clock")
-        self.assertEqual(bs.Simulation(g).not_simulated, ["LoadSensor Mesh"])
+        self.assertEqual(bs.Simulation(g).not_simulated, [f"{left[0]} Mesh"] if left else [])
 
     def _drag_world(self, kind, **fields):
         g = self.graph()
