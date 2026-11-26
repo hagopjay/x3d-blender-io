@@ -14,6 +14,7 @@ One node class per catalogue node, one socket class per X3D field type. A socket
 between two types is removed as it is made: the editor cannot hold a ROUTE X3D would reject.
 """
 
+import json
 import bpy
 from bpy.props import (BoolProperty, CollectionProperty, FloatProperty, FloatVectorProperty, IntProperty,
                        PointerProperty, StringProperty)
@@ -509,6 +510,9 @@ def rows_on_node(count, limit):
     return list(range(limit - 1)) + [count - 1]
 
 
+MATERIAL_KINDS = ("material", "texture")      # bindings that name a Blender material rather than an object
+
+
 class _TargetNode(_X3DNodeBase):
     x3d_role = bg.TARGET
     x3d_object: PointerProperty(type=bpy.types.Object, name="Object")
@@ -520,10 +524,10 @@ class _TargetNode(_X3DNodeBase):
         self.use_custom_color, self.color = True, (0.16, 0.24, 0.30)
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, "x3d_material" if bg.BINDING_OF.get(self.x3d_type) == "material" else "x3d_object", text="")
+        layout.prop(self, "x3d_material" if bg.BINDING_OF.get(self.x3d_type) in MATERIAL_KINDS else "x3d_object", text="")
 
     def draw_label(self):
-        data = self.x3d_material if bg.BINDING_OF.get(self.x3d_type) == "material" else self.x3d_object
+        data = self.x3d_material if bg.BINDING_OF.get(self.x3d_type) in MATERIAL_KINDS else self.x3d_object
         return f"{self.x3d_type}  {data.name}" if data else f"{self.x3d_type}  (unbound)"
 
 
@@ -661,7 +665,7 @@ def _add_menu(self, context):
 
 def _datablock_of(binding):
     kind, name = binding
-    if kind == "material":
+    if kind in MATERIAL_KINDS:
         return None, bpy.data.materials.get(name)
     return bpy.data.objects.get(name), None
 
@@ -792,7 +796,7 @@ def read(scene):
                     graph.def_hints[item.x3d_parent.name] = recorded
         elif role == bg.TARGET:
             kind = bg.BINDING_OF[item.x3d_type]
-            data = item.x3d_material if kind == "material" else item.x3d_object
+            data = item.x3d_material if kind in MATERIAL_KINDS else item.x3d_object
             graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position,
                                         binding=(kind, data.name) if data else None)
         else:
@@ -823,11 +827,16 @@ def import_graph(scene, filepath, new_actions=None):
 
     def resolver(def_name, node_type):
         kind = bg.BINDING_OF.get(node_type)
-        if kind == "material":
+        if kind in MATERIAL_KINDS:          # a texture target is found through the material it belongs to
             for material in bpy.data.materials:
                 if material.get("x3d_def") == def_name:
                     return kind, material.name
             return None
+        if kind == "text":
+            # the importer names a Text's FONT object by its Shape's or Transform's DEF and the curve by the Text's DEF
+            found = [obj for obj in scene.objects if obj.type == "FONT" and getattr(obj.data, "name", None) == def_name]
+            outer = [obj for obj in found if obj.parent is None or obj.parent not in found]
+            return (kind, (outer or found)[0].name) if found else None
         wanted = {"transform": None, "viewpoint": "CAMERA", "light": "LIGHT"}.get(kind, "?")
         if wanted == "?":
             return None
@@ -844,6 +853,12 @@ def import_graph(scene, filepath, new_actions=None):
         return None
 
     bg.bind(parsed, resolver)
+    for node in parsed.nodes.values():           # the transform the importer baked into the UVs: Play shows only the change from it
+        if node.role == bg.TARGET and node.node_type == "TextureTransform" and node.binding:
+            material = bpy.data.materials.get(node.binding[1])
+            authored = (parsed._candidates.get(node.id) or {}).get("texture_transform")
+            if material is not None and authored is not None:
+                material["x3d_texture_transform"] = json.dumps(authored)
     graph = bg.Behaviour(nodes=parsed.nodes, routes=parsed.routes, diagnostics=parsed.diagnostics)
     for node in graph.nodes.values():            # a placed sensor's parent is a DEF in the file: make it the object's name
         if node.role == bg.BEHAVIOUR and node.parent:
@@ -877,7 +892,7 @@ def _drop_baked_actions(graph, new_actions):
     if not new_actions:
         return []
     driven = {node.binding[1] for node in graph.nodes.values()
-              if node.role == bg.TARGET and node.binding and node.binding[0] != "material"
+              if node.role == bg.TARGET and node.binding and node.binding[0] not in MATERIAL_KINDS
               and any(route.to_id == node.id for route in graph.routes)}
     messages = []
     for name in sorted(driven):

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="KeyDeviceSensor" level="2" />
+    <meta name="title" content="Piano: type and it plays" />
+    <meta name="description" content="A grand piano seen from above its keyboard. Any key strikes the hammer, Shift Ctrl Alt light the pedals, click the sheet to type a line, Enter stamps it." />
+    <meta name="generator" content="tests/behaviour/demos/piano/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.05 0.04 0.06" />
+    <Viewpoint DEF="View" description="Over the keyboard" position="0 4.0 2.5" orientation="1 0 0 -0.93" fieldOfView="0.9" />
+    <DirectionalLight direction="-0.3 -1 -0.4" intensity="0.9" />
+    <PointLight DEF="Hall" location="0 3 1" color="1 0.92 0.8" intensity="2" radius="9" />
+    <Transform translation="0 -0.05 0"><Shape><Appearance><PhysicalMaterial DEF="FloorPaint" baseColor="0.22 0.14 0.09" roughness="0.7" metallic="0.0"/></Appearance><Box size="8 0.1 6"/></Shape></Transform>
+    <Transform DEF="Body" translation="0 0.4 -1.4"><Shape><Appearance><PhysicalMaterial DEF="LacquerPaint" baseColor="0.02 0.02 0.03" roughness="0.15" metallic="0.1"/></Appearance><Box size="3.4 0.8 2.6"/></Shape></Transform>
+    <Transform DEF="Lid" translation="0 1.55 -2.1" rotation="1 0 0 0.75"><Shape><Appearance><PhysicalMaterial DEF="LidPaint" baseColor="0.02 0.02 0.03" roughness="0.15" metallic="0.1"/></Appearance><Box size="3.3 0.05 2.3"/></Shape></Transform>
+    <Transform DEF="Keybed" translation="0 0.76 0.35"><Shape><Appearance><PhysicalMaterial DEF="KeybedPaint" baseColor="0.12 0.07 0.04" roughness="0.5" metallic="0.0"/></Appearance><Box size="2.9 0.1 1.0"/></Shape></Transform>
+    <Transform DEF="KeySlip" translation="0 0.88 -0.08"><Shape><Appearance><PhysicalMaterial DEF="SlipPaint" baseColor="0.05 0.05 0.06" roughness="0.2" metallic="0.0"/></Appearance><Box size="2.9 0.18 0.1"/></Shape></Transform>
+    <Transform DEF="White1" translation="-1.2 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint1" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White2" translation="-1.0 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint2" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White3" translation="-0.8 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint3" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White4" translation="-0.6 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint4" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White5" translation="-0.4 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint5" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White6" translation="-0.2 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint6" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White7" translation="0.0 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint7" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White8" translation="0.2 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint8" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White9" translation="0.4 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint9" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White10" translation="0.6 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint10" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White11" translation="0.8 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint11" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White12" translation="1.0 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint12" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White13" translation="1.2 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint13" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="White14" translation="1.4 0.84 0.45"><Shape><Appearance><PhysicalMaterial DEF="WhitePaint14" baseColor="0.93 0.91 0.86" roughness="0.35" metallic="0.0"/></Appearance><Box size="0.19 0.05 0.7"/></Shape></Transform>
+    <Transform DEF="Black1" translation="-1.1 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint1" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black2" translation="-0.9 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint2" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black4" translation="-0.5 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint4" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black5" translation="-0.3 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint5" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black6" translation="-0.1 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint6" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black8" translation="0.3 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint8" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black9" translation="0.5 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint9" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black11" translation="0.9 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint11" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black12" translation="1.1 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint12" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Black13" translation="1.3 0.885 0.3"><Shape><Appearance><PhysicalMaterial DEF="BlackPaint13" baseColor="0.03 0.03 0.04" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.11 0.07 0.42"/></Shape></Transform>
+    <Transform DEF="Hammer" translation="0 0.97 0.12"><Shape><Appearance><PhysicalMaterial DEF="FeltPaint" baseColor="0.65 0.1 0.1" roughness="0.9" metallic="0.0"/></Appearance><Box size="2.8 0.05 0.07"/></Shape></Transform>
+    <Transform DEF="SoftPedal" translation="-0.35 0.1 1.25"><Shape><Appearance><PhysicalMaterial DEF="SoftBrass" baseColor="0.8 0.6 0.25" roughness="0.25" metallic="0.9"/></Appearance><Box size="0.22 0.05 0.5"/></Shape></Transform>
+    <Transform DEF="SoftGlow" translation="-0.35 0.17 1.25" visible="false"><Shape><Appearance><PhysicalMaterial DEF="SoftGlowPaint" baseColor="1 0.75 0.2" roughness="0.5" metallic="0.0" emissiveColor="1 0.6 0.1"/></Appearance><Box size="0.3 0.03 0.6"/></Shape></Transform>
+    <Transform DEF="SostPedal" translation="0.0 0.1 1.25"><Shape><Appearance><PhysicalMaterial DEF="SostBrass" baseColor="0.8 0.6 0.25" roughness="0.25" metallic="0.9"/></Appearance><Box size="0.22 0.05 0.5"/></Shape></Transform>
+    <Transform DEF="SostGlow" translation="0.0 0.17 1.25" visible="false"><Shape><Appearance><PhysicalMaterial DEF="SostGlowPaint" baseColor="1 0.75 0.2" roughness="0.5" metallic="0.0" emissiveColor="1 0.6 0.1"/></Appearance><Box size="0.3 0.03 0.6"/></Shape></Transform>
+    <Transform DEF="SustainPedal" translation="0.35 0.1 1.25"><Shape><Appearance><PhysicalMaterial DEF="SustainBrass" baseColor="0.8 0.6 0.25" roughness="0.25" metallic="0.9"/></Appearance><Box size="0.22 0.05 0.5"/></Shape></Transform>
+    <Transform DEF="SustainGlow" translation="0.35 0.17 1.25" visible="false"><Shape><Appearance><PhysicalMaterial DEF="SustainGlowPaint" baseColor="1 0.75 0.2" roughness="0.5" metallic="0.0" emissiveColor="1 0.6 0.1"/></Appearance><Box size="0.3 0.03 0.6"/></Shape></Transform>
+    <Transform DEF="LyreBar" translation="0 0.24 1.0"><Shape><Appearance><PhysicalMaterial DEF="LyrePaint" baseColor="0.7 0.5 0.2" roughness="0.3" metallic="0.9"/></Appearance><Box size="1.2 0.05 0.05"/></Shape></Transform>
+    <!-- the music stand: a board on the case, the sheet on it, a lamp and a lever -->
+    <Transform DEF="Stand" translation="0 1.1 -0.5"><Shape><Appearance><PhysicalMaterial DEF="StandPaint" baseColor="0.05 0.05 0.06" roughness="0.3" metallic="0.0"/></Appearance><Box size="0.1 0.7 0.05"/></Shape></Transform>
+    <Transform DEF="Sheet" translation="0 1.62 -0.62" rotation="1 0 0 -0.3">
+      <TouchSensor DEF="SheetTouch" description="Click the sheet, then type" />
+      <Shape><Appearance><PhysicalMaterial DEF="SheetPaint" baseColor="0.95 0.93 0.85" roughness="0.9" metallic="0.0"/></Appearance><Box size="1.5 0.85 0.03"/></Shape>
+      <Transform translation="0 0.12 0.03"><Shape><Appearance><PhysicalMaterial DEF="InkPaint" baseColor="0.05 0.05 0.08" roughness="0.9" metallic="0.0"/></Appearance><Text DEF="SheetText" string='"click the sheet and type"'><FontStyle size="0.13" justify='"MIDDLE" "MIDDLE"' /></Text></Shape></Transform>
+    </Transform>
+    <Transform DEF="Line" translation="0 1.3 0.2" rotation="1 0 0 -0.93">
+      <Shape><Appearance><PhysicalMaterial DEF="LineInk" baseColor="1 0.85 0.4" roughness="0.6" metallic="0.0" emissiveColor="0.5 0.35 0.1"/></Appearance><Text DEF="LineText" string='"type here"'><FontStyle size="0.17" justify='"MIDDLE" "MIDDLE"' /></Text></Shape>
+    </Transform>
+    <Transform DEF="Lamp" translation="-1.0 1.75 -0.6">
+      <Transform translation="0 -0.28 0"><Shape><Appearance><PhysicalMaterial DEF="LampPole" baseColor="0.8 0.6 0.25" roughness="0.25" metallic="0.9"/></Appearance><Box size="0.05 0.56 0.05"/></Shape></Transform>
+      <Shape><Appearance><PhysicalMaterial DEF="ShadePaint" baseColor="0.1 0.4 0.25" roughness="0.4" metallic="0.0"/></Appearance><Cone bottomRadius="0.2" height="0.22" /></Shape>
+      <Transform DEF="LampGlow" translation="0 -0.2 0.0"><Shape><Appearance><PhysicalMaterial DEF="GlowPaint" baseColor="1 0.9 0.5" roughness="0.5" metallic="0.0" emissiveColor="1 0.85 0.4" transparency="1"/></Appearance><Sphere radius="0.18" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="KeysLight" translation="-1.25 0.99 -0.08"><Shape><Appearance><PhysicalMaterial DEF="KeysLightPaint" baseColor="1 0.7 0.2" roughness="0.5" metallic="0.0" emissiveColor="1 0.6 0.1"/></Appearance><Sphere radius="0.05" /></Shape></Transform>
+    <Transform DEF="TypeLight" translation="1.25 0.99 -0.08" visible="false"><Shape><Appearance><PhysicalMaterial DEF="TypeLightPaint" baseColor="0.3 0.6 1" roughness="0.5" metallic="0.0" emissiveColor="0.2 0.5 1"/></Appearance><Sphere radius="0.05" /></Shape></Transform>
+    <Transform DEF="Caption" translation="0 0.89 -0.02" rotation="1 0 0 -0.4">
+      <Shape><Appearance><PhysicalMaterial DEF="CaptionInk" baseColor="0.9 0.9 0.95" roughness="0.6" metallic="0.0" emissiveColor="0.4 0.4 0.45"/></Appearance><Text DEF="CaptionText" string='"last key"'><FontStyle size="0.07" justify='"MIDDLE" "MIDDLE"' /></Text></Shape>
+    </Transform>
+    <Transform DEF="Lever" translation="1.0 1.3 -0.5">
+      <TouchSensor DEF="LockTouch" description="Click: forbid or allow Backspace" />
+      <Shape><Appearance><PhysicalMaterial DEF="LeverPaint" baseColor="0.8 0.6 0.25" roughness="0.25" metallic="0.9"/></Appearance><Box size="0.18 0.3 0.1"/></Shape>
+      <Transform DEF="AllowedLight" translation="0 0.26 0.0"><Shape><Appearance><PhysicalMaterial DEF="AllowedPaint" baseColor="0.2 1 0.35" roughness="0.5" metallic="0.0" emissiveColor="0.1 0.9 0.2"/></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    </Transform>
+
+    <KeySensor DEF="Keys" description="Keyboard mode" />
+    <StringSensor DEF="Typed" enabled="false" description="Typing mode" />
+    <Script DEF="EchoLine"><field name="set_line" type="SFString" accessType="inputOnly"/><field name="line" type="MFString" accessType="outputOnly"/><![CDATA[ecmascript:
+function set_line (value) { line = new MFString (value); }
+]]></Script>
+    <Script DEF="EchoSheet"><field name="set_line" type="SFString" accessType="inputOnly"/><field name="line" type="MFString" accessType="outputOnly"/><![CDATA[ecmascript:
+function set_line (value) { line = new MFString (value); }
+]]></Script>
+    <Script DEF="EchoKey"><field name="set_press" type="SFString" accessType="inputOnly"/><field name="set_release" type="SFString" accessType="inputOnly"/><field name="line" type="MFString" accessType="outputOnly"/><![CDATA[ecmascript:
+function set_press (value) { line = new MFString ('down ' + JSON.stringify (value)); }
+function set_release (value) { line = new MFString ('up ' + JSON.stringify (value)); }
+]]></Script>
+
+    <!-- any key: the hammer strikes, the lamp flashes -->
+    <BooleanFilter DEF="Strike" />
+    <TimeTrigger DEF="StrikeTrigger" />
+    <TimeSensor DEF="HammerClock" cycleInterval="0.25" />
+    <PositionInterpolator DEF="HammerDip" key="0 0.4 1" keyValue="0 0.97 0.12 0 0.90 0.12 0 0.97 0.12" />
+    <ScalarInterpolator DEF="LampFlash" key="0 0.3 1" keyValue="1 0.1 1" />
+    <ROUTE fromNode="Keys" fromField="isActive" toNode="Strike" toField="set_boolean" />
+    <ROUTE fromNode="Strike" fromField="inputTrue" toNode="StrikeTrigger" toField="set_boolean" />
+    <ROUTE fromNode="StrikeTrigger" fromField="triggerTime" toNode="HammerClock" toField="startTime" />
+    <ROUTE fromNode="HammerClock" fromField="fraction_changed" toNode="HammerDip" toField="set_fraction" />
+    <ROUTE fromNode="HammerClock" fromField="fraction_changed" toNode="LampFlash" toField="set_fraction" />
+    <ROUTE fromNode="HammerDip" fromField="value_changed" toNode="Hammer" toField="translation" />
+    <ROUTE fromNode="LampFlash" fromField="value_changed" toNode="GlowPaint" toField="transparency" />
+    <!-- the modifiers light the pedals while held -->
+    <ROUTE fromNode="Keys" fromField="shiftKey" toNode="SoftGlow" toField="visible" />
+    <ROUTE fromNode="Keys" fromField="altKey" toNode="SostGlow" toField="visible" />
+    <ROUTE fromNode="Keys" fromField="controlKey" toNode="SustainGlow" toField="visible" />
+    <!-- arrows and F keys: the code is kept, and sent on when the key comes up -->
+    <BooleanFilter DEF="KeyUp" />
+    <IntegerTrigger DEF="ActionCode" />
+    <IntegerTrigger DEF="LastAction" />
+    <ROUTE fromNode="Keys" fromField="actionKeyPress" toNode="ActionCode" toField="integerKey" />
+    <ROUTE fromNode="Keys" fromField="isActive" toNode="KeyUp" toField="set_boolean" />
+    <ROUTE fromNode="KeyUp" fromField="inputNegate" toNode="ActionCode" toField="set_boolean" />
+    <ROUTE fromNode="ActionCode" fromField="triggerValue" toNode="LastAction" toField="integerKey" />
+    <IntegerTrigger DEF="ReleaseCode" />
+    <ROUTE fromNode="Keys" fromField="actionKeyRelease" toNode="ReleaseCode" toField="integerKey" />
+    <!-- the character of every key, shown on the caption through a Script -->
+    <ROUTE fromNode="Keys" fromField="keyPress" toNode="EchoKey" toField="set_press" />
+    <ROUTE fromNode="Keys" fromField="keyRelease" toNode="EchoKey" toField="set_release" />
+    <ROUTE fromNode="EchoKey" fromField="line" toNode="CaptionText" toField="string" />
+    <!-- which sensor has the keyboard: only one key device sensor listens at a time -->
+    <ROUTE fromNode="Keys" fromField="enabled_changed" toNode="KeysLight" toField="visible" />
+    <ROUTE fromNode="Typed" fromField="enabled_changed" toNode="TypeLight" toField="visible" />
+    <!-- the sheet takes the keyboard; Enter gives it back -->
+    <BooleanFilter DEF="SheetPress" />
+    <BooleanFilter DEF="TypingDone" />
+    <ROUTE fromNode="SheetTouch" fromField="isActive" toNode="SheetPress" toField="set_boolean" />
+    <ROUTE fromNode="SheetPress" fromField="inputTrue" toNode="Typed" toField="enabled" />
+    <ROUTE fromNode="Typed" fromField="isActive" toNode="TypingDone" toField="set_boolean" />
+    <ROUTE fromNode="TypingDone" fromField="inputNegate" toNode="Keys" toField="enabled" />
+    <!-- the typed line and the stamp, through a Script (a SFString cannot be routed into a MFString) -->
+    <ROUTE fromNode="Typed" fromField="enteredText" toNode="EchoLine" toField="set_line" />
+    <ROUTE fromNode="EchoLine" fromField="line" toNode="LineText" toField="string" />
+    <ROUTE fromNode="Typed" fromField="finalText" toNode="EchoSheet" toField="set_line" />
+    <ROUTE fromNode="EchoSheet" fromField="line" toNode="SheetText" toField="string" />
+    <!-- the lever: forbid or allow Backspace, with a green light while it is allowed -->
+    <BooleanFilter DEF="LeverPress" />
+    <BooleanToggle DEF="Allow" toggle="true" />
+    <ROUTE fromNode="LockTouch" fromField="isActive" toNode="LeverPress" toField="set_boolean" />
+    <ROUTE fromNode="LeverPress" fromField="inputTrue" toNode="Allow" toField="set_boolean" />
+    <ROUTE fromNode="Allow" fromField="toggle_changed" toNode="Typed" toField="deletionAllowed" />
+    <ROUTE fromNode="Allow" fromField="toggle_changed" toNode="AllowedLight" toField="visible" />
+  </Scene>
+</X3D>

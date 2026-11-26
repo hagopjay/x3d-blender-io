@@ -16,9 +16,10 @@ translation, a material's colour) is reported back.
 
 What it runs: TimeSensor, the linear interpolators (scalar, position, 2D position, colour in HSV, orientation by slerp),
 EaseInEaseOut, the Spline interpolators (scalar, position, 2D position), SquadOrientationInterpolator, PlaneSensor,
-CylinderSensor and SphereSensor drags (from the pointer's ray and the viewer, X_ITE's rules), the sequencers, the four event
-utilities and triggers, the dampers and the chasers (the colour and orientation chasers buffer by buffer as X_ITE's do; the
-scalar and position chasers sum eased jumps). Pointing sensors do not sense by
+CylinderSensor and SphereSensor drags (from the pointer's ray and the viewer, X_ITE's rules), KeySensor and StringSensor from
+raw keys (X_ITE's rules, one enabled at a time), the sequencers, the four event utilities and triggers, the dampers and the
+chasers (the colour and orientation chasers buffer by buffer as X_ITE's do; the position 2D chaser likewise; the scalar and
+position chasers sum eased jumps). Pointing sensors do not sense by
 themselves here; the caller says what the pointer did (``hover``, ``press``, ``release``, ``drag``). Whatever is not run
 is named in ``Simulation.not_simulated``, never silently skipped.
 
@@ -867,6 +868,84 @@ class _OrientationChaser(_BufferChaser):
         return abs(2 * math.acos(max(-1.0, min(1.0, w)))) < cls.TOLERANCE
 
 
+class _PositionChaser2D(_Machine):
+    """X_ITE 16.7's X3DChaserNode as written there, for PositionChaser2D: the answer to a destination is sampled through
+    60 buffers ``duration / 60`` apart, each frame shifts them by the time that passed (a frame that took longer fills
+    the skipped ones by blending the destination into the old value) and sums the step responses (half a cosine).
+    Written so that a slow frame gives what X_ITE gives, not what a clean ramp would."""
+    ticks = True
+    NUM = 60
+
+    def setup(self):
+        destination, value = tuple(self.f["initialDestination"]), tuple(self.f["initialValue"])
+        self.destination, self.previous, self.value = destination, value, value
+        self.buffer = [destination] + [value] * (self.NUM - 1)
+        self.end, self.active = None, False
+
+    def start(self, now):
+        self.end = now
+        if _distance(self.destination, self.value) >= 1e-8:
+            self.active = True
+            self.emit("isActive", True)
+
+    def _activate(self, now):
+        if not self.active:
+            self.end = now
+            self.active = True
+            self.emit("isActive", True)
+
+    def receive(self, name, value, now):
+        if name == "set_destination":
+            self.destination = tuple(value)
+            self._activate(now)
+        elif name == "set_value":
+            value = tuple(value)
+            self.buffer = [value] * self.NUM
+            if not self.active:
+                self.end = now
+            self.previous, self.value = value, value
+            self.emit("value_changed", value)
+            self.active = False
+            self._activate(now)
+        else:
+            super().receive(name, value, now)
+
+    def _response(self, t):
+        duration = self.f["duration"]
+        if t <= 0:
+            return 0.0
+        if t >= duration:
+            return 1.0
+        return 0.5 - 0.5 * math.cos(t / duration * math.pi)
+
+    def tick(self, now, dt):
+        if not self.active:
+            return
+        n, step_time = self.NUM, self.f["duration"] / self.NUM
+        lerp = lambda a, b, w: tuple(x + (y - x) * w for x, y in zip(a, b))          # noqa: E731
+        fraction = (now - self.end) / step_time
+        if fraction >= 1:
+            seconds = math.floor(fraction)
+            fraction -= seconds
+            if seconds < n:
+                self.previous = self.buffer[n - seconds]
+                old = self.buffer
+                self.buffer = [lerp(self.destination, old[0], i / seconds) for i in range(seconds)] + old[:n - seconds]   # old[0] has moved to buffer[seconds]
+            else:
+                self.previous = self.buffer[0] if seconds == n else self.destination
+                self.buffer = [self.destination] * n
+            self.end += seconds * step_time
+        output = lerp(self.previous, self.buffer[n - 1], self._response((n - 1 + fraction) * step_time))
+        for i in range(n - 2, -1, -1):
+            weight = self._response((i + fraction) * step_time)
+            output = tuple(o + (a - b) * weight for o, a, b in zip(output, self.buffer[i], self.buffer[i + 1]))
+        self.value = output
+        self.emit("value_changed", output)
+        if _distance(output, self.destination) < 1e-8:
+            self.active = False
+            self.emit("isActive", False)
+
+
 # -- drag sensors: X_ITE's CylinderSensor and SphereSensor --------------------------------------------------------
 # Vectors are 3-tuples in the sensor's own coordinates. A rotation is kept as X_ITE keeps it (Rotation4): a quaternion
 # built from axis and angle with the half angle wrapped into [0, pi), compared exactly, read back by acos.
@@ -1177,6 +1256,145 @@ class _ProximitySensor(_Machine):
             return [("isActive", False), ("exitTime", now)]
         return []
 
+# KeySensor and StringSensor, from raw keys. X_ITE (Components/KeyDeviceSensor/KeySensor.js, StringSensor.js) reads a
+# browser key event's ``which`` (the key code), ``key`` (the character or name), ``charCode`` and ``keyCode``.
+_ACTION_KEYS = {**{112 + i: 1 + i for i in range(12)},                  # F1 .. F12 -> 1 .. 12
+                36: 13, 35: 14, 33: 15, 34: 16,                          # Home End PageUp PageDown
+                38: 17, 40: 18, 37: 19, 39: 20}                          # Up Down Left Right
+_MODIFIER_KEYS = {16: "shiftKey", 17: "controlKey", 18: "altKey"}
+_NAMED_KEYS = {"Backspace": chr(8), "Delete": chr(127), "Enter": "\n", "Escape": chr(27), "Tab": "\t"}
+_QUIET_KEYS = ("AltGraph", "CapsLock", "Insert")
+
+
+class _KeyDevice(_Machine):
+    """What KeySensor and StringSensor share. X_ITE lets one key device sensor be enabled at a time: enabling one
+    (at load, or by a ROUTE into ``enabled``) sets every other enabled one to ``enabled`` false, which releases it.
+    Fields are set, not sent: a field set twice by one key event sends its last value once."""
+
+    def setup(self):
+        self.pending = {}
+        self.state = {}
+        self.listening = False        # in the browser's set of key device sensors (enabled, and the world has loaded)
+
+    def start(self, now):
+        if self.f["enabled"]:
+            self._enable()
+
+    def changed(self, name, now):
+        if name == "enabled":
+            if self.f["enabled"]:
+                self._enable()
+            else:
+                self.listening = False
+                self.release()
+
+    def _enable(self):
+        self.listening = True
+        for other in self.sim.machines.values():
+            if other is not self and isinstance(other, _KeyDevice) and other.listening and other.f["enabled"]:
+                other.f["enabled"], other.listening = False, False
+                other.emit("enabled", False)
+                other.release()
+
+    def put(self, name, value):
+        """Set an output field (the last value set during one key event is the one sent)."""
+        self.state[name] = value
+        self.pending.pop(name, None)
+        self.pending[name] = value
+
+    def flush(self):
+        pending, self.pending = self.pending, {}
+        for name, value in pending.items():
+            self.emit(name, value)
+
+    def release(self):
+        pass
+
+    def key(self, kind, event):
+        pass
+
+
+class _KeySensor(_KeyDevice):
+    def setup(self):
+        super().setup()
+        self.state = {"isActive": False, "shiftKey": False, "controlKey": False, "altKey": False}
+
+    def release(self):
+        for name in ("shiftKey", "controlKey", "altKey", "isActive"):
+            if self.state[name]:
+                self.put(name, False)
+        self.flush()
+
+    @staticmethod
+    def _named(event):
+        """The string X_ITE gives keyPress / keyRelease for a key that is not a modifier or an action key."""
+        if not (event.get("charCode") or event.get("keyCode")):
+            return None
+        key = event.get("key", "")
+        if key in _QUIET_KEYS:
+            return None
+        if key in _NAMED_KEYS:
+            return _NAMED_KEYS[key]
+        return key if len(key) == 1 else None
+
+    def key(self, kind, event):
+        which = event.get("which", 0)
+        if kind == "keydown":
+            if not self.state["isActive"]:
+                self.put("isActive", True)
+            if which in _MODIFIER_KEYS:
+                self.put(_MODIFIER_KEYS[which], True)
+            elif which in _ACTION_KEYS:
+                self.put("actionKeyPress", _ACTION_KEYS[which])
+            else:
+                named = self._named(event)
+                if named is not None:
+                    self.put("keyPress", named)
+        else:
+            if which in _MODIFIER_KEYS:
+                self.put(_MODIFIER_KEYS[which], False)
+            elif which in _ACTION_KEYS:
+                self.put("actionKeyRelease", _ACTION_KEYS[which])
+            else:
+                named = self._named(event)
+                if named is not None:
+                    self.put("keyRelease", named)
+            if self.state["isActive"]:
+                self.put("isActive", False)
+        self.flush()
+
+
+class _StringSensor(_KeyDevice):
+    def setup(self):
+        super().setup()
+        self.state = {"isActive": False, "enteredText": ""}
+
+    def key(self, kind, event):
+        if kind != "keydown":
+            return
+        key = event.get("key", "")
+        text = self.state["enteredText"]
+        if key == "Backspace":
+            if self.state["isActive"] and self.f["deletionAllowed"] and text:
+                self.put("enteredText", text[:-1])
+        elif key == "Enter":
+            self.put("finalText", text)
+            self.state["enteredText"] = ""            # X_ITE clears the field without sending it
+            if self.state["isActive"]:
+                self.put("isActive", False)
+        elif key == "Escape":
+            self.state["enteredText"] = ""
+            if self.state["isActive"]:
+                self.put("isActive", False)
+        elif key == "Tab":
+            pass
+        elif (event.get("charCode") or event.get("keyCode")) and len(key) == 1:
+            if not self.state["isActive"]:
+                self.put("isActive", True)
+                self.put("enteredText", "")
+            self.put("enteredText", self.state["enteredText"] + key)
+        self.flush()
+
 
 class _Sensor(_Machine):
     """A sensor the caller drives: its outputs are posted from outside (``Simulation.post``, ``press``, ``drag``)."""
@@ -1304,10 +1522,10 @@ _MACHINES = {
     "IntegerTrigger": _IntegerTrigger, "TimeTrigger": _TimeTrigger,
     "ScalarDamper": _Damper, "PositionDamper": _Damper, "PositionDamper2D": _Damper, "ColorDamper": _ColorDamper,
     "OrientationDamper": _OrientationDamper,
-    "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _Chaser, "ColorChaser": _ColorChaser,
+    "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _PositionChaser2D, "ColorChaser": _ColorChaser,
     "OrientationChaser": _OrientationChaser,
     "TouchSensor": _Sensor, "PlaneSensor": _PlaneSensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
-    "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _Sensor, "StringSensor": _Sensor,
+    "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _KeySensor, "StringSensor": _StringSensor,
 }
 
 # sensors the caller can drive with press / release / drag; the others only through post()
@@ -1437,6 +1655,17 @@ class Simulation:
         for field_name, value in machine.sense(position, orientation, center_of_rotation, now, test_position):
             changes += self.post(node_id, field_name, value, now)
         return changes
+
+    def key(self, kind, event, now):
+        """A key goes down (``kind`` "keydown") or up ("keyup"): ``event`` holds what a browser's key event does,
+        ``key``, ``which``, ``charCode`` and ``keyCode``. The one enabled KeySensor or StringSensor takes it (X_ITE: only
+        one key device sensor is enabled at a time)."""
+        self.now, self._fired = now, set()
+        for machine in list(self.machines.values()):
+            if isinstance(machine, _KeyDevice) and machine.listening:
+                machine.key(kind, event)
+        self._drain()
+        return self._collect()
 
     def _sensor(self, node_id):
         machine = self.machines.get(node_id)

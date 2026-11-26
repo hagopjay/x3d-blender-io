@@ -43,7 +43,10 @@ VIEWPOINT_TYPES = {"Viewpoint", "OrthoViewpoint"}
 LIGHT_TYPES = {"PointLight", "DirectionalLight", "SpotLight"}
 MATERIAL_TYPES = {"PhysicalMaterial", "Material", "UnlitMaterial"}
 BINDING_OF = {**{t: "transform" for t in TRANSFORM_TYPES}, **{t: "viewpoint" for t in VIEWPOINT_TYPES},
-              **{t: "light" for t in LIGHT_TYPES}, **{t: "material" for t in MATERIAL_TYPES}}
+              **{t: "light" for t in LIGHT_TYPES}, **{t: "material" for t in MATERIAL_TYPES},
+              **{"Text": "text"},
+              }
+BINDING_OF["TextureTransform"] = "texture"      # bound to the material of the Appearance it sits in
 # Sensors that act on their siblings: where they sit in the scene graph is part of their meaning.
 PLACED_TYPES = {"TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "VisibilitySensor",
                 "TransformSensor"}
@@ -328,6 +331,9 @@ def parse_x3d(source) -> Graph:
                 "top_xml": _element_text(top) if top is not None else None,
                 "top_inner": tuple(sorted(e.get("DEF") for e in top.iter() if e.get("DEF"))) if top is not None else (),
                 "top_type": _local(top.tag) if top is not None else None,
+                "appearance_material": _appearance_material_def(target, parent_of),
+                "texture_transform": {k: v for k, v in target.attrib.items() if k in ("center", "rotation", "scale", "translation")}
+                if _local(target.tag) == "TextureTransform" else None,
             }
         graph.routes.append(Route(*ends))
     # routes are a set in X3D; keep first occurrences in file order
@@ -338,6 +344,15 @@ def parse_x3d(source) -> Graph:
             unique.append(route)
     graph.routes = unique
     return graph
+
+
+def _appearance_material_def(element, parent_of):
+    """The DEF of the material in the Appearance an element sits in (a TextureTransform's), or None."""
+    appearance = parent_of.get(element)
+    for sibling in appearance if appearance is not None else ():
+        if _local(sibling.tag) in MATERIAL_TYPES and sibling.get("DEF"):
+            return sibling.get("DEF")
+    return None
 
 
 def _element_text(element: ET.Element) -> str:
@@ -357,7 +372,12 @@ def bind(graph: Graph, resolver) -> Graph:
         node = graph.nodes[name]
         if node.role != TARGET or node.binding is not None:
             continue
-        binding = resolver(name, node.node_type)
+        # a TextureTransform is not a DEF the importer keeps: it is found through the material of its Appearance
+        lookup = (graph._candidates.get(name) or {}).get("appearance_material") if node.node_type == "TextureTransform" else name
+        binding = resolver(lookup, node.node_type) if lookup else None
+        if node.node_type == "TextureTransform" and not lookup:
+            graph.diagnostics.append(f"TextureTransform {name!r} sits in an Appearance whose material has no DEF, so it cannot "
+                                     "be tied to a Blender material (not guessed); its ROUTEs were left out.")
         if binding is not None:
             node.binding = tuple(binding)
             continue

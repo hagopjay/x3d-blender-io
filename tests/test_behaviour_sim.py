@@ -352,8 +352,7 @@ class XiteAgreementTests(unittest.TestCase):
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one
-        self.assertEqual(unjudged, ["KeySensor", "PositionChaser2D",
-                                    "PositionInterpolator2D", "StringSensor", "VisibilitySensor"])
+        self.assertEqual(unjudged, ["VisibilitySensor"])
 
 
 DEMOS = WORLDS / "demos"
@@ -381,8 +380,13 @@ class DemoJudgeTests(unittest.TestCase):
                 result = judge.judge(folder / f"{folder.name}.x3d", trace)
                 self.assertEqual([s["source"] for s in result["streams"] if not s["agree"]], [])
                 self.assertEqual(len(result["streams"]), contract["streams"])
-                self.assertTrue(all(s["x_ite_events"] > 0 for s in result["streams"]),
+                idle = set(contract.get("idle", []))        # sources the recorded click cannot fire: silent in both
+                self.assertEqual(sorted(idle - {s["source"] for s in result["streams"]}), [])
+                self.assertTrue(all(s["x_ite_events"] > 0 for s in result["streams"] if s["source"] not in idle),
                                 "a stream X_ITE never sent proves nothing")
+                self.assertTrue(all(s["x_ite_events"] == 0 and s["simulator_events"] == 0
+                                    for s in result["streams"] if s["source"] in idle),
+                                "an idle stream must be silent in X_ITE and in the simulator")
                 graph = bg.Behaviour.from_x3d((folder / f"{folder.name}.x3d").read_text(encoding="utf-8"))
                 senders = {graph.nodes[r.from_id].node_type for r in graph.routes}
                 self.assertEqual(sorted(set(contract.get("judges", [])) - senders), [])
