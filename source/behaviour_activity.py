@@ -589,11 +589,12 @@ def visible_rect(region_width, region_height, left=0.0, right=0.0, top=0.0, bott
     return (left, bottom, max(0.0, region_width - left - right), max(0.0, region_height - top - bottom))
 
 
-def hud_rect(visible, width, height, margin=12.0, max_fraction=0.6):
+def hud_rect(visible, width, height, margin=12.0, max_fraction=0.6, basis=None):
     """(x, y, w, h) of the activity block in the bottom-left of ``visible`` (see ``visible_rect``), inset by ``margin``,
-    at most ``max_fraction`` of its width and kept inside it."""
+    at most ``max_fraction`` of ``basis`` (default: the visible width; the whole region's width lets the block use
+    the room under the sidebar's transparent lower part) and kept inside ``visible``."""
     x, y, vw, vh = visible
-    w = min(width, vw * max_fraction, max(0.0, vw - 2 * margin))
+    w = min(width, (basis if basis is not None else vw) * max_fraction, max(0.0, vw - 2 * margin))
     h = min(height, max(0.0, vh - 2 * margin))
     return (x + margin, y + margin, w, h)
 
@@ -642,6 +643,33 @@ def trim_text(measure, text, limit):
     while text and measure(text + "…") > limit:
         text = text[:-1]
     return text + "…" if text else ""
+
+
+def middle_ellipsis(text, length):
+    """``text`` cut in the middle to ``length`` characters with an ellipsis ("Sli…der"), whole when it already fits."""
+    if len(text) <= length:
+        return text
+    keep = max(1, length - 1)
+    head = (keep + 1) // 2
+    tail = keep - head
+    return text[:head] + "\u2026" + (text[-tail:] if tail else "")
+
+
+def fit_route(measure, key, limit, arrow=">"):
+    """``from.field > to.field`` for a ROUTE key (from, field, to, field) within ``limit``: field names are kept whole,
+    the node names lose characters from their middles (the longer one first) down to 3; only then is the tail cut."""
+    source, source_field, target, target_field = key
+    lengths = [len(source), len(target)]
+
+    def build():
+        return (f"{middle_ellipsis(source, lengths[0])}.{source_field} {arrow} "
+                f"{middle_ellipsis(target, lengths[1])}.{target_field}")
+
+    text = build()
+    while measure(text) > limit and max(lengths) > 3:
+        lengths[0 if lengths[0] >= lengths[1] else 1] -= 1
+        text = build()
+    return trim_text(measure, text, limit)
 
 
 def rounded_rect(x, y, w, h, radius, segments=6):
@@ -809,6 +837,11 @@ def _bright(colour, amount=0.4):
     return tuple(c + (1.0 - c) * amount for c in colour)
 
 
+def _tint(colour, share=0.6):
+    """``share`` of the field type's colour and the rest white: a link that reads as its type, hot."""
+    return tuple(c * share + (1.0 - share) for c in colour)
+
+
 def _font():
     """A monospaced font id (digits that line up), else the default."""
     if _state["font"] is None:
@@ -954,7 +987,7 @@ def _draw_in_view():
             halo_pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
             halo_col += [(*colour, 0.20 * strength)] * 2
             core_pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
-            core_col += [(*_bright(colour, 0.5), 0.95 * strength)] * 2
+            core_col += [(*_tint(colour, 0.6), 0.95 * strength)] * 2
     line = shaders["line"]
     line.uniform_float("viewportSize", size)
     for pos, col, width in ((halo_pos, halo_col, 9.0 * unit), (core_pos, core_col, 2.0 * unit)):
@@ -978,12 +1011,13 @@ def _draw_in_view():
                 layers["halo"][0].append(spot)
                 layers["halo"][1].append((*colour, 0.35))
                 layers["head"][0].append(spot)
-                layers["head"][1].append((*_bright(colour, 0.55), 1.0))
+                layers["head"][1].append((*_bright(colour, 0.9), 1.0))
                 layers["core"][0].append(spot)
                 layers["core"][1].append((1.0, 1.0, 1.0, 1.0))
             else:
                 layers["tail"][0].append(spot)
                 layers["tail"][1].append((*_bright(colour, 0.3), 0.8 * strength))
+    _state["diag"]["packets_drawn"] = len(layers["head"][0])
     point = shaders["point"]
     for name, px in (("halo", 20.0), ("tail", 4.0), ("head", 8.0), ("core", 4.0)):
         pos, col = layers[name]
@@ -1142,11 +1176,22 @@ def _draw_in_pixels():
     room = int((visible[3] - 24.0 * unit - 2 * pad) / line_h) - len(stats) - 1
     lines = lines[-max(0, min(len(lines), room)):] if lines and room > 0 else []
     height = 2 * pad + line_h * (len(stats) + (len(lines) + 0.5 if lines else 0))
-    rect = hud_rect(visible, 400.0 * unit, height, 12.0 * unit, 0.6)
+    measure = lambda t: blf.dimensions(fid, t)[0]                   # noqa: E731
+    arrow = "\u2192" if fid else ">"
+    gap, chip = 10.0 * unit, 12.0 * unit
+    _text_size(fid, line_px)
+    time_w = measure("000.00")
+    parts = []
+    for entry in lines:
+        value = value_text(entry.value, 18) + (f"  \u00d7{entry.rate:.0f}/s" if entry.count > 1 and entry.rate else "")
+        full = f"{entry.key[0]}.{entry.key[1]} {arrow} {entry.key[2]}.{entry.key[3]}"
+        parts.append((entry, value, full))
+    wanted = max([measure(t) for t in stats] +
+                 [chip + time_w + gap + measure(full) + gap + measure(value) for _e, value, full in parts] + [0.0])
+    rect = hud_rect(visible, wanted + 2 * pad, height, 12.0 * unit, 0.6, basis=region.width)
     _panel(shaders, batch_for_shader, rect, 8.0 * unit, (0.04, 0.05, 0.07, 0.8), (0.35, 0.8, 1.0, 0.9), size)
     x, ytop = rect[0] + pad, rect[1] + rect[3] - pad
     inner = rect[2] - 2 * pad
-    measure = lambda t: blf.dimensions(fid, t)[0]                   # noqa: E731
     for row, text in enumerate(stats):
         _text_size(fid, head_px if row == 0 else line_px)
         blf.color(fid, 0.55, 0.9, 1.0, 1.0) if row == 0 else blf.color(fid, 0.95, 0.97, 1.0, 1.0)
@@ -1155,19 +1200,30 @@ def _draw_in_pixels():
     _text_size(fid, line_px)
     chips_pos, chips_col = [], []
     base = ytop - line_h * (len(stats) + 0.5)
-    for row, entry in enumerate(reversed(lines)):
+    for row, (entry, value, full) in enumerate(reversed(parts)):
         yy = base - line_h * (row + 0.8)
         colour = _colour(entry.type)
         s = 7.0 * unit
         chips_pos += [(x, yy, 0), (x + s, yy, 0), (x + s, yy + s, 0), (x, yy, 0), (x + s, yy + s, 0), (x, yy + s, 0)]
         chips_col += [(*colour, 1.0)] * 6
-        key = entry.key
-        text = f"{entry.time:7.2f} {key[0]}.{key[1]} > {key[2]}.{key[3]}  {value_text(entry.value, 18)}"
-        if entry.count > 1:
-            text += f"  x{entry.count} {entry.rate:.0f}/s"
-        blf.color(fid, 0.82, 0.88, 0.95, 0.95 - 0.05 * row)
-        blf.position(fid, x + 12.0 * unit, yy, 0)
-        blf.draw(fid, trim_text(measure, text, inner - 12.0 * unit))
+        shade = 0.95 - 0.05 * row
+        blf.color(fid, 0.62, 0.7, 0.8, shade)
+        blf.position(fid, x + chip, yy, 0)
+        blf.draw(fid, f"{entry.time:.2f}")
+        route_x = x + chip + time_w + gap
+        room_for_value = inner - (route_x - x) - measure(value) - gap
+        if room_for_value >= measure(entry.key[1]) + measure(entry.key[3]) + 6 * measure("0"):      # keep the value when the route can be shortened to fit
+            route = fit_route(measure, entry.key, room_for_value, arrow)
+            show_value = True
+        else:
+            route, show_value = fit_route(measure, entry.key, inner - (route_x - x), arrow), False
+        blf.color(fid, 0.88, 0.93, 1.0, shade)
+        blf.position(fid, route_x, yy, 0)
+        blf.draw(fid, route)
+        if show_value:
+            blf.color(fid, 1.0, 0.86, 0.55, shade)
+            blf.position(fid, x + inner - measure(value), yy, 0)
+            blf.draw(fid, value)
     if chips_pos:
         flat = shaders["flat"]
         batch_for_shader(flat, "TRIS", {"pos": chips_pos, "color": chips_col}).draw(flat)

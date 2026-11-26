@@ -358,6 +358,41 @@ def check(name, key, ok, detail=None):
     print(f"[eyetest] {name}: check {key} = {'ok' if ok else 'FAILED'} {detail if detail is not None else ''}")
 
 
+def zoom_to_link(name, editor, win, region, player):
+    """Zoom so the busiest link spans about a third of the editor's width, centred on it: select its two nodes, frame
+    them, then zoom in a step at a time while the overlay reports the scale (``px_per_unit`` in its diagnostics)."""
+    mod = act_module()
+    tree = bpy.context.scene.x3d_behaviour_tree
+    busiest = player.activity.busiest(1)
+    if not busiest:
+        note(name, "zoom_to_link", "no ROUTE has carried an event")
+        return
+    source, _field, target, _to = busiest[0][0]
+    ends = [n for n in tree.nodes if (n.x3d_def or n.name) in (source, target)]
+    for n in tree.nodes:
+        n.select = n in ends
+    with bpy.context.temp_override(window=win, area=editor, region=region):
+        bpy.ops.node.view_selected()
+    yield 0.4
+    ui = bpy.context.preferences.system.ui_scale or 1.0
+    a = next((n for n in ends if (n.x3d_def or n.name) == source), None)
+    b = next((n for n in ends if (n.x3d_def or n.name) == target), None)
+    steps = []
+    for _ in range(12):
+        per_unit = mod.diagnostics().get("px_per_unit") or 0.0
+        gap = abs((b.location.x * ui) - (a.location.x * ui + a.dimensions.x)) if a and b else 0.0
+        length_px = max(gap, 60.0) * per_unit
+        steps.append(round(length_px))
+        if length_px >= region.width / 3.0:
+            break
+        with bpy.context.temp_override(window=win, area=editor, region=region):
+            bpy.ops.view2d.zoom_in()
+        yield 0.4
+    note(name, "zoom_to_link", {"link": [source, target], "link_px_per_step": steps, "region_width": region.width})
+    for n in tree.nodes:
+        n.select = False
+
+
 def activity_shots(name, editor, win, player, targets):
     """Mid-play screenshots of the node editor with the Activity overlay, at two zoom levels (``--activity``). The
     pointer clicks what a sensor senses again so events are in flight when the shot is taken; the counts the overlay
@@ -368,13 +403,13 @@ def activity_shots(name, editor, win, player, targets):
         return
     region = region_of(editor)
     point = next((p for p in (screen_point(o) for o in targets) if p), None)
+    seen = []                                         # packets on screen at each shot (the overlay's own count)
     for zoom in ("fit", "close"):
         with bpy.context.temp_override(window=win, area=editor, region=region):
             bpy.ops.node.view_all()
-            if zoom == "close":
-                for _ in range(3):
-                    bpy.ops.view2d.zoom_in()
         yield 0.3
+        if zoom == "close":
+            yield from zoom_to_link(name, editor, win, region, player)
         if point is not None:                         # an event stream: the shot is taken within a packet's travel time
             mouse(*point)
             yield 0.05
@@ -386,9 +421,12 @@ def activity_shots(name, editor, win, player, targets):
                 type_key(key)
         yield 0.05
         mod = act_module()
-        note(name, f"activity_{zoom}", {"shot": shot(f"{name}-activity-{zoom}", editor), "events": act.events,
-                                        "deliveries": act.deliveries, "packets": len(act.packets(player.sim.now)),
-                                        "overlay": mod.handler_active(), "diagnostics": mod.diagnostics()})
+        taken = shot(f"{name}-activity-{zoom}", editor)
+        diagnostics = mod.diagnostics()
+        seen.append(diagnostics.get("packets_drawn"))
+        note(name, f"activity_{zoom}", {"shot": taken, "events": act.events, "deliveries": act.deliveries,
+                                        "packets_drawn": diagnostics.get("packets_drawn"),
+                                        "overlay": mod.handler_active(), "diagnostics": diagnostics})
         yield 0.1
     if ACTIVITY_DEBUG:
         mod = act_module()
@@ -396,9 +434,13 @@ def activity_shots(name, editor, win, player, targets):
             bpy.ops.node.view_all()
         mod.set_debug(True)
         yield 0.4
-        note(name, "activity_debug", {"shot": shot(f"{name}-activity-debug", editor), "diagnostics": mod.diagnostics()})
+        taken = shot(f"{name}-activity-debug", editor)
+        seen.append(mod.diagnostics().get("packets_drawn"))
+        note(name, "activity_debug", {"shot": taken, "diagnostics": mod.diagnostics()})
         mod.set_debug(False)
         yield 0.2
+    note(name, "packets_drawn_per_shot", seen)
+    check(name, "packets_seen", any((n or 0) >= 1 for n in seen), seen)
     mod = act_module()
     check(name, "overlay_drew", mod.draw_count() > 0, {"draws": mod.draw_count()})
     check(name, "overlay_did_not_fail", mod.failure() is None, mod.failure())

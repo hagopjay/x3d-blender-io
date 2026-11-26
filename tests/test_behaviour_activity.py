@@ -338,6 +338,30 @@ class Geometry(unittest.TestCase):
         points = ba.rounded_rect(0, 0, 100, 40, 8)
         self.assertTrue(all(-1e-9 <= px <= 100 + 1e-9 and -1e-9 <= py <= 40 + 1e-9 for px, py in points))
 
+    def test_a_route_line_keeps_field_names_and_cuts_node_names_in_the_middle(self):
+        measure = lambda s: 7.0 * len(s)                                     # noqa: E731
+        key = ("PositionInterpolator", "value_changed", "TransformHead", "translation")
+        full = ba.fit_route(measure, key, 10_000, ">")
+        self.assertEqual(full, "PositionInterpolator.value_changed > TransformHead.translation")
+        fitted = ba.fit_route(measure, key, 7 * 50, ">")
+        self.assertLessEqual(measure(fitted), 7 * 50)
+        self.assertIn(".value_changed", fitted)
+        self.assertIn(".translation", fitted)
+        self.assertIn("\u2026", fitted.split(".value_changed")[0])               # the node name lost its middle
+        tiny = ba.fit_route(measure, key, 7 * 20, ">")
+        self.assertLessEqual(measure(tiny), 7 * 20)
+        self.assertEqual(ba.middle_ellipsis("Slide", 5), "Slide")
+        self.assertEqual(ba.middle_ellipsis("Interpolator", 7), "Int\u2026tor")
+        self.assertEqual(len(ba.middle_ellipsis("Interpolator", 7)), 7)
+
+    def test_the_hud_may_use_sixty_percent_of_the_whole_region(self):
+        visible = ba.visible_rect(653, 878, left=0, right=250, top=40)
+        narrow = ba.hud_rect(visible, 600, 200, 12, 0.6)
+        wide = ba.hud_rect(visible, 600, 200, 12, 0.6, basis=653)
+        self.assertLess(narrow[2], wide[2])
+        self.assertAlmostEqual(wide[2], min(0.6 * 653, 403 - 24))
+        self.assertLessEqual(wide[0] + wide[2], visible[0] + visible[2])
+
     def test_trim_text(self):
         measure = lambda s: 7 * len(s)                                    # noqa: E731
         self.assertEqual(ba.trim_text(measure, "abc", 100), "abc")
