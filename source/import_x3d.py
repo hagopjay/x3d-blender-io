@@ -372,6 +372,11 @@ def vrmlFormat(data):
 NODE_NORMAL = 1  # {}
 NODE_ARRAY = 2  # []
 NODE_REFERENCE = 3  # USE foobar
+# Rigid-body physics nodes are placed once, where they are defined; a USE of one is a reference (a joint's body1 and body2,
+# a CollisionCollection's collidables, a RigidBodyCollection's bodies), so the importer does not walk into it again.
+PHYSICS_REFERENCE_SPECS = frozenset({'RigidBody', 'CollidableShape', 'CollidableOffset'})
+# Nodes that move what is under them like a Transform does, with the same fields, except RigidBody (position, orientation).
+PHYSICS_FRAME_SPECS = frozenset({'RigidBody', 'CollidableShape', 'CollidableOffset'})
 # NODE_PROTO = 4 #
 
 lines = []
@@ -674,6 +679,10 @@ class vrmlNode(object):
         results.append((self, tuple(ancestry)))
         ancestry.append(self)
         for child in self.getRealNode().children:
+            if child.node_type == NODE_REFERENCE and child.getSpec() in PHYSICS_REFERENCE_SPECS:
+                # A joint, a collision collection or a body list names a body or a collidable it already has: it is not
+                # a second copy of its geometry (a USE'd Transform is an instance; a USE'd RigidBody never is)
+                continue
             if child not in ancestry:
                 # We dont want to load proto's, they are only references
                 # We could enforce this elsewhere
@@ -1773,11 +1782,13 @@ def translateScale(sca):
 
 
 def translateTransform(node, ancestry):
+    # RigidBody places itself with position and orientation; CollidableShape and CollidableOffset use a Transform's names
+    is_body = node.getSpec() == 'RigidBody'
     cent = node.getFieldAsFloatTuple('center', None, ancestry, conversion_scale)  # (0.0, 0.0, 0.0)
-    rot = node.getFieldAsFloatTuple('rotation', None, ancestry)  # (0.0, 0.0, 1.0, 0.0)
+    rot = node.getFieldAsFloatTuple('orientation' if is_body else 'rotation', None, ancestry)  # (0.0, 0.0, 1.0, 0.0)
     sca = node.getFieldAsFloatTuple('scale', None, ancestry)  # (1.0, 1.0, 1.0)
     scaori = node.getFieldAsFloatTuple('scaleOrientation', None, ancestry)  # (0.0, 0.0, 1.0, 0.0)
-    tx = node.getFieldAsFloatTuple('translation', None, ancestry, conversion_scale)  # (0.0, 0.0, 0.0)
+    tx = node.getFieldAsFloatTuple('position' if is_body else 'translation', None, ancestry, conversion_scale)  # (0.0, 0.0, 0.0)
 
     if cent and len(cent) != 3:
         logger.warning("center %r has %d of 3 numbers; read as no center", cent, len(cent))
@@ -1887,7 +1898,7 @@ def _note_protos(has_protos):
 
 def getFinalMatrix(node, mtx, ancestry, global_matrix):
 
-    transform_nodes = [node_tx for node_tx in ancestry if node_tx.getSpec() == 'Transform']
+    transform_nodes = [node_tx for node_tx in ancestry if node_tx.getSpec() == 'Transform' or node_tx.getSpec() in PHYSICS_FRAME_SPECS]
     if node.getSpec() == 'Transform':
         transform_nodes.append(node)
     transform_nodes.reverse()
