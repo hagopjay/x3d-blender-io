@@ -446,6 +446,29 @@ class XiteAgreementTests(unittest.TestCase):
         # and judged with the MF-aware wrapper: the judge's own reader takes lists of numbers, not lists of vectors.
         self.agree("probe-coord", 6, judge_mf)
 
+    def test_a_turn_written_as_0_pi_2pi_rocks_in_x_ite_and_in_the_simulator(self):
+        # OrientationInterpolator, key 0 0.5 1, keyValue 0, pi, 2 pi about y (tests/behaviour/probe-turn.x3d, X_ITE 16.8.1):
+        # (a) pi and 2 pi as 3.14159265 and 6.28318531 (a hair under both) turns up to pi and back (shortest path both ways);
+        # (b) 3.141593 and 6.283185 (a hair over) turns the other way round, then on: one continuous turn; (c) five keys:
+        # a turn. The judge compares rotations (through quaternions, so q and -q and an axis flip are one rotation) and the
+        # simulator agrees at every sample, so what X_ITE does is what the simulator does.
+        self.agree("probe-turn", 5)       # the fifth stream: a PositionInterpolator written as "0 5e-01 1" and "1e-05 2.5E+0 -3.0e-1"
+        trace = json.loads((WORLDS / "x_ite_traces" / "probe-turn.json").read_text(encoding="utf-8"))
+
+        def angles(name):          # the turn about y, as a signed angle, from X_ITE's own events
+            out = []
+            for _when, node, field, value in trace["events"]:
+                if node == name and field == "value_changed":
+                    x, y, z, a = (float(v) for v in value.split())
+                    out.append(a if y >= 0 else -a)
+            return out
+        rocking, over, safe = angles("ExactPi"), angles("JustOver"), angles("Safe")
+        self.assertLess(max(rocking), math.pi + 0.01)           # never gets past pi
+        self.assertLess(rocking[-1], 0.1)                       # and is back where it started
+        self.assertLess(min(over), -2.9)                        # (b) goes round the other way to nearly -pi ...
+        self.assertGreater(max(over), 6.0)                      # ... and on, to a full turn by the end
+        self.assertGreater(max(safe), 6.1)
+
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
         judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord")))

@@ -194,14 +194,15 @@ synthetic series; three browser cases, skipped with a reason when Node, Playwrig
 against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
 from the last run are in the commit message of the change that added it.
 
-**A turn written as 0, pi, 2 pi (26 Nov 2026).** `probe-turn.x3d`, recorded on X_ITE 16.8.1 (load average 4.8 to 5.7): an
+**A turn written as 0, pi, 2 pi (26 Nov 2026).** `probe-turn.x3d`, recorded on X_ITE 16.8.1 (load average 5.4 to 6.2): an
 OrientationInterpolator with key `0 0.5 1` and keyValue about y of 0, 3.14159265, 6.28318531 (a hair under pi and 2 pi)
 rocks in X_ITE: it turns to pi and comes back to 0, because each half is a shortest-path slerp. The same with 3.141593 and
 6.283185 (a hair over) is one continuous full turn, going the other way round first (to about -pi), then on to 2 pi; four
-keys 0, 2.0944, 4.18879, 5.23599, 6.28318 turn normally. The simulator agrees at every one of the 59 samples of each
+keys 0, 2.0944, 4.18879, 5.23599, 6.28318 turn normally. The simulator agrees at every one of the 62 samples of each
 stream (distance 0 at the judge's 6-decimal rounding); no simulator change was needed. The judge already compares
 rotations as rotations (the angle between the two quaternions, `behaviour_sim._rotation_distance`, so q and -q and an axis
-flip with a negated angle are the same rotation). To turn a full circle, use more than three keys or write the middle key a
+flip with a negated angle are the same rotation). The same world has a PositionInterpolator with key `0 5e-01 1` and keyValue `0 0 0 1e-05 2.5E+0 -3.0e-1 0 0 0`: X_ITE
+parses the exponent forms (`1e-05`, `2.5E+0`, `5e-01`) and the simulator agrees on all 62 samples. To turn a full circle, use more than three keys or write the middle key a
 little over pi.
 
 ### Typed field editors
