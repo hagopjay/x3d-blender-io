@@ -167,6 +167,32 @@ class PlayTests(_Base):
         player.release(1.2)
         player.stop()
 
+    def test_a_sphere_sensor_drag_turns_the_ball_and_stop_puts_it_back(self):
+        # probe-drag.x3d: press on the Ball with a ray from the scene camera, drag sideways, stop
+        from mathutils import Vector
+        scene = self.load("probe-drag")
+        ball = scene.objects["Ball"]
+        camera = scene.camera or next(o for o in scene.objects if o.type == "CAMERA")
+        eye = camera.matrix_world.translation.copy()
+        back = (camera.matrix_world.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+        bpy.context.view_layer.update()
+        aim = (ball.matrix_world.translation + Vector((0.1, 0.0, 0.15)) - eye).normalized()
+        hit, location, _n, _i, obj, _m = scene.ray_cast(bpy.context.evaluated_depsgraph_get(), eye, aim)
+        self.assertTrue(hit)
+        before = ball.matrix_basis.copy()
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        self.assertTrue(player.press(obj.original, 0.5, location, ray=(eye, aim), eye=(eye, back)))
+        sideways = (aim + Vector((0.03, 0.0, 0.0))).normalized()
+        player.drag(eye, sideways, 0.6)
+        player.step(0.6)
+        turned = ball.matrix_basis.to_quaternion().rotation_difference(before.to_quaternion()).angle
+        self.assertGreater(turned, 0.05)
+        player.release(0.7)
+        player.stop()
+        gap = max(abs(a - b) for row_a, row_b in zip(ball.matrix_basis, before) for a, b in zip(row_a, row_b))
+        self.assertLess(gap, 1e-6)
+
     def test_the_nodes_that_sent_an_event_light_up_and_go_back(self):
         scene = self.load("door")
         tree = scene.x3d_behaviour_tree

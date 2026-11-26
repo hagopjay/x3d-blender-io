@@ -15,7 +15,8 @@ translation, a material's colour) is reported back.
         ...
 
 What it runs: TimeSensor, the linear interpolators (scalar, position, 2D position, colour in HSV, orientation by slerp),
-EaseInEaseOut, the Spline interpolators (scalar, position, 2D position), SquadOrientationInterpolator, the sequencers, the four event utilities and triggers, the dampers and the chasers. Pointing sensors do not sense by
+EaseInEaseOut, the Spline interpolators (scalar, position, 2D position), SquadOrientationInterpolator, CylinderSensor and
+SphereSensor drags (from the pointer's ray and the viewer, X_ITE's rules), the sequencers, the four event utilities and triggers, the dampers and the chasers. Pointing sensors do not sense by
 themselves here; the caller says what the pointer did (``hover``, ``press``, ``release``, ``drag``). Whatever is not run
 is named in ``Simulation.not_simulated``, never silently skipped.
 
@@ -747,6 +748,284 @@ class _OrientationChaser(_Machine):
             self.emit("isActive", False)
 
 
+# -- drag sensors: X_ITE's CylinderSensor and SphereSensor --------------------------------------------------------
+# Vectors are 3-tuples in the sensor's own coordinates. A rotation is kept as X_ITE keeps it (Rotation4): a quaternion
+# built from axis and angle with the half angle wrapped into [0, pi), compared exactly, read back by acos.
+
+def _v_add(a, b):
+    return (a[0] + b[0], a[1] + b[1], a[2] + b[2])
+
+
+def _v_sub(a, b):
+    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+
+def _v_scale(a, k):
+    return (a[0] * k, a[1] * k, a[2] * k)
+
+
+def _v_dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _v_cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+def _v_norm(a):
+    return math.sqrt(_v_dot(a, a))
+
+
+def _v_unit(a):
+    n = _v_norm(a)
+    return _v_scale(a, 1 / n) if n else a
+
+
+def _interval(value, low, high):
+    """X_ITE's Algorithm.interval: wrap ``value`` into [low, high) (JavaScript's %, which keeps the dividend's sign)."""
+    if value >= high:
+        return math.fmod(value - low, high - low) + low
+    if value < low:
+        return math.fmod(value - high, high - low) + high
+    return value
+
+
+class _Rot:
+    def __init__(self, q=(0.0, 0.0, 0.0, 1.0), raw=None):
+        self.q = tuple(q)
+        self.raw = raw          # the axis and angle it was made from; X_ITE reads those back until it is multiplied
+
+    @classmethod
+    def axis_angle(cls, x, y, z, angle):
+        raw = (x, y, z, angle)
+        scale = math.hypot(x, y, z)
+        if scale == 0:
+            return cls(raw=raw)
+        half = _interval(angle / 2, 0, math.pi)
+        k = math.sin(half) / scale
+        return cls((x * k, y * k, z * k, math.cos(half)), raw=raw)
+
+    @classmethod
+    def from_vectors(cls, a, b):
+        a, b = _v_unit(a), _v_unit(b)
+        cos_angle = max(-1.0, min(1.0, _v_dot(a, b)))
+        cross = _v_unit(_v_cross(a, b))
+        if _v_norm(cross) == 0:
+            if cos_angle > 0:
+                return cls()
+            t = _v_cross(a, (1.0, 0.0, 0.0))
+            if _v_dot(t, t) == 0:
+                t = _v_cross(a, (0.0, 1.0, 0.0))
+            t = _v_unit(t)
+            return cls((t[0], t[1], t[2], 0.0))
+        k = math.sqrt(abs(1 - cos_angle) / 2)
+        return cls((cross[0] * k, cross[1] * k, cross[2] * k, math.sqrt(abs(1 + cos_angle) / 2)))
+
+    def value(self):
+        """What X_ITE reads back: the axis and angle it was made from, or (after a product) Rotation4.get."""
+        if self.raw is not None:
+            return self.raw
+        x, y, z, w = self.q
+        if abs(w) >= 1:
+            return (0.0, 0.0, 1.0, 0.0)
+        angle = math.acos(w) * 2
+        scale = math.sin(angle / 2)
+        if scale == 0:
+            return (0.0, 0.0, 1.0, 0.0)
+        return (x / scale, y / scale, z / scale, angle)
+
+    def then(self, other):                      # X_ITE multRight: this, then other (other * this), normalised
+        return _Rot(_q_normalize(_q_mul(other.q, self.q)))
+
+    def after(self, other):                     # X_ITE multLeft: other, then this (this * other), normalised
+        return _Rot(_q_normalize(_q_mul(self.q, other.q)))
+
+    def inverse(self):
+        x, y, z, w = self.q
+        return _Rot((-x, -y, -z, w))
+
+    def rotate(self, v):
+        qx, qy, qz, qw = self.q
+        t = _v_scale(_v_cross((qx, qy, qz), v), 2)
+        return _v_add(_v_add(v, _v_scale(t, qw)), _v_cross((qx, qy, qz), t))
+
+
+def _perpendicular(line_point, line_direction, point):
+    """X_ITE's Line3.getPerpendicularVectorToPoint: from ``point`` to the line, square to it."""
+    r = _v_sub(line_point, point)
+    return _v_sub(r, _v_scale(line_direction, _v_dot(r, line_direction)))
+
+
+class _Plane:
+    def __init__(self, point, normal):
+        self.normal, self.d = tuple(normal), _v_dot(normal, point)
+
+    def distance(self, point):
+        return _v_dot(point, self.normal) - self.d
+
+    def meet(self, origin, direction):
+        theta = _v_dot(direction, self.normal)
+        if theta == 0:
+            return None
+        return _v_add(_v_scale(direction, (self.d - _v_dot(self.normal, origin)) / theta), origin)
+
+
+def _ray(ray):
+    origin, direction = ray
+    return tuple(origin), _v_unit(tuple(direction))
+
+
+class _DragSensor(_Machine):
+    """A CylinderSensor or SphereSensor. ``press`` and ``drag`` take the pointer's ray and, on press, the hit point
+    and the viewer (where it is and which way is back), all in the sensor's own coordinates."""
+
+    def setup(self):
+        self.over = self.pressed = False
+        self.origin = None
+
+    # CylinderSensor ------------------------------------------------------------------------------------------------
+
+    def _cylinder_behind(self, origin, direction, hit):
+        """Inventor's SbCylinder: which crossing is 'enter' depends on the sign of b, not on the order along the ray."""
+        p, d = origin, direction
+        y = self.y_axis
+        p_perp, d_perp = _v_sub(p, _v_scale(y, _v_dot(p, y))), _v_sub(d, _v_scale(y, _v_dot(d, y)))
+        a, b, c = _v_dot(d_perp, d_perp), 2 * _v_dot(p_perp, d_perp), _v_dot(p_perp, p_perp) - self.radius ** 2
+        disc = b * b - 4 * a * c
+        if disc < 0 or a == 0:
+            enter = exit_ = (0.0, 0.0, 0.0)            # X_ITE leaves both at zero: never behind
+        else:
+            plus, minus = (-b + math.sqrt(disc)) / (2 * a), (-b - math.sqrt(disc)) / (2 * a)
+            t_enter, t_exit = (plus, minus) if b > 0 else (minus, plus)
+            enter, exit_ = _v_add(p, _v_scale(d, t_enter)), _v_add(p, _v_scale(d, t_exit))
+        return _v_norm(_v_sub(hit, enter)) > _v_norm(_v_sub(hit, exit_))
+
+    def _cylinder_track(self, origin, direction):
+        z_point = self.z_plane.meet(origin, direction) or (0.0, 0.0, 0.0)
+        axis_point = _v_add(z_point, _perpendicular((0.0, 0.0, 0.0), self.y_axis, z_point))
+        distance = self.sx_plane.distance(z_point) / self.radius
+        section = math.floor((distance + 1) / 2)
+        sinp = _interval(distance, -1, 1)
+        phi = math.asin(sinp) if section == 0 else sinp * math.pi / 2
+        turn = _Rot.axis_angle(*self.y_axis, phi + section * math.pi)
+        return _v_add(turn.rotate(_v_scale(self.sz_normal, self.radius)), axis_point)
+
+    def _cylinder_point(self, origin, direction):
+        if self.disk:
+            return self.y_plane.meet(origin, direction) or (0.0, 0.0, 0.0)
+        return self._cylinder_track(origin, direction)
+
+    def cylinder_press(self, ray, hit, eye):
+        origin, direction = ray
+        eye_origin, eye_back = eye
+        axis_rotation = _Rot.axis_angle(*self.f["axisRotation"])
+        self.axis_rotation = axis_rotation
+        self.y_axis = axis_rotation.rotate((0.0, 1.0, 0.0))
+        back = _v_unit(eye_back)
+        self.eye_origin, self.eye_back = tuple(eye_origin), back
+        self.radius = _v_norm(_perpendicular((0.0, 0.0, 0.0), self.y_axis, hit))
+        self.disk = abs(_v_dot(back, self.y_axis)) > math.cos(self.f["diskAngle"])
+        self.behind = self._cylinder_behind(origin, direction, hit)
+        self.y_plane, self.z_plane = _Plane(hit, self.y_axis), _Plane(hit, back)
+        sx_normal = _v_unit(_v_cross(self.y_axis, self.eye_origin))
+        self.sx_plane = _Plane((0.0, 0.0, 0.0), sx_normal)
+        self.sz_normal = _v_unit(_v_cross(sx_normal, self.y_axis))
+        track = self._cylinder_point(origin, direction)
+        self.from_vector = _v_scale(_perpendicular((0.0, 0.0, 0.0), self.y_axis, track), -1)
+        self.start_offset = _Rot.axis_angle(*self.y_axis, self.f["offset"])
+        self.rotation = self.start_offset
+        self.angle = self.f["offset"]
+        self.start_vector = self.rotation.rotate(axis_rotation.rotate((0.0, 0.0, 1.0)))
+        return [("trackPoint_changed", track), ("rotation_changed", self.rotation.value())]
+
+    def cylinder_drag(self, ray):
+        origin, direction = ray
+        track = self._cylinder_point(origin, direction)
+        sent = [("trackPoint_changed", track)]
+        to_vector = _v_scale(_perpendicular((0.0, 0.0, 0.0), self.y_axis, track), -1)
+        rotation = _Rot.from_vectors(self.from_vector, to_vector)
+        if self.disk:
+            if _v_dot(_v_sub(track, self.eye_origin), self.eye_back) > 0:   # behind the viewer
+                rotation = rotation.then(_Rot.axis_angle(*self.y_plane.normal, math.pi))
+        elif self.behind:
+            rotation = rotation.inverse()
+        rotation = rotation.after(self.start_offset)
+        low, high = self.f["minAngle"], self.f["maxAngle"]
+        if low > high:
+            self.rotation = rotation
+            return sent + [("rotation_changed", rotation.value())]
+        end_vector = rotation.rotate(self.axis_rotation.rotate((0.0, 0.0, 1.0)))
+        delta = _Rot.from_vectors(self.start_vector, end_vector)
+        axis = self.axis_rotation.rotate((0.0, 1.0, 0.0))
+        sign = 1 if _v_dot(axis, delta.value()[:3]) > 0 else -1
+        self.angle += sign * delta.value()[3]
+        self.start_vector = end_vector
+        rotation = _Rot.axis_angle(*self.y_axis, min(max(self.angle, low), high))
+        if rotation.q != self.rotation.q:
+            self.rotation = rotation
+            sent.append(("rotation_changed", rotation.value()))
+        return sent
+
+    def cylinder_release(self):
+        x, y, z, angle = self.rotation.value()
+        offset = angle if _v_dot((x, y, z), self.y_axis) > 0 else -angle
+        return [("offset", offset)] if self.f["autoOffset"] else []
+
+    # SphereSensor --------------------------------------------------------------------------------------------------
+
+    def _sphere_meet(self, origin, direction):
+        """X_ITE's Sphere3.intersectsLine: (nearer, farther) along the ray, or None."""
+        b = 2 * _v_dot(origin, direction)
+        c = _v_dot(origin, origin) - self.radius ** 2
+        core = b * b - 4 * c
+        if core < 0:
+            return None
+        t1, t2 = sorted(((-b + math.sqrt(core)) / 2, (-b - math.sqrt(core)) / 2))
+        return _v_add(_v_scale(direction, t1), origin), _v_add(_v_scale(direction, t2), origin)
+
+    def _sphere_track(self, origin, direction, behind):
+        met = self._sphere_meet(origin, direction)
+        if met is None:
+            return None
+        enter, exit_ = met
+        # X_ITE: (exit nearer than enter) - behind, a number used as a truth value: true when the two differ
+        if (_v_norm(_v_sub(origin, exit_)) < _v_norm(_v_sub(origin, enter))) != bool(behind):
+            return exit_
+        return enter
+
+    def sphere_press(self, ray, hit, eye):
+        self.eye_back = _v_unit(eye[1])
+        self.z_plane = _Plane((0.0, 0.0, 0.0), self.eye_back)
+        self.radius = _v_norm(hit)
+        self.behind = self.z_plane.distance(hit) < 0
+        self.from_vector = self.start_point = tuple(hit)
+        self.start_offset = _Rot.axis_angle(*self.f["offset"])
+        self.rotation = self.start_offset
+        return [("trackPoint_changed", tuple(hit)), ("rotation_changed", tuple(self.f["offset"]))]
+
+    def sphere_drag(self, ray):
+        origin, direction = ray
+        track = self._sphere_track(origin, direction, self.behind)
+        if track is not None:
+            self.z_plane = _Plane(track, self.eye_back)
+        else:                                           # off the sphere: X_ITE folds the ray back onto it
+            tangent = self.z_plane.meet(origin, direction) or (0.0, 0.0, 0.0)
+            track = self._sphere_track(tangent, _v_unit(_v_scale(tangent, -1)), False) or (0.0, 0.0, 0.0)
+            a, b, c = (0.0, 0.0, 0.0), track, self.start_point
+            tri = _v_unit(_v_cross(_v_sub(c, b), _v_sub(a, b)))
+            normal = _v_unit(_v_cross(tri, _v_unit(track)))
+            point1 = _v_sub(track, _v_scale(normal, _v_norm(_v_sub(tangent, track))))
+            track = self._sphere_track(point1, _v_unit(_v_scale(point1, -1)), False) or track
+        rotation = _Rot.from_vectors(self.from_vector, track)
+        if self.behind:
+            rotation = rotation.inverse()
+        self.rotation = self.start_offset.then(rotation)
+        return [("trackPoint_changed", track), ("rotation_changed", self.rotation.value())]
+
+    def sphere_release(self):
+        return [("offset", self.rotation.value())] if self.f["autoOffset"] else []
+
+
 class _Sensor(_Machine):
     """A sensor the caller drives: its outputs are posted from outside (``Simulation.post``, ``press``, ``drag``)."""
 
@@ -769,7 +1048,7 @@ _MACHINES = {
     "OrientationDamper": _OrientationDamper,
     "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _Chaser, "ColorChaser": _Chaser,
     "OrientationChaser": _OrientationChaser,
-    "TouchSensor": _Sensor, "PlaneSensor": _Sensor, "CylinderSensor": _Sensor, "SphereSensor": _Sensor,
+    "TouchSensor": _Sensor, "PlaneSensor": _Sensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
     "ProximitySensor": _Sensor, "VisibilitySensor": _Sensor, "KeySensor": _Sensor, "StringSensor": _Sensor,
 }
 
@@ -900,21 +1179,42 @@ class Simulation:
         sensor.over = bool(over)
         return self.post(node_id, "isOver", sensor.over, now)
 
-    def press(self, node_id, now, point=(0.0, 0.0, 0.0)):
-        """The pointer button goes down on the sensor's shapes. ``point`` is where, in the sensor's own coordinates."""
+    def press(self, node_id, now, point=(0.0, 0.0, 0.0), ray=None, eye=None, follow=True):
+        """The pointer button goes down on the sensor's shapes. ``point`` is where, in the sensor's own coordinates.
+        A CylinderSensor or SphereSensor also needs the pointer's ``ray`` (origin, direction) and the viewer's ``eye``
+        (where it is, which way is back), in the same coordinates; without them it sends only isActive."""
         sensor = self._sensor(node_id)
         if not sensor.f.get("enabled", True) or sensor.pressed:
             return []
         changes = self.hover(node_id, True, now)
         sensor.pressed, sensor.origin = True, tuple(point)
-        return changes + self.post(node_id, "isActive", True, now)
+        changes += self.post(node_id, "isActive", True, now)
+        sensor.geometry = ray is not None and eye is not None
+        if sensor.node_type in ("CylinderSensor", "SphereSensor") and sensor.geometry:
+            start = sensor.cylinder_press if sensor.node_type == "CylinderSensor" else sensor.sphere_press
+            for field_name, value in start(_ray(ray), tuple(point), eye):
+                changes += self.post(node_id, field_name, value, now)
+            # X_ITE follows the press with one motion along the same ray (recorded: at its next frame, before any move),
+            # so a SphereSensor's track point leaves the picked point for the ray's own crossing of the sphere.
+            # ``follow=False`` leaves that motion to the caller (the judge sends it at X_ITE's next frame time).
+            if follow:
+                changes += self.drag(node_id, None, now, ray=ray)
+        return changes
 
-    def drag(self, node_id, point, now):
-        """The pointer moves with the button down. A PlaneSensor sends where its plane was hit, less where it began."""
+    def drag(self, node_id, point, now, ray=None):
+        """The pointer moves with the button down. A PlaneSensor sends where its plane was hit, less where it began;
+        a CylinderSensor or SphereSensor turns by the pointer's ``ray``, in the sensor's own coordinates."""
         sensor = self._sensor(node_id)
         if not sensor.pressed:
             return []
         changes = []
+        if sensor.node_type in ("CylinderSensor", "SphereSensor"):
+            if ray is None or not getattr(sensor, "geometry", False):
+                return []
+            move = sensor.cylinder_drag if sensor.node_type == "CylinderSensor" else sensor.sphere_drag
+            for field_name, value in move(_ray(ray)):
+                changes += self.post(node_id, field_name, value, now)
+            return changes
         if sensor.node_type == "PlaneSensor":
             changes += self.post(node_id, "trackPoint_changed", tuple(point), now)
             moved = _add(_add(tuple(point), sensor.origin, -1.0), sensor.f["offset"])
@@ -934,6 +1234,11 @@ class Simulation:
         changes = self.post(node_id, "isActive", False, now)
         if sensor.node_type == "TouchSensor" and sensor.over:
             changes += self.post(node_id, "touchTime", now, now)
+        if sensor.node_type in ("CylinderSensor", "SphereSensor") and getattr(sensor, "geometry", False):
+            finish = sensor.cylinder_release if sensor.node_type == "CylinderSensor" else sensor.sphere_release
+            for field_name, value in finish():
+                sensor.f[field_name] = value
+                changes += self.post(node_id, field_name, value, now)
         if sensor.node_type == "PlaneSensor" and sensor.f["autoOffset"] and getattr(sensor, "last", None):
             sensor.f["offset"] = sensor.last
             changes += self.post(node_id, "offset", sensor.last, now)

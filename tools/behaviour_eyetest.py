@@ -15,6 +15,7 @@ cannot disturb it. What it cannot judge is taste: the screenshots are for a pers
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import tempfile
@@ -236,6 +237,34 @@ def world_steps(world, tag=""):
         yield 0.1
         mouse(*point, "LEFTMOUSE", "RELEASE")
     yield 0.15
+    # drag sensors: grab each object one senses and sweep the pointer through an arc, through the event queue
+    draggers = {"PlaneSensor", "CylinderSensor", "SphereSensor"}
+    if any(player.graph.nodes[s].node_type in draggers for sensors in player._sensors.values() for s in sensors):
+        dragged = []
+        for index, obj in enumerate(o for o in targets if any(player.graph.nodes[s].node_type in draggers
+                                                               for s in player.sensors_for(o))):
+            start = screen_point(obj)
+            if start is None:
+                continue
+            before_turn = tuple(round(v, 4) for v in obj.matrix_world.to_euler())
+            mouse(*start)
+            yield 0.1
+            mouse(*start, "LEFTMOUSE", "PRESS")
+            yield 0.05
+            radius = 90
+            for step in range(1, 25):
+                a = step / 24 * math.pi * 1.2
+                mouse(start[0] + radius * math.sin(a), start[1] + radius * (1 - math.cos(a)) * 0.6)
+                yield 0.04
+                if step == 12:
+                    shot(f"{name}-drag-{index}-{obj.name}")
+            mouse(start[0] + radius * math.sin(math.pi * 1.2), start[1] + radius * (1 - math.cos(math.pi * 1.2)) * 0.6,
+                  "LEFTMOUSE", "RELEASE")
+            yield 0.1
+            turned = {o.name for o in scene.objects
+                      if tuple(round(v, 4) for v in o.matrix_basis.to_euler()) != before_full.get(o.name, (None, None))[1]}
+            dragged.append({"grabbed": obj.name, "sensors": player.sensors_for(obj), "turned": sorted(turned)})
+        note(name, "drags", dragged)
     glowing = [n.name for n in tree.nodes if n.use_custom_color]
     note(name, "glowing_after_click", glowing)
     note(name, "shot_glow", shot(f"{name}-4-play-glow"))

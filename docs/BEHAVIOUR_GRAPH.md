@@ -80,7 +80,7 @@ Nothing is keyframed and nothing is left changed.
 
 | Simulated | Not simulated (named in the sidebar, never silently skipped) |
 |---|---|
-| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor and PlaneSensor from the pointer | Coordinate and Normal interpolators, coordinate and texture-coordinate followers, CylinderSensor and SphereSensor drags, ProximitySensor, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
+| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer | Coordinate and Normal interpolators, coordinate and texture-coordinate followers, ProximitySensor, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
 
 Shown on Blender data: Transform translation, rotation, scale, visible; material baseColor / diffuseColor,
 emissiveColor, transparency, roughness, metallic; light color and on; Viewpoint set_bind (the scene camera). Anything
@@ -105,6 +105,7 @@ in `tests/behaviour/x_ite_traces/` and replayed by `tests/test_behaviour_sim.py`
 | snake.x3d (8 s) | 6 | 6 | 0.0048 (followers) |
 | probe.x3d (2 clicks; every simulated kind, built by `tools/behaviour_probe.py`) | 25 | 25 | 0.0645 (followers) |
 | probe-spline.x3d (2 clicks; EaseInEaseOut, the Spline interpolators, Squad, PositionDamper2D; same tool) | 12 | 12 | 0.000001 exact; 0.0202 (follower) |
+| probe-drag.x3d (7 real drags on 5 sensors, `probe-drag.drags.json`; same tools) | 7 | 7 | 0.000007 (matched event for event) |
 
 Tolerances: 0.002 for everything exact, 0.08 for dampers and chasers and what they feed (X_ITE steps them by its frame
 rate, the simulator by the clock). Discrete streams must also have the same number of events. What the comparison
@@ -144,6 +145,25 @@ child object are in its parent's axes and are never turned.
 The importer now hides the objects made under a node whose `visible` is false (viewport and render) and marks them
 `x3d_visible_false`; the exporter writes `visible="false"` back for an object that is marked and still hidden.
 Unhiding it in Blender is the user's choice and is written as visible.
+
+**Drag sensors (26 Nov 2026).** CylinderSensor and SphereSensor run from the pointer's ray and the viewer (where it
+is, which way is back), both in the sensor's own coordinates: `Simulation.press(..., ray=, eye=)` and
+`drag(..., ray=)`; in Blender, Play takes them from the 3D viewport. The code follows X_ITE 16.7 line by line: the
+cylinder's billboarded planes and asin track, its disk mode when the axis points within `diskAngle` of the viewer,
+`minAngle` / `maxAngle` by accumulated angle, and "behind" from Inventor's root order; the sphere's track with its
+fallback off the sphere, its inverse when pressed behind the centre, `autoOffset`; rotations kept as X_ITE keeps them
+(half angle wrapped into [0, pi), compared exactly, read back as made until multiplied). Judged on `probe-drag.x3d`:
+`tools/behaviour_sim_judge.cjs` with a drags file makes real drags in X_ITE 16.7.1 and logs every pointer event;
+`tools/behaviour_sim_judge.py` rebuilds each ray from the pointer and the Viewpoint, takes the press point from a
+TouchSensor beside each drag sensor, and runs the simulator. What the recording taught: the press point is X_ITE's
+pick at the pixel's centre (0.5 px right and up), while the drag ray uses the pointer as given; X_ITE follows a press
+with one motion on the same ray (a SphereSensor's track point moves off the picked point); X_ITE stamps a press with a
+fresh clock and a motion with its last frame's, so a driven sensor is compared event for event, in order, with equal
+counts. 7 of 7 streams agree (worst 0.000007). Six deliberately wrong versions are rejected (no motion after the
+press, sphere ignoring "behind", cylinder never "behind", limits ignored, never a disk, sphere forgetting its offset);
+the two "behind" ones passed until the probe got boxes behind their sensor's origin. Through Blender the world keeps 7
+of 12 ROUTEs: the 5 into empty Transforms (hit markers) are left out and named. A sensor's empty parent now keeps its
+DEF on export (it came back as `OB_CylBase`).
 
 ## Looked at on a real screen (25 Nov 2026)
 

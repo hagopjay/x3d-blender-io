@@ -128,21 +128,39 @@ class Player:
         self._over = wanted
         return bool(wanted)
 
-    def press(self, obj, now, location=None):
-        """The button goes down on ``obj`` at ``location`` (Blender world). True when a sensor took it."""
+    def _local_ray(self, sensor, origin, direction):
+        inverse = self._frame(sensor).inverted()
+        return tuple(inverse @ Vector(origin)), tuple((inverse.to_3x3() @ Vector(direction)).normalized())
+
+    def press(self, obj, now, location=None, ray=None, eye=None):
+        """The button goes down on ``obj`` at ``location`` (Blender world). True when a sensor took it. A
+        CylinderSensor or SphereSensor also needs the pointer's ``ray`` (origin, direction) and the viewer's ``eye``
+        (where it is, which way is back), in Blender world; the player turns them into the sensor's coordinates."""
         self.hover(obj, now)
         self._held = list(self._over)
         for sensor in self._held:
             point = self._frame(sensor).inverted() @ Vector(location) if location is not None else Vector((0, 0, 0))
             self._plane[sensor] = point.z
-            self._apply(self.sim.press(sensor, now, tuple(point)))
+            extra = {}
+            if ray is not None and eye is not None and \
+                    self.graph.nodes[sensor].node_type in ("CylinderSensor", "SphereSensor"):
+                inverse = self._frame(sensor).inverted()
+                extra = {"ray": self._local_ray(sensor, *ray),
+                         "eye": (tuple(inverse @ Vector(eye[0])),
+                                 tuple((inverse.to_3x3() @ Vector(eye[1])).normalized()))}
+            self._apply(self.sim.press(sensor, now, tuple(point), **extra))
         return bool(self._held)
 
     def drag(self, origin, direction, now):
         """The pointer moved with the button down; ``origin`` and ``direction`` are its ray in Blender world. A
-        PlaneSensor follows the ray on the plane (its own XY, through the point it was pressed at)."""
+        PlaneSensor follows the ray on the plane (its own XY, through the point it was pressed at); a CylinderSensor
+        or SphereSensor turns by the ray (X_ITE's rules, judged against X_ITE)."""
         for sensor in self._held:
-            if self.graph.nodes[sensor].node_type != "PlaneSensor":
+            kind = self.graph.nodes[sensor].node_type
+            if kind in ("CylinderSensor", "SphereSensor"):
+                self._apply(self.sim.drag(sensor, None, now, ray=self._local_ray(sensor, origin, direction)))
+                continue
+            if kind != "PlaneSensor":
                 continue
             inverse = self._frame(sensor).inverted()
             start, way = inverse @ Vector(origin), inverse.to_3x3() @ Vector(direction)
@@ -359,6 +377,15 @@ def is_playing():
     return _running["player"] is not None
 
 
+def _eye(context, event):
+    """Where the viewer is and which way is back (Blender world) for the 3D viewport under the pointer."""
+    found = _view_under(context, event)
+    if found is None:
+        return None
+    view = found[1].view_matrix.inverted()
+    return tuple(view.translation), tuple((view.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized())
+
+
 def _view_under(context, event):
     """(region, region_3d, (x, y) in the region) of the 3D viewport the pointer is over, or None."""
     for area in context.window.screen.areas:
@@ -436,7 +463,8 @@ class X3D_OT_behaviour_play(bpy.types.Operator):
                 over = self.player.hover(obj, now)
                 context.window.cursor_set("HAND" if over else "DEFAULT")
             elif event.value == "PRESS":
-                if obj is not None and self.player.press(obj, now, location):
+                if obj is not None and self.player.press(obj, now, location, ray=(origin, direction),
+                                                          eye=_eye(context, event)):
                     self.dragging = True
                     return {"RUNNING_MODAL"}           # the click was for a sensor, not for selecting
             elif event.value == "RELEASE" and self.dragging:

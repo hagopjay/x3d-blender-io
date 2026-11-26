@@ -4,12 +4,17 @@
 // Records what X_ITE does with a behaviour graph, event by event, so tools/behaviour_sim_judge.py can ask the Python
 // simulator (source/behaviour_sim.py) to do the same and compare.
 //   NODE_PATH=$(npm root -g) node tools/behaviour_sim_judge.cjs <x_ite dist dir> <file.x3d> <sources.json> <clicks> <seconds> > trace.json
+//   ... <seconds> [drags.json] > trace.json        with drags: real drags instead of clicks (pass 0 clicks)
 // sources.json: [["DEF","field"], ...] every ROUTE source of the file (written by the .py with --sources).
+// drags.json (tools/behaviour_probe.py writes one): {"drags": [{"sensor", "touch", "at": [x, y], "path": [[x, y], ...]}]}.
+// Each drag presses at "at", moves through "path" one point every 80 ms, and releases. Every pointer event is logged
+// with X_ITE's time ("pointer" in the trace) so the replay can rebuild the pointer's ray.
 // A pointing sensor is found by moving the real pointer until one reports isOver; then <clicks> real clicks follow.
 // Every event carries X_ITE's own time stamp (browser.currentTime). Software GL: values and order are claims.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
-const [xiteDir, file, sourcesFile, clicksArg, secondsArg] = process.argv.slice(2);
+const [xiteDir, file, sourcesFile, clicksArg, secondsArg, dragsFile] = process.argv.slice(2);
+const plan = dragsFile ? JSON.parse(fs.readFileSync(dragsFile, 'utf8')) : null;
 const sources = JSON.parse(fs.readFileSync(sourcesFile, 'utf8'));
 const types = { '.js': 'text/javascript', '.css': 'text/css', '.x3d': 'model/x3d+xml' };
 const page = `<!doctype html><meta charset=utf-8><link rel=stylesheet href=/xite/x_ite.css><script src=/xite/x_ite.min.js></script>
@@ -33,7 +38,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(3000);   // let followers settle before recording
   const info = await p.evaluate(sources => {
     const B = X3D.getBrowser(document.getElementById('c')), s = B.currentScene;
-    window.__events = []; window.__frames = [];
+    window.__events = []; window.__frames = []; window.__pointer = [];
+    // capture: logged before X_ITE sees the event. The time is the wall clock X_ITE's own times are taken from, not
+    // getCurrentTime(): that only moves when X_ITE draws a frame, and nothing is drawn while the pointer rests.
+    for (const type of ['mousedown', 'mousemove', 'mouseup'])
+      window.addEventListener(type, e => window.__pointer.push([(performance.timeOrigin + performance.now()) / 1000, type, e.pageX, e.pageY]), true);
     const text = v => (v !== null && typeof v === 'object') ? String(v) : v;
     const missing = [], sensors = [];
     sources.forEach(([d, f], i) => {
@@ -57,8 +66,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await p.mouse.move(hit.x, hit.y); await p.mouse.down(); await sleep(140); await p.mouse.up(); await sleep(1100);
     }
   }
+  const drags = [];
+  for (const drag of plan ? plan.drags : []) {
+    const [x, y] = drag.at;
+    await p.mouse.move(x - 4, y - 4); await p.mouse.move(x, y); await sleep(250);
+    const down = await p.evaluate(() => X3D.getBrowser(document.getElementById('c')).getCurrentTime());
+    await p.mouse.down(); await sleep(120);
+    for (const [px, py] of drag.path) { await p.mouse.move(px, py); await sleep(80); }
+    await p.mouse.up(); await sleep(500);
+    drags.push({ sensor: drag.sensor, touch: drag.touch, at: drag.at, down });
+  }
   await sleep(Number(secondsArg) * 1000);
-  const out = await p.evaluate(() => ({ events: window.__events, frames: window.__frames }));
+  const out = await p.evaluate(() => ({ events: window.__events, frames: window.__frames, pointer: window.__pointer }));
   await b.close(); srv.close();
-  console.log(JSON.stringify({ file: path.basename(file), browser: `${info.name} ${info.version}`, began: info.began, sensorAt: hit, clicks: Number(clicksArg), missing: info.missing, pageErrors: errors, frames: out.frames, events: out.events }));
+  console.log(JSON.stringify({ file: path.basename(file), browser: `${info.name} ${info.version}`, began: info.began, sensorAt: hit, clicks: Number(clicksArg), missing: info.missing, pageErrors: errors, frames: out.frames, events: out.events,
+    ...(plan ? { view: plan.view, drags, pointer: out.pointer } : {}) }));
 })();
