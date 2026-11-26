@@ -53,6 +53,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "source"))
 import behaviour_catalogue as cat      # noqa: E402
 import behaviour_graph as bg           # noqa: E402
 import behaviour_sim as bs             # noqa: E402
+import behaviour_pick as bp            # noqa: E402
 import behaviour_world as bw           # noqa: E402
 
 NODE_TYPES = sorted(cat.NODES)
@@ -414,7 +415,55 @@ def make_world(graph, hostile):
     if viewpoint is not None:
         world.viewpoint = viewpoint.id
     world.viewer.position = tuple(_vector(rng, False))
+    make_pick(graph, world, hostile)
     return world
+
+
+PICK_GEOMETRIES = ('<Box size="{a} {b} {a}"/>', '<Sphere radius="{a}"/>', '<Cone bottomRadius="{a}" height="{b}"/>',
+                   '<Cylinder radius="{a}" height="{b}"/>',
+                   '<IndexedFaceSet coordIndex="0 1 2 -1 0 2 3 -1"><Coordinate point="0 {b} 0 -{a} 0 0 {a} 0 {a} 0 0 -{a}"/></IndexedFaceSet>',
+                   '<PointSet><Coordinate point="0 0 0 {a} {b} 0"/></PointSet>',
+                   '<IndexedLineSet coordIndex="0 1 -1"><Coordinate point="-{a} 0 0 {a} {b} 0"/></IndexedLineSet>')
+
+
+def make_pick(graph, world, hostile):
+    """The pick scene of the graph's pick sensors: shapes of every kind, sensors inside the Transforms the world already has
+    (the same DEF names, so the frames move with the world), a PickableGroup or two. Built from the graph alone."""
+    sensors = [n for n in graph.nodes.values() if n.role == bg.BEHAVIOUR and n.node_type in bp.SENSORS]
+    if not sensors:
+        return
+    rng = random.Random(len(graph.nodes) * 6151 + len(graph.routes) * 7907 + (1 if hostile else 0))
+    sizes = ["0.5", "1", "2"] + (["0", "1e-9", "1e9", "-1", "nan"] if hostile else [])
+    names = [None] + [n for n in world.frames]
+    shapes = []
+    for k in range(rng.randint(1, 5)):
+        geometry = rng.choice(PICK_GEOMETRIES).format(a=rng.choice(sizes), b=rng.choice(sizes))
+        shapes.append(f'<Shape DEF="Pick{k}">{geometry}</Shape>')
+    gate = rng.choice(["Group", "Group", "PickableGroup", "PickableGroup pickable=\"false\"", "PickableGroup objectType='\"TERRAIN\"'"])
+    body = [f'<{gate} DEF="Targets">' + "".join(shapes) + f'</{gate.split()[0]}>']
+    for sensor in sensors:
+        geometry = rng.choice(PICK_GEOMETRIES).format(a=rng.choice(sizes), b=rng.choice(sizes))
+        tag = sensor.node_type
+        kind = rng.choice(["BOUNDS", "GEOMETRY"] + (["junk"] if hostile else []))
+        order = rng.choice(["CLOSEST", "ALL", "ALL_SORTED", "ANY"])
+        picking = geometry.replace("/>", ' containerField="pickingGeometry"/>', 1) if "><" not in geometry \
+            else geometry.replace(">", ' containerField="pickingGeometry">', 1)
+        inside = f'<{tag} DEF="{sensor.id}" intersectionType="{kind}" sortOrder="{order}">{picking}' \
+                 f'<{gate.split()[0]} USE="Targets" containerField="pickTarget"/></{tag}>'
+        home = rng.choice(names)
+        if home is None:
+            body.append('<Shape><Box size="0.1 0.1 0.1"/></Shape>' + inside)
+        else:
+            body.append(f'<Transform DEF="{home}"><Shape><Box size="0.1 0.1 0.1"/></Shape>{inside}</Transform>')
+    text = '<X3D profile="Full" version="4.0"><head/><Scene>' + "".join(body) + '</Scene></X3D>'
+    try:
+        found = bw.World.from_x3d(text)
+    except Exception:                 # noqa: BLE001 - the fuzz asks for a World, and a document it cannot read gives none
+        return
+    if found.pick is not None:
+        for name, frame in found.frames.items():
+            world.frames.setdefault(name, frame)
+        world.pick = found.pick
 
 
 def schedule(rng, graph, hostile):

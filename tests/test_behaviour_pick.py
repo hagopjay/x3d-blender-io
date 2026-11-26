@@ -83,6 +83,34 @@ class HelperTests(unittest.TestCase):
         self.assertAlmostEqual(bp.distance_point_box((3, 0, 0), a), 2.0, places=12)
         self.assertAlmostEqual(bp.distance_point_box((2, 2, 0), a), math.sqrt(2), places=12)
 
+    def test_the_quick_box_test_agrees_with_the_exact_one_or_declines(self):
+        rng = random.Random(5)
+
+        def random_box():
+            matrix = bw.m_transform((rng.uniform(-3, 3), rng.uniform(-3, 3), rng.uniform(-3, 3)),
+                                    (rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-4, 4)),
+                                    tuple(rng.choice([1, 1, 2, 0.5]) for _ in range(3)), (0, 0, 0), (0, 0, 1, 0))
+            return bp.obb_of((0, 0, 0), tuple(rng.choice([0.5, 1, 2]) for _ in range(3)), matrix)
+
+        def exact(a, b):
+            pa, pb = bp._corners(a), bp._corners(b)
+            return not (bp._apart(bw._box_normals(*a.axes), pa, pb) or bp._apart(bw._box_normals(*b.axes), pa, pb)
+                        or bp._apart([bw._cross(p, q) for p in a.axes for q in b.axes], pa, pb))
+
+        answered = 0
+        for _ in range(3000):
+            a, b = random_box(), random_box()
+            quick = bp.boxes_meet_quick(a, b)
+            if quick is not None:
+                answered += 1
+                self.assertEqual(quick, exact(a, b))
+        self.assertGreater(answered, 2900)
+
+    def test_a_flat_box_is_left_to_the_exact_test(self):
+        flat = bp.obb_of((0, 0, 0), (1, 1, 0), IDENTITY)
+        self.assertIsNone(bp.boxes_meet_quick(flat, self.box((0.5, 0, 0), (1, 1, 1))))
+        self.assertTrue(bp.boxes_meet(flat, self.box((0.5, 0, 0), (1, 1, 1))))
+
     def test_quicksort_sorts(self):
         rng = random.Random(4)
         items = [rng.random() for _ in range(200)]
@@ -147,6 +175,36 @@ class BehaviourTests(unittest.TestCase):
               <PickableGroup USE="T" containerField="pickTarget"/></VolumePickSensor></Transform>''')
         _sim, log = run(text, 0.2)
         self.assertEqual(self.active(log), [])
+
+
+class MemoTests(unittest.TestCase):
+
+    def test_a_sensor_whose_frames_did_not_move_is_not_asked_again(self):
+        text = pair("BOUNDS", "1.5 0 0")
+        sim, _log = run(text, 0.1)
+        machine = sim.machines["P"]
+        calls = []
+        original = machine.hits
+        machine.hits = lambda *a, **k: calls.append(1) or original(*a, **k)
+        for frame in range(10, 20):
+            sim.step(frame / 60.0)
+        self.assertEqual(calls, [])
+
+    def test_a_moved_target_is_noticed(self):
+        text = scene('''
+          <Transform DEF="Mover" translation="5 0 0"><Shape><Box DEF="Target" size="2 2 2"/></Shape></Transform>
+          <Group><Shape><Box size="0.1 0.1 0.1"/></Shape>
+            <VolumePickSensor DEF="P" intersectionType="BOUNDS"><Box containerField="pickingGeometry" size="1 1 1"/>
+              <Transform USE="Mover" containerField="pickTarget"/></VolumePickSensor></Group>''')
+        graph = bg.Behaviour.from_x3d(text)
+        world = bw.World.from_x3d(text)
+        sim = bs.Simulation(graph, log_size=1000, world=world)
+        sim.start(0.0)
+        sim.step(1 / 60)
+        self.assertEqual([r for r in sim.log if r[1] == "P" and r[2] == "isActive"], [])
+        world.apply("Mover", "translation", (0.5, 0.0, 0.0))
+        sim.step(2 / 60)
+        self.assertEqual([r[3] for r in sim.log if r[1] == "P" and r[2] == "isActive"], [True])
 
 
 class HostileTests(unittest.TestCase):

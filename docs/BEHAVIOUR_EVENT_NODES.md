@@ -132,6 +132,67 @@ fed": the Player has no frustum to give a VisibilitySensor and the TransformSens
 a non-root Transform under a moving camera for VisibilitySensor; frustum motion faster than one step; `avatarSize` other
 than the default for Collision; GEOMETRY-precise Collision (it is a box-and-depth test as X_ITE's).
 
+### P4 results: LinePickSensor, PointPickSensor, PrimitivePickSensor, VolumePickSensor
+
+`source/behaviour_pick.py` (no bpy): the document is read once (`World.from_x3d` calls `behaviour_pick.build`; `World.pick` is a
+`PickScene` of shapes, sensors and `PickableGroup` gates). Each sensor asks the `World` for matrices once per step, after the events
+have settled, and sends `isActive`, `pickedGeometry` (the names of the geometries) and, for GEOMETRY, `pickedPoint`,
+`pickedNormal` and `pickedTextureCoordinate`. A broad phase (ball against ball) runs before any test, and a sensor whose
+frames and gates did not change since the last step does nothing.
+
+Instrument for every verdict: `tools/behaviour_pick_judge.py` (the simulator judge with node lists and vector lists readable)
+replaying X_ITE 16.8.1 (headless Chromium, software GL, recorded by `tools/behaviour_pick_record.cjs`) on two worlds:
+`tests/behaviour/probe-pick.x3d` (BOUNDS, 489 frames) and `tests/behaviour/probe-pick-geometry.x3d` (GEOMETRY, 510 frames).
+
+| probe | pick streams | events compared | worst gap | notes |
+|---|---:|---:|---:|---|
+| probe-pick.x3d: all four sensors, every `sortOrder`, `objectType`, `matchCriterion`, PickableGroup, hidden, lone, empty and wrong-kind geometry | 75 | 1,031 | 0 | 19 of the 75 streams are silent in both, which counts as agreeing |
+| probe-pick-geometry.x3d: Volume and Primitive (Box, Sphere pickers; rotating, scaled), Point, Line (IndexedLineSet, LineSet) | 22 | 655 | 0 | vector streams compared as lists of single-precision numbers |
+| the other streams of the same two worlds (clock, interpolators) | 32 | 15,415 | 4e-06 | |
+
+Every stream agrees, 129 of 129. Grade: Confirmed for these 129 streams on X_ITE 16.8.1, for the cases the probes contain.
+
+What X_ITE 16.8.1 does, from its source (PickingComponent.js) and then from the recordings; the simulator follows it:
+
+- Every scene sits under the Layer's implicit PickableGroup, so everything is pickable. A `PickableGroup` with `pickable` false
+  or an `objectType` that holds `NONE` hides what is below it; `objectType` ALL leaves the filter alone; any other list lets
+  through the sensors whose `objectType` shares a type with it, and `MATCH_EVERY` needs the sensor's list to be one type.
+- BOUNDS is the separating axis test of the two bounding boxes (`Box3.intersectsBox`); touching counts. A geometry with no
+  vertices has a point box at its origin, not an empty one.
+- `sortOrder`: CLOSEST and ANY report one geometry (CLOSEST by the distance between the box centres, through X_ITE's own
+  quicksort, which is Hoare's and not stable); ALL in scene order; ALL_SORTED sorted. The vector outputs list every picked
+  target whatever the order.
+- A sensor that is the only child of its group is never picked (the group is not rebuilt after the sensor goes live), unless
+  a sibling subtree holds a Shape with a geometry or a light, or the sensor sits at the scene root. Counted in
+  `noted["pick-lone-sensor"]`.
+- A sensor with `enabled` false or an `objectType` that holds `NONE` is outside X_ITE's set and sends nothing.
+- GEOMETRY: LinePickSensor intersects its lines with the target's triangles (Moeller-Trumbore, after a bounding-box test that
+  skips the left face); the other three use Ammo.js contact tests. Outputs are in the target's own coordinates.
+  A contact is within a margin of 0.015 that the simulator fits: the recording agrees for any value from 0.01 to 0.0225,
+  and does not for 0.0075 or 0.025 (Ammo's own box margin is 0.04, so this is not read from it).
+
+Exact in the simulator: Box and Sphere against Box and Sphere with rigid matrices (no shear, no mirror) and uniform sphere
+scale; PointPickSensor against Box and Sphere; LinePickSensor (IndexedLineSet, LineSet) against Box. Everything else in
+GEOMETRY (Cone, Cylinder, IndexedFaceSet and the other meshes as targets, an ellipsoid, a sheared or mirrored frame, a line
+against a non-box) falls back to BOUNDS and is counted once per sensor in `Simulation.noted["bounds-for-geometry"]`.
+That fallback is simulated but not judged: `tests/behaviour/pick-fallback/` holds the recording of those cases, and it
+disagrees (for example 7 of the 23 `P0.isActive` events of X_ITE have no match), which a test states. ROUTEs into a PickableGroup
+(`pickable`, `objectType`) are not simulated: the catalogue has no PickableGroup target (its size is pinned at 35 by a test).
+
+Cost, `tools/behaviour_bench.py --shapes pick` (`PYTHONHASHSEED=3`, simulator only, median of 300 steps of 1/60 s, Python
+3.13.18, shared 4-core Xeon at load average 10 at the end of the run; one sensor in ten moves, each sensor has five targets,
+half BOUNDS and half GEOMETRY, a quarter of each kind): 0.24 ms per step at N=10, 2.08 at N=100, 4.48 at N=200 (the budget
+size, 242 nodes), 29.83 at N=1000 (1,202 nodes). N=1000 is over 16.7 ms: a known limit. cProfile at N=1000 (30 steps, each
+sensor that moved is tested again, a sensor that did not is not) puts about 74 % of the time in the tests of moving sensors
+(the box test 35 %, the exact GEOMETRY tests 28 %) and 15 % in finding out which sensors did not move. A flat target (a
+face set, a slab) has no quick box test and goes through the 15-axis corner test; a cheaper test for flat boxes, and for
+the sphere and segment tests, is the next step.
+
+Play lists the four as "not fed" (`UNFED_SENSORS` in `source/behaviour_play.py`): the Player's World has no pick scene, so the
+sensors are blind there (`noted["no-pick-scene"]`) and send nothing; they are `NOT_PLAYED`. Not checked: a real Blender
+window; GEOMETRY with a picking geometry rotated by a sheared parent; targets inside an Inline; LOD, Billboard and the HAnim
+groups (treated as plain groups); a scene that changes its graph while running; X_ITE versions other than 16.8.1.
+
 ### `Resources` (class D)
 
 X3D leaves loading to the browser, so a simulator must be told. `Resources` maps a URL to `{"loads": seconds}` or

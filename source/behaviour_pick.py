@@ -73,11 +73,25 @@ def _local(tag):
 class Obb:
     """A parallelepiped: ``center`` and the three half axes (each a 3-vector, signed as X_ITE's matrix holds them), the box a
     geometry's bounding box becomes under a matrix. ``radius`` is the radius of a ball that holds it (the broad phase)."""
-    __slots__ = ("center", "axes", "radius")
+    __slots__ = ("center", "axes", "radius", "frame")
 
     def __init__(self, center, axes):
         self.center, self.axes = center, axes
         self.radius = sum(math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) for a in axes)
+        self.frame = None            # (unit axes, lengths) when the three axes are square to each other and none is flat; else False
+
+    def unit(self):
+        """The axes as unit vectors and lengths, or False for a box that is sheared, flat or not finite (the quick test of
+        ``boxes_meet_quick`` is then not used)."""
+        if self.frame is None:
+            self.frame = False
+            lengths = [math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) for a in self.axes]
+            if all(1e-9 < n < 1e12 for n in lengths):
+                units = tuple((a[0] / n, a[1] / n, a[2] / n) for a, n in zip(self.axes, lengths))
+                if all(abs(units[i][0] * units[j][0] + units[i][1] * units[j][1] + units[i][2] * units[j][2]) < 1e-9
+                       for i, j in ((0, 1), (0, 2), (1, 2))):
+                    self.frame = (units, tuple(lengths))
+        return self.frame
 
 
 def obb_of(center, half, matrix):
@@ -96,16 +110,91 @@ def _corners(box):
                     for p in (first[2], first[3], first[0], first[1])]
 
 
+def _apart(axes, points1, points2):
+    """``behaviour_world._separated`` with the arithmetic written out (the same products, summed in the same order, so the
+    same answers; it is the cost of the exact test): True when the corner sets do not overlap on some axis."""
+    for ax, ay, az in axes:
+        low1 = high1 = None
+        for p in points1:
+            d = p[0] * ax + p[1] * ay + p[2] * az
+            if low1 is None:
+                low1 = high1 = d
+            elif d < low1:
+                low1 = d
+            elif d > high1:
+                high1 = d
+        low2 = high2 = None
+        for p in points2:
+            d = p[0] * ax + p[1] * ay + p[2] * az
+            if low2 is None:
+                low2 = high2 = d
+            elif d < low2:
+                low2 = d
+            elif d > high2:
+                high2 = d
+        if not ((low1 <= low2 <= high1) or (low2 <= low1 <= high2)):
+            return True
+    return False
+
+
+def boxes_meet_quick(a, b):
+    """The same question for two boxes that are square (the usual case) by the radius form of the separating axis test: True
+    or False when every axis is clear of touching by a margin far above rounding, else None (the caller runs the exact test,
+    which also decides everything this does not: a sheared or flat box, touching, edges nearly parallel)."""
+    fa, fb = a.unit(), b.unit()
+    if not fa or not fb:
+        return None
+    (ua, ea), (ub, eb) = fa, fb
+    t = (b.center[0] - a.center[0], b.center[1] - a.center[1], b.center[2] - a.center[2])
+    tol = 1e-9 * (ea[0] + ea[1] + ea[2] + eb[0] + eb[1] + eb[2] + abs(t[0]) + abs(t[1]) + abs(t[2]) + 1e-300)
+    ta = [t[0] * u[0] + t[1] * u[1] + t[2] * u[2] for u in ua]
+    r = [[ua[i][0] * ub[j][0] + ua[i][1] * ub[j][1] + ua[i][2] * ub[j][2] for j in range(3)] for i in range(3)]
+    ab = [[abs(v) for v in row] for row in r]
+    clear = True
+    for i in range(3):
+        slack = abs(ta[i]) - (ea[i] + eb[0] * ab[i][0] + eb[1] * ab[i][1] + eb[2] * ab[i][2])
+        if slack > tol:
+            return False
+        if slack > -tol:
+            clear = False
+    for j in range(3):
+        tb = ta[0] * r[0][j] + ta[1] * r[1][j] + ta[2] * r[2][j]
+        slack = abs(tb) - (ea[0] * ab[0][j] + ea[1] * ab[1][j] + ea[2] * ab[2][j] + eb[j])
+        if slack > tol:
+            return False
+        if slack > -tol:
+            clear = False
+    for i in range(3):
+        i1, i2 = (i + 1) % 3, (i + 2) % 3
+        for j in range(3):
+            j1, j2 = (j + 1) % 3, (j + 2) % 3
+            sin2 = 1.0 - r[i][j] * r[i][j]
+            if sin2 < 1e-6:
+                if sin2 > 1e-24 or sin2 < -1e-6:
+                    clear = False            # edges nearly parallel: X_ITE's own rounding decides
+                continue                     # exactly parallel: its cross product is zero and separates nothing
+            d = abs(ta[i2] * r[i1][j] - ta[i1] * r[i2][j])
+            slack = d - (ea[i1] * ab[i2][j] + ea[i2] * ab[i1][j] + eb[j1] * ab[i][j2] + eb[j2] * ab[i][j1])
+            if slack > tol * math.sqrt(sin2):
+                return False
+            if slack > -tol * math.sqrt(sin2):
+                clear = False
+    return True if clear else None
+
+
 def boxes_meet(a, b):
     """X_ITE's ``Box3.intersectsBox`` for two boxes (boxes are never empty here): the three face normals of each, then the nine
     cross products of the axes; a gap on any of them separates. Touching boxes meet."""
+    quick = boxes_meet_quick(a, b)
+    if quick is not None:
+        return quick
     points_a, points_b = _corners(a), _corners(b)
-    if bw._separated(bw._box_normals(*a.axes), points_a, points_b):
+    if _apart(bw._box_normals(*a.axes), points_a, points_b):
         return False
-    if bw._separated(bw._box_normals(*b.axes), points_a, points_b):
+    if _apart(bw._box_normals(*b.axes), points_a, points_b):
         return False
     crosses = [bw._cross(p, q) for p in a.axes for q in b.axes]
-    return not bw._separated(crosses, points_a, points_b)
+    return not _apart(crosses, points_a, points_b)
 
 
 def quicksort(items, less):
@@ -720,6 +809,7 @@ def machines(Machine, WorldSensor):
             self.names = ()               # pickedGeometry as last sent
             self.sent = {}                # the vector outputs as last sent (single precision)
             self.cache = None
+            self.memo = None
             self.said = set()
 
         def registered(self):
@@ -748,6 +838,8 @@ def machines(Machine, WorldSensor):
                 if info.bad_geometry:
                     self.blind("no-volume")
                 return
+            if self.settled(world, scene, info):
+                return                    # nothing the answer depends on has changed since the last step
             hits = self.hits(world, scene, info)
             names = tuple(h[0].geom.name for h in hits)
             active = bool(names)
@@ -759,6 +851,36 @@ def machines(Machine, WorldSensor):
                 self.emit("pickedGeometry", list(names))
             if self.vector_outputs:
                 self.vectors(hits)
+
+        def settled(self, world, scene, info):
+            """True when this step's inputs are the last step's: no frame the answer reads has moved (a frame that moved, or one
+            below it, is marked dirty, and gets a new matrix object when asked), the gates are as they were, and so are the
+            fields that decide. Remembers what it saw for the next step."""
+            f = self.f
+            fields = (scene.version, f.get("intersectionType"), f.get("sortOrder"), f.get("matchCriterion"), f.get("objectType"))
+            last = self.memo
+            if last is not None and last[0] == fields:
+                for frame, matrix in last[1]:
+                    if frame.dirty or frame.world is not matrix:
+                        break
+                else:
+                    return True
+            frames = world.frames
+            names = {info.frame}
+            names.update(shape.frame for shape in self.shapes_of(scene, info))
+            seen = []
+            for name in names:
+                if name is not None:
+                    matrix = world.matrix(name)
+                    seen.append((frames[name], matrix))
+            self.memo = (fields, seen)
+            return False
+
+        def shapes_of(self, scene, info):
+            key = (scene.version, tuple(self.f.get("objectType", ["ALL"])), str(self.f.get("matchCriterion", "MATCH_ANY")))
+            if self.cache is None or self.cache[0] != key:
+                self.cache = (key, eligible(scene, info, key[1], key[2]))
+            return self.cache[1]
 
         def vectors(self, hits):
             """GEOMETRY: the points (and normals, texture coordinates) of every target that was hit, in the order of ``hits``
@@ -786,10 +908,7 @@ def machines(Machine, WorldSensor):
             picker = obb_of(info.geom.center, info.geom.half, matrix)
             geometry = str(self.f.get("intersectionType", "BOUNDS")) == "GEOMETRY"
             found = []
-            key = (scene.version, tuple(self.f.get("objectType", ["ALL"])), criterion)
-            if self.cache is None or self.cache[0] != key:
-                self.cache = (key, eligible(scene, info, key[1], criterion))
-            for shape in self.cache[1]:
+            for shape in self.shapes_of(scene, info):
                 box = self.box_of(world, shape)
                 reach = picker.radius + box.radius
                 d = (picker.center[0] - box.center[0], picker.center[1] - box.center[1], picker.center[2] - box.center[2])

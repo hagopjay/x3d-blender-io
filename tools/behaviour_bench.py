@@ -16,6 +16,9 @@ Six shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), an
           N CoordinateDampers, each into its own Coordinate: every damper is chasing a new list on every step
   media   N looping AudioClips (an X_ITE-judged clock each, 1 s long) whose elapsedTime and isActive each reach a node,
           and one LoadSensor over N/10 of them; simulation only (the Player lists these nodes as not applied)
+  pick    N pick sensors (a quarter of each of the four kinds, BOUNDS and GEOMETRY alternating), each with its own five targets
+          (Box, Sphere, Cone and IndexedFaceSet shapes, and a flat Box), one sensor in ten moved through its targets by
+          its own PositionInterpolator (the rest stand still), and a sink for every isActive; simulation only (Play does not feed pick sensors)
   world   N sensors that read a World of 5 N volumes (N / 2 TransformSensors each aiming at a Transform that one
           interpolator moves, N / 4 VisibilitySensors, N / 4 Collision groups of 4 boxes), with the viewer flown past
           by the same interpolator (``world_for`` builds the World, which the simulation reads once per step)
@@ -50,7 +53,7 @@ import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
 import behaviour_world as bw      # noqa: E402
 
-SHAPES = ("fan", "chains", "mixed", "hosted", "media", "world")
+SHAPES = ("fan", "chains", "mixed", "hosted", "media", "world", "pick")
 OPT_IN_SHAPES = ("lists",)         # run when named; not in the default sweep, and not timed in the player (no Transform to move)
 POINTS = 100                       # points per list in the "lists" shape
 SIZES = (10, 100, 1000, 5000)
@@ -113,6 +116,8 @@ def build(shape: str, n: int) -> bg.Behaviour:
             follow.value_changed >> b.target("Coordinate", f"Mesh{i}").point
     elif shape == "media":
         return bg.Behaviour.from_x3d(media_world(n))
+    elif shape == "pick":
+        return bg.Behaviour.from_x3d(pick_world(n))
     elif shape == "world":
         clock = b.add("TimeSensor", "Clock", cycleInterval=8, loop=True)
         move = b.add("PositionInterpolator", "Move", key=[0, 0.5, 1], keyValue=[(-8, 1, 6), (8, 1, 6), (-8, 1, 6)])
@@ -148,6 +153,36 @@ def touch(sim, shape, n, k, now):
             sim.contact(f"Hit{i}", bool(k % 2), ["A|B"] if k % 2 else (), ["A"] if k % 2 else (), now)
 
 
+def pick_world(n: int) -> str:
+    """The "pick" shape as X3D text. Deterministic: sensor i sits at a grid point, over its own group of five targets; a
+    Transform per ten sensors is moved back and forth through them."""
+    kinds = ("LinePickSensor", "PointPickSensor", "PrimitivePickSensor", "VolumePickSensor")
+    pickers = {"LinePickSensor": '<IndexedLineSet containerField="pickingGeometry" coordIndex="0 1 -1"><Coordinate point="-1 0 0 1 0 0"/></IndexedLineSet>',
+               "PointPickSensor": '<PointSet containerField="pickingGeometry"><Coordinate point="0 0 0 0.5 0 0"/></PointSet>',
+               "PrimitivePickSensor": '<Sphere containerField="pickingGeometry" radius="0.6"/>',
+               "VolumePickSensor": '<Box containerField="pickingGeometry" size="1 1 1"/>'}
+    shapes = ('<Box size="1 1 1"/>', '<Sphere radius="0.7"/>', '<Cone/>',
+              '<IndexedFaceSet coordIndex="0 1 2 -1"><Coordinate point="0 1 0 -1 -1 0 1 -1 0"/></IndexedFaceSet>', '<Box size="2 0.2 2"/>')
+    body = ['<BooleanToggle DEF="SinkB"/><TimeSensor DEF="Clock" cycleInterval="6" loop="true"/>']
+    routes = []
+    for g in range((n + 9) // 10):
+        body.append(f'<PositionInterpolator DEF="Move{g}" key="0 0.5 1" keyValue="-1.5 0 0 1.5 0 0 -1.5 0 0"/>')
+        routes.append(f'<ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Move{g}" toField="set_fraction"/>')
+    for i in range(n):
+        x, z = (i % 40) * 4.0, (i // 40) * 4.0
+        group = "".join(f'<Transform translation="{k * 0.4 - 0.8} 0 0"><Shape>{shape}</Shape></Transform>' for k, shape in enumerate(shapes))
+        kind = kinds[i % 4]
+        body.append(f'<Transform translation="{x} 0 {z}"><Group DEF="Targets{i}">{group}</Group>'
+                    f'<Transform DEF="Mover{i}" translation="-1.5 0 0"><Shape><Box size="0.1 0.1 0.1"/></Shape>'
+                    f'<{kind} DEF="Pick{i}" intersectionType="{"GEOMETRY" if (i // 4) % 2 else "BOUNDS"}" sortOrder="ALL">'
+                    f'{pickers[kind]}<Group USE="Targets{i}" containerField="pickTarget"/></{kind}></Transform></Transform>')
+        if i % 10 == 0:                  # one sensor in ten is moved; the rest stand still (the sensor says so by not recomputing)
+            routes.append(f'<ROUTE fromNode="Move{i // 10}" fromField="value_changed" toNode="Mover{i}" toField="set_translation"/>')
+        routes.append(f'<ROUTE fromNode="Pick{i}" fromField="isActive" toNode="SinkB" toField="set_boolean"/>')
+    return ('<?xml version="1.0" encoding="UTF-8"?><X3D profile="Full" version="4.0"><head/><Scene>'
+            + "".join(body) + "".join(routes) + "</Scene></X3D>")
+
+
 def media_world(n: int) -> str:
     """The "media" shape as X3D text: N looping AudioClips with a sink route each, one LoadSensor over the first N/10."""
     body = ['<BooleanToggle DEF="SinkB"/><TimeSensor DEF="SinkT" enabled="false"/>']
@@ -172,6 +207,8 @@ def resources_for(shape: str):
 
 def world_for(shape: str, n: int):
     """The World a shape's simulation reads (None for the shapes that need none). Deterministic."""
+    if shape == "pick":
+        return bw.World.from_x3d(pick_world(n))
     if shape != "world":
         return None
     world = bw.World()
@@ -473,7 +510,7 @@ def main(argv=None):
             receipt["simulation"].append(measure_sim(shape, n, args.budget))
             print(f"sim {shape} {n}: {receipt['simulation'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)
     if args.bpy:
-        for shape in (x for x in args.shapes if x != "media" and x not in OPT_IN_SHAPES):       # the Player applies no sound or points: nothing to time
+        for shape in (x for x in args.shapes if x not in ("media", "pick") and x not in OPT_IN_SHAPES):       # the Player applies no sound or points: nothing to time
             for n in args.sizes:
                 receipt["player"].append(measure_player(shape, n, args.budget, args.tree_limit))
                 print(f"player {shape} {n}: {receipt['player'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)
