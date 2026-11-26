@@ -149,7 +149,7 @@ class ActivityInBlender(unittest.TestCase):
         self.assertEqual(len(bpy.app.handlers.load_post), loaded)      # balanced: one handler, not two, not none
 
     def test_ensure_properties_after_they_are_deleted(self):
-        for name, _l, _t in self.ba.PROPERTIES:
+        for name, _l, _t, _d in self.ba.PROPERTIES:
             if hasattr(bpy.types.Scene, name):
                 delattr(bpy.types.Scene, name)
         self.assertFalse(hasattr(bpy.types.Scene, "x3d_activity_show"))
@@ -157,6 +157,30 @@ class ActivityInBlender(unittest.TestCase):
         self.ba.ensure_properties()                           # safe to repeat
         scene = bpy.context.scene
         self.assertTrue(scene.x3d_activity_show and scene.x3d_activity_stream and scene.x3d_activity_badges)
+        self.assertFalse(scene.x3d_activity_record)
+
+    def test_a_full_recording_from_the_player_replays(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        import behaviour_sim as bs
+        for world in ("door", "counter"):
+            with self.subTest(world=world):
+                scene = self.load(world)
+                scene.x3d_activity_record = True
+                player, _ = self.run_world(scene, True)
+                activity = player.activity
+                self.assertIsNotNone(activity.trace)
+                self.assertEqual(len(activity.trace), activity.deliveries)
+                calls = {c["call"] for c in activity.stimulus}
+                self.assertTrue({"start", "step", "press", "release"} <= calls, calls)
+                fresh = bs.Simulation(player.graph, log_size=10_000_000)
+                again = self.ba.Activity.from_simulation(fresh, record=True)
+                self.ba.replay(fresh, __import__("json").loads(activity.to_json())["stimulus"], again)
+                self.assertEqual(again.trace, __import__("json").loads(activity.to_json())["trace"])
+                player.stop()
+                scene.x3d_activity_record = False
+                off, _ = self.run_world(self.load(world), True)
+                self.assertIsNone(off.activity.trace)
+                off.stop()
 
     def test_the_copy_text_and_report(self):
         scene = self.load("counter")

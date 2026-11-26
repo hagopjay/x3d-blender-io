@@ -13,6 +13,7 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 | `tools/behaviour_sim_judge.cjs`, `tools/behaviour_sim_judge.py`, `tools/behaviour_probe.py` | record X_ITE's events, replay them through the simulator, compare; build the probe world |
 | `tests/test_behaviour_sim.py`, `tests/test_behaviour_play_bpy.py` | version 2: 20 plain-Python tests (4 replay X_ITE traces) and 15 Blender tests |
 | `tools/behaviour_roundtrip.py` | import a file with its graph, optionally set fields, export, print the graph difference |
+| `tools/behaviour_record.py` | record a world's full activity (every delivery, every call) from a script, in plain Python |
 | `source/behaviour_activity.py` | live activity while playing: the counting model (plain Python) and its drawing in the node editor |
 | `tools/behaviour_eyetest.py` | open a real Blender window, import each world with its graph, screenshot the editor, Play it with real (simulated) clicks, check Esc restores everything |
 | `tools/behaviour_replay.cjs` | play the same real mouse clicks on two files in X_ITE and compare what the scene did |
@@ -258,7 +259,7 @@ What the numbers mean (`source/behaviour_activity.py`, class `Activity`, no Blen
 | Word | Meaning |
 |---|---|
 | event | one line of `Simulation.log`: a node sent a value from an output field |
-| delivery | an event carried over one ROUTE, as the simulation delivered it (one per ROUTE per simulation call, only a value that fits the destination) |
+| delivery | an event carried over one ROUTE, as the simulation delivered it (one per ROUTE per `post` the simulation makes, and only a value that fits the destination) |
 | ROUTE total | deliveries over that ROUTE; per second is the last second of simulation time |
 | widest cascade | most events sharing one timestamp |
 | active ROUTEs a/b | ROUTEs that carried an event in the last second, of all |
@@ -270,18 +271,43 @@ simulation's ROUTE table; it never runs or changes the simulation. `Activity.rep
 ROUTE's count and rate, every node's in and out and the last 200 event lines (a stream within 0.25 s updates one line)
 as plain data, `to_json()` as JSON (`x3d.activity/1`), for use outside Blender.
 
+### Full recording (opt in)
+
+`Activity(record=True)`, `Activity.from_simulation(sim, record=True)`, or `Scene.x3d_activity_record` (the "Record full
+trace" checkbox, default off) keeps every delivery in order and every call the world received, as plain JSON, up to
+200,000 of each (`trace_truncated` says when that was hit; the counts are never capped). `report()` then has:
+
+| Key | Meaning |
+|---|---|
+| `trace` | `[time, from, from_field, to, to_field, type, value]` per delivery, in the simulation's order, uncoalesced, `value` as JSON numbers, strings, booleans and lists; `null` when recording is off |
+| `stimulus` | `{time, call, node, args}` per call: `start`, `step`, `press`, `drag`, `release`, `hover`, `key`, `viewer` (and `click`, `post` for scripts); the Player records the Simulation-level calls it makes (a click is a `press` and a `release`); `null` when off |
+| `trace_truncated`, `world` | the cap was hit; the file's name when known |
+
+    {"schema": "x3d.activity/1", "world": "door.x3d", "events": 918, "deliveries": 365,
+     "trace": [[0.5, "Click", "touchTime", "Timer", "startTime", "SFTime", 0.5]],
+     "stimulus": [{"time": 0.0, "call": "start", "node": null, "args": {}},
+                  {"time": 0.5, "call": "press", "node": "Click", "args": {}}], "...": "..."}
+
+`behaviour_activity.replay(Simulation(graph), report["stimulus"])` sends the same events again; the tests require the
+trace to come out identical. `tools/behaviour_record.py world.x3d --script stimulus.json --seconds 4 --out
+x.activity.json` (plain Python, no Blender) makes a recording from a script of calls; three are committed under
+`tests/behaviour/activity/` (door, counter, one CylinderSensor drag on `probe-drag.x3d` with the arguments the X_ITE
+drag tests use), each under 60 KB. The simulation forgets which ROUTEs fired at the start of every `post` (a press or a
+drag makes several), so Activity feeds each `post` as its own batch (it wraps `sim.post` on the instance); counting a
+whole press as one batch under-counted by half in the drag recording, which the trace-against-changes test caught.
+
 Checked, with the instrument:
 
-- `tests/test_behaviour_activity.py` (plain Python, 28 tests): counts equal the log of the bench worlds and of
+- `tests/test_behaviour_activity.py` (plain Python, 36 tests, including the recordings and the committed files): counts equal the log of the bench worlds and of
   `door.x3d`; deliveries into Transforms equal the changes the simulation handed back; a bounded log; windows; caps;
   packets empty without events; determinism; the link curve passes through both sockets; packets lie on the curve at
   three zoom scales; panel rectangles stay inside the region.
-- `tests/test_behaviour_activity_bpy.py` (bpy 5.3.0 wheel, no window, 7 tests): on the door, counter and snake worlds
+- `tests/test_behaviour_activity_bpy.py` (bpy 5.3.0 wheel, no window, 8 tests): on the door, counter and snake worlds
   the totals equal what the simulation logged for the same calls; Activity off or on gives the same `values` and the
   same log; the benchmark digest is unchanged with Activity attached; the overlay handler is added once and removed
   (Stop, file load, unregister); the Scene properties come back after being deleted.
 - Cost: `Player.step` on the `fan` benchmark graph, N = 1000, 300 steps, `PYTHONHASHSEED=3`, bpy 5.3.0 wheel, a shared
-  4-core machine, four runs each way alternating: median 4.33 ms per step off, 4.87 ms on (+12.5 %).
+  4-core machine, four runs each way alternating: median 4.35 ms per step off, 4.99 ms on (+15 %; one on-run was disturbed by another job).
 
 Not checked by anyone: the drawing. It needs a Blender window and the machine this was written on had none, so the
 overlay code has never run on a screen. In particular the socket positions (Python cannot read Blender's own, so they

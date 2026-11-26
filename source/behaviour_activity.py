@@ -37,6 +37,7 @@ COALESCE = 0.25          # a stream: the same ROUTE within this many seconds upd
 RING = 200               # event lines kept
 PER_ROUTE = 3            # packets drawn at most per ROUTE
 MAX_PACKETS = 400        # and in all
+TRACE_CAP = 200_000      # recorded deliveries and calls kept at most (then ``trace_truncated``)
 RECENT = 4096            # times kept per ROUTE (exact "per second" up to this many a second)
 
 
@@ -72,6 +73,68 @@ def value_text(value, limit=32):
     return text if len(text) <= limit else text[:limit - 1] + "…"
 
 
+def plain(value):
+    """``value`` as plain JSON data: numbers, strings, booleans, None and lists (tuples become lists)."""
+    if isinstance(value, (bool, int, str)) or value is None:
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else str(value)
+    if isinstance(value, dict):
+        return {str(k): plain(v) for k, v in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [plain(v) for v in value]
+    return str(value)
+
+
+def _tuples(value):
+    """The inverse of ``plain`` for a recorded argument: lists become tuples (what the simulation is given)."""
+    if isinstance(value, list):
+        return tuple(_tuples(v) for v in value)
+    if isinstance(value, dict):
+        return {k: _tuples(v) for k, v in value.items()}
+    return value
+
+
+def perform(sim, entry):
+    """Do one recorded call (``{"time", "call", "node", "args"}``) on a Simulation; returns its changes. The calls are
+    the Simulation's own: start, step, click, press, drag, release, hover, key, viewer, post."""
+    call, node, now = entry["call"], entry.get("node"), entry["time"]
+    args = _tuples(entry.get("args") or {})
+    if call == "start":
+        return sim.start(now)
+    if call == "step":
+        return sim.step(now)
+    if call == "click":
+        return sim.click(node, now, held=args.get("held", 0.0))
+    if call == "press":
+        return sim.press(node, now, point=args.get("point", (0.0, 0.0, 0.0)), ray=args.get("ray"), eye=args.get("eye"),
+                         follow=args.get("follow", True), screen=args.get("screen"))
+    if call == "drag":
+        return sim.drag(node, args.get("point"), now, ray=args.get("ray"))
+    if call == "release":
+        return sim.release(node, now)
+    if call == "hover":
+        return sim.hover(node, args["over"], now)
+    if call == "key":
+        return sim.key(args["kind"], args["event"], now)
+    if call == "viewer":
+        return sim.viewer(node, args["position"], args["orientation"], now,
+                          center_of_rotation=args.get("center_of_rotation", (0.0, 0.0, 0.0)),
+                          test_position=args.get("test_position"))
+    if call == "post":
+        return sim.post(node, args["field"], args["value"], now)
+    raise ValueError(f"unknown call {call!r}")
+
+
+def replay(sim, stimulus, activity=None):
+    """Run a recorded stimulus on a (fresh) Simulation, feeding ``activity`` after every call when given. The same
+    graph and the same stimulus give the same events: that is how a recording is checked."""
+    for entry in stimulus:
+        perform(sim, entry)
+        if activity is not None:
+            activity.feed_log(sim.log, sim.now)
+
+
 class _Route:
     __slots__ = ("key", "type", "total", "recent", "last_time", "last_value", "live")
 
@@ -102,10 +165,11 @@ class Activity:
     """What a running simulation delivered. Memory is bounded: one record per ROUTE and node, the last second of times
     per ROUTE, 200 stream lines."""
 
-    def __init__(self, routes=None, types=None, *, travel=TRAVEL):
+    def __init__(self, routes=None, types=None, *, travel=TRAVEL, record=False, world=None):
         """``routes``: {(from node, from field): [(to node, to field, fits)]}; ``fits`` is None or a function of the
         value that says whether the ROUTE carries it. ``types``: {(from, field, to, field): X3D type name}."""
         self.travel = travel
+        self.record, self.world = bool(record), world
         self._out = {}
         self._routes = {}
         types = types or {}
@@ -132,6 +196,18 @@ class Activity:
         if not isinstance(sim.log, CountingLog):
             sim.log = CountingLog(sim.log, maxlen=sim.log.maxlen)
         activity._seen = sim.log.appended
+        # The simulation lets each ROUTE carry one event per ``post`` (it forgets which ROUTEs fired at the start of every
+        # post, and a press or a drag makes several). So what a post delivered is fed as its own batch: the batches are
+        # the simulation's own moments, and a delivery here is a delivery there.
+        original = sim.post
+
+        def post(*args, **kwargs):
+            activity.feed_log(sim.log, sim.now)
+            try:
+                return original(*args, **kwargs)
+            finally:
+                activity.feed_log(sim.log, sim.now)
+        sim.post = post
         return activity
 
     def reset(self):
@@ -147,6 +223,10 @@ class Activity:
         self._cascade_time, self._cascade = None, 0
         self._hot = {}                       # ROUTEs that carried something within the last second, oldest first
         self._seen = 0
+        # the full recording (opt in): every delivery in order and every call the world received, as plain data
+        self.trace = [] if self.record else None
+        self.stimulus = [] if self.record else None
+        self.trace_truncated = False
 
     # -- feeding ----------------------------------------------------------------------------------------------
 
@@ -194,6 +274,11 @@ class Activity:
                     continue
                 fired.add(key)
                 self.deliveries += 1
+                if self.trace is not None:
+                    if len(self.trace) < TRACE_CAP:
+                        self.trace.append([when, *key, self._routes[key].type, plain(value)])
+                    else:
+                        self.trace_truncated = True
                 route = routes[key]
                 route.total += 1
                 route.recent.append(when)
@@ -213,6 +298,24 @@ class Activity:
                     entry = route.live = _Entry(when, key, route.type, value)
                     ring.append(entry)
         self.now = max(self.now, last if now is None else now)
+
+    def note_call(self, call, node, now, **args):
+        """Record a call the world received (start, step, click, press, drag, release, hover, key, viewer, post) so
+        the recording can be replayed. Does nothing unless ``record`` is on. ``args`` are the call's own arguments."""
+        if self.stimulus is None:
+            return
+        if len(self.stimulus) < TRACE_CAP:
+            self.stimulus.append({"time": now, "call": call, "node": node, "args": plain(args)})
+        else:
+            self.trace_truncated = True
+
+    def drive(self, sim, call, node, now, **args):
+        """For pure Python: note the call, do it on ``sim`` and take what it delivered. Returns the sim's changes."""
+        entry = {"time": now, "call": call, "node": node, "args": plain(args)}
+        self.note_call(call, node, now, **args)
+        changes = perform(sim, entry)
+        self.feed_log(sim.log, sim.now)
+        return changes
 
     def _add_window(self, when, count):
         window = self._window
@@ -326,12 +429,13 @@ class Activity:
             "schema": SCHEMA, "time": now, "events": self.events, "deliveries": self.deliveries,
             "unattributed": self.unseen, "events_per_second": self.events_per_second(now),
             "routes_total": len(self._routes), "routes_active": self.routes_active(now),
-            "widest_cascade": self.widest, "routes": routes,
+            "widest_cascade": self.widest, "world": self.world, "routes": routes,
             "nodes": [{"node": name, "in": record[0], "out": record[1], "last_output": record[2]}
                       for name, record in sorted(self.nodes.items())],
             "ring": [{"time": e.time, "from": e.key[0], "from_field": e.key[1], "to": e.key[2], "to_field": e.key[3],
                       "type": e.type, "value": value_text(e.value), "count": e.count, "per_second": e.rate}
                      for e in self.ring],
+            "trace": self.trace, "trace_truncated": self.trace_truncated, "stimulus": self.stimulus,
         }
 
     def to_json(self, now=None, indent=None):
@@ -853,17 +957,20 @@ def _draw_hud(activity, now, size, ui, fid, stream, batch_for_shader, shaders):
 # Scene properties, the copy button, registration
 # ---------------------------------------------------------------------------------------------------------------
 
-PROPERTIES = (("x3d_activity_show", "Show activity", "Draw events travelling along the links while playing"),
-              ("x3d_activity_stream", "Event stream", "List the latest events in the activity panel"),
-              ("x3d_activity_badges", "Count badges", "Show how many events each link carried"))
+PROPERTIES = (("x3d_activity_show", "Show activity", "Draw events travelling along the links while playing", True),
+              ("x3d_activity_stream", "Event stream", "List the latest events in the activity panel", True),
+              ("x3d_activity_badges", "Count badges", "Show how many events each link carried", True),
+              ("x3d_activity_record", "Record full trace",
+               "Keep every delivered event and every call the world received (up to 200,000), for Copy activity report "
+               "and the saved JSON", False))
 
 
 def ensure_properties():
     """Define the three Scene properties when missing (a factory reset with another copy of the add-on drops them)."""
     import bpy
-    for name, label, text in PROPERTIES:
+    for name, label, text, default in PROPERTIES:
         if not hasattr(bpy.types.Scene, name):
-            setattr(bpy.types.Scene, name, bpy.props.BoolProperty(name=label, description=text, default=True))
+            setattr(bpy.types.Scene, name, bpy.props.BoolProperty(name=label, description=text, default=default))
 
 
 def draw_options(layout, context):
@@ -871,7 +978,7 @@ def draw_options(layout, context):
     ensure_properties()
     box = layout.column(align=True)
     box.label(text="Activity")
-    for name, _label, _text in PROPERTIES:
+    for name, _label, _text, _default in PROPERTIES:
         box.prop(context.scene, name)
     row = box.row()
     row.enabled = last_activity() is not None
@@ -932,7 +1039,7 @@ def unregister():
     _state["last"] = None
     if _on_load in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(_on_load)
-    for name, _label, _text in PROPERTIES:
+    for name, _label, _text, _default in PROPERTIES:
         if hasattr(bpy.types.Scene, name):
             delattr(bpy.types.Scene, name)
     for cls in reversed(_state["classes"] or ()):

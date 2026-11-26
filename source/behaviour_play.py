@@ -178,13 +178,15 @@ class _TransformState:
 class Player:
     """A scene's behaviour graph, running on the scene's own objects."""
 
-    def __init__(self, scene, graph=None, *, global_matrix=None, flash=True, activity=False):
+    def __init__(self, scene, graph=None, *, global_matrix=None, flash=True, activity=False, record=None):
         self.scene = scene
         self.graph = graph if graph is not None else behaviour_nodes.read(scene)
         if self.graph is None:
             raise bg.BehaviourError("no-graph", "this scene has no X3D Behaviour node tree to play")
         self.sim = Simulation(self.graph)
-        self.activity = behaviour_activity.Activity.from_simulation(self.sim) if activity else None   # see behaviour_activity
+        self.activity = behaviour_activity.Activity.from_simulation(
+            self.sim, record=bool(getattr(scene, "x3d_activity_record", False)) if record is None else record,
+            world=scene.name) if activity else None   # see behaviour_activity
         self.global_matrix = global_matrix if global_matrix is not None else EXPORT_AXES
         self.not_applied = []          # "Type.field" an event reached but the player does not show
         self.now = 0.0
@@ -226,12 +228,19 @@ class Player:
 
     # -- time and the pointer -----------------------------------------------------------------------------------
 
+    def _note(self, call, node, now, **args):
+        """The call the world is about to receive, for a full recording (only when asked for)."""
+        if self.activity is not None and self.activity.stimulus is not None:
+            self.activity.note_call(call, node, now, **args)
+
     def start(self, now=0.0):
         self.now = now
+        self._note("start", None, now)
         self._apply(self.sim.start(now))
 
     def step(self, now):
         self.now = now
+        self._note("step", None, now)
         self._apply(self.sim.step(now))
         self._flash_nodes()
 
@@ -246,6 +255,7 @@ class Player:
         the one KeySensor or StringSensor that is enabled."""
         self.now = now
         event = {"key": key, "which": which, "charCode": 0, "keyCode": which}
+        self._note("key", None, now, kind=kind, event=event)
         self._apply(self.sim.key(kind, event, now))
 
     def key_event(self, event, now):
@@ -290,14 +300,18 @@ class Player:
             position, turn, _scale = local.decompose()
             axis, angle = turn.to_axis_angle()
             center = self._frame(sensor).inverted() @ Vector(pivot)
+            self._note("viewer", sensor, now, position=tuple(position), orientation=(*axis, angle),
+                       center_of_rotation=tuple(center))
             self._apply(self.sim.viewer(sensor, tuple(position), (*axis, angle), now, center_of_rotation=tuple(center)))
 
     def hover(self, obj, now):
         """The pointer is over ``obj`` (None: over nothing a sensor senses)."""
         wanted = self.sensors_for(obj) if obj is not None else []
         for sensor in [s for s in self._over if s not in wanted]:
+            self._note("hover", sensor, now, over=False)
             self._apply(self.sim.hover(sensor, False, now))
         for sensor in [s for s in wanted if s not in self._over]:
+            self._note("hover", sensor, now, over=True)
             self._apply(self.sim.hover(sensor, True, now))
         self._over = wanted
         return bool(wanted)
@@ -322,6 +336,7 @@ class Player:
                 extra = {"ray": self._local_ray(sensor, *ray),
                          "eye": (tuple(inverse @ Vector(eye[0])),
                                  tuple((inverse.to_3x3() @ Vector(eye[1])).normalized()))}
+            self._note("press", sensor, now, point=tuple(point), **extra)
             self._apply(self.sim.press(sensor, now, tuple(point), **extra))
         return bool(self._held)
 
@@ -332,7 +347,9 @@ class Player:
         for sensor in self._held:
             kind = self.graph.nodes[sensor].node_type
             if kind in ("CylinderSensor", "SphereSensor"):
-                self._apply(self.sim.drag(sensor, None, now, ray=self._local_ray(sensor, origin, direction)))
+                ray = self._local_ray(sensor, origin, direction)
+                self._note("drag", sensor, now, ray=ray)
+                self._apply(self.sim.drag(sensor, None, now, ray=ray))
                 continue
             if kind != "PlaneSensor":
                 continue
@@ -341,10 +358,12 @@ class Player:
             if abs(way.z) < 1e-9:
                 continue
             point = start + way * ((self._plane[sensor] - start.z) / way.z)
+            self._note("drag", sensor, now, point=tuple(point))
             self._apply(self.sim.drag(sensor, tuple(point), now))
 
     def release(self, now):
         for sensor in self._held:
+            self._note("release", sensor, now)
             self._apply(self.sim.release(sensor, now))
         self._held = []
 

@@ -1,0 +1,38 @@
+[
+ {
+  "time": 0.5,
+  "call": "press",
+  "node": "Press",
+  "args": {}
+ },
+ {
+  "time": 0.6,
+  "call": "release",
+  "node": "Press",
+  "args": {}
+ },
+ {
+  "time": 1.5,
+  "call": "press",
+  "node": "Press",
+  "args": {}
+ },
+ {
+  "time": 1.6,
+  "call": "release",
+  "node": "Press",
+  "args": {}
+ },
+ {
+  "time": 2.5,
+  "call": "press",
+  "node": "Press",
+  "args": {}
+ },
+ {
+  "time": 2.6,
+  "call": "release",
+  "node": "Press",
+  "args": {}
+ }
+]

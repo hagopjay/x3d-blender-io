@@ -24,6 +24,8 @@ import behaviour_activity as ba   # noqa: E402
 import behaviour_bench as bench   # noqa: E402
 import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
+import behaviour_record as record_tool   # noqa: E402
+import behaviour_sim_judge as judge   # noqa: E402
 
 WORLDS = ROOT / "tests" / "behaviour"
 
@@ -311,6 +313,160 @@ class Geometry(unittest.TestCase):
         self.assertEqual(strengths[0], 1.0)
         self.assertEqual(strengths, sorted(strengths, reverse=True))
         self.assertEqual(len(ba.packet_trail(points, ba.arc_lengths(points), 0.0)), 1)
+
+
+def world_graph(name):
+    return bg.Behaviour.from_x3d((WORLDS / f"{name}.x3d").read_text(encoding="utf-8"))
+
+
+def stimulus_of(name):
+    """(graph, [(call, node, time, args)]) for a world: the door and the counter are clicked, then stepped for 4 s."""
+    graph = world_graph(name)
+    touch = [n.id for n in graph.nodes.values() if n.node_type == "TouchSensor"]
+    calls = [("start", None, 0.0, {})]
+    for k, sensor in enumerate(touch):
+        calls.append(("click", sensor, 0.3 + 0.9 * k, {"held": 0.0}))
+        calls.append(("press", sensor, 3.0 + k, {}))
+        calls.append(("release", sensor, 3.2 + k, {}))
+    calls += [("step", None, i / 30, {}) for i in range(1, 121)]
+    calls.sort(key=lambda c: c[2])
+    return graph, calls
+
+
+def drag_stimulus():
+    """One CylinderSensor drag with the arguments the X_ITE drag tests give the simulator (probe-drag, sensor Spin)."""
+    text = (WORLDS / "probe-drag.x3d").read_text(encoding="utf-8")
+    trace = json.loads((WORLDS / "x_ite_traces" / "probe-drag.json").read_text(encoding="utf-8"))
+    graph = bg.Behaviour.from_x3d(text)
+    actions = judge._drag_actions(graph, text, trace)
+    mine = []
+    for when, sensor, action, args in actions:
+        if sensor != "Spin":
+            continue
+        mine.append((when, action, args))
+        if action == "release":
+            break
+    calls = [("start", None, mine[0][0] - 1.0, {})]
+    for when, action, args in mine:
+        if action == "press":
+            point, ray, eye, screen = args
+            calls.append(("press", "Spin", when, {"point": point, "ray": ray, "eye": eye, "screen": screen}))
+        elif action == "drag":
+            calls.append(("drag", "Spin", when, {"ray": args[0]}))
+        else:
+            calls.append(("release", "Spin", when, {}))
+    return graph, calls
+
+
+class Recording(unittest.TestCase):
+
+    def record(self, graph, calls, **options):
+        sim = bs.Simulation(graph, log_size=10_000_000)
+        activity = ba.Activity.from_simulation(sim, record=True, **options)
+        changes = []
+        for call, node, when, args in calls:
+            changes += activity.drive(sim, call, node, when, **args)
+        return sim, activity, changes
+
+    def worlds(self):
+        yield "door", stimulus_of("door")
+        yield "counter", stimulus_of("counter")
+        yield "drag", drag_stimulus()
+
+    def test_the_trace_is_every_delivery_in_the_simulations_order(self):
+        for name, (graph, calls) in self.worlds():
+            with self.subTest(world=name):
+                sim, activity, changes = self.record(graph, calls)
+                self.assertGreater(activity.deliveries, 0)
+                self.assertEqual(len(activity.trace), activity.deliveries)
+                self.assertEqual(len(activity.stimulus), len(calls))
+                # independent of the model's own loop: what reached a target is exactly the changes the simulation
+                # handed back, in the order it handed them
+                into_targets = [(t[3], t[4], t[6]) for t in activity.trace if graph.nodes[t[3]].role == bg.TARGET]
+                self.assertEqual(into_targets, [(n, f, ba.plain(v)) for n, f, v in changes])
+                times = [t[0] for t in activity.trace]
+                self.assertEqual(times, sorted(times))
+                self.assertFalse(activity.trace_truncated)
+                self.assertEqual(activity.report()["trace"], activity.trace)
+
+    def test_replaying_the_recorded_stimulus_reproduces_the_trace(self):
+        for name, (graph, calls) in self.worlds():
+            with self.subTest(world=name):
+                _sim, first, _c = self.record(graph, calls)
+                saved = json.loads(first.to_json())                  # through JSON, as a file would carry it
+                fresh = bs.Simulation(world_graph("probe-drag" if name == "drag" else name), log_size=10_000_000)
+                again = ba.Activity.from_simulation(fresh, record=True)
+                ba.replay(fresh, saved["stimulus"], again)
+                self.assertEqual(again.trace, saved["trace"])
+                self.assertEqual(again.deliveries, saved["deliveries"])
+                self.assertEqual(json.loads(again.to_json())["trace"], saved["trace"])
+
+    def test_the_drag_world_really_turns_the_cylinder(self):
+        graph, calls = drag_stimulus()
+        _sim, activity, _c = self.record(graph, calls)
+        self.assertTrue(any(t[2] in ("rotation_changed", "trackPoint_changed") for t in activity.trace) or
+                        activity.events > 0)
+        self.assertGreater(len(activity.trace), 3)
+
+    def test_off_by_default_and_null_in_the_report(self):
+        sim, activity, _c = play("fan", 5, 10)
+        report = activity.report()
+        self.assertIsNone(report["trace"])
+        self.assertIsNone(report["stimulus"])
+        self.assertFalse(report["trace_truncated"])
+        activity.note_call("click", "X", 1.0)                      # nothing happens without record=True
+        self.assertIsNone(activity.stimulus)
+
+    def test_the_cap_and_the_flag(self):
+        old = ba.TRACE_CAP
+        ba.TRACE_CAP = 50
+        try:
+            _sim, activity, _c = self.record(*stimulus_of("door"))
+        finally:
+            ba.TRACE_CAP = old
+        self.assertEqual(len(activity.trace), 50)
+        self.assertTrue(activity.trace_truncated)
+        self.assertGreater(activity.deliveries, 50)                # the counts are never capped
+
+    def test_values_are_plain_json(self):
+        graph, calls = stimulus_of("door")
+        _sim, activity, _c = self.record(graph, calls)
+        self.assertEqual(json.loads(json.dumps(activity.trace)), activity.trace)
+        self.assertTrue(any(isinstance(t[6], list) for t in activity.trace))     # a position is a list of numbers
+        self.assertEqual(activity.report()["world"], None)
+
+
+RECORDINGS = WORLDS / "activity"
+
+
+class CommittedRecordings(unittest.TestCase):
+    """tests/behaviour/activity/*.activity.json: made by tools/behaviour_record.py from the .stimulus.json beside them."""
+
+    CASES = (("door", "door"), ("counter", "counter"), ("drag", "probe-drag"))
+
+    def test_the_files_are_what_the_tool_makes_and_small(self):
+        for name, world in self.CASES:
+            with self.subTest(recording=name):
+                path = RECORDINGS / f"{name}.activity.json"
+                self.assertLess(path.stat().st_size, 300_000)
+                script = json.loads((RECORDINGS / f"{name}.stimulus.json").read_text(encoding="utf-8"))
+                made = record_tool.record((WORLDS / f"{world}.x3d").read_text(encoding="utf-8"), script,
+                                          world=f"{world}.x3d").report()
+                self.assertEqual(json.dumps(made, sort_keys=True, separators=(",", ":")) + "\n",
+                                 path.read_text(encoding="utf-8"))
+
+    def test_each_recording_replays_to_itself(self):
+        for name, world in self.CASES:
+            with self.subTest(recording=name):
+                saved = json.loads((RECORDINGS / f"{name}.activity.json").read_text(encoding="utf-8"))
+                self.assertEqual(saved["schema"], ba.SCHEMA)
+                self.assertEqual(len(saved["trace"]), saved["deliveries"])
+                self.assertFalse(saved["trace_truncated"])
+                fresh = bs.Simulation(world_graph(world), log_size=10_000_000)
+                again = ba.Activity.from_simulation(fresh, record=True)
+                ba.replay(fresh, saved["stimulus"], again)
+                self.assertEqual(again.trace, saved["trace"])
+                self.assertGreater(len(saved["trace"]), 5)
 
 
 if __name__ == "__main__":
