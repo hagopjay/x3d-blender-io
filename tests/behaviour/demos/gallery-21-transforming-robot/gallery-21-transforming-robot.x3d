@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 21: transforming robot" />
+    <meta name="description" content="Click the orange cube: it unfolds panel by panel into a robot that waves and dances. Click again to fold it." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-21-transforming-robot/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.04 0.08 0.14" />
+    <Viewpoint DEF="Cam" description="Platform" position="0 2.7 9.6" orientation="1 0 0 -0.05" />
+    <DirectionalLight direction="-0.3 -0.6 -0.7" intensity="1.0" />
+    <Transform translation="0 -0.1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.12 0.15" roughness="0.9" /></Appearance><Box size="40 0.2 30" /></Shape></Transform>
+    <Transform translation="0 0.2 0"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.28 0.33" metallic="0.6" roughness="0.4" /></Appearance><Cylinder radius="3.3" height="0.4" /></Shape></Transform>
+    <Transform DEF="Stud0" translation="3 0.45 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform><Transform DEF="Stud1" translation="2.1213 0.45 2.1213" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform><Transform DEF="Stud2" translation="0 0.45 3" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform><Transform DEF="Stud3" translation="-2.1213 0.45 2.1213" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform><Transform DEF="Stud4" translation="-3 0.45 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform><Transform DEF="Stud5" translation="-2.1213 0.45 -2.1213" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform><Transform DEF="Stud6" translation="-0 0.45 -3" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform><Transform DEF="Stud7" translation="2.1213 0.45 -2.1213" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 1 0.9" emissiveColor="0.1 0.9 0.8"  /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <Transform DEF="Robot" translation="0 0.4 0"><Transform DEF="Bounce"><Transform DEF="Body" translation="0 0.8 0"><TouchSensor DEF="Touch" description="Click the robot: unfold or fold" /><Transform DEF="Torso"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.45 0.1" metallic="0.3" roughness="0.5" /></Appearance><Box size="1.6 1.6 1.6" /></Shape></Transform><Transform translation="0 -0.35 0.82" rotation="1 0 0 1.5708"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.15 0.18"  /></Appearance><Cylinder radius="0.3" height="0.06" /></Shape></Transform><Transform DEF="ChestLamp" translation="0 -0.35 0.86" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="1 0.75 0.1"  /></Appearance><Sphere radius="0.17" /></Shape></Transform><Transform translation="-0.66 -0.66 0.82"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.72"  /></Appearance><Sphere radius="0.07" /></Shape></Transform><Transform translation="0.66 -0.66 0.82"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.72"  /></Appearance><Sphere radius="0.07" /></Shape></Transform><Transform DEF="HipR" translation="1 -0.8 0" rotation="0 0 1 3.1416"><Transform translation="0 -0.4 0"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.52 0.75"  /></Appearance><Box size="0.3 0.8 0.3" /></Shape></Transform><Transform DEF="KneeR" translation="0 -0.8 0.32" rotation="0 0 1 3.1416"><Transform translation="0 -0.35 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.4 0.62"  /></Appearance><Box size="0.26 0.7 0.26" /></Shape></Transform><Transform DEF="AnkleR" translation="0 -0.7 0"><Transform translation="0 -0.05 0.1"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.15 0.18"  /></Appearance><Box size="0.36 0.1 0.5" /></Shape></Transform></Transform></Transform></Transform><Transform DEF="HipL" translation="-1 -0.8 0" rotation="0 0 -1 3.1416"><Transform translation="0 -0.4 0"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.52 0.75"  /></Appearance><Box size="0.3 0.8 0.3" /></Shape></Transform><Transform DEF="KneeL" translation="0 -0.8 0.32" rotation="0 0 -1 3.1416"><Transform translation="0 -0.35 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.4 0.62"  /></Appearance><Box size="0.26 0.7 0.26" /></Shape></Transform><Transform DEF="AnkleL" translation="0 -0.7 0"><Transform translation="0 -0.05 0.1"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.15 0.18"  /></Appearance><Box size="0.36 0.1 0.5" /></Shape></Transform></Transform></Transform></Transform><Transform DEF="ShoulderYR" translation="0.8 0.4 0.88"><Transform DEF="ShoulderZR"><Transform translation="-0.4 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.4 0.62"  /></Appearance><Box size="0.8 0.7 0.12" /></Shape></Transform><Transform DEF="ElbowR" translation="-0.8 0 0.14" rotation="0 0 1 3.1416"><Transform translation="-0.35 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.52 0.75"  /></Appearance><Box size="0.7 0.5 0.1" /></Shape></Transform><Transform DEF="WristR" translation="-0.7 0 0"><Transform translation="-0.14 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.45 0.1"  /></Appearance><Sphere radius="0.18" /></Shape></Transform></Transform></Transform></Transform></Transform><Transform DEF="ShoulderYL" translation="-0.8 0.4 0.88"><Transform DEF="ShoulderZL"><Transform translation="0.4 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.4 0.62"  /></Appearance><Box size="0.8 0.7 0.12" /></Shape></Transform><Transform DEF="ElbowL" translation="0.8 0 0.14" rotation="0 0 1 3.1416"><Transform translation="0.35 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.52 0.75"  /></Appearance><Box size="0.7 0.5 0.1" /></Shape></Transform><Transform DEF="WristL" translation="0.7 0 0"><Transform translation="0.14 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.45 0.1"  /></Appearance><Sphere radius="0.18" /></Shape></Transform></Transform></Transform></Transform></Transform><Transform DEF="HeadYaw" translation="0 0.8 0"><Transform DEF="HeadRise" scale="1 0.1 1"><Transform translation="0 0.35 0"><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.8 0.86" metallic="0.3" roughness="0.4" /></Appearance><Box size="0.9 0.7 0.8" /></Shape></Transform><Transform DEF="Sockets" translation="-0.2 0.42 0.41" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.1 0.12"  /></Appearance><Box size="0.24 0.16 0.04" /></Shape></Transform><Transform DEF="SocketsB" translation="0.2 0.42 0.41" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.1 0.12"  /></Appearance><Box size="0.24 0.16 0.04" /></Shape></Transform><Transform DEF="Eyes" visible="false"><Transform translation="-0.2 0.42 0.44"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.95 1" emissiveColor="0.2 0.9 1"  /></Appearance><Sphere radius="0.07" /></Shape></Transform><Transform translation="0.2 0.42 0.44"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.95 1" emissiveColor="0.2 0.9 1"  /></Appearance><Sphere radius="0.07" /></Shape></Transform></Transform><Transform DEF="AntHinge" translation="0.28 0.7 0" rotation="0 0 1 1.4" visible="false"><Transform translation="0 0.25 0"><Shape><Appearance><PhysicalMaterial baseColor="0.6 0.6 0.65"  /></Appearance><Cylinder radius="0.035" height="0.5" /></Shape></Transform><Transform translation="0 0.52 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.2 0.2" emissiveColor="1 0.1 0.1"  /></Appearance><Sphere radius="0.09" /></Shape></Transform></Transform></Transform></Transform></Transform></Transform></Transform>
+    <TimeSensor DEF="U1" cycleInterval="2.2" />
+    <TimeSensor DEF="U2" cycleInterval="1.8" />
+    <TimeSensor DEF="U3" cycleInterval="1.2" />
+    <TimeSensor DEF="U4" cycleInterval="1.0" />
+    <TimeSensor DEF="U5" cycleInterval="2.4" />
+    <TimeSensor DEF="U6" cycleInterval="3.0" />
+    <TimeSensor DEF="F" cycleInterval="3.0" />
+    <TimeTrigger DEF="GoUnfold" />
+    <TimeTrigger DEF="GoFold" />
+    <TimeTrigger DEF="Go2" />
+    <TimeTrigger DEF="Go3" />
+    <TimeTrigger DEF="Go4" />
+    <TimeTrigger DEF="Go5" />
+    <TimeTrigger DEF="Go6" />
+    <BooleanFilter DEF="Press" />
+    <BooleanFilter DEF="Dir" />
+    <BooleanFilter DEF="Edge1" />
+    <BooleanFilter DEF="Edge2" />
+    <BooleanFilter DEF="Edge3" />
+    <BooleanFilter DEF="Edge4" />
+    <BooleanFilter DEF="Edge5" />
+    <BooleanToggle DEF="Flip" />
+    <ROUTE fromNode="Touch" fromField="isActive" toNode="Press" toField="set_boolean" />
+    <ROUTE fromNode="Press" fromField="inputTrue" toNode="Flip" toField="set_boolean" />
+    <ROUTE fromNode="Flip" fromField="toggle_changed" toNode="Dir" toField="set_boolean" />
+    <ROUTE fromNode="Dir" fromField="inputTrue" toNode="GoUnfold" toField="set_boolean" />
+    <ROUTE fromNode="Dir" fromField="inputNegate" toNode="GoFold" toField="set_boolean" />
+    <ROUTE fromNode="GoUnfold" fromField="triggerTime" toNode="U1" toField="startTime" />
+    <ROUTE fromNode="GoFold" fromField="triggerTime" toNode="F" toField="startTime" />
+    <ROUTE fromNode="U1" fromField="isActive" toNode="Edge1" toField="set_boolean" />
+    <ROUTE fromNode="Edge1" fromField="inputNegate" toNode="Go2" toField="set_boolean" />
+    <ROUTE fromNode="Go2" fromField="triggerTime" toNode="U2" toField="startTime" />
+    <ROUTE fromNode="U2" fromField="isActive" toNode="Edge2" toField="set_boolean" />
+    <ROUTE fromNode="Edge2" fromField="inputNegate" toNode="Go3" toField="set_boolean" />
+    <ROUTE fromNode="Go3" fromField="triggerTime" toNode="U3" toField="startTime" />
+    <ROUTE fromNode="U3" fromField="isActive" toNode="Edge3" toField="set_boolean" />
+    <ROUTE fromNode="Edge3" fromField="inputNegate" toNode="Go4" toField="set_boolean" />
+    <ROUTE fromNode="Go4" fromField="triggerTime" toNode="U4" toField="startTime" />
+    <ROUTE fromNode="U4" fromField="isActive" toNode="Edge4" toField="set_boolean" />
+    <ROUTE fromNode="Edge4" fromField="inputNegate" toNode="Go5" toField="set_boolean" />
+    <ROUTE fromNode="Go5" fromField="triggerTime" toNode="U5" toField="startTime" />
+    <ROUTE fromNode="U5" fromField="isActive" toNode="Edge5" toField="set_boolean" />
+    <ROUTE fromNode="Edge5" fromField="inputNegate" toNode="Go6" toField="set_boolean" />
+    <ROUTE fromNode="Go6" fromField="triggerTime" toNode="U6" toField="startTime" />
+    <ScalarInterpolator DEF="Rev" key="0 1" keyValue="1 0" />
+    <ROUTE fromNode="F" fromField="fraction_changed" toNode="Rev" toField="set_fraction" />
+    <PositionInterpolator DEF="Rise" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.8 0 0 1.1121 0 0 1.4123 0 0 1.6889 0 0 1.9314 0 0 2.1304 0 0 2.2782 0 0 2.3693 0 0 2.4 0" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="Rise" toField="set_fraction" />
+    <ROUTE fromNode="Rise" fromField="value_changed" toNode="Body" toField="translation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="Rise" toField="set_fraction" />
+    <OrientationInterpolator DEF="HipSwingR" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 0 1 3.1416 0 0 1 2.9089 0 0 1 2.3271 0 0 1 1.5708 0 0 1 0.8145 0 0 1 0.2327 0 0 1 0" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="HipSwingR" toField="set_fraction" />
+    <ROUTE fromNode="HipSwingR" fromField="value_changed" toNode="HipR" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="HipSwingR" toField="set_fraction" />
+    <OrientationInterpolator DEF="KneeSwingR" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 0 1 3.1416 0 0 1 2.9089 0 0 1 2.3271 0 0 1 1.5708 0 0 1 0.8145 0 0 1 0.2327 0 0 1 0" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="KneeSwingR" toField="set_fraction" />
+    <ROUTE fromNode="KneeSwingR" fromField="value_changed" toNode="KneeR" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="KneeSwingR" toField="set_fraction" />
+    <PositionInterpolator DEF="KneeSlideR" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 -0.8 0.32 0 -0.8 0.2963 0 -0.8 0.237 0 -0.8 0.16 0 -0.8 0.083 0 -0.8 0.0237 0 -0.8 0" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="KneeSlideR" toField="set_fraction" />
+    <ROUTE fromNode="KneeSlideR" fromField="value_changed" toNode="KneeR" toField="translation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="KneeSlideR" toField="set_fraction" />
+    <OrientationInterpolator DEF="HipSwingL" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 0 -1 3.1416 0 0 -1 2.9089 0 0 -1 2.3271 0 0 -1 1.5708 0 0 -1 0.8145 0 0 -1 0.2327 0 0 -1 0" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="HipSwingL" toField="set_fraction" />
+    <ROUTE fromNode="HipSwingL" fromField="value_changed" toNode="HipL" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="HipSwingL" toField="set_fraction" />
+    <OrientationInterpolator DEF="KneeSwingL" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 0 -1 3.1416 0 0 -1 2.9089 0 0 -1 2.3271 0 0 -1 1.5708 0 0 -1 0.8145 0 0 -1 0.2327 0 0 -1 0" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="KneeSwingL" toField="set_fraction" />
+    <ROUTE fromNode="KneeSwingL" fromField="value_changed" toNode="KneeL" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="KneeSwingL" toField="set_fraction" />
+    <PositionInterpolator DEF="KneeSlideL" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 -0.8 0.32 0 -0.8 0.2963 0 -0.8 0.237 0 -0.8 0.16 0 -0.8 0.083 0 -0.8 0.0237 0 -0.8 0" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="KneeSlideL" toField="set_fraction" />
+    <ROUTE fromNode="KneeSlideL" fromField="value_changed" toNode="KneeL" toField="translation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="KneeSlideL" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn0" key="0 0.02 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn0" toField="set_fraction" />
+    <ROUTE fromNode="StudOn0" fromField="value_changed" toNode="Stud0" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn0" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn1" key="0 0.1111 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn1" toField="set_fraction" />
+    <ROUTE fromNode="StudOn1" fromField="value_changed" toNode="Stud1" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn1" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn2" key="0 0.2222 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn2" toField="set_fraction" />
+    <ROUTE fromNode="StudOn2" fromField="value_changed" toNode="Stud2" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn2" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn3" key="0 0.3333 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn3" toField="set_fraction" />
+    <ROUTE fromNode="StudOn3" fromField="value_changed" toNode="Stud3" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn3" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn4" key="0 0.4444 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn4" toField="set_fraction" />
+    <ROUTE fromNode="StudOn4" fromField="value_changed" toNode="Stud4" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn4" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn5" key="0 0.5556 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn5" toField="set_fraction" />
+    <ROUTE fromNode="StudOn5" fromField="value_changed" toNode="Stud5" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn5" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn6" key="0 0.6667 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn6" toField="set_fraction" />
+    <ROUTE fromNode="StudOn6" fromField="value_changed" toNode="Stud6" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn6" toField="set_fraction" />
+    <BooleanSequencer DEF="StudOn7" key="0 0.7778 1" keyValue="false true true" />
+    <ROUTE fromNode="U1" fromField="fraction_changed" toNode="StudOn7" toField="set_fraction" />
+    <ROUTE fromNode="StudOn7" fromField="value_changed" toNode="Stud7" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="StudOn7" toField="set_fraction" />
+    <OrientationInterpolator DEF="DoorSwingR" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 1 0 0 0 1 0 0.2327 0 1 0 0.8145 0 1 0 1.5708 0 1 0 2.3271 0 1 0 2.9089 0 1 0 3.1416" />
+    <ROUTE fromNode="U2" fromField="fraction_changed" toNode="DoorSwingR" toField="set_fraction" />
+    <ROUTE fromNode="DoorSwingR" fromField="value_changed" toNode="ShoulderYR" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="DoorSwingR" toField="set_fraction" />
+    <OrientationInterpolator DEF="ElbowSwingR" key="0 0.35 0.4583 0.5667 0.675 0.7833 0.8917 1" keyValue="0 0 1 3.1416 0 0 1 3.1416 0 0 1 2.9089 0 0 1 2.3271 0 0 1 1.5708 0 0 1 0.8145 0 0 1 0.2327 0 0 1 0" />
+    <ROUTE fromNode="U2" fromField="fraction_changed" toNode="ElbowSwingR" toField="set_fraction" />
+    <ROUTE fromNode="ElbowSwingR" fromField="value_changed" toNode="ElbowR" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="ElbowSwingR" toField="set_fraction" />
+    <PositionInterpolator DEF="ElbowSlideR" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="-0.8 0 0.14 -0.8 0 0.1296 -0.8 0 0.1037 -0.8 0 0.07 -0.8 0 0.0363 -0.8 0 0.0104 -0.8 0 0" />
+    <ROUTE fromNode="U2" fromField="fraction_changed" toNode="ElbowSlideR" toField="set_fraction" />
+    <ROUTE fromNode="ElbowSlideR" fromField="value_changed" toNode="ElbowR" toField="translation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="ElbowSlideR" toField="set_fraction" />
+    <OrientationInterpolator DEF="DoorSwingL" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 -1 0 0 0 -1 0 0.2327 0 -1 0 0.8145 0 -1 0 1.5708 0 -1 0 2.3271 0 -1 0 2.9089 0 -1 0 3.1416" />
+    <ROUTE fromNode="U2" fromField="fraction_changed" toNode="DoorSwingL" toField="set_fraction" />
+    <ROUTE fromNode="DoorSwingL" fromField="value_changed" toNode="ShoulderYL" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="DoorSwingL" toField="set_fraction" />
+    <OrientationInterpolator DEF="ElbowSwingL" key="0 0.35 0.4583 0.5667 0.675 0.7833 0.8917 1" keyValue="0 0 1 3.1416 0 0 1 3.1416 0 0 1 2.9089 0 0 1 2.3271 0 0 1 1.5708 0 0 1 0.8145 0 0 1 0.2327 0 0 1 0" />
+    <ROUTE fromNode="U2" fromField="fraction_changed" toNode="ElbowSwingL" toField="set_fraction" />
+    <ROUTE fromNode="ElbowSwingL" fromField="value_changed" toNode="ElbowL" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="ElbowSwingL" toField="set_fraction" />
+    <PositionInterpolator DEF="ElbowSlideL" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0.8 0 0.14 0.8 0 0.1296 0.8 0 0.1037 0.8 0 0.07 0.8 0 0.0363 0.8 0 0.0104 0.8 0 0" />
+    <ROUTE fromNode="U2" fromField="fraction_changed" toNode="ElbowSlideL" toField="set_fraction" />
+    <ROUTE fromNode="ElbowSlideL" fromField="value_changed" toNode="ElbowL" toField="translation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="ElbowSlideL" toField="set_fraction" />
+    <PositionInterpolator DEF="HeadGrow" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="1 0.1 1 1 0.1667 1 1 0.3333 1 1 0.55 1 1 0.7667 1 1 0.9333 1 1 1 1" />
+    <ROUTE fromNode="U3" fromField="fraction_changed" toNode="HeadGrow" toField="set_fraction" />
+    <ROUTE fromNode="HeadGrow" fromField="value_changed" toNode="HeadRise" toField="scale" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="HeadGrow" toField="set_fraction" />
+    <BooleanSequencer DEF="SocketsOn" key="0 0.6 1" keyValue="false true true" />
+    <ROUTE fromNode="U3" fromField="fraction_changed" toNode="SocketsOn" toField="set_fraction" />
+    <ROUTE fromNode="SocketsOn" fromField="value_changed" toNode="Sockets" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="SocketsOn" toField="set_fraction" />
+    <BooleanSequencer DEF="SocketsOnB" key="0 0.6 1" keyValue="false true true" />
+    <ROUTE fromNode="U3" fromField="fraction_changed" toNode="SocketsOnB" toField="set_fraction" />
+    <ROUTE fromNode="SocketsOnB" fromField="value_changed" toNode="SocketsB" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="SocketsOnB" toField="set_fraction" />
+    <OrientationInterpolator DEF="AntennaUp" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0 0 1 1.4 0 0 1 1.2963 0 0 1 1.037 0 0 1 0.7 0 0 1 0.363 0 0 1 0.1037 0 0 1 0" />
+    <ROUTE fromNode="U4" fromField="fraction_changed" toNode="AntennaUp" toField="set_fraction" />
+    <ROUTE fromNode="AntennaUp" fromField="value_changed" toNode="AntHinge" toField="rotation" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="AntennaUp" toField="set_fraction" />
+    <BooleanSequencer DEF="AntennaOn" key="0 0.05 1" keyValue="false true true" />
+    <ROUTE fromNode="U4" fromField="fraction_changed" toNode="AntennaOn" toField="set_fraction" />
+    <ROUTE fromNode="AntennaOn" fromField="value_changed" toNode="AntHinge" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="AntennaOn" toField="set_fraction" />
+    <BooleanSequencer DEF="EyesLit" key="0 0.3 1" keyValue="false true true" />
+    <ROUTE fromNode="U4" fromField="fraction_changed" toNode="EyesLit" toField="set_fraction" />
+    <ROUTE fromNode="EyesLit" fromField="value_changed" toNode="Eyes" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="EyesLit" toField="set_fraction" />
+    <BooleanSequencer DEF="ChestLit" key="0 0.6 1" keyValue="false true true" />
+    <ROUTE fromNode="U4" fromField="fraction_changed" toNode="ChestLit" toField="set_fraction" />
+    <ROUTE fromNode="ChestLit" fromField="value_changed" toNode="ChestLamp" toField="visible" />
+    <ROUTE fromNode="Rev" fromField="value_changed" toNode="ChestLit" toField="set_fraction" />
+    <TimeSensor DEF="Pulse" cycleInterval="0.8" loop="true" enabled="false" />
+    <ROUTE fromNode="Flip" fromField="toggle_changed" toNode="Pulse" toField="enabled" />
+    <PositionInterpolator DEF="PulseScale" key="0 0.5 1" keyValue="1 1 1 1.6 1.6 1.6 1 1 1" />
+    <ROUTE fromNode="Pulse" fromField="fraction_changed" toNode="PulseScale" toField="set_fraction" />
+    <ROUTE fromNode="PulseScale" fromField="value_changed" toNode="ChestLamp" toField="scale" />
+    <OrientationInterpolator DEF="WaveRaise" key="0 0.18 0.82 1" keyValue="0 0 -1 0 0 0 -1 1.4 0 0 -1 1.4 0 0 -1 0" />
+    <ROUTE fromNode="U5" fromField="fraction_changed" toNode="WaveRaise" toField="set_fraction" />
+    <ROUTE fromNode="WaveRaise" fromField="value_changed" toNode="ShoulderZR" toField="rotation" />
+    <OrientationInterpolator DEF="WaveHand" key="0 0.22 0.3 0.38 0.46 0.54 0.62 0.7 0.78 1" keyValue="0 0 1 0 0 0 1 0.6 0 0 1 -0.6 0 0 1 0.6 0 0 1 -0.6 0 0 1 0.6 0 0 1 -0.6 0 0 1 0.6 0 0 1 -0.6 0 0 1 0" />
+    <ROUTE fromNode="U5" fromField="fraction_changed" toNode="WaveHand" toField="set_fraction" />
+    <ROUTE fromNode="WaveHand" fromField="value_changed" toNode="WristR" toField="rotation" />
+    <OrientationInterpolator DEF="WaveHead" key="0 0.2 0.4 0.6 0.8 1" keyValue="0 1 0 0 0 1 0 0.08 0 1 0 -0.08 0 1 0 0.08 0 1 0 -0.08 0 1 0 0" />
+    <ROUTE fromNode="U5" fromField="fraction_changed" toNode="WaveHead" toField="set_fraction" />
+    <ROUTE fromNode="WaveHead" fromField="value_changed" toNode="HeadYaw" toField="rotation" />
+    <PositionInterpolator DEF="DanceBounce" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 0 0 0.28 0 0 0 0 0 0.28 0 0 0 0 0 0.28 0 0 0 0 0 0.28 0 0 0 0 0 0.28 0 0 0 0 0 0.28 0 0 0 0 0 0.28 0 0 0 0 0 0.28 0 0 0 0" />
+    <ROUTE fromNode="U6" fromField="fraction_changed" toNode="DanceBounce" toField="set_fraction" />
+    <ROUTE fromNode="DanceBounce" fromField="value_changed" toNode="Bounce" toField="translation" />
+    <OrientationInterpolator DEF="DanceTwist" key="0 0.0625 0.1875 0.3125 0.4375 0.5625 0.6875 0.8125 0.9375 1" keyValue="0 1 0 0 0 1 0 0.5 0 1 0 -0.5 0 1 0 0.5 0 1 0 -0.5 0 1 0 0.5 0 1 0 -0.5 0 1 0 0.5 0 1 0 -0.5 0 1 0 0" />
+    <ROUTE fromNode="U6" fromField="fraction_changed" toNode="DanceTwist" toField="set_fraction" />
+    <ROUTE fromNode="DanceTwist" fromField="value_changed" toNode="Robot" toField="rotation" />
+    <OrientationInterpolator DEF="FlapR" key="0 0.0625 0.1875 0.3125 0.4375 0.5625 0.6875 0.8125 0.9375 1" keyValue="0 0 -1 0 0 0 -1 0.2 0 0 -1 1.2 0 0 -1 0.2 0 0 -1 1.2 0 0 -1 0.2 0 0 -1 1.2 0 0 -1 0.2 0 0 -1 1.2 0 0 -1 0" />
+    <ROUTE fromNode="U6" fromField="fraction_changed" toNode="FlapR" toField="set_fraction" />
+    <ROUTE fromNode="FlapR" fromField="value_changed" toNode="ShoulderZR" toField="rotation" />
+    <OrientationInterpolator DEF="FlapL" key="0 0.0625 0.1875 0.3125 0.4375 0.5625 0.6875 0.8125 0.9375 1" keyValue="0 0 1 0 0 0 1 1.2 0 0 1 0.2 0 0 1 1.2 0 0 1 0.2 0 0 1 1.2 0 0 1 0.2 0 0 1 1.2 0 0 1 0.2 0 0 1 0" />
+    <ROUTE fromNode="U6" fromField="fraction_changed" toNode="FlapL" toField="set_fraction" />
+    <ROUTE fromNode="FlapL" fromField="value_changed" toNode="ShoulderZL" toField="rotation" />
+    <OrientationInterpolator DEF="DanceHead" key="0 0.0833 0.25 0.4167 0.5833 0.75 0.9167 1" keyValue="0 1 0 0 0 1 0 0.6 0 1 0 -0.6 0 1 0 0.6 0 1 0 -0.6 0 1 0 0.6 0 1 0 -0.6 0 1 0 0" />
+    <ROUTE fromNode="U6" fromField="fraction_changed" toNode="DanceHead" toField="set_fraction" />
+    <ROUTE fromNode="DanceHead" fromField="value_changed" toNode="HeadYaw" toField="rotation" />
+    <OrientationInterpolator DEF="FootTap" key="0 0.0625 0.1875 0.3125 0.4375 0.5625 0.6875 0.8125 0.9375 1" keyValue="1 0 0 0 1 0 0 0.5 1 0 0 0.5 1 0 0 0.5 1 0 0 0.5 1 0 0 0.5 1 0 0 0.5 1 0 0 0.5 1 0 0 0.5 1 0 0 0" />
+    <ROUTE fromNode="U6" fromField="fraction_changed" toNode="FootTap" toField="set_fraction" />
+    <ROUTE fromNode="FootTap" fromField="value_changed" toNode="AnkleR" toField="rotation" />
+  </Scene>
+</X3D>
