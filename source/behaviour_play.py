@@ -241,6 +241,13 @@ class Player:
         self._collision = {}         # CollisionSensor id -> the names it watches (None: every body), when Blender's rigid body world is read
         self._host_scripts()
         self._host_collision()
+        for node in self.graph.nodes.values():      # nodes that run on outside resources: their events travel on, the media do not play
+            if node.node_type == "AudioClip":
+                self._skip(node, "sound", "the Player plays no sound; its clock and events run")
+            elif node.node_type == "MovieTexture":
+                self._skip(node, "picture", "the Player shows no video; its clock and events run")
+            elif node.node_type == "LoadSensor":
+                self._skip(node, "loading", "nothing is fetched; every URL counts as loaded at once")
 
     # -- what can be clicked ------------------------------------------------------------------------------------
 

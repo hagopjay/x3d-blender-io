@@ -38,8 +38,10 @@ from itertools import chain
 
 try:
     from . import behaviour_graph as bg
+    from .behaviour_resources import Resources
 except ImportError:  # imported as a plain module: tests, tools/
     import behaviour_graph as bg
+    from behaviour_resources import Resources
 
 # ---------------------------------------------------------------------------------------------------------------
 # X3D text <-> Python values
@@ -273,6 +275,7 @@ def hsv_lerp(a, b, t):
 class _Machine:
     """A behaviour node while it runs. ``receive`` takes an event at an input, ``tick`` is called once per step."""
     ticks = False
+    records = False         # True for a scene node kept in place (AudioClip, ...): what reaches it is also reported as a change
 
     def __init__(self, sim, node):
         self.sim, self.id, self.node_type = sim, node.id, node.node_type
@@ -1993,13 +1996,24 @@ _MACHINES = {
 # sensors the caller can drive with press / release / drag; the others only through post()
 POINTING = ("TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor")
 DRAGGED = POINTING[1:]            # the ones a drag moves
-SIMULATED = tuple(sorted(_MACHINES))
+
+# Class D (what waits on the outside: LoadSensor, AudioClip, MovieTexture) lives in behaviour_media, which needs _Machine
+# from here; it registers its machines now that everything above exists. AudioClip and MovieTexture are scene nodes kept in
+# place (targets in the graph), so they run as ``_SCENE_MACHINES``; ImageTexture and Inline run too, as plain load states
+# a LoadSensor can watch, and are not event nodes.
+try:
+    from . import behaviour_media as _media
+except ImportError:  # imported as a plain module: tests, tools/
+    import behaviour_media as _media
+_MACHINES.update(_media.MACHINES)
+_SCENE_MACHINES = _media.SCENE_MACHINES
+SIMULATED = tuple(sorted({*_MACHINES, "AudioClip", "MovieTexture"}))
 
 
 class Simulation:
     """A behaviour graph, running. See the module text for the short tour."""
 
-    def __init__(self, graph, *, log_size=400):
+    def __init__(self, graph, *, log_size=400, resources=None):
         self.graph = graph
         # What hostile input cost: ``dropped`` counts values that were never delivered ("non-finite": a NaN or an
         # infinity; "mismatch": a value whose shape does not fit the field it was routed to; "bad-field": field text
@@ -2009,10 +2023,15 @@ class Simulation:
         self.noted = {}                  # oddities that lose nothing: "bad-count" (a keyValue that is not a whole number of lists)
         self.hosted_outputs = deque(maxlen=log_size)    # (time, Script id, field, value) of what Python handlers sent
         self.machines, self.not_simulated = {}, []
+        # what the outside world does when something asks to load (see behaviour_resources): a table, or plain data for one
+        self.resources = resources if isinstance(resources, Resources) else Resources(resources)
+        if self.resources.rejected:
+            self.dropped["bad-resource"] = len(self.resources.rejected)
         for node in graph.nodes.values():
-            if node.role == bg.BEHAVIOUR and node.node_type in _MACHINES:
+            if (node.role == bg.BEHAVIOUR and node.node_type in _MACHINES) or \
+                    (node.role == bg.TARGET and node.node_type in _SCENE_MACHINES):
                 try:
-                    self.machines[node.id] = _MACHINES[node.node_type](self, node)
+                    self.machines[node.id] = (_MACHINES if node.role == bg.BEHAVIOUR else _SCENE_MACHINES)[node.node_type](self, node)
                 except Exception as error:      # a node that cannot be built is reported, not run
                     self._fault(node.id, "setup", error)
                     self.not_simulated.append(f"{node.node_type} {node.id}")
@@ -2112,6 +2131,9 @@ class Simulation:
                         machine.receive(to_field, value, now)
                     except Exception as error:       # noqa: BLE001 - one bad node must not end the run
                         self._fault(to_id, "receive", error)
+                    if machine.records:              # a scene node that runs (AudioClip, ...): the change is also reported
+                        self.values[(to_id, to_field)] = value
+                        self._changes.append((to_id, to_field, value))
                 elif self.graph.nodes[to_id].role == bg.TARGET:
                     self.values[(to_id, to_field)] = value
                     self._changes.append((to_id, to_field, value))

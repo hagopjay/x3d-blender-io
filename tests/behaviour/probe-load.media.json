@@ -1,0 +1,32 @@
+{
+ "pic1.png": {
+  "delay": 400
+ },
+ "pic2.png": {
+  "delay": 900
+ },
+ "slow.png": {
+  "delay": 1500
+ },
+ "pic3.png": {
+  "delay": 300
+ },
+ "pic4.png": {
+  "delay": 250
+ },
+ "tone.wav": {
+  "delay": 600
+ },
+ "gone1.png": {
+  "status": 404,
+  "delay": 200
+ },
+ "gone2.png": {
+  "status": 404,
+  "delay": 150
+ },
+ "gone3.png": {
+  "status": 404,
+  "delay": 500
+ }
+}

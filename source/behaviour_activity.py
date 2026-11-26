@@ -155,6 +155,16 @@ def perform(sim, entry, parent_of=None):
     raise ValueError(f"unknown call {call!r}")
 
 
+def resources_of(report):
+    """The ``Resources`` a recording was made with (empty for a recording that has none): hand it to the Simulation the
+    stimulus is replayed on, ``Simulation(graph, resources=resources_of(report))``."""
+    try:
+        from .behaviour_resources import Resources
+    except ImportError:  # imported as a plain module: tests, tools/
+        from behaviour_resources import Resources
+    return Resources(report.get("resources") if isinstance(report, dict) else None)
+
+
 def replay(sim, stimulus, activity=None, parent_of=None, script_outputs=None):
     """Run a recorded stimulus on a (fresh) Simulation, feeding ``activity`` after every call when given. The same
     graph and the same stimulus give the same events: that is how a recording is checked.
@@ -212,6 +222,7 @@ class Activity:
         value that says whether the ROUTE carries it. ``types``: {(from, field, to, field): X3D type name}."""
         self.travel = travel
         self.record, self.world = bool(record), world
+        self.resources = None                # from_simulation: what the world's outside resources were (a recording holds it)
         self.graph = None                    # set by from_simulation: lets a pointer call name its object
         self.hosted = None                   # set by from_simulation: what Python handlers of Scripts sent (a recording carries it)
         self._out = {}
@@ -241,6 +252,8 @@ class Activity:
             sim.log = CountingLog(sim.log, maxlen=sim.log.maxlen)
         activity.graph = sim.graph
         activity.hosted = getattr(sim, "hosted_outputs", None)
+        resources = getattr(sim, "resources", None)
+        activity.resources = resources.to_dict() if resources else None
         activity._seen = sim.log.appended
         # The simulation lets each ROUTE carry one event per ``post`` (it forgets which ROUTEs fired at the start of every
         # post, and a press or a drag makes several). So what a post delivered is fed as its own batch: the batches are
@@ -488,6 +501,8 @@ class Activity:
                      for e in self.ring],
             "trace": self.trace, "trace_truncated": self.trace_truncated, "stimulus": self.stimulus,
             **({"script_outputs": plain(list(self.hosted))} if self.record and self.hosted else {}),
+            # optional: what the outside world did (url -> loads / fails, duration); a recording made without it loads as before
+            **({"resources": self.resources} if self.resources else {}),
         }
 
     def to_json(self, now=None, indent=None):

@@ -251,9 +251,15 @@ class NodeTests(unittest.TestCase):
 
     def test_what_is_not_run_is_named(self):
         g = self.graph()
-        g.add("LoadSensor", "Mesh")                # CoordinateDamper was the example until the list followers were judged
+        # the example is whichever wired behaviour node has no machine yet (the examples kept being simulated); when every
+        # node has one, a graph has nothing to name
+        import behaviour_catalogue as catalogue
+        import behaviour_graph as graph_module
+        left = sorted(name for name in catalogue.NODES if name not in bs.SIMULATED and name not in graph_module.IN_PLACE)
+        if left:
+            g.add(left[0], "Mesh")
         g.add("TimeSensor", "Clock")
-        self.assertEqual(bs.Simulation(g).not_simulated, ["LoadSensor Mesh"])
+        self.assertEqual(bs.Simulation(g).not_simulated, [f"{left[0]} Mesh"] if left else [])
 
     def _drag_world(self, kind, **fields):
         g = self.graph()
@@ -815,8 +821,13 @@ class XiteAgreementTests(unittest.TestCase):
         judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord",
                                 "probe-script", "probe-list-followers")))
         judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
+        # the worlds recorded for outside resources (tools/behaviour_resources_judge.py, tests/test_behaviour_resources.py)
+        judged += list(map(world, ("probe-load", "probe-loadlive", "probe-audio", "probe-movie")))
         used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
+        # AudioClip and MovieTexture are scene nodes kept in place: targets in the graph, and they send on a ROUTE too
+        used |= {graph.nodes[route.from_id].node_type for graph in judged
+                 for route in graph.routes if graph.nodes[route.from_id].node_type in bg.IN_PLACE}
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one. CollisionSensor is simulated from a contact
