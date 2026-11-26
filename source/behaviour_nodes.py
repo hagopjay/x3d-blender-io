@@ -25,6 +25,8 @@ from .behaviour_catalogue import NODES, TARGETS
 from .behaviour_sim import parse_value
 
 TREE_IDNAME = "X3DBehaviourTree"
+_BUILDING = set()         # names of the trees ``apply`` is filling: their update callback waits until it has finished
+_SOCKETS_LATER = []       # while ``apply`` is filling a tree, a new node gets its sockets in a second pass (see _fill)
 ANY = "X3DSocketAny"
 
 # One colour per field type; families share a hue (time amber, booleans red, numbers grey, vectors blue ...).
@@ -369,12 +371,22 @@ class X3DBehaviourTree(NodeTree):
                     "of the file's (Y up). Only the display changes; the stored X3D text does not")
 
     def update(self):
-        # X3D: a ROUTE joins fields of one type. Remove a link that does not.
-        for link in list(self.links):
-            a = getattr(link.from_socket, "x3d_type", None)
-            b = getattr(link.to_socket, "x3d_type", None)
-            if a and b and a != b:
+        # X3D: a ROUTE joins fields of one type. Remove a link that does not. (``apply`` makes every link itself and
+        # checks them once at the end: this walk over all links would run once per link made.)
+        if self.name in _BUILDING:
+            return
+        self.remove_mismatched_links()
+
+    def remove_mismatched_links(self):
+        bad = [link for link in self.links
+               if (getattr(link.from_socket, "x3d_type", None) and getattr(link.to_socket, "x3d_type", None)
+                   and link.from_socket.x3d_type != link.to_socket.x3d_type)]
+        _BUILDING.add(self.name)          # removing a link calls update again: not for the links still on the list
+        try:
+            for link in bad:
                 self.links.remove(link)
+        finally:
+            _BUILDING.discard(self.name)
 
 
 class _X3DNodeBase:
@@ -405,7 +417,8 @@ class _BehaviourNode(_X3DNodeBase):
                                 description="The object this sensor sits in: it senses that object's shapes")
 
     def init(self, context):
-        self._make_sockets(NODES[self.x3d_type][1])
+        if not _SOCKETS_LATER:
+            self._make_sockets(NODES[self.x3d_type][1])
         self.width = 240
 
     def draw_buttons(self, context, layout):
@@ -519,7 +532,8 @@ class _TargetNode(_X3DNodeBase):
     x3d_material: PointerProperty(type=bpy.types.Material, name="Material")
 
     def init(self, context):
-        self._make_sockets(TARGETS[self.x3d_type])
+        if not _SOCKETS_LATER:
+            self._make_sockets(TARGETS[self.x3d_type])
         self.width = 220
         self.use_custom_color, self.color = True, (0.16, 0.24, 0.30)
 
@@ -711,7 +725,23 @@ def apply(graph, scene, name="X3D Behaviour"):
     """Show ``graph`` as the scene's behaviour node tree (replacing the nodes of the tree the scene already has)."""
     _ensure_scene_property()
     tree = scene.x3d_behaviour_tree or bpy.data.node_groups.new(name, TREE_IDNAME)
+    _BUILDING.add(tree.name)
+    try:
+        _fill(graph, scene, tree)
+    finally:
+        _BUILDING.discard(tree.name)
+        del _SOCKETS_LATER[:]
+    tree.remove_mismatched_links()
+    scene.x3d_behaviour_tree = tree
+    return tree
+
+
+def _fill(graph, scene, tree):
+    """Build the nodes, then their sockets, then the links. Blender re-checks the whole tree after every change, so a
+    call costs in proportion to the sockets the tree holds at that moment (measured: see docs/BEHAVIOUR_GRAPH.md): the
+    node, its name and its place are set while the tree has none, and only the sockets and links are made after."""
     tree.nodes.clear()
+    _SOCKETS_LATER.append(True)
     positions = bg.layout(graph)
     made = {}
     for node in graph.nodes.values():
@@ -734,6 +764,12 @@ def apply(graph, scene, name="X3D Behaviour"):
         item.label = item.draw_label()
         item.location = node.position or positions.get(node.id, (0, 0))
         made[node.id] = item
+    del _SOCKETS_LATER[:]
+    for node_id, item in made.items():
+        if item.x3d_role == bg.BEHAVIOUR:
+            item._make_sockets(NODES[item.x3d_type][1])
+        elif item.x3d_role == bg.TARGET:
+            item._make_sockets(TARGETS[item.x3d_type])
     for route in graph.routes:
         a, b = made.get(route.from_id), made.get(route.to_id)
         if a is None or b is None:
@@ -742,8 +778,6 @@ def apply(graph, scene, name="X3D Behaviour"):
         in_socket = _socket(b, graph.nodes[route.to_id], route.to_field, "in")
         if out_socket is not None and in_socket is not None:
             tree.links.new(out_socket, in_socket)
-    scene.x3d_behaviour_tree = tree
-    return tree
 
 
 def _socket(item, node, field_name, direction):
@@ -802,10 +836,14 @@ def read(scene):
         else:
             graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position,
                                         xml=item.x3d_xml, inner=tuple(item.x3d_inner.split()))
+    seen = set()        # what graph.route(check=False) does, without it building the set of all routes for every link
     for link in tree.links:
         a, b = ids.get(link.from_node.name), ids.get(link.to_node.name)
         if a and b:
-            graph.route(a, link.from_socket.name, b, link.to_socket.name, check=False)
+            route = bg.Route(a, link.from_socket.name, b, link.to_socket.name)
+            if route.key() not in seen:
+                seen.add(route.key())
+                graph.routes.append(route)
     return graph
 
 

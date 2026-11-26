@@ -473,3 +473,48 @@ Looked at on a real screen by a script (see below) and by the owner for `door.x3
 eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
 played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
 importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on, and so do the "X3D import loss" log lines and `X3D_IMPORT_STRICT=1`: the importer holds its ROUTE losses back until the graph is built, then reports only those the graph could not keep. Losses that are not ROUTEs (event nodes, timers, sensor fields) are reported at once, as with the option off.
+
+### Building the node tree
+
+Instrument: `tools/behaviour_bench.py --tree` (one case per process; seconds for `behaviour_nodes.apply` onto an empty
+scene, with milliseconds per node in brackets), same machine and Blender as above, load average 0.4 to 4.4 during the
+runs (the "before" column ran at 0.4 to 3.5, the "after" column at 2.3 to 4.4, so differences under about 10 % are
+noise). "Before" is the code at 8e4f4fb, "after" the code with the changes below. `read` of the finished tree takes
+0.02 s or less for every size that finished (it was 0.25 s at 2001 nodes: see below). A second `apply` onto the existing tree costs the
+same as the first.
+
+| shape | N (nodes) | apply before | apply after |
+|---|---:|---:|---:|
+| fan | 10 (21) | 0.019 (0.89) | 0.017 (0.81) |
+| fan | 30 (61) | 0.090 (1.48) | 0.108 (1.77) |
+| fan | 100 (201) | 0.825 (4.10) | 0.810 (4.03); 0.74 in two other runs |
+| fan | 300 (601) | 6.56 (10.9) | 6.16 (10.3); 5.65 in another run |
+| fan | 1000 (2001) | 78.1 (39.0) | 68.8 (34.4) |
+| chains | 100 (400) | 3.22 (8.05) | 2.91 (7.28) |
+| chains | 300 (1200) | 28.6 (23.8) | 26.8 (22.3) |
+| chains | 1000 (4000) | did not finish in 200 s | did not finish in 120 s |
+| mixed | 100 (400) | 3.70 (9.25) | 3.38 (8.45) |
+| mixed | 300 (1200) | 32.0 (26.6) | 30.6 (25.5) |
+| mixed | 1000 (4000) | did not finish in 200 s | did not finish in 120 s |
+
+It is still not linear, and what is left is inside Blender, not in this add-on. cProfile (fan N=100) puts 88 % of `apply` in the Blender calls made from `_make_sockets` and `apply` itself:
+`inputs.new`, `outputs.new` and the property sets that Blender answers with a check of the whole tree (a gdb stack
+sampled during a loop of `node.location = ...` shows `RNA_property_update`, `BKE_main_ensure_invariants`,
+`NodeTreeMainUpdater::update_tree` and `ensure_topology_cache`). Every `nodes.new`, `inputs.new`, `links.new`, `name` and
+`location` call pays for the nodes and sockets already in the tree: about 0.15 microseconds per socket per call, 7222
+sockets and about 9600 such calls for the 601-node fan. The same shape shows in a minimal script without this add-on (a
+Python node tree with a Python or a built-in socket type, 300 nodes of 10 sockets: 0.87 s to build, and one `location`
+set then costs 0.44 ms; with 100, 200 and 400 nodes of 6 sockets the build took 0.16, 0.65 and 2.2 s). What
+the add-on could change, it did, in `behaviour_nodes.py`:
+
+* the tree's own `update` callback (it removes a link between two field types) walked every link in Python after every
+  change, so a build of L links did L times L work in Python; it now waits while `apply` fills the tree, and one pass
+  after the build removes the links of unequal types;
+* a node gets its sockets after all nodes are made, so the node, its name and its place are set while the tree holds no
+  sockets, and the sockets are made in the same order afterwards (about 10 to 14 % less than before);
+* `read` built the set of all routes for every link (`Graph.route`), 0.25 s at 2001 nodes; it now checks duplicates with
+  one set (0.014 s).
+
+The result is the same tree: `tests/test_behaviour_perf.py` pins a digest of every node, field, socket and link of
+three trees (door, probe, mixed N=20), computed before the change. Not done because it would change what is built:
+fewer sockets (the dump holds every socket) or sockets made only when a link needs them.

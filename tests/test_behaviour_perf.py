@@ -113,6 +113,11 @@ class SameTreeTests(unittest.TestCase):
     """behaviour_nodes.apply must build the same node tree it built before it was made fast. The digests were computed
     from apply as it was BEFORE the performance work (commit 8e4f4fb plus the benchmark's --tree mode)."""
 
+    # apply of "fan" with 100 interpolators (201 nodes) measured 0.74 s after the performance work (0.83 s before; the
+    # cost is inside Blender, see docs/BEHAVIOUR_GRAPH.md): tools/behaviour_bench.py --tree, bpy 5.3.0, Intel Xeon
+    # 2.1 GHz, load average about 2. The budget is 5 times that, so a busy machine does not trip it.
+    FAN_100_BUDGET_S = 3.7
+
     DOOR = "103ce95551519f301c72b9a9ebfd575c285e37430f9f4e11a21302bbc5b68902"
     PROBE = "9a9aadd3a4845e095578aa7c22e2e46a03aec7dde71dec983e700630cc7705d6"
     MIXED_20 = "37081ee4b5519d99e6c623884eb552089a4e8e54d7477f4c7116231796bf0728"
@@ -166,6 +171,37 @@ class SameTreeTests(unittest.TestCase):
         self._no_difference(graph)
         self.bn.apply(graph, self.scene)
         self.assertEqual(tree_digest(self.scene.x3d_behaviour_tree), self.MIXED_20)
+
+    def test_a_route_between_two_types_is_not_drawn_but_an_editor_link_is_removed_as_before(self):
+        graph = self.bg.Behaviour()
+        graph.add("TimeSensor", "Clock")
+        graph.add("PositionInterpolator", "Move")
+        graph.route("Clock", "fraction_changed", "Move", "set_fraction", check=False)
+        graph.route("Clock", "cycleTime", "Move", "keyValue", check=False)          # SFTime into MFVec3f: wrong
+        tree = self.bn.apply(graph, self.scene)
+        self.assertEqual([(l.from_socket.name, l.to_socket.name) for l in tree.links],
+                         [("fraction_changed", "set_fraction")])
+        tree.links.new(tree.nodes["Clock"].outputs["cycleTime"], tree.nodes["Move"].inputs["keyValue"])
+        self.assertEqual(len(tree.links), 1)                 # the callback is live again after apply
+
+    def test_a_failed_apply_leaves_the_callback_and_the_sockets_working(self):
+        graph = bench.build("mixed", 2)
+        bench.bind_targets(bpy, self.scene, graph)
+        graph.nodes["Slide0"].node_type = "NoSuchNode"
+        with self.assertRaises(Exception):
+            self.bn.apply(graph, self.scene)
+        self.assertEqual(self.bn._SOCKETS_LATER, [])
+        self.assertEqual(self.bn._BUILDING, set())
+        tree = self.bn.apply(bench.build("mixed", 2), self.scene)
+        self.assertGreater(len(tree.nodes["Timer0"].inputs), 3)
+
+    def test_apply_of_a_fan_of_100_stays_inside_its_budget(self):
+        graph = bench.build("fan", 100)
+        bench.bind_targets(bpy, self.scene, graph)
+        began = time.perf_counter()
+        self.bn.apply(graph, self.scene)
+        seconds = time.perf_counter() - began
+        self.assertLess(seconds, self.FAN_100_BUDGET_S, f"{seconds:.2f} s")
 
     def test_the_dump_sees_a_difference(self):
         graph = bench.build("mixed", 3)
