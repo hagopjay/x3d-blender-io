@@ -1,0 +1,422 @@
+{
+ "x3duom_sha256": "7e426a238656c21a4a444b989276494329da363625c36f0a719b15d89416bee3",
+ "x3duom_version": "4.0",
+ "nodes": [
+  {
+   "name": "ProximitySensor",
+   "component": "EnvironmentalSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "TransformSensor",
+   "component": "EnvironmentalSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "VisibilitySensor",
+   "component": "EnvironmentalSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "BooleanFilter",
+   "component": "EventUtilities",
+   "inherits": []
+  },
+  {
+   "name": "BooleanSequencer",
+   "component": "EventUtilities",
+   "inherits": [
+    "X3DSequencerNode"
+   ]
+  },
+  {
+   "name": "BooleanToggle",
+   "component": "EventUtilities",
+   "inherits": []
+  },
+  {
+   "name": "BooleanTrigger",
+   "component": "EventUtilities",
+   "inherits": [
+    "X3DTriggerNode"
+   ]
+  },
+  {
+   "name": "IntegerSequencer",
+   "component": "EventUtilities",
+   "inherits": [
+    "X3DSequencerNode"
+   ]
+  },
+  {
+   "name": "IntegerTrigger",
+   "component": "EventUtilities",
+   "inherits": [
+    "X3DTriggerNode"
+   ]
+  },
+  {
+   "name": "TimeTrigger",
+   "component": "EventUtilities",
+   "inherits": [
+    "X3DTriggerNode"
+   ]
+  },
+  {
+   "name": "ColorChaser",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "ColorDamper",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "CoordinateChaser",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "CoordinateDamper",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "OrientationChaser",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "OrientationDamper",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "PositionChaser",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "PositionChaser2D",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "PositionDamper",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "PositionDamper2D",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "ScalarChaser",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "ScalarDamper",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "TexCoordChaser2D",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "TexCoordDamper2D",
+   "component": "Followers",
+   "inherits": [
+    "X3DFollowerNode"
+   ]
+  },
+  {
+   "name": "GeoPositionInterpolator",
+   "component": "Geospatial",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "GeoProximitySensor",
+   "component": "Geospatial",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "GeoTouchSensor",
+   "component": "Geospatial",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "ColorInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "CoordinateInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "CoordinateInterpolator2D",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "EaseInEaseOut",
+   "component": "Interpolation",
+   "inherits": []
+  },
+  {
+   "name": "NormalInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "OrientationInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "PositionInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "PositionInterpolator2D",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "ScalarInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "SplinePositionInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "SplinePositionInterpolator2D",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "SplineScalarInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "SquadOrientationInterpolator",
+   "component": "Interpolation",
+   "inherits": [
+    "X3DInterpolatorNode"
+   ]
+  },
+  {
+   "name": "KeySensor",
+   "component": "KeyDeviceSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "StringSensor",
+   "component": "KeyDeviceSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "Collision",
+   "component": "Navigation",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "LoadSensor",
+   "component": "Networking",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "LinePickSensor",
+   "component": "Picking",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "PointPickSensor",
+   "component": "Picking",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "PrimitivePickSensor",
+   "component": "Picking",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "VolumePickSensor",
+   "component": "Picking",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "CylinderSensor",
+   "component": "PointingDeviceSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "PlaneSensor",
+   "component": "PointingDeviceSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "SphereSensor",
+   "component": "PointingDeviceSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "TouchSensor",
+   "component": "PointingDeviceSensor",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "CollisionSensor",
+   "component": "RigidBodyPhysics",
+   "inherits": [
+    "X3DSensorNode"
+   ]
+  },
+  {
+   "name": "Script",
+   "component": "Scripting",
+   "inherits": [
+    "X3DScriptNode"
+   ]
+  },
+  {
+   "name": "AudioClip",
+   "component": "Sound",
+   "inherits": [
+    "X3DTimeDependentNode"
+   ]
+  },
+  {
+   "name": "MovieTexture",
+   "component": "Texturing",
+   "inherits": [
+    "X3DTimeDependentNode"
+   ]
+  },
+  {
+   "name": "TimeSensor",
+   "component": "Time",
+   "inherits": [
+    "X3DSensorNode",
+    "X3DTimeDependentNode"
+   ]
+  }
+ ],
+ "out_of_scope": {
+  "DIS": [
+   "EspduTransform",
+   "ReceiverPdu",
+   "SignalPdu",
+   "TransmitterPdu"
+  ],
+  "Sound": [
+   "Analyser",
+   "BiquadFilter",
+   "BufferAudioSource",
+   "Convolver",
+   "Delay",
+   "DynamicsCompressor",
+   "Gain",
+   "ListenerPointSource",
+   "MicrophoneSource",
+   "OscillatorSource",
+   "StreamAudioSource",
+   "WaveShaper"
+  ]
+ }
+}
