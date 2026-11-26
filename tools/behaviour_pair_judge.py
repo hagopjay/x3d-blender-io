@@ -84,6 +84,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import time
 import concurrent.futures
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -278,7 +279,52 @@ def overall_reason(streams):
         return None
     if any(s.get("reason") == "blind" for s in streams):
         return "blind"
+    if streams and all(s.get("reason") == "nothing-moved" for s in streams):
+        return "nothing-moved"
     return next((s["reason"] for s in streams if s.get("reason")), "no comparable stream" if not streams else None)
+
+
+SPAN_LIMIT_ROTATION = 1e-3     # rad: a rotation stream sweeping less than this is practically still
+SPAN_LIMIT_VALUE = 1e-4        # in the field's own unit (scene units for a length): the same for every other stream
+MIN_FPS = 15.0                 # drawn frames per second under which a blind stream is also noted "low frame rate"
+
+
+def span_limit(rotation):
+    """The absolute span (rad for a rotation stream, else the field's own unit) under which a stream is practically still."""
+    return SPAN_LIMIT_ROTATION if rotation else SPAN_LIMIT_VALUE
+
+
+def activity(events_a, events_b):
+    """What the event counts of one stream say before any number is compared. ``events_a`` and ``events_b``: events
+    delivered per run of A and of B. "nothing-moved": no run of either file delivered an event. "one-side-silent": every run
+    of one file delivered none and every run of the other delivered some (so every A-versus-B pairing has a silent side).
+    Otherwise None (a stream silent in only some runs is left to the floor)."""
+    if not any(events_a) and not any(events_b):
+        return "nothing-moved"
+    if (not any(events_a) and all(events_b)) or (not any(events_b) and all(events_a)):
+        return "one-side-silent"
+    return None
+
+
+def stream_notes(span, rotation, events, blind, median_fps, min_fps=MIN_FPS):
+    """Notes that do not change a verdict: "span below <limit>" when a stream that moved at all swept less than the
+    absolute limit (``span_limit``), "low frame rate" when it is blind and the median drawn frame rate is under ``min_fps``."""
+    notes = []
+    limit = span_limit(rotation)
+    if events and span < limit:
+        notes.append(f"span below {limit:g} {'rad' if rotation else 'in the field unit'}")
+    if blind and median_fps is not None and median_fps < min_fps:
+        notes.append("low frame rate")
+    return notes
+
+
+def frame_stats(frames, start, stop):
+    """Drawn frames in the window [start, stop] (X_ITE time stamps): the distinct stamps of the page's
+    requestAnimationFrame log (X_ITE's clock moves only when it draws, so a tick with no draw repeats a stamp). Returns
+    {"frames", "seconds", "fps"}."""
+    seconds = max(stop - start, 0.0)
+    count = len({t for t in frames if start - 1e-9 <= t <= stop + 1e-9})
+    return {"frames": count, "seconds": round(seconds, 3), "fps": round(count / seconds, 2) if seconds > 0 else 0.0}
 
 
 NODE_TYPES = ("SFNode", "MFNode")
@@ -481,6 +527,11 @@ def _pointer(stim):
     return bool(stim.get("clicks") or stim.get("click_plan") or stim.get("drags") or stim.get("keys"))
 
 
+def _stop(trace, seconds):
+    """When a recording stopped, in X_ITE time: its start plus the wait it was asked for, or its last drawn frame if later."""
+    return max(max(trace["frames"], default=trace["began"]), trace["began"] + seconds)
+
+
 def record_together(files, sources, stimulus, x_ite, scratch, timeout=240):
     """The runs of ``files`` (a list) at the same moment, one browser each, started together: the list of traces."""
     scratch = pathlib.Path(scratch)
@@ -498,11 +549,13 @@ SLACK = 2.0
 
 
 def judge_pair(file_a, file_b, stimulus=None, repeats=3, x_ite=None, *, tolerance=0.02, margin=3.0, min_abs=0.01, step=0.05,
-               timeout=240, mode="auto", blind=BLIND):
+               timeout=240, mode="auto", blind=BLIND, min_fps=MIN_FPS, share_runs=False):
     """Replay ``file_a`` and ``file_b`` ``repeats`` times each in X_ITE and return the verdict dict described in the module
     text. ``mode``: "simultaneous" (A with B, A with A and B with B run at the same moment, every repeat), "sequential"
     (A B A B ... one at a time, each run from its own time zero), or "auto" (simultaneous unless the stimulus has a pointer,
-    keys or drags). Needs ``repeats`` >= 2 (the floor is measured from the repeats). Raises ``PairJudgeError`` when the tool
+    keys or drags). ``share_runs`` (simultaneous only): run A, A, B, B at once in four pages per repeat and form the pairs
+    from them (A1 with A2, B1 with B2 for the floor, the four A-with-B combinations) instead of three pairs of two pages.
+    ``min_fps``: the frame rate under which a blind stream is also noted "low frame rate". Needs ``repeats`` >= 2 (the floor is measured from the repeats). Raises ``PairJudgeError`` when the tool
     cannot run."""
     if repeats < 2:
         raise PairJudgeError("repeats must be at least 2: the noise floor is measured from the repeats")
@@ -520,6 +573,8 @@ def judge_pair(file_a, file_b, stimulus=None, repeats=3, x_ite=None, *, toleranc
     elif mode == "simultaneous" and _pointer(stim):
         raise PairJudgeError("a pointer, key or drag stimulus cannot be made at the same moment in two browsers: use "
                              "mode='sequential' (or 'auto') for it")
+    if share_runs and mode != "simultaneous":
+        raise PairJudgeError("share_runs applies to the simultaneous mode only")
     graph_a, graph_b = _graph(file_a), _graph(file_b)
     wa, wb = watched(graph_a), watched(graph_b)
     ta_, tb_ = field_types(graph_a), field_types(graph_b)
@@ -542,37 +597,59 @@ def judge_pair(file_a, file_b, stimulus=None, repeats=3, x_ite=None, *, toleranc
     load, traces = [], {"a": [], "b": []}
     plan = {"ab": [], "aa": [], "bb": []}          # [(trace, trace)] of every pairing, in the order it was measured
     seen = lambda: os.getloadavg()                 # noqa: E731
+    wall, started = [], time.monotonic()
     with tempfile.TemporaryDirectory(prefix="pair-judge-") as scratch:
         if mode == "simultaneous":
             run_stim = dict(stim, seconds=stim["seconds"] + SLACK)
             for _ in range(repeats):
-                for kind, (n1, n2) in (("ab", "ab"), ("aa", "aa"), ("bb", "bb")):
-                    before = seen()
-                    t1, t2 = record_together([paths[n1], paths[n2]], [sources[n1], sources[n2]], run_stim, x_ite, scratch, timeout)
-                    load.append({"pair": kind, "before": before, "after": seen()})
-                    plan[kind].append((t1, t2))
-                    traces[n1].append(t1)
-                    traces[n2].append(t2)
+                if share_runs:
+                    batches = [("abab", "aabb")]
+                else:
+                    batches = [("ab", "ab"), ("aa", "aa"), ("bb", "bb")]
+                for kind, names in batches:
+                    before, tick = seen(), time.monotonic()
+                    ts = record_together([paths[n] for n in names], [sources[n] for n in names], run_stim, x_ite, scratch, timeout)
+                    took = round(time.monotonic() - tick, 2)
+                    if share_runs:
+                        load.append({"pair": "a,a,b,b", "before": before, "after": seen()})
+                        wall.append({"pair": "a,a,b,b", "seconds": took})
+                        a1, a2, b1, b2 = ts
+                        plan["aa"].append((a1, a2))
+                        plan["bb"].append((b1, b2))
+                        plan["ab"] += [(a1, b1), (a1, b2), (a2, b1), (a2, b2)]
+                    else:
+                        load.append({"pair": kind, "before": before, "after": seen()})
+                        wall.append({"pair": kind, "seconds": took})
+                        plan[kind].append(tuple(ts))
+                    for name, t in zip(names, ts):
+                        traces[name].append(t)
         else:
             for _ in range(repeats):
                 for name in ("a", "b"):
-                    before = seen()
+                    before, tick = seen(), time.monotonic()
                     trace = record(paths[name], sources[name], stim, x_ite, scratch, timeout)
                     load.append({"file": name, "before": before, "after": seen()})
+                    wall.append({"file": name, "seconds": round(time.monotonic() - tick, 2)})
                     traces[name].append(trace)
+    wall_total = round(time.monotonic() - started, 2)
     timers = {n.id for graph in (graph_a, graph_b) for n in graph.nodes.values() if n.node_type == "TimeSensor"}
     # lay out every pairing: (trace, zero, trace, zero, grid), the zero being a run's time zero, grids in seconds from it
     if mode == "simultaneous":
         layout, zeros = {}, {"a": [], "b": []}
+        windows = {}
         for kind in plan:
             layout[kind] = []
             for t1, t2 in plan[kind]:
+                # the window comes from the recordings' own start and stop, not from event times: X_ITE's clock only moves
+                # when it draws, so a scene that draws nothing leaves every stamp at the start and the window read 0 s
                 zero = max(t1["began"], t2["began"])
-                end = min(max(t1["frames"], default=0.0), max(t2["frames"], default=0.0))
+                end = min(_stop(t1, run_stim["seconds"]), _stop(t2, run_stim["seconds"]))
                 span = min(end - zero, stim["seconds"])
                 if span < 1.0:
                     raise PairJudgeError(f"the two simultaneous runs overlapped for {max(span, 0):.2f} s: too little to compare "
                                          "(was the machine busy? raise 'seconds')")
+                windows.setdefault(id(t1), (zero, zero + span))
+                windows.setdefault(id(t2), (zero, zero + span))
                 layout[kind].append((t1, zero, t2, zero, [i * step for i in range(int(span / step) + 1)]))
         zeros = {"a": [(row[1], "shared clock") for row in layout["ab"]], "b": [(row[3], "shared clock") for row in layout["ab"]]}
     else:
@@ -583,6 +660,7 @@ def judge_pair(file_a, file_b, stimulus=None, repeats=3, x_ite=None, *, toleranc
         within = lambda ts: [(ts[i], ts[j]) for i in range(len(ts)) for j in range(i + 1, len(ts))]  # noqa: E731
         pairs = {"ab": [(a, b) for a in traces["a"] for b in traces["b"]], "aa": within(traces["a"]), "bb": within(traces["b"])}
         layout = {k: [(x, zero_of[id(x)], y, zero_of[id(y)], grid) for x, y in v] for k, v in pairs.items()}
+        windows = {i: (z, z + (grid[-1] if grid else 0.0)) for i, z in zero_of.items()}
     horizon = min(len(row[4]) for rows in layout.values() for row in rows) - 1
     horizon = max(horizon, 0) * step
     streams, unobservable = [], []
@@ -606,9 +684,31 @@ def judge_pair(file_a, file_b, stimulus=None, repeats=3, x_ite=None, *, toleranc
         result["stream"] = f"{d}.{f}"
         result["type"] = kind
         result["events"] = {n: [sum(1 for e in t["events"] if e[1] == d and e[2] == f) for t in traces[n]] for n in traces}
-        if not any(result["events"]["a"]) and not any(result["events"]["b"]):
-            result["verdict"], result["reason"] = "unclear", "no run ever sent this stream"
+        result["samples"] = {n: [sum(1 for e in t["events"] if e[1] == d and e[2] == f and windows[id(t)][0] <= e[0] <= windows[id(t)][1])
+                                 for t in traces[n]] for n in traces}
+        result["span_unit"] = "rad" if rotation else "field unit"
+        what = activity(result["events"]["a"], result["events"]["b"])
+        if what and f"{d}.{f}" in set(unobservable):
+            result["verdict"], result["reason"] = "unclear", "unobservable"
+            result["detail"] = "X_ITE could not hook this field in at least one run, so no event could be seen"
+        elif what == "nothing-moved":
+            result["verdict"], result["reason"] = "unclear", "nothing-moved"
+            result["detail"] = ("no run of either file delivered an event on this stream: nothing moved without a stimulus, "
+                                "so there is nothing to compare (give a stimulus that makes it move)")
+        elif what == "one-side-silent":
+            side = "A" if not any(result["events"]["a"]) else "B"
+            result["verdict"], result["reason"] = "differs", "one-side-silent"
+            result["detail"] = (f"every run of file {side} delivered no event on this stream and every run of the other file "
+                                "delivered some: silent in every A-versus-B pairing")
+        result["_blind"], result["_moved"] = result["reason"] == "blind", sum(result["events"]["a"]) + sum(result["events"]["b"])
         streams.append(result)
+    fps = {n: [frame_stats(t["frames"], *windows[id(t)]) for t in traces[n]] for n in traces}
+    every_fps = [row["fps"] for n in fps for row in fps[n]]
+    median_fps = round(statistics.median(every_fps), 2) if every_fps else None
+    for result in streams:
+        blind_now, moved = result.pop("_blind"), result.pop("_moved")
+        result["notes"] = stream_notes(result["span"], result["tolerance_unit"] == "rad", moved, blind_now, median_fps, min_fps)
+        result["note"] = "; ".join(result["notes"]) or None
     unmatched["unobservable"] = sorted(set(unobservable))
     flat_load = [v for row in load for v in row["before"][:1] + row["after"][:1]]
     return {
@@ -616,6 +716,10 @@ def judge_pair(file_a, file_b, stimulus=None, repeats=3, x_ite=None, *, toleranc
         "files": {"a": str(file_a), "b": str(file_b)}, "stimulus": stim, "repeats": repeats,
         "x_ite": traces["a"][0]["browser"], "x_ite_dist": str(x_ite), "browser": browser_version(),
         "instrument": "tools/behaviour_pair_judge.py, headless Chromium with software GL",
+        "wall_time_s": {"total": wall_total, "per_pair": wall, "shared_runs": share_runs},
+        "frame_rate": {"unit": "drawn frames per second over each run's compared window (distinct X_ITE frame time stamps)",
+                       "per_run": fps, "median": median_fps, "low_limit": min_fps},
+        "span_limits": {"rotation_rad": SPAN_LIMIT_ROTATION, "other_field_unit": SPAN_LIMIT_VALUE},
         "tolerance": {"fraction_of_span": tolerance, "margin": margin, "min_abs": min_abs, "sample_step_s": step,
                       "samples": int(round(horizon / step)) + 1, "horizon_s": round(horizon, 3), "blind_floor": blind,
                       "rotation": "the angle between the two rotations, in radians"},
@@ -635,11 +739,15 @@ def main(argv=None):
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--mode", choices=["auto", "simultaneous", "sequential"], default="auto",
                         help="simultaneous: A and B run at the same moment (a world nobody touches); sequential: one at a time")
+    parser.add_argument("--share-runs", action="store_true",
+                        help="simultaneous only: run A, A, B, B at once in four pages per repeat and form the pairs from them")
+    parser.add_argument("--min-fps", type=float, default=MIN_FPS, help="blind streams are noted 'low frame rate' under this many drawn frames a second")
     parser.add_argument("--x-ite", help="X_ITE dist directory (default: $X_ITE_DIST)")
     parser.add_argument("--out", help="also write the verdict JSON here")
     args = parser.parse_args(argv)
     try:
-        result = judge_pair(args.file_a, args.file_b, args.stimulus, args.repeats, args.x_ite, mode=args.mode)
+        result = judge_pair(args.file_a, args.file_b, args.stimulus, args.repeats, args.x_ite, mode=args.mode, min_fps=args.min_fps,
+                            share_runs=args.share_runs)
     except PairJudgeError as error:
         result = {"verdict": "error", "error": str(error)}
     text = json.dumps(result, indent=1)
