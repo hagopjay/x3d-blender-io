@@ -135,12 +135,16 @@ def _strings(text):
 
 def _lerp(a, b, t):
     if isinstance(a, tuple):
+        if len(a) == 3 and len(b) == 3:         # the common case (positions, colours), without the generator
+            return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t)
         return tuple(x + (y - x) * t for x, y in zip(a, b))
     return a + (b - a) * t
 
 
 def _distance(a, b):
     if isinstance(a, tuple):
+        if len(a) == 3 and len(b) == 3:         # sum() of a tuple, not of a generator: the same additions, in order
+            return math.sqrt(sum(((a[0] - b[0]) ** 2, (a[1] - b[1]) ** 2, (a[2] - b[2]) ** 2)))
         return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
     return abs(a - b)
 
@@ -1615,12 +1619,15 @@ class Simulation:
                     self.not_simulated.append(f"{node.node_type} {node.id}")
             elif node.role != bg.TARGET:
                 self.not_simulated.append(f"{node.node_type} {node.id}")
+        self._ticking = [machine for machine in self.machines.values() if machine.ticks]    # fixed once built
         self._routes = {}
         for route in graph.routes:
             source = self._canonical(route.from_id, route.from_field, "out")
             destination = self._canonical(route.to_id, route.to_field, "in")
             if source and destination:
-                self._routes.setdefault(source, []).append(destination + (self._field_type(*destination),))
+                # the ROUTE's identity is built once here, not for every event that crosses it
+                self._routes.setdefault(source, []).append(
+                    (*destination, self._field_type(*destination), (*source, *destination)))
         self.values = {}                 # (target id, field) -> the last value that reached it
         self.outputs = {}                # (node id, field) -> the last value any node sent
         self.log = deque(maxlen=log_size)   # (time, node id, field, value) of every event sent
@@ -1671,28 +1678,29 @@ class Simulation:
 
     def _drain(self):
         now = self.now if self.now is not None else 0.0
-        while self._queue:
-            node_id, field_name, value = self._queue.popleft()
+        queue, outputs, log, routes, fired, machines, dropped = \
+            self._queue, self.outputs, self.log, self._routes, self._fired, self.machines, self.dropped
+        while queue:
+            node_id, field_name, value = queue.popleft()
             if not _finite(value):               # a NaN or an infinity never leaves a node
-                self.dropped["non-finite"] = self.dropped.get("non-finite", 0) + 1
+                dropped["non-finite"] = dropped.get("non-finite", 0) + 1
                 continue
-            self.outputs[(node_id, field_name)] = value
-            self.log.append((now, node_id, field_name, value))
-            for to_id, to_field, to_type in self._routes.get((node_id, field_name), ()):
-                key = (node_id, field_name, to_id, to_field)
-                if key in self._fired:               # 4.4.8.3: a ROUTE carries one event per timestamp, which
+            outputs[(node_id, field_name)] = value
+            log.append((now, node_id, field_name, value))
+            for to_id, to_field, to_type, key in routes.get((node_id, field_name), ()):
+                if key in fired:                     # 4.4.8.3: a ROUTE carries one event per timestamp, which
                     continue                         # is also what stops a loop of ROUTEs
                 if to_type is not None and not _fits(value, to_type):
-                    self.dropped["mismatch"] = self.dropped.get("mismatch", 0) + 1
+                    dropped["mismatch"] = dropped.get("mismatch", 0) + 1
                     continue
-                self._fired.add(key)
-                machine = self.machines.get(to_id)
+                fired.add(key)
+                machine = machines.get(to_id)
                 if machine is not None:
                     self._try(to_id, "receive", machine.receive, to_field, value, now)
                 elif self.graph.nodes[to_id].role == bg.TARGET:
                     self.values[(to_id, to_field)] = value
                     self._changes.append((to_id, to_field, value))
-                    self._emit(to_id, to_field, value)      # an inputOutput field sends what it was given
+                    queue.append((to_id, to_field, value))      # an inputOutput field sends what it was given
 
     def _collect(self):
         changes, self._changes = self._changes, []
@@ -1717,9 +1725,8 @@ class Simulation:
         dt, self.now, self._fired = max(0.0, now - self.now), now, set()
         # every time-driven node first works out what it sends, from what it knew before this step; then the events
         # travel. So a follower chases where its destination was one step ago, as it does in X_ITE.
-        for machine in list(self.machines.values()):
-            if machine.ticks:
-                self._try(machine.id, "tick", machine.tick, now, dt)
+        for machine in self._ticking:
+            self._try(machine.id, "tick", machine.tick, now, dt)
         self._drain()
         return self._collect()
 

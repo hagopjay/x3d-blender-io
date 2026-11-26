@@ -30,6 +30,7 @@ import statistics
 import sys
 import time
 import tracemalloc
+from collections import deque
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -163,12 +164,12 @@ def measure_sim(shape: str, n: int, budget: float) -> dict:
     tracemalloc.start()
     sim = bs.Simulation(build(shape, n))
     counted = [0]
-    emit = sim._emit
 
-    def counting(node_id, field_name, value):
-        counted[0] += 1
-        emit(node_id, field_name, value)
-    sim._emit = counting
+    class CountingLog(deque):          # every event sent is one entry in the log
+        def append(self, item):
+            counted[0] += 1
+            super().append(item)
+    sim.log = CountingLog(sim.log, maxlen=sim.log.maxlen)
     run_sim(sim, shape, n, len(steps))
     row["peak_memory_mb"] = tracemalloc.get_traced_memory()[1] / 2**20
     tracemalloc.stop()

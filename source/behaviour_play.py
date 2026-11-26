@@ -359,7 +359,11 @@ class Player:
             node = self.graph.nodes[node_id]
             kind, name = node.binding or (None, None)
             if kind == "transform" or (kind in ("viewpoint", "light") and field_name == "visible"):
-                obj = bpy.data.objects.get(name)
+                state = self._transforms.get(name)
+                if state is not None and field_name != "visible" and self._still_there(state, name):
+                    obj = state.obj      # bpy.data.objects.get costs microseconds: the object is the one found before
+                else:
+                    obj = bpy.data.objects.get(name)
                 if obj is None:
                     continue
                 if field_name == "visible":
@@ -406,6 +410,14 @@ class Player:
                 self._skip(node, field_name)
         for state in touched.values():
             state.write()
+
+    @staticmethod
+    def _still_there(state, name):
+        """The object a state was made for still has that name (it was not deleted or renamed while playing)."""
+        try:
+            return state.obj.name == name
+        except ReferenceError:
+            return False
 
     def _skip(self, node, field_name):
         label = f"{node.node_type}.{field_name}"
@@ -589,8 +601,10 @@ class Player:
             if self.now - when > glow:
                 break
             recent.setdefault(node_id, when)
-        for node_id, item in self._flash.items():
-            if node_id not in recent and node_id not in self._colours:
+        # only nodes that sent something or are still tinted need work, not every node of the tree
+        for node_id in [*recent, *(n for n in self._colours if n not in recent)]:
+            item = self._flash.get(node_id)
+            if item is None:
                 continue
             if node_id not in self._colours:
                 self._colours[node_id] = (item.use_custom_color, tuple(item.color))

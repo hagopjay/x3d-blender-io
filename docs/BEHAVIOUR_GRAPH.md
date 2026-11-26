@@ -349,6 +349,39 @@ wrong numbers; no window, so the editor's drawing code is reached only through `
 agreement with X_ITE is not tested on random graphs (only the recorded worlds, as before); nothing here says the values
 are right, only that they are finite, shaped and bounded; the Blender pass was run on bpy 5.3.0 only, and each graph
 in a fresh scene; a node that overflows beyond 1e154 is isolated, not made to compute the answer.
+## How fast (26 Nov 2026)
+
+Instrument: `tools/behaviour_bench.py` (300 steps of 1/60 s per case, median per step), Intel Xeon Processor @ 2.10GHz
+(from /proc/cpuinfo, 4 cores, shared machine), Python 3.13.18, Blender 5.3.0 bpy wheel. "Before" is the add-on at 2.7.5, "after"
+is the same code with the performance work. Same events in the same order with the same values (a digest test pins it).
+Shapes: fan = one looping TimeSensor into N PositionInterpolators; chains = N times TimeSensor, PositionInterpolator,
+PositionDamper; mixed = N copies of the door graph with one click per 10 copies.
+
+Simulation alone, ms per step (60 steps per second needs 16.7 or less):
+
+| shape | N=10 | N=100 | N=1000 | N=5000 |
+|---|---:|---:|---:|---:|
+| fan, before / after | 0.025 / 0.018 | 0.21 / 0.28 (noise) | 2.41 / 1.66 | 15.0 / 10.4 |
+| chains, before / after | 0.15 / 0.06 | 0.97 / 0.59 | 11.3 / 7.4 | 92.5 / 54.6 |
+| mixed, before / after | 0.005 / 0.006 | 0.033 / 0.021 | 0.34 / 0.19 | 1.96 / 1.19 |
+
+Player.step in Blender (one empty per target; node glow only where the node tree was built, up to 1000 nodes, because
+building the tree with `behaviour_nodes.apply` itself takes 7 s for 600 nodes), ms per step:
+
+| shape | N=10 | N=100 | N=300 | N=1000 | N=5000 |
+|---|---:|---:|---:|---:|---:|
+| fan, before / after | 0.13 / 0.11 | 1.17 / 0.82 | 5.87 / 2.01 | 30.4 / 3.45 | did not finish in 40 s (54 steps, 751 each) / 20.4 |
+| chains, before / after | 0.25 / 0.21 | 2.12 / 1.50 | 5.66 / 2.97 | 41.2 / 9.66 | did not finish in 40 s (49 steps, 803 each) / 65.7 |
+| mixed, before / after | 0.02 / 0.02 | 0.17 / 0.10 | 0.43 / 0.10 | 3.63 / 0.33 | 107 / 2.72 |
+
+What was slow: the player looked each object up by name (`bpy.data.objects.get`, about 8 microseconds, more on big
+scenes) for every event, and walked every node of the tree each step to see whether it should glow. It now remembers
+the object it moved (and checks it was not deleted or renamed) and visits only the nodes that sent something. The
+simulator builds each ROUTE's key once and skips non-timer nodes when it ticks.
+
+Largest size that holds 60 steps per second on this machine (checked at 10, 100, 300, 1000 and 5000 only): the
+simulation, fan 5000, mixed 5000, chains between 1000 and 5000; the player, fan 1000 and chains 1000 (fan 5000 takes
+20 ms, chains 5000 66 ms), mixed 5000. Not measured: a real viewport redraw, which costs more than these numbers.
 
 ## Limits
 
