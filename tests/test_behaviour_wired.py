@@ -107,7 +107,9 @@ class CatalogueTests(unittest.TestCase):
     def test_none_of_the_twelve_is_simulated_yet(self):
         # the hosted two (Script, CollisionSensor) are simulated: Simulation.host and Simulation.contact (tests/test_behaviour_hosted.py);
         # so are the two that run on outside resources, AudioClip and MovieTexture (tools/behaviour_resources_judge.py)
-        self.assertFalse(((NINE | IN_PLACE) - {"Script", "CollisionSensor", "AudioClip", "MovieTexture"}) & set(bs.SIMULATED))
+        # and the four pick sensors, simulated over the World's pick scene (tests/test_behaviour_pick.py)
+        self.assertFalse(((NINE | IN_PLACE) - {"Script", "CollisionSensor", "AudioClip", "MovieTexture", "LinePickSensor",
+                                               "PointPickSensor", "PrimitivePickSensor", "VolumePickSensor"}) & set(bs.SIMULATED))
 
     def test_every_node_that_is_placed_in_the_scene_is_listed_as_placed(self):
         self.assertLessEqual({"GeoProximitySensor", "GeoTouchSensor", "LinePickSensor", "PointPickSensor",

@@ -823,6 +823,8 @@ class XiteAgreementTests(unittest.TestCase):
         judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
         # the worlds recorded for outside resources (tools/behaviour_resources_judge.py, tests/test_behaviour_resources.py)
         judged += list(map(world, ("probe-load", "probe-loadlive", "probe-audio", "probe-movie")))
+        # the pick sensors (tools/behaviour_pick_judge.py, tests/test_behaviour_pick.py)
+        judged += list(map(world, ("probe-pick", "probe-pick-geometry")))
         used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
         # AudioClip and MovieTexture are scene nodes kept in place: targets in the graph, and they send on a ROUTE too
