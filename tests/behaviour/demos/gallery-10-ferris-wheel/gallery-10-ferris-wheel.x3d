@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 10: Ferris wheel" />
+    <meta name="description" content="A night-fair wheel whose cabins stay upright; click the booth to stop it." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-10-ferris-wheel/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.02 0.02 0.08" />
+    <Viewpoint DEF="View" description="Front" position="0 5 15" orientation="1 0 0 -0.05" />
+    <DirectionalLight direction="-0.2 -0.5 -1" intensity="0.8" />
+    <PointLight location="0 5.4 4" color="1 0.85 0.6" intensity="120" radius="20" />
+    <Transform translation="0 -0.1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.15 0.1" roughness="0.9" /></Appearance><Box size="24 0.2 10" /></Shape></Transform>
+    <Transform translation="0 5.4 0">
+      <Transform DEF="Wheel">
+        <Transform translation="4.200 0.000 0" rotation="0 0 1 1.5708"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="4.057 1.087 0" rotation="0 0 1 1.8326"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="3.637 2.100 0" rotation="0 0 1 2.0944"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="2.970 2.970 0" rotation="0 0 1 2.3562"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="2.100 3.637 0" rotation="0 0 1 2.6180"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="1.087 4.057 0" rotation="0 0 1 2.8798"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="0.000 4.200 0" rotation="0 0 1 3.1416"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-1.087 4.057 0" rotation="0 0 1 3.4034"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-2.100 3.637 0" rotation="0 0 1 3.6652"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-2.970 2.970 0" rotation="0 0 1 3.9270"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-3.637 2.100 0" rotation="0 0 1 4.1888"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-4.057 1.087 0" rotation="0 0 1 4.4506"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-4.200 0.000 0" rotation="0 0 1 4.7124"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-4.057 -1.087 0" rotation="0 0 1 4.9742"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-3.637 -2.100 0" rotation="0 0 1 5.2360"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-2.970 -2.970 0" rotation="0 0 1 5.4978"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-2.100 -3.637 0" rotation="0 0 1 5.7596"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-1.087 -4.057 0" rotation="0 0 1 6.0214"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="-0.000 -4.200 0" rotation="0 0 1 6.2832"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="1.087 -4.057 0" rotation="0 0 1 6.5450"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="2.100 -3.637 0" rotation="0 0 1 6.8068"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="2.970 -2.970 0" rotation="0 0 1 7.0686"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="3.637 -2.100 0" rotation="0 0 1 7.3304"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform translation="4.057 -1.087 0" rotation="0 0 1 7.5922"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="1.146 0.14 0.3" /></Shape></Transform><Transform rotation="0 0 1 0.0000"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 0.5236"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 1.0472"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 1.5708"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 2.0944"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 2.6180"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 3.1416"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 3.6652"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 4.1888"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 4.7124"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 5.2360"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform><Transform rotation="0 0 1 5.7596"><Transform translation="2.1 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="4.2 0.08 0.12" /></Shape></Transform></Transform>
+      <Transform translation="4.200 0.000 0">
+        <Transform DEF="Cab0"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="1 0.3 0.3" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="3.637 2.100 0">
+        <Transform DEF="Cab1"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="1 0.7 0.2" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="2.100 3.637 0">
+        <Transform DEF="Cab2"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="0.4 0.9 0.4" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="0.000 4.200 0">
+        <Transform DEF="Cab3"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="0.3 0.7 1" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="-2.100 3.637 0">
+        <Transform DEF="Cab4"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="0.8 0.4 1" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="-3.637 2.100 0">
+        <Transform DEF="Cab5"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.8" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="-4.200 0.000 0">
+        <Transform DEF="Cab6"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="1 0.3 0.3" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="-3.637 -2.100 0">
+        <Transform DEF="Cab7"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="1 0.7 0.2" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="-2.100 -3.637 0">
+        <Transform DEF="Cab8"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="0.4 0.9 0.4" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="-0.000 -4.200 0">
+        <Transform DEF="Cab9"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="0.3 0.7 1" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="2.100 -3.637 0">
+        <Transform DEF="Cab10"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="0.8 0.4 1" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+      <Transform translation="3.637 -2.100 0">
+        <Transform DEF="Cab11"><Transform translation="0 -0.55 0">
+          <Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.8" roughness="0.4" /></Appearance><Box size="0.9 0.6 0.7" /></Shape>
+          <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Cylinder radius="0.02" height="0.4" /></Shape></Transform>
+        </Transform></Transform>
+      </Transform>
+        <Transform DEF="Bulb0" translation="4.283 0.564 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb1" translation="3.991 1.653 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb2" translation="3.427 2.630 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb3" translation="2.630 3.427 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb4" translation="1.653 3.991 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb5" translation="0.564 4.283 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb6" translation="-0.564 4.283 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb7" translation="-1.653 3.991 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb8" translation="-2.630 3.427 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb9" translation="-3.427 2.630 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb10" translation="-3.991 1.653 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb11" translation="-4.283 0.564 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb12" translation="-4.283 -0.564 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb13" translation="-3.991 -1.653 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb14" translation="-3.427 -2.630 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb15" translation="-2.630 -3.427 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb16" translation="-1.653 -3.991 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb17" translation="-0.564 -4.283 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb18" translation="0.564 -4.283 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb19" translation="1.653 -3.991 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb20" translation="2.630 -3.427 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb21" translation="3.427 -2.630 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb22" translation="3.991 -1.653 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform><Transform DEF="Bulb23" translation="4.283 -0.564 0.2"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="1 0.85 0.4"  /></Appearance><Sphere radius="0.1" /></Shape></Transform>
+        <Shape><Appearance><PhysicalMaterial baseColor="0.9 0.4 0.2" metallic="1" /></Appearance><Cylinder radius="0.35" height="0.5" /></Shape>
+      </Transform>
+    </Transform>
+    <Transform translation="-2.2 2.7 0" rotation="0 0 1 0.6"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="0.25 6.0 0.25" /></Shape></Transform>
+    <Transform translation="2.2 2.7 0" rotation="0 0 1 -0.6"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.75 0.8" metallic="1" roughness="0.35" /></Appearance><Box size="0.25 6.0 0.25" /></Shape></Transform>
+    <Transform DEF="Booth" translation="6 0.8 2">
+      <TouchSensor DEF="BoothTouch" description="Click: stop or start the wheel" />
+      <Shape><Appearance><PhysicalMaterial baseColor="0.8 0.15 0.15" roughness="0.6" /></Appearance><Box size="1.6 1.6 1.2" /></Shape>
+      <Transform translation="0 1.0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="0.6 0.5 0.1"  /></Appearance><Cone bottomRadius="1.1" height="0.7" /></Shape></Transform>
+    </Transform>
+    <TimeSensor DEF="Spin" cycleInterval="18.0" loop="true" />
+    <OrientationInterpolator DEF="Turn" key="0 0.0833 0.1667 0.25 0.3333 0.4167 0.5 0.5833 0.6667 0.75 0.8333 0.9167 1" keyValue="0 0 1 0 0 0 1 0.5236 0 0 1 1.0472 0 0 1 1.5708 0 0 1 2.0944 0 0 1 2.618 0 0 1 3.1416 0 0 1 3.6652 0 0 1 4.1888 0 0 1 4.7124 0 0 1 5.236 0 0 1 5.7596 0 0 1 6.2832" />
+    <OrientationInterpolator DEF="Level" key="0 0.0833 0.1667 0.25 0.3333 0.4167 0.5 0.5833 0.6667 0.75 0.8333 0.9167 1" keyValue="0 0 1 -0 0 0 1 -0.5236 0 0 1 -1.0472 0 0 1 -1.5708 0 0 1 -2.0944 0 0 1 -2.618 0 0 1 -3.1416 0 0 1 -3.6652 0 0 1 -4.1888 0 0 1 -4.7124 0 0 1 -5.236 0 0 1 -5.7596 0 0 1 -6.2832" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Turn" toField="set_fraction" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Level" toField="set_fraction" />
+    <ROUTE fromNode="Turn" fromField="value_changed" toNode="Wheel" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab0" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab1" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab2" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab3" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab4" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab5" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab6" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab7" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab8" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab9" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab10" toField="rotation" />
+    <ROUTE fromNode="Level" fromField="value_changed" toNode="Cab11" toField="rotation" />
+    <TimeSensor DEF="Chase" cycleInterval="1.5" loop="true" />
+    <BooleanSequencer DEF="Flash0" key="0 0.25 1" keyValue="true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash0" toField="set_fraction" />
+    <ROUTE fromNode="Flash0" fromField="value_changed" toNode="Bulb0" toField="visible" />
+    <BooleanSequencer DEF="Flash1" key="0 0.0417 0.2917 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash1" toField="set_fraction" />
+    <ROUTE fromNode="Flash1" fromField="value_changed" toNode="Bulb1" toField="visible" />
+    <BooleanSequencer DEF="Flash2" key="0 0.0833 0.3333 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash2" toField="set_fraction" />
+    <ROUTE fromNode="Flash2" fromField="value_changed" toNode="Bulb2" toField="visible" />
+    <BooleanSequencer DEF="Flash3" key="0 0.125 0.375 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash3" toField="set_fraction" />
+    <ROUTE fromNode="Flash3" fromField="value_changed" toNode="Bulb3" toField="visible" />
+    <BooleanSequencer DEF="Flash4" key="0 0.1667 0.4167 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash4" toField="set_fraction" />
+    <ROUTE fromNode="Flash4" fromField="value_changed" toNode="Bulb4" toField="visible" />
+    <BooleanSequencer DEF="Flash5" key="0 0.2083 0.4583 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash5" toField="set_fraction" />
+    <ROUTE fromNode="Flash5" fromField="value_changed" toNode="Bulb5" toField="visible" />
+    <BooleanSequencer DEF="Flash6" key="0 0.25 0.5 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash6" toField="set_fraction" />
+    <ROUTE fromNode="Flash6" fromField="value_changed" toNode="Bulb6" toField="visible" />
+    <BooleanSequencer DEF="Flash7" key="0 0.2917 0.5417 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash7" toField="set_fraction" />
+    <ROUTE fromNode="Flash7" fromField="value_changed" toNode="Bulb7" toField="visible" />
+    <BooleanSequencer DEF="Flash8" key="0 0.3333 0.5833 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash8" toField="set_fraction" />
+    <ROUTE fromNode="Flash8" fromField="value_changed" toNode="Bulb8" toField="visible" />
+    <BooleanSequencer DEF="Flash9" key="0 0.375 0.625 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash9" toField="set_fraction" />
+    <ROUTE fromNode="Flash9" fromField="value_changed" toNode="Bulb9" toField="visible" />
+    <BooleanSequencer DEF="Flash10" key="0 0.4167 0.6667 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash10" toField="set_fraction" />
+    <ROUTE fromNode="Flash10" fromField="value_changed" toNode="Bulb10" toField="visible" />
+    <BooleanSequencer DEF="Flash11" key="0 0.4583 0.7083 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash11" toField="set_fraction" />
+    <ROUTE fromNode="Flash11" fromField="value_changed" toNode="Bulb11" toField="visible" />
+    <BooleanSequencer DEF="Flash12" key="0 0.5 0.75 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash12" toField="set_fraction" />
+    <ROUTE fromNode="Flash12" fromField="value_changed" toNode="Bulb12" toField="visible" />
+    <BooleanSequencer DEF="Flash13" key="0 0.5417 0.7917 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash13" toField="set_fraction" />
+    <ROUTE fromNode="Flash13" fromField="value_changed" toNode="Bulb13" toField="visible" />
+    <BooleanSequencer DEF="Flash14" key="0 0.5833 0.8333 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash14" toField="set_fraction" />
+    <ROUTE fromNode="Flash14" fromField="value_changed" toNode="Bulb14" toField="visible" />
+    <BooleanSequencer DEF="Flash15" key="0 0.625 0.875 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash15" toField="set_fraction" />
+    <ROUTE fromNode="Flash15" fromField="value_changed" toNode="Bulb15" toField="visible" />
+    <BooleanSequencer DEF="Flash16" key="0 0.6667 0.9167 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash16" toField="set_fraction" />
+    <ROUTE fromNode="Flash16" fromField="value_changed" toNode="Bulb16" toField="visible" />
+    <BooleanSequencer DEF="Flash17" key="0 0.7083 0.9583 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash17" toField="set_fraction" />
+    <ROUTE fromNode="Flash17" fromField="value_changed" toNode="Bulb17" toField="visible" />
+    <BooleanSequencer DEF="Flash18" key="0 0.75 1 1" keyValue="false true false false" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash18" toField="set_fraction" />
+    <ROUTE fromNode="Flash18" fromField="value_changed" toNode="Bulb18" toField="visible" />
+    <BooleanSequencer DEF="Flash19" key="0 0.0417 0.7917 1" keyValue="true false true true" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash19" toField="set_fraction" />
+    <ROUTE fromNode="Flash19" fromField="value_changed" toNode="Bulb19" toField="visible" />
+    <BooleanSequencer DEF="Flash20" key="0 0.0833 0.8333 1" keyValue="true false true true" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash20" toField="set_fraction" />
+    <ROUTE fromNode="Flash20" fromField="value_changed" toNode="Bulb20" toField="visible" />
+    <BooleanSequencer DEF="Flash21" key="0 0.125 0.875 1" keyValue="true false true true" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash21" toField="set_fraction" />
+    <ROUTE fromNode="Flash21" fromField="value_changed" toNode="Bulb21" toField="visible" />
+    <BooleanSequencer DEF="Flash22" key="0 0.1667 0.9167 1" keyValue="true false true true" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash22" toField="set_fraction" />
+    <ROUTE fromNode="Flash22" fromField="value_changed" toNode="Bulb22" toField="visible" />
+    <BooleanSequencer DEF="Flash23" key="0 0.2083 0.9583 1" keyValue="true false true true" />
+    <ROUTE fromNode="Chase" fromField="fraction_changed" toNode="Flash23" toField="set_fraction" />
+    <ROUTE fromNode="Flash23" fromField="value_changed" toNode="Bulb23" toField="visible" />
+    <BooleanFilter DEF="BoothPress" />
+    <BooleanToggle DEF="Halt" />
+    <BooleanFilter DEF="Running" />
+    <ROUTE fromNode="BoothTouch" fromField="isActive" toNode="BoothPress" toField="set_boolean" />
+    <ROUTE fromNode="BoothPress" fromField="inputTrue" toNode="Halt" toField="set_boolean" />
+    <ROUTE fromNode="Halt" fromField="toggle_changed" toNode="Running" toField="set_boolean" />
+    <ROUTE fromNode="Running" fromField="inputNegate" toNode="Spin" toField="enabled" />
+    <ROUTE fromNode="Running" fromField="inputNegate" toNode="Chase" toField="enabled" />
+  </Scene>
+</X3D>
