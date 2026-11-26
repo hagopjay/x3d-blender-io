@@ -180,7 +180,7 @@ def behaviour():
     kick = b.add("TimeTrigger", "Kick")
     sweep = b.add("TimeSensor", "Sweep", cycleInterval=2)
     colours = b.add("ColorInterpolator", "Colours", key=[0, 0.5, 1], keyValue=[AMBER, ROSE, TEAL])
-    glow = b.add("ColorChaser", "GlowChase", duration=3, initialValue=AMBER, initialDestination=AMBER)
+    glow = b.add("ColorChaser", "GlowChase", duration=0.6, initialValue=AMBER, initialDestination=AMBER)
     turn.isActive >> press.set_boolean
     press.inputTrue >> kick.set_boolean
     kick.triggerTime >> sweep.startTime
@@ -191,7 +191,7 @@ def behaviour():
 
     roll = b.add("SphereSensor", "Roll", parent="GlobeSense")
     b.add("TouchSensor", "RollTouch", parent="GlobeSense").hitPoint_changed >> b.target("Transform", "GlobeHit").translation
-    moon = b.add("OrientationChaser", "MoonChase", duration=2)
+    moon = b.add("OrientationChaser", "MoonChase", duration=0.8)
     roll.rotation_changed >> b.target("Transform", "Globe").rotation
     roll.rotation_changed >> moon.set_destination
     moon.value_changed >> b.target("Transform", "MoonArm").rotation

@@ -21,22 +21,22 @@ lever first and click a planet that holds still; pull it again to let go. Esc st
 |---|---|
 | orbits | per arm a looping TimeSensor (`EmberClock` 4 s, `VenusClock` 7 s, `TerraClock` 12 s, `GaleClock` 20 s; moons `LunaClock` 5 s, `PebbleClock` 9 s) → OrientationInterpolator (`EmberSpin` ...: 8 keys, one turn about Y) → `rotation` of the arm Transform (`EmberArm` ...) |
 | flights | per body (Sun, Venus, Terra): TouchSensor `XTouch`.`isActive` → TimeTrigger `XGo` → `triggerTime` → 3 s TimeSensor `XFlight`.`startTime` → PositionInterpolator `XPath` (3 keys: home, a lift above the middle, the post) and OrientationInterpolator `XTurn` → Viewpoint `View`.`position` and `.orientation` |
-| star chart | `YearClock` (12 s) → PositionInterpolator2D `ChartPan` (a ratchet: 4 ticks of 1.4 chart widths, 3 s apart; `YearClock` 12 s) → PositionChaser2D `ChartSmooth` (`duration 1.5`) → TextureTransform `ChartMap`.`translation` (on the chart's Appearance; the material `ChartPaint` has a DEF, and two PixelTextures: base and emissive) |
+| star chart | `YearClock` (20 s) → PositionInterpolator2D `ChartPan` (a ratchet: 4 ticks of 0.6 of the chart, 2 s apart) → PositionChaser2D `ChartSmooth` (`duration 1.5`) → TextureTransform `ChartMap`.`translation` (on the chart's Appearance; the material `ChartPaint` has a DEF, and two PixelTextures: base and emissive) |
 | lever | TouchSensor `LeverTouch` → BooleanFilter `LeverPull` → BooleanToggle `Running` (`toggle="true"`, so the first pull sends false) → `enabled` of the seven orbit and year clocks |
 
 ## Checked
 
 | What | Instrument | Result |
 |---|---|---|
-| Judge | X_ITE 16.7.1, headless Chromium (SwiftShader, 13012 frames over 162 s), one real click on each of `LeverTouch` (210, 120), `TerraTouch` (540, 330), `VenusTouch` (690, 300), `SunTouch` (480, 30), `LeverTouch` (90, 60), each hunted with the pointer sweep, 3.5 s apart, then 20 s; `tools/behaviour_demo.py judge orrery` | 29 of 29 streams agree, every one with X_ITE events (835 for the clocks and chart; 54 to 61 per flight; 2 for the lever); worst gap 0.000005 on exact streams (tolerance 0.002) and 0.027696 on `ChartSmooth` (0.08), which is the first recorded frame (the chaser was mid-ramp when recording began); elsewhere 0.000001 |
-| `judges` | same | `PositionInterpolator2D` (`ChartPan`, 835 X_ITE events) and `PositionChaser2D` (`ChartSmooth`, 835) are judged |
-| The test catches mistakes | `tests/test_behaviour_sim.py::DemoJudgeTests`, wrong simulators by hand (table below) | all seven rejected (table below) |
+| Judge | X_ITE 16.7.1, headless Chromium (SwiftShader, 12313 frames over 172 s), one real click on each of `LeverTouch` (210, 120), `TerraTouch` (600, 330), `VenusTouch` (210, 270), `SunTouch` (480, 30), `LeverTouch` (90, 60), each hunted with the pointer sweep, 3.5 s apart, then 20 s; `tools/behaviour_demo.py judge orrery` | 29 of 29 streams agree, every one with X_ITE events (841 for the clocks and chart; 47 to 59 per flight; 2 for the lever); worst gap 0.000005 on exact streams (tolerance 0.002) and 0.038878 on `ChartSmooth` (0.08), which is the first recorded frame (the chaser was mid-ramp when recording began); elsewhere 0.000001 |
+| `judges` | same | `PositionInterpolator2D` (`ChartPan`, 841 X_ITE events) and `PositionChaser2D` (`ChartSmooth`, 841) are judged |
+| The test catches mistakes | `tests/test_behaviour_sim.py::DemoJudgeTests`, wrong simulators by hand (table below) | 6 of 7 rejected; one survives (see the table) |
 | Play and graph code | `tests/test_behaviour_demo_orrery_bpy.py`, 10 tests, Blender 5.3.0; ten wrong versions by hand (table below) | all ten rejected |
 | Live window | `tools/behaviour_demo.py show orrery`, Blender 5.3.0, 1600 x 1000, real clicks through the event queue; the act (`act.py`) | Host-eyes pass; `act_ok` true; `not_applied` and `not_simulated` empty; restored after Esc |
 | Full suite | Blender 5.3.0 `-b`, `.github/scripts/run_tests_in_blender.py` | 1115 tests, 49 skipped by the suite itself; one failure, `test_import_extreme_scale_bpy.test_inverted_helper`, the known macOS arm64 one; none new |
 
 The act (every object found by DEF through the graph): runs the orrery with a screenshot every 1.5 s (all six arms
-turned 44 to 175 degrees, the chart's Mapping node moved through 5 positions), checks the camera flew to the sun's post
+turned 46 to 177 degrees, the chart's Mapping node moved through 5 positions), checks the camera flew to the sun's post
 (the last key of `SunPath`, within 0.05), pulls the lever (clocks stop: every arm moved 0.00 degrees through both
 flights), clicks Terra, then Venus, with real clicks (camera at each planet's post within 0.05 each time), pulls the
 lever again (every arm turns again). I looked at the screenshots: the star chart shows stars in Material Preview and
@@ -56,19 +56,15 @@ a ramp. With the port the worst gap is 0.000001 except the first recorded frame.
 
 Simulator (`source/behaviour_sim.py`, restored after each), by hand, `judge orrery`:
 
-| Wrong version | Result (worst gap on `ChartSmooth`; tolerance 0.08) |
+| Wrong version | Result |
 |---|---|
-| PositionInterpolator2D sends (y, x) | `ChartPan`, `ChartSmooth` rejected (2.1) |
-| PositionInterpolator2D eases its fraction (`t * t`) | `ChartPan`, `ChartSmooth` rejected (0.123) |
-| PositionChaser2D takes 1.3 times its `duration` (step time and response) | `ChartSmooth` rejected (0.331) |
-| PositionChaser2D step response linear, not half a cosine | `ChartSmooth` rejected (0.193) |
-| PositionChaser2D sends its destination (no smoothing) | `ChartSmooth` rejected (1.4) |
-| PositionChaser2D fills skipped frames from the wrong buffer | `ChartSmooth` rejected (0.197) |
-| PositionChaser2D restarts its clock on every destination event | `ChartSmooth` rejected (0.339) |
-
-With the chart's first ticks (0.6 of a chart width) the linear-response mutant got through (0.0606); with ticks of 1.4
-and one every 3 s all seven are rejected. Changing only the buffer
-spacing by 1.3 (not the response) is not rejected (0.0268, the same as the honest gap): it is nearly the same chaser.
+| PositionInterpolator2D sends (y, x) | `ChartPan`, `ChartSmooth` rejected |
+| PositionInterpolator2D eases its fraction (`t * t`) | `ChartPan` rejected |
+| PositionChaser2D takes 1.3 times its `duration` | `ChartSmooth` rejected |
+| PositionChaser2D sends its destination (no smoothing) | `ChartSmooth` rejected |
+| PositionChaser2D fills skipped frames from the wrong buffer | `ChartSmooth` rejected |
+| PositionChaser2D restarts its clock on every destination event | `ChartSmooth` rejected |
+| PositionChaser2D step response linear, not half a cosine | **not rejected**: `ChartSmooth` worst gap 0.060604, inside the follower tolerance 0.08 (Finding 7) |
 
 Play and graph (`source/behaviour_play.py`, `behaviour_graph.py`, `behaviour_nodes.py`, restored after each), by hand,
 `test_behaviour_demo_orrery_bpy`:
@@ -105,6 +101,8 @@ Play and graph (`source/behaviour_play.py`, `behaviour_graph.py`, `behaviour_nod
   DEFs), passed to the recorder as `--click-plan FILE` after the positional arguments (separate from `--keys`); the
   recorder sweeps the pointer until that sensor reports `isOver`, clicks it, waits 3.5 s, and does nothing different
   when there is no plan; `check` rejects a name that is not a pointing sensor of the world.
+- `tools/behaviour_demo.py` and `DemoJudgeTests`: an optional `idle` list, in its own commit; the orrery does not use it
+  (kept at the owner's word).
 - `tests/test_behaviour_sim.py`: `PositionChaser2D` and `PositionInterpolator2D` left the `unjudged` list.
 
 Not touched: the importer, the exporter, `ir.py`, `validate.py`, `mapping/*`, the version.
@@ -128,7 +126,8 @@ Not touched: the importer, the exporter, `ir.py`, `validate.py`, `mapping/*`, th
 
 1. **The recorder clicked one spot, so a world could have one click chain.** `run_judge` and `DemoJudgeTests` need an
    X_ITE event on every compared stream. Evidence: the first recording (the pointer found Gale first) left 18 of 37
-   streams empty. Answer: `click_plan` (one hunted click per named sensor).
+   streams empty. Answer: `click_plan` (one hunted click per named sensor). An optional `idle` list exists too and is
+   unused here.
 2. **A ROUTE into a TextureTransform never reached Play.** `behaviour_graph.BINDING_OF` had no entry for it and the
    importer neither makes a Mapping node (it bakes the transform into the UVs) nor records the node's DEF. Evidence:
    import log "TextureTransform 'ChartMap' is the end of a ROUTE but is neither a Blender object nor a top-level
@@ -147,10 +146,8 @@ Not touched: the importer, the exporter, `ir.py`, `validate.py`, `mapping/*`, th
 6. **Moving targets.** Planets move 2 to 3 units a second: the recorder pauses them with the lever before it hunts
    them, and a person has to do the same. The sun's crown (a cone higher than any planet) is what a plain scan finds
    first.
-7. **A probe whose steps are too small lets a wrong chaser pass.** With ticks of 0.6 of a chart width a linear step
-   response had a worst gap of 0.0606, inside the follower tolerance 0.08; with ticks of 1.4 it is 0.193 and rejected,
-   while the honest simulator stays at 0.000001. The tolerance was not changed: the probe was. Any follower probe needs
-   steps large compared with the tolerance divided by the shape's difference (about 10 percent of a step).
+7. **The follower tolerance (0.08) cannot tell a linear step response from half a cosine** on jumps of 0.6: worst gap
+   0.060604 with the wrong shape. Jumps of 1.0 would, at a cost of an honest gap nearer the limit on slow frames.
 8. **X3D cannot start a flight from where the camera is.** Every flight runs from the home pose through a lift to the
    post (key 0 is the home pose), so a click on a second planet starts with the camera jumping back home (by reading
    the keys; not filmed).

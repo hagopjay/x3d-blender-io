@@ -452,8 +452,8 @@
     <TimeTrigger DEF="Kick" />
     <TimeSensor DEF="Sweep" cycleInterval="2" />
     <ColorInterpolator DEF="Colours" key="0 0.5 1" keyValue="1 0.62 0.12 0.95 0.25 0.45 0.1 0.75 0.7" />
-    <ColorChaser DEF="GlowChase" duration="3" initialDestination="1 0.62 0.12" initialValue="1 0.62 0.12" />
-    <OrientationChaser DEF="MoonChase" duration="2" />
+    <ColorChaser DEF="GlowChase" duration="0.6" initialDestination="1 0.62 0.12" initialValue="1 0.62 0.12" />
+    <OrientationChaser DEF="MoonChase" duration="0.8" />
     <ROUTE fromNode="SlideTouch" fromField="hitPoint_changed" toNode="FaderHit" toField="translation" />
     <ROUTE fromNode="Slide" fromField="translation_changed" toNode="Knob" toField="translation" />
     <ROUTE fromNode="Slide" fromField="trackPoint_changed" toNode="FaderDot" toField="translation" />

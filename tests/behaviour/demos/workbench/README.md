@@ -7,14 +7,8 @@ A warm workshop bench under one lamp, with three toys. Each toy is a drag sensor
 | Toy | Sensor | What follows |
 |---|---|---|
 | **Fader**: a brass knob on a 2 m track | `PlaneSensor` `Slide`, `minPosition -1 0`, `maxPosition 1 0` (x only) | the knob (`translation_changed`); a toy car on a parallel rail through a `PositionChaser` (`duration 0.8`): it lags and catches up |
-| **Dial**: a big brass knob in a panel | `CylinderSensor` `Turn` (`autoOffset true`) | the dial (`rotation_changed`); `isActive` true starts a 2 s colour sweep: `BooleanFilter` `Press` → `TimeTrigger` `Kick` → `TimeSensor` `Sweep` → `ColorInterpolator` `Colours` (amber, rose, teal) → `ColorChaser` `GlowChase` (`duration 3`, not the spec's 0.6: see below) → the lamp shade's `emissiveColor` and the bench light's `color` |
-| **Globe** | `SphereSensor` `Roll` | the globe (`rotation_changed`); a moon on an arm through an `OrientationChaser` `MoonChase` (`duration 2`, spec silent), trailing the globe's turn |
-
-The spec gives the ColorChaser 0.6 s. At that length the recorded frames (X_ITE ran at 7 to 18 frames a second here) came
-so close to a ramp's length that few fell inside one, and the ramp's shape was hardly sampled: a first version of this demo
-judged the ColorChaser at a worst gap of 0.000000 and still passed with the ramp made linear. So `GlowChase` runs 3 s and
-`MoonChase` 2 s (a 0.8 s moon chaser also met a 0.8 s frame stall once, finding 6): about 35 to 55 frames fall inside each ramp.
-The lamp therefore follows the sweep slowly, about 5 s from the press to teal.
+| **Dial**: a big brass knob in a panel | `CylinderSensor` `Turn` (`autoOffset true`) | the dial (`rotation_changed`); `isActive` true starts a 2 s colour sweep: `BooleanFilter` `Press` → `TimeTrigger` `Kick` → `TimeSensor` `Sweep` → `ColorInterpolator` `Colours` (amber, rose, teal) → `ColorChaser` `GlowChase` (`duration 0.6`) → the lamp shade's `emissiveColor` and the bench light's `color` |
+| **Globe** | `SphereSensor` `Roll` | the globe (`rotation_changed`); a moon on an arm through an `OrientationChaser` `MoonChase` (`duration 0.8`), trailing the globe's turn |
 
 Three `TouchSensor`s sit beside the drag sensors only so the recorder logs the press point (as `probe-drag` does); their
 `hitPoint_changed` goes to three empty Transforms.
@@ -42,30 +36,27 @@ the same pointer and steps at X_ITE's own frames.
 |---|---|---|---|---|
 | `Slide.translation_changed` (PlaneSensor, driven, matched in order) | 68 | 68 | 0.000000 | 0.002 |
 | `Slide.trackPoint_changed` | 73 | 73 | 0.000001 | 0.002 |
-| `CarChase.value_changed` (PositionChaser) | 194 | 189 | 0.021307 | 0.08 |
+| `CarChase.value_changed` (PositionChaser) | 160 | 158 | 0.018240 | 0.08 |
 | `Turn.rotation_changed` (CylinderSensor, driven) | 41 | 41 | 0.000000 | 0.002 |
 | `Turn.isActive` | 2 | 2 | 0.000000 | 0.002 |
 | `Press.inputTrue` | 1 | 1 | 0.000000 | 0.002 |
 | `Kick.triggerTime` | 1 | 1 | 0.000000 | 0.002 |
-| `Sweep.fraction_changed` | 20 | 21 | 0.000000 | 0.002 |
-| `Colours.value_changed` | 20 | 21 | 0.000000 | 0.002 |
-| `GlowChase.value_changed` (ColorChaser) | 63 | 64 | 0.000000 | 0.08 |
+| `Sweep.fraction_changed` | 21 | 22 | 0.000000 | 0.002 |
+| `Colours.value_changed` | 21 | 22 | 0.000000 | 0.002 |
+| `GlowChase.value_changed` (ColorChaser) | 31 | 32 | 0.000000 | 0.08 |
 | `Roll.rotation_changed` (SphereSensor, driven) | 34 | 34 | 0.000004 | 0.002 |
-| `MoonChase.value_changed` (OrientationChaser) | 128 | 127 | 0.005459 | 0.08 |
+| `MoonChase.value_changed` (OrientationChaser) | 115 | 115 | 0.007528 | 0.08 |
 
 (Gap: largest distance between X_ITE's value and the simulator's at each X_ITE event; rotations by the angle between them.
 The three driven sensors are matched event for event, in order; the others by time. Event counts of the time-driven
 streams differ by one or two at the ends of a run; I did not look into why.)
 
-The ramp is sampled well: in the committed recording `GlowChase` ticked 63 times, `MoonChase` 128 and `CarChase` 194, at a
-median gap of 0.05 to 0.06 s (about 18 frames a second) against ramps of 3, 2 and 0.8 s.
-
-Recordings: three of this version of the world (`GlowChase` 3 s, `MoonChase` 2 s), made while other sessions loaded the
-machine (load average 4 to 11); all three passed 12 of 12 (`CarChase` 0.004 to 0.029, `GlowChase` 0.000, `MoonChase` 0.003 to
-0.005). The committed trace is the first. Before this change, seven recordings of the earlier version (`GlowChase` 0.6 s,
-`MoonChase` 0.8 s) were made: six passed with `CarChase` 0.013 to 0.072 and `MoonChase` 0.002 to 0.008; one (a frame gap
-of about 0.8 s, the chaser's own duration) failed `MoonChase` at 0.097. A further recording with `GlowChase` at 3 s but
-`MoonChase` still 0.8 s failed `MoonChase` at 0.091 the same way, which is why `MoonChase` was lengthened too (finding 6).
+Seven recordings of this world were made on a machine that other sessions were loading (load average 8 to 16, X_ITE
+at 7 to 10 frames a second). Six passed 12 of 12 with the final judge; worst gaps `CarChase` 0.013 to 0.072, `GlowChase`
+0.000 in all six, `MoonChase` 0.002 to 0.008. The seventh (a frame gap of about 0.8 s, the chaser's own duration) failed
+`MoonChase` at 0.097 and was not kept: see finding 6. The first three were recorded before the lamp's lighting was tuned
+(same nodes and ROUTEs, different lights and shade colour); the last three, of the final world, were 5, 6 and 7 here, and
+the committed trace is the middle one.
 
 ### What changed in the simulator, and the deliberately wrong versions
 
@@ -75,36 +66,35 @@ quaternions for orientation); in the judge, the PlaneSensor replay (camera orien
 a press and release, stepping at X_ITE's frames). Each deliberately wrong version was applied alone with a script that restores
 the file afterwards, and `judge workbench` was run:
 
-| Wrong version | `GlowChase` gap | `MoonChase` gap | Rejected (failing streams) |
-|---|---|---|---|
-| **the honest simulator** | **0.000000** | **0.005459** | passes 12 of 12 |
-| P1 a plane even when one axis is limited | 0.000000 | 0.005459 | `Slide.translation_changed`, `Slide.trackPoint_changed` |
-| P2 no clamp at the limits | 0.000000 | 0.005459 | `Slide.translation_changed`, `CarChase.value_changed` |
-| P3 the offset ignored at the press | 0.000000 | 0.005459 | `Slide.translation_changed`, `CarChase.value_changed` |
-| P4 the camera ignored (nearest the ray, not nearest its picture) | 0.000000 | 0.005459 | `Slide.translation_changed`, `Slide.trackPoint_changed` |
-| P5 `translation_changed` sent every time | 0.000000 | 0.005459 | `Slide.translation_changed` |
-| P6 the track point on the grabbed line, not the axis line | 0.000000 | 0.005459 | `Slide.trackPoint_changed` |
-| P7 `autoOffset` not kept on release | 0.000000 | 0.005459 | `Slide.translation_changed`, `CarChase.value_changed` |
-| J1 replay ignores the viewpoint's orientation | 0.000000 | 3.035660 | `Slide.translation_changed`, `Slide.trackPoint_changed`, `Turn.rotation_changed`, `Roll.rotation_changed`, `MoonChase.value_changed` |
-| J2 replay puts the eye 1 m too low | 0.000000 | 2.535983 | the same five |
-| J3 press and release not stamped by X_ITE's clock | 0.000757 | 0.005459 | `Press.inputTrue`, `Kick.triggerTime` |
-| J4 replay leaves PlaneSensor to the recording | 0.000000 | 0.005459 | count: 10 of 10 streams, contract says 12 (no stream names it) |
-| J5 camera up vector taken without the pitch | 0.000000 | 0.005459 | `Slide.translation_changed`, `Slide.trackPoint_changed` |
-| J6 the simulator stepped at every page frame, not X_ITE's | 0.146184 | 0.038263 | `GlowChase.value_changed` |
-| C2 **the buffer chaser's `ramp` linear** (`age / duration`), not a half cosine | 0.124446 | 0.083192 | `GlowChase.value_changed`, `MoonChase.value_changed` |
-| C1 **ColorChaser in RGB, not HSV** (lift and lower identity, blend a plain lerp) | 0.306787 | 0.005459 | `GlowChase.value_changed` |
-| C5 **hue never goes the short way round** (the `abs(hb - ha) <= pi` branch dropped) | 0.770226 | 0.005459 | `GlowChase.value_changed` |
-| C3 no spreading of a frame's change over the frame | 0.151613 | 0.052868 | `GlowChase.value_changed` |
-| C4 slot spacing wrong (duration / 120) | 0.481634 | 0.255993 | `GlowChase.value_changed`, `MoonChase.value_changed` |
-| C6 colour steps added with the wrong sign | 0.969779 | 0.005459 | `GlowChase.value_changed` |
-| O1 rotation steps composed the other way | 0.000000 | 0.775161 | `MoonChase.value_changed` |
-| O2 the orientation chaser stops within 0.5 rad | 0.000000 | 0.473360 | `MoonChase.value_changed` |
-| O3 the ramp a square, not a half cosine | 0.588748 | 0.345564 | `GlowChase.value_changed`, `MoonChase.value_changed` |
+| Wrong version | Rejected (failing streams) |
+|---|---|
+| P1 a plane even when one axis is limited | `Slide.translation_changed`, `Slide.trackPoint_changed` |
+| P2 no clamp at the limits | `Slide.translation_changed` |
+| P3 the offset ignored at the press | `Slide.translation_changed`, `CarChase.value_changed` |
+| P4 the camera ignored (nearest the ray, not nearest its picture) | `Slide.translation_changed`, `Slide.trackPoint_changed` |
+| P5 `translation_changed` sent every time | `Slide.translation_changed` |
+| P6 the track point on the grabbed line, not the axis line | `Slide.trackPoint_changed` |
+| P7 `autoOffset` not kept on release | `Slide.translation_changed`, `CarChase.value_changed` |
+| J1 replay ignores the viewpoint's orientation | `Slide.translation_changed`, `Slide.trackPoint_changed`, `Turn.rotation_changed`, `Roll.rotation_changed`, `MoonChase.value_changed` |
+| J2 replay puts the eye 1 m too low | the same five |
+| J4 replay leaves PlaneSensor to the recording | count: 10 of 10 streams, contract says 12 (no stream names it) |
+| J5 camera up vector taken without the pitch | `Slide.translation_changed`, `Slide.trackPoint_changed` |
+| C1 ColorChaser in RGB, not HSV | `GlowChase.value_changed` |
+| C3 no spreading of a frame's change over the frame | `MoonChase.value_changed` |
+| C4 slot spacing wrong (duration / 120) | `GlowChase.value_changed`, `MoonChase.value_changed` |
+| C5 hue never wraps the short way | `GlowChase.value_changed` |
+| C6 colour steps added with the wrong sign | `GlowChase.value_changed` |
+| O1 rotation steps composed the other way | `MoonChase.value_changed` |
+| O2 the orientation chaser stops within 0.5 rad | `MoonChase.value_changed` |
+| O3 the ramp a square, not a half cosine | `GlowChase.value_changed`, `MoonChase.value_changed` |
 
-All 22 are rejected on the committed trace. The three the lead asked to see are in bold: the chaser's ramp linear
-(`GlowChase` 0.124, `MoonChase` 0.083), the colour chased in RGB (`GlowChase` 0.307), and the hue sent the long way round
-(`GlowChase` 0.770), against the honest simulator's 0.000000, all with the tolerance unchanged at 0.08. (Before the
-chasers were lengthened, J3, J6 and C2 passed the committed trace and only some of the other recordings rejected them.)
+Three wrong versions were not rejected by the committed trace, and I did not fix that, only measured it. J3 (press and
+release not stamped by X_ITE's clock) and J6 (the simulator stepped at every page frame, not X_ITE's) fail on some recordings
+and not others: J3 was rejected on 5 of the 6 passing recordings (`Press.inputTrue`, `Kick.triggerTime`), J6 on 4 of 6
+(`GlowChase`, and `MoonChase` once). On the committed trace the pointer's clock and X_ITE's agreed to the microsecond and the
+frames fell where the pointer did not. C2 (a linear ramp in the buffer chaser) is not rejected by any workbench recording
+(a steady turn cannot tell a linear ramp from a cosine one at 0.08); it is rejected by `probe.x3d`'s `ChaseTurn`, which
+jumps (`tests/test_behaviour_sim.py`, `XiteAgreementTests.test_probe_of_every_simulated_kind`).
 
 Plain unit tests for the same code (no X_ITE, no Blender): `tests/test_behaviour_demo_workbench.py` (10 tests: the folder is
 what `build.py` writes; the line follows the pointer's picture and not a plane, with a worked number; limits; `autoOffset`;
@@ -120,20 +110,19 @@ destination every frame holds a constant lag). The full suite in Blender 5.3 (`r
 `not_applied` empty; `not_simulated` empty; Stop put everything back (`restored` true, `not_restored` empty).
 `act.py` finds every object by the DEF the importer recorded, drags each toy through the event queue with a screenshot
 mid-drag, and checks (all true): the knob reached +1 m and then -1 m (the clamps); the car never moved before the knob,
-lagged it by up to 1.0 m (1.023), and was within 0.03 m of the knob 1.4 s after it stopped; the dial turned (3.14 rad at its
-furthest from where it began, the largest angle a short-way measure can show); the lamp changed colour (largest change 0.80 in
+lagged it by up to 1.0 m (0.995), and was within 0.03 m of the knob 1.4 s after it stopped; the dial turned (3.14 rad at its
+furthest from where it began, the largest angle a short-way measure can show); the lamp changed colour (largest change 0.89 in
 one channel), the shade's emission and the bench light's colour both ended teal; the globe turned 1.65 rad and the moon
-followed it (at the release it had turned 2.36 rad where the globe was at 1.65, the moon trailing the path the globe
-had swept, and 3.5 s later it was within 0.001 rad). While the knob slid, its picture stayed within 6.1 px of the pointer
+followed it (at the release it had turned 2.13 rad where the globe was at 1.65, the moon trailing the path the globe
+had swept, and 1.6 s later it was within 0.001 rad). While the knob slid, its picture stayed within 6.1 px of the pointer
 (76 px a metre at the knob): that is Play's own plane drag, see finding 9.
 
 What I saw in the screenshots (`shots/`): the knob well along its track and the car on its rail behind it, to the left (the
-car chasing the fader); the lamp shade, its glow and the track lit green in the middle of the dial's sweep, with the dial's
-pointer no longer at twelve o'clock (green because the colour chaser runs in HSV and was heading from the previous sweep's
-teal back to amber, not a mistake in the picture), and teal-blue in the full-window shot a little later; the moon on its arm
-out to the upper right of the globe; and, in the full-window shot, the node editor beside the bench with some nodes tinted
-(the ones that had just sent events). I judged colour and position by eye on those four pictures only; I did not watch a
-person use it. I did not see amber and rose in a picture this time (the earlier, 0.6 s version showed rose).
+car chasing the fader); the lamp shade, its glow and the track lit rose in the middle of the dial's sweep, with the dial's
+pointer no longer at twelve o'clock, and teal in the full-window shot at the sweep's end; the moon on its arm out to the
+upper right of the globe; and, in the full-window shot, the node editor beside the bench with some nodes tinted orange (the
+ones that had just sent events). I judged colour and position by eye on those four pictures only; I did not watch a person
+use it.
 
 ### Not checked
 

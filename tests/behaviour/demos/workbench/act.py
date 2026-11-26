@@ -158,7 +158,7 @@ def act(rig, ctx):
     watchers.append(watch_colour)
     yield from drag(path, 20, "dial")
     watchers.clear()
-    for _ in range(26):                                                    # the 2 s sweep and the 3 s chaser, to the end
+    for _ in range(14):                                                    # the 2 s sweep and the 0.6 s chaser, to the end
         yield 0.25
         colours.append(lamp_colours(scene))
         if _ == 5:
@@ -194,14 +194,14 @@ def act(rig, ctx):
     watchers.clear()
     after_globe = turned(globe_before, globe.matrix_basis.to_quaternion())
     moon_now = turned(moon_before, moon.matrix_basis.to_quaternion())
-    yield 3.5
+    yield 1.6
     moon_late = turned(moon_before, moon.matrix_basis.to_quaternion())
     gap_late = turned(globe.matrix_basis.to_quaternion(), moon.matrix_basis.to_quaternion())
     checks["globe_turned"] = after_globe > 0.3
     checks["moon_turned"] = moon_late > 0.3
     checks["moon_trails_the_globe"] = any(m < g - 0.05 for g, m in trail) and gap_late < 0.05
     rig.note(name, "act_globe", {"globe_turned_rad": round(after_globe, 3), "moon_turned_rad_at_release": round(moon_now, 3),
-                                 "moon_turned_rad_3_5s_later": round(moon_late, 3),
+                                 "moon_turned_rad_1_6s_later": round(moon_late, 3),
                                  "moon_to_globe_gap_rad": round(gap_late, 3),
                                  "largest_trail_rad": round(max(g - m for g, m in trail), 3)})
     rig.shot(f"{name}-act-globe-settled", view)
