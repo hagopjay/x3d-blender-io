@@ -265,6 +265,20 @@ def world_steps(world, tag=""):
                       if tuple(round(v, 4) for v in o.matrix_basis.to_euler()) != before_full.get(o.name, (None, None))[1]}
             dragged.append({"grabbed": obj.name, "sensors": player.sensors_for(obj), "turned": sorted(turned)})
         note(name, "drags", dragged)
+    # proximity sensors: let the camera fly (a scripted Viewpoint, or the viewport) and watch what lights
+    if player.proximity_sensors():
+        shown = lambda o: not (o.hide_viewport or o.hide_get())
+        seen = {}
+        for tick in range(90):                       # 9 seconds: one 8 s flight and a little more
+            yield 0.1
+            for o in scene.objects:
+                seen.setdefault(o.name, set()).add(shown(o))
+            if tick % 15 == 14:
+                shot(f"{name}-fly-{tick // 15}")
+        note(name, "proximity_toggled", sorted(n for n, states in seen.items() if len(states) == 2))
+        camera_now = scene.camera.matrix_world.translation if scene.camera else None
+        note(name, "camera_moved", camera_now is not None and
+             tuple(round(v, 3) for v in camera_now) != before_full.get(scene.camera.name, ((None,),))[0])
     glowing = [n.name for n in tree.nodes if n.use_custom_color]
     note(name, "glowing_after_click", glowing)
     note(name, "shot_glow", shot(f"{name}-4-play-glow"))
@@ -285,7 +299,89 @@ def world_steps(world, tag=""):
     note(name, "shot_restored", shot(f"{name}-6-restored"))
 
 
+def _sha256(path):
+    import hashlib
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def source_candidate():
+    """The add-on source as a Loom candidate digest, byte for byte as loomkit's candidate() makes it: sha256 of every
+    file keyed by POSIX relative path, written as sorted compact JSON, then hashed. Caches and archives are skipped
+    the same way, so `loom accept` over the source folder finds this record current."""
+    import hashlib
+    skip_dirs = {"evidence", ".git", "node_modules", ".venv", "__pycache__", "receipts", "runs-local", ".work"}
+    files = {}
+    for path in sorted(SOURCE.rglob("*")):
+        rel = path.relative_to(SOURCE)
+        if (not path.is_file() or any(part in skip_dirs for part in rel.parts[:-1])
+                or path.name in {"SHA256SUMS.txt", ".build-in-progress", ".DS_Store"} or path.suffix in {".pyc", ".zip"}):
+            continue
+        files[rel.as_posix()] = _sha256(path)
+    return hashlib.sha256(json.dumps(files, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
+
+def source_uncommitted():
+    """True when the source folder differs from its git commit (or git cannot say): a development run, which
+    `loom accept` refuses."""
+    import subprocess
+    try:
+        r = subprocess.run(["git", "-C", str(SOURCE), "status", "--porcelain", "--", "."],
+                           capture_output=True, text=True, timeout=10)
+        return r.returncode != 0 or bool(r.stdout.strip())
+    except (OSError, subprocess.SubprocessError):
+        return True
+
+
+def witness_record(subject_at_start):
+    """The run as a Loom witness record (loom.witness/1, the fields loomkit's write_witness writes): the Host-eyes
+    witness. Pass when nothing errored, every world imported with a node editor open was shown in it with no
+    overlapping nodes, and every world that played was put back as it was. Error, not pass or fail, when the source
+    changed while the run watched it."""
+    import datetime
+    import platform
+    subject = source_candidate()
+    worlds = {name: v for name, v in LOG["worlds"].items() if not name.endswith("-no-editor")}
+    checks = {name: {"shown": v.get("shown_in_editor") is True, "overlaps": len(v.get("overlaps") or []),
+                     "played": v.get("playing") is True, "restored": v.get("restored"),
+                     "not_simulated": v.get("not_simulated"), "drags": len(v.get("drags") or []),
+                     "proximity_toggled": v.get("proximity_toggled")} for name, v in worlds.items()}
+    failed = [name for name, c in checks.items()
+              if not c["shown"] or c["overlaps"] or (c["played"] and c["restored"] is not True)]
+    played = [name for name, c in checks.items() if c["played"]]
+    if subject != subject_at_start:
+        status, reason = "error", "the add-on source changed while the run watched it"
+    else:
+        status = "pass" if not failed and not LOG["errors"] else "fail"
+        reason = (f"{len(worlds) - len(failed)} of {len(worlds)} worlds shown, laid out, played and restored"
+                  + (f"; failed: {', '.join(failed)}" if failed else "")
+                  + (f"; {len(LOG['errors'])} error(s)" if LOG["errors"] else ""))
+    evidence = [{"path": p.name, "sha256": _sha256(p)} for p in sorted(OUT.glob("*.png"))]
+    evidence.append({"path": "eyetest.json", "sha256": _sha256(OUT / "eyetest.json")})
+    return {
+        "schema": "loom.witness/1", "witness": "host-eyes", "status": status, "grade": "C", "origin": "executed",
+        "subject_sha256": subject_at_start,
+        "instrument": {"tool": "tools/behaviour_eyetest.py", "blender": bpy.app.version_string,
+                       "flags": ["--factory-startup", "--enable-event-simulate"],
+                       "window": [window().width, window().height], "os": f"{platform.system()} {platform.release()}",
+                       "machine": platform.machine()},
+        "measurements": checks,
+        "coverage": {"worlds": len(worlds), "shown": sum(c["shown"] for c in checks.values()),
+                     "played": len(played), "restored": sum(checks[n]["restored"] is True for n in played),
+                     "names": sorted(worlds)},
+        "limitations": ["taste is not judged: the screenshots are for a person", "one window size and UI scale",
+                        "events come from Blender's queue, not the operating system's",
+                        "Blender versions other than the one named were not run"],
+        "evidence": evidence,
+        "development": source_uncommitted(),
+        "reason": reason,
+        "finished_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
+        "environment": {"python": sys.version.split()[0], "optimized": bool(sys.flags.optimize)},
+    }
+
+
 def run():
+    global SUBJECT_AT_START
+    SUBJECT_AT_START = source_candidate()       # taken before the add-on loads; checked again at the end
     load_addon()
     yield 0.5
     key("ESC")                                   # the splash screen
@@ -301,6 +397,7 @@ def run():
             LOG["errors"].append(f"{world}: {traceback.format_exc()}")
             print(traceback.format_exc())
     (OUT / "eyetest.json").write_text(json.dumps(LOG, indent=1))
+    (OUT / "host-eyes.json").write_text(json.dumps(witness_record(SUBJECT_AT_START), sort_keys=True, indent=2) + "\n")
     print(f"[eyetest] done: {OUT}")
     if not KEEP_OPEN:
         bpy.ops.wm.quit_blender()

@@ -286,6 +286,79 @@ def drag_plan():
     return {"view": VIEW, "drags": out}
 
 
+PROXIMITY_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: proximity"/>
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint DEF="Eye" position="0 1.6 12" centerOfRotation="0 1 0"/>
+    <Transform translation="0 -0.05 0"><Shape><Appearance><Material diffuseColor="0.25 0.27 0.3"/></Appearance><Box size="30 0.1 30"/></Shape></Transform>
+    <Transform DEF="GateBase" translation="0 1.5 4">
+      <Transform translation="-2.1 0 0"><Shape><Appearance><Material DEF="GatePaint" diffuseColor="0.9 0.6 0.2"/></Appearance><Box size="0.2 3 0.4"/></Shape></Transform>
+      <Transform translation="2.1 0 0"><Shape><Appearance><Material diffuseColor="0.9 0.6 0.2"/></Appearance><Box size="0.2 3 0.4"/></Shape></Transform>
+      <Transform translation="0 1.6 0"><Shape><Appearance><Material diffuseColor="0.9 0.6 0.2"/></Appearance><Box size="4.4 0.2 0.4"/></Shape></Transform>
+      <Transform DEF="GateLamp" translation="0 2 0" visible="false"><Shape><Appearance><Material emissiveColor="1 0.9 0.3"/></Appearance><Sphere radius="0.25"/></Shape></Transform>
+      <Transform DEF="GateEcho"/>
+    </Transform>
+    <Transform DEF="RoomBase" translation="2.5 1.5 -4" rotation="0 1 0 0.6">
+      <Transform translation="0.5 -1.45 0"><Shape><Appearance><Material diffuseColor="0.3 0.6 0.9"/></Appearance><Box size="3 0.1 5"/></Shape></Transform>
+      <Transform DEF="RoomCompass" translation="0.5 -1.2 0"><Shape><Appearance><Material emissiveColor="0.2 0.9 1"/></Appearance><Cone bottomRadius="0.2" height="0.8"/></Shape></Transform>
+      <Transform DEF="RoomPivot"><Shape><Appearance><Material emissiveColor="1 0.3 0.8"/></Appearance><Sphere radius="0.12"/></Shape></Transform>
+      <Transform DEF="RoomLamp" translation="0.5 1.6 0" visible="false"><Shape><Appearance><Material emissiveColor="0.3 1 0.6"/></Appearance><Sphere radius="0.25"/></Shape></Transform>
+      <Transform DEF="RoomEcho"/>
+    </Transform>
+    <Transform DEF="CamEcho"/>
+  </Scene>
+</X3D>
+"""
+
+
+def build_proximity():
+    """probe-proximity.x3d: the camera flies a loop (a TimeSensor driving the Viewpoint) through a gate and a turned room
+    with an off-centre box. "Cam", a ProximitySensor of size -1 at the root, is X_ITE's own report of where the camera
+    is each frame; the judge hands that to the simulator's other proximity sensors."""
+    b = Behaviour()
+    eye = b.target("Viewpoint", "Eye")
+    flight = b.add("TimeSensor", "Flight", cycleInterval=8, loop=True)
+    path = b.add("PositionInterpolator", "FlightPath", key=[0, 0.25, 0.5, 0.75, 1],
+                 keyValue=[(0, 1.6, 12), (0, 1.6, 4), (2.5, 1.6, -3.5), (-3, 1.6, -2), (0, 1.6, 12)])
+    look = b.add("OrientationInterpolator", "FlightLook", key=[0, 0.25, 0.5, 0.75, 1],
+                 keyValue=[(0, 1, 0, 0), (0, 1, 0, 0), (0, 1, 0, -0.6), (0, 1, 0, 1.2), (0, 1, 0, 0)])
+    flight.fraction_changed >> path.set_fraction
+    flight.fraction_changed >> look.set_fraction
+    path.value_changed >> eye.position
+    look.value_changed >> eye.orientation
+
+    cam = b.add("ProximitySensor", "Cam", size=(-1, -1, -1))
+    echo = b.target("Transform", "CamEcho")
+    cam.position_changed >> echo.translation
+    cam.orientation_changed >> echo.rotation
+    cam.centerOfRotation_changed >> b.target("Transform", "GateEcho").translation   # a world point; any SFVec3f end
+
+    gate = b.add("ProximitySensor", "Gate", parent="GateBase", size=(4, 3, 3))
+    gate.isActive >> b.target("Transform", "GateLamp").visible
+    pulse = b.add("TimeSensor", "Pulse", cycleInterval=0.6)
+    gate.enterTime >> pulse.startTime
+    glow = b.add("ScalarInterpolator", "GateGlow", key=[0, 0.5, 1], keyValue=[0, 0.7, 0])
+    pulse.fraction_changed >> glow.set_fraction
+    glow.value_changed >> b.target("Material", "GatePaint").transparency
+    gate.position_changed >> b.target("Transform", "RoomEcho").translation
+
+    room = b.add("ProximitySensor", "Room", parent="RoomBase", size=(3, 3, 5), center=(0.5, 0, 0))
+    room.isActive >> b.target("Transform", "RoomLamp").visible
+    room.orientation_changed >> b.target("Transform", "RoomCompass").rotation
+    room.centerOfRotation_changed >> b.target("Transform", "RoomPivot").translation
+    fade = b.add("TimeSensor", "Fade", cycleInterval=0.5)
+    room.exitTime >> fade.startTime
+    flash = b.add("TimeSensor", "Flash", cycleInterval=0.5)
+    room.enterTime >> flash.startTime
+    return b
+
+
 if __name__ == "__main__":
     for name, graph, title in (("probe.x3d", build(), "Behaviour simulator probe"),
                                ("probe-spline.x3d", build_spline(), "Behaviour simulator probe: splines and easing")):
@@ -298,6 +371,10 @@ if __name__ == "__main__":
                                   '<Material diffuseColor="0.2 0.3 0.5"/><TextureTransform DEF="PadTexture"/></Appearance>')
         target.write_text(graph.weave(scene), encoding="utf-8")
         print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())
+    graph = build_proximity()
+    target = ROOT / "tests" / "behaviour" / "probe-proximity.x3d"
+    target.write_text(graph.weave(PROXIMITY_SCENE), encoding="utf-8")
+    print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())
     graph = build_drag()
     target = ROOT / "tests" / "behaviour" / "probe-drag.x3d"
     target.write_text(graph.weave(DRAG_SCENE), encoding="utf-8")

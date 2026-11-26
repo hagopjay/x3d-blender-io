@@ -831,12 +831,15 @@ def import_graph(scene, filepath, new_actions=None):
         wanted = {"transform": None, "viewpoint": "CAMERA", "light": "LIGHT"}.get(kind, "?")
         if wanted == "?":
             return None
+        if wanted is None:
+            # The importer gives a DEF'd Transform's unnamed child Transforms its DEF too (and often its name, the
+            # Transform itself becoming "Name.001"): the Transform is the outermost object that carries the DEF.
+            found = [obj for obj in scene.objects if obj.type not in {"CAMERA", "LIGHT"} and (
+                str(obj.get("x3d_def_path") or "").split("/")[-1] == def_name or obj.get("x3d_def") == def_name)]
+            outer = [obj for obj in found if obj.parent is None or obj.parent not in found]
+            return (kind, (outer or found)[0].name) if found else None
         for obj in scene.objects:
-            if wanted is None:
-                path = str(obj.get("x3d_def_path") or "")
-                if path.split("/")[-1] == def_name or (obj.get("x3d_def") == def_name and obj.type not in {"CAMERA", "LIGHT"}):
-                    return kind, obj.name
-            elif obj.type == wanted and obj.get("x3d_def") == def_name:
+            if obj.type == wanted and obj.get("x3d_def") == def_name:
                 return kind, obj.name
         return None
 

@@ -61,6 +61,50 @@ def _to_local(chain, point, direction=False):
     return point
 
 
+def _to_local_rotation(chain, rotation):
+    """A world orientation (axis, angle) in the coordinates of the innermost Transform of ``chain``."""
+    q = bs._Rot.axis_angle(*rotation).q
+    for _translation, turn, _scale, _center, _scale_orientation in chain:
+        q = bs._q_mul(bs._Rot.axis_angle(*turn).inverse().q, q)
+    return bs._Rot(q).value()
+
+
+def _numbers_of(value):
+    return tuple(float(c) for c in str(value).split())
+
+
+def _viewer_actions(graph, x3d_text, trace):
+    """The viewer as X_ITE reported it each frame through a root ProximitySensor of size -1 (the driver), handed to
+    every other ProximitySensor in its own coordinates: (time, sensor, position, orientation, centre of rotation)."""
+    drivers = {n.id for n in graph.nodes.values() if n.node_type == "ProximitySensor" and not n.parent
+               and _numbers_of(n.fields.get("size", "0 0 0")) == (-1.0, -1.0, -1.0)}
+    if not drivers:
+        return set(), []
+    driver = sorted(drivers)[0]
+    others = [n.id for n in graph.nodes.values() if n.node_type == "ProximitySensor" and n.id not in drivers]
+    chains = {sensor: _transform_chain(x3d_text, graph.nodes[sensor].parent) if graph.nodes[sensor].parent else []
+              for sensor in others}
+    pose = {field: _numbers_of(value) for d, field, value in trace.get("initial", []) if d == driver}
+    pose.setdefault("position_changed", (0.0, 0.0, 10.0))
+    pose.setdefault("orientation_changed", (0.0, 0.0, 1.0, 0.0))
+    pose.setdefault("centerOfRotation_changed", (0.0, 0.0, 0.0))
+    by_time = {}
+    for when, node_id, field_name, value in sorted(trace["events"], key=lambda e: e[0]):
+        if node_id == driver:
+            by_time.setdefault(when, []).append((field_name, _numbers_of(value)))
+    actions = []
+    for when in sorted(by_time):
+        drawn = pose["position_changed"]          # X_ITE's box test sees the camera as it was drawn: last frame's
+        for field_name, value in by_time[when]:
+            pose[field_name] = value
+        for sensor in others:
+            chain = chains[sensor]
+            actions.append((when, sensor, _to_local(chain, pose["position_changed"]),
+                            _to_local_rotation(chain, pose["orientation_changed"]),
+                            _to_local(chain, pose["centerOfRotation_changed"]), _to_local(chain, drawn)))
+    return drivers, actions
+
+
 def _pointer_ray(view, page_x, page_y, centre=PIXEL_CENTRE):
     x = page_x + centre
     y = view["height"] - page_y + centre
@@ -143,8 +187,21 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
     by_action = {}
     for action in actions:
         by_action.setdefault(action[0], []).append(action)
+    # proximity: a root ProximitySensor of size -1 reports the viewer; the others are run from that report
+    drivers, views = _viewer_actions(graph, x3d_text, trace)
+    pointing = pointing | drivers
+    by_view = {}
+    for view in views:
+        by_view.setdefault(view[0], []).append(view)
+    for d, field_name, value in trace.get("initial", []):      # start where X_ITE was when recording began
+        machine = sim.machines.get(d)
+        if machine is not None and machine.node_type == "ProximitySensor" and d not in drivers:
+            if field_name == "isActive":
+                machine.active = value is True or str(value) == "true"
+            elif field_name in ("position_changed", "orientation_changed", "centerOfRotation_changed"):
+                machine.last[field_name] = _numbers_of(value)
     events = sorted(trace["events"], key=lambda e: e[0])
-    times = sorted(set(trace["frames"]) | {e[0] for e in events} | set(by_action))
+    times = sorted(set(trace["frames"]) | {e[0] for e in events} | set(by_action) | set(by_view))
     if not times:
         return {"file": trace["file"], "verdict": "no events recorded", "streams": []}
     # X_ITE had been running for a few seconds before recording began; the simulator is started earlier still, so
@@ -177,6 +234,9 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
                 sim.drag(sensor, None, when, ray=args[0])
             else:
                 sim.release(sensor, when)
+        for _when, sensor, position, orientation, center, drawn in by_view.get(when, ()):
+            sim.now = when
+            sim.viewer(sensor, position, orientation, when, center_of_rotation=center, test_position=drawn)
         for _when, node_id, field_name, value in by_time.get(when, ()):
             if node_id in pointing and node_id not in driven:
                 x3d_type = bg.resolve_field(graph.nodes[node_id].node_type, field_name, "out")[1]
