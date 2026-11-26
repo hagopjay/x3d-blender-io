@@ -208,6 +208,7 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
             made = set(bpy.data.actions) - actions_before
             for message in behaviour_nodes.import_graph(context.scene, self.filepath, new_actions=made):
                 self.report({'INFO'}, message)
+            _drop_losses_the_graph_kept(context.scene)
             tree = getattr(context.scene, "x3d_behaviour_tree", None)
             if tree is not None:      # say where the graph went: the import used to end with nothing on screen
                 area = behaviour_nodes.show_tree(context, tree)
@@ -265,6 +266,41 @@ def import_ui_mesh(layout, operator):
 
         line = body.row(align=True)
         line.prop(operator, "light_units")
+
+
+def _drop_losses_the_graph_kept(scene):
+    """The importer lists every ROUTE it did not turn into keyframes or triggers as lost, before the behaviour graph
+    exists. A ROUTE that is now a link in the scene's node tree is not lost: take it out of ``x3d_import_losses``.
+    A ROUTE the tree does not hold (an end that was not imported, a field the node has no socket for) stays listed."""
+    import json
+    from . import behaviour_graph as bg
+    raw = scene.get("x3d_import_losses")
+    graph = behaviour_nodes.read(scene) if raw else None
+    if graph is None:
+        return
+    try:
+        losses = json.loads(raw)
+    except ValueError:
+        return
+    held = {bg._canonical_route(graph, route) for route in graph.routes}
+
+    def kept(record):
+        if record.get("kind") != "route" or record.get("detail") != "ROUTE not imported":
+            return False
+        try:
+            source, destination = record["node"].split(" -> ")
+            route = bg.Route(*source.rsplit(".", 1), *destination.rsplit(".", 1))
+        except (KeyError, ValueError, TypeError):
+            return False
+        return bg._canonical_route(graph, route) in held
+
+    left = [record for record in losses if not kept(record)]
+    if len(left) == len(losses):
+        return
+    if left:
+        scene["x3d_import_losses"] = json.dumps(left)
+    else:
+        del scene["x3d_import_losses"]
 
 
 def _scene_imported_animation(scene):

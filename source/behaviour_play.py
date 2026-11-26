@@ -24,6 +24,7 @@ back, so a value means here what it means in the file.
 import time
 
 import bpy
+from bpy.props import EnumProperty
 from bpy_extras.io_utils import axis_conversion
 from mathutils import Matrix, Quaternion, Vector
 
@@ -32,6 +33,37 @@ from . import behaviour_nodes
 from .behaviour_sim import POINTING, Simulation
 
 EXPORT_AXES = axis_conversion(to_forward='-Z', to_up='Y').to_4x4()      # the export dialog's default: -Z forward, Y up
+
+# The export dialog's "Forward" and "Up" choices (same identifiers and names as the export operator's).
+_AXIS_ITEMS_FORWARD = tuple((a, f"{a} Forward", "") for a in ("X", "Y", "Z", "-X", "-Y", "-Z"))
+_AXIS_ITEMS_UP = tuple((a, f"{a} Up", "") for a in ("X", "Y", "Z", "-X", "-Y", "-Z"))
+
+
+def axes_matrix(forward, up):
+    """The exporter's ``global_matrix`` (4x4) for these axes, or None when forward and up share an axis."""
+    try:
+        return axis_conversion(to_forward=forward, to_up=up).to_4x4()
+    except Exception:       # Blender raises a bare Exception for an invalid pair
+        return None
+
+
+def last_export_axes(context):
+    """(forward, up) the export dialog was last used with in this Blender session, or None when it cannot be read.
+    Blender keeps no value for a dialog that has not run yet: the dialog's own defaults come back."""
+    try:
+        last = context.window_manager.operator_properties_last("export_scene.x3d")
+        return (last.axis_forward, last.axis_up) if last is not None else None
+    except Exception:
+        return None
+
+
+def scene_axes(context, scene):
+    """(global_matrix, problem) for the scene's Play axes. An invalid pair gives the default matrix and a message."""
+    forward, up = scene.x3d_play_forward, scene.x3d_play_up
+    matrix = axes_matrix(forward, up)
+    if matrix is None:
+        return EXPORT_AXES, f"Play axes {forward} forward / {up} up share an axis; played with -Z forward, Y up instead"
+    return matrix, None
 
 
 def _srgb_to_linear(c):
@@ -448,8 +480,16 @@ class X3D_OT_behaviour_play(bpy.types.Operator):
         return not is_playing() and getattr(context.scene, "x3d_behaviour_tree", None) is not None
 
     def invoke(self, context, event):
+        scene = context.scene
+        if not scene.is_property_set("x3d_play_forward") and not scene.is_property_set("x3d_play_up"):
+            last = last_export_axes(context)        # nothing chosen yet: start from what the export dialog last used
+            if last is not None and axes_matrix(*last) is not None:
+                scene.x3d_play_forward, scene.x3d_play_up = last
+        matrix, problem = scene_axes(context, scene)
+        if problem:
+            self.report({"WARNING"}, problem)
         try:
-            self.player = Player(context.scene)
+            self.player = Player(scene, global_matrix=matrix)
         except bg.BehaviourError as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
@@ -572,6 +612,13 @@ class X3D_PT_behaviour_play(bpy.types.Panel):
             return
         layout.prop(context.scene, "x3d_behaviour_tree", text="")
         _draw_buttons(layout, context)
+        box = layout.column(align=True)
+        box.enabled = not is_playing()
+        box.label(text="Play axes (as the export dialog)")
+        box.prop(context.scene, "x3d_play_forward")
+        box.prop(context.scene, "x3d_play_up")
+        if axes_matrix(context.scene.x3d_play_forward, context.scene.x3d_play_up) is None:
+            layout.label(text="Forward and Up share an axis: -Z / Y is used", icon="ERROR")
         player = _running["player"]
         if player is not None:
             layout.label(text=f"{len(player.sensed_objects())} object(s) answer the pointer")
@@ -587,6 +634,13 @@ classes = (X3D_OT_behaviour_play, X3D_OT_behaviour_stop, X3D_PT_behaviour_play)
 
 
 def register():
+    if not hasattr(bpy.types.Scene, "x3d_play_forward"):
+        bpy.types.Scene.x3d_play_forward = EnumProperty(
+            name="Forward", items=_AXIS_ITEMS_FORWARD, default="-Z",
+            description="Forward axis the scene is exported with; Play moves objects as a file exported with these axes would")
+        bpy.types.Scene.x3d_play_up = EnumProperty(
+            name="Up", items=_AXIS_ITEMS_UP, default="Y",
+            description="Up axis the scene is exported with; Play moves objects as a file exported with these axes would")
     for cls in classes:
         if not getattr(cls, "is_registered", False):
             bpy.utils.register_class(cls)
@@ -598,6 +652,9 @@ def unregister():
         _running["player"].stop()
         _running["player"] = None
     bpy.types.NODE_HT_header.remove(_node_header)
+    for name in ("x3d_play_forward", "x3d_play_up"):
+        if hasattr(bpy.types.Scene, name):
+            delattr(bpy.types.Scene, name)
     for cls in reversed(classes):
         if getattr(cls, "is_registered", False):
             bpy.utils.unregister_class(cls)

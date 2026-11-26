@@ -363,3 +363,112 @@ class VisibleTests(_Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlayAxesTests(_Base):
+    """The player moves objects as a file exported with the same axes would (the Play axes on the scene)."""
+
+    PAIRS = (("-Z", "Y", (0.0, 0.0, 2.0)),     # the export dialog's default: X3D +Y is Blender +Z
+             ("Y", "Z", (0.0, 2.0, 0.0)),      # Blender's own axes (axis_conversion is the identity): X3D +Y is Blender +Y
+             ("X", "Z", (-2.0, 0.0, 0.0)))     # Blender +Y forward turned to +X: X3D +Y is Blender -X
+
+    def lift_scene(self, *, child=False):
+        """A root object "Lift" (and optionally a child "Hand" under a parent "Arm" at X 5) driven by a looping timer:
+        X3D value (0, 2, 0) at 1 s for the root, (0, 0, 2) at 1 s for the child."""
+        scene = bpy.context.scene
+        lift = bpy.data.objects.new("Lift", bpy.data.meshes.new("LiftMesh"))
+        scene.collection.objects.link(lift)
+        bg = importlib.import_module("io_scene_x3d.behaviour_graph")
+        graph = bg.Behaviour()
+        clock = graph.add("TimeSensor", "Clock", cycleInterval=2, loop=True)
+        up = graph.add("PositionInterpolator", "Up", key=[0, 1], keyValue=[(0, 0, 0), (0, 4, 0)])
+        clock.fraction_changed >> up.set_fraction
+        up.value_changed >> self.bn.target(graph, lift).translation
+        hand = None
+        if child:
+            arm = bpy.data.objects.new("Arm", None)
+            hand = bpy.data.objects.new("Hand", bpy.data.meshes.new("HandMesh"))
+            scene.collection.objects.link(arm)
+            scene.collection.objects.link(hand)
+            arm.location = (5.0, 0.0, 0.0)
+            hand.parent = arm
+            along = graph.add("PositionInterpolator", "Along", key=[0, 1], keyValue=[(0, 0, 0), (0, 0, 4)])
+            clock.fraction_changed >> along.set_fraction
+            along.value_changed >> self.bn.target(graph, hand).translation
+        self.bn.apply(graph, scene)
+        return scene, lift, hand
+
+    def play_axes(self, scene, forward, up):
+        scene.x3d_play_forward, scene.x3d_play_up = forward, up
+        matrix, problem = self.bp.scene_axes(bpy.context, scene)
+        self.assertIsNone(problem)
+        return matrix
+
+    def test_the_axis_choices_are_the_export_dialogs(self):
+        for name in ("axis_forward", "axis_up"):
+            export = bpy.ops.export_scene.x3d.get_rna_type().properties[name]
+            ours = bpy.types.Scene.bl_rna.properties["x3d_play_" + name[5:]]
+            self.assertEqual([(i.identifier, i.name) for i in ours.enum_items],
+                             [(i.identifier, i.name) for i in export.enum_items])
+            self.assertEqual(ours.default, export.default)
+
+    def test_a_root_object_moves_along_the_axis_the_exporter_maps_x3d_y_from(self):
+        for forward, up, literal in self.PAIRS:
+            with self.subTest(forward=forward, up=up):
+                bpy.ops.wm.read_factory_settings(use_empty=True)
+                self.bn.ensure_registered()
+                scene, lift, _ = self.lift_scene()
+                matrix = self.play_axes(scene, forward, up)
+                player = self.bp.Player(scene, global_matrix=matrix)
+                player.start(0.0)
+                player.step(1.0)                                    # fraction 0.5: X3D translation (0, 2, 0)
+                bpy.context.view_layer.update()
+                from bpy_extras.io_utils import axis_conversion
+                from mathutils import Vector
+                derived = axis_conversion(to_forward=forward, to_up=up).inverted() @ Vector((0.0, 2.0, 0.0))
+                self.assertEqual(tuple(round(v, 4) for v in lift.location), tuple(round(v, 4) for v in derived))
+                # the literal vector, worked out by hand from the exporter's rule (X3D = axis_conversion @ Blender):
+                self.assertEqual(tuple(round(v, 4) for v in lift.location), literal)
+                player.stop()
+                self.assertEqual(tuple(lift.location), (0.0, 0.0, 0.0))
+
+    def test_a_child_object_ignores_the_axes(self):
+        for forward, up, _ in self.PAIRS:
+            with self.subTest(forward=forward, up=up):
+                bpy.ops.wm.read_factory_settings(use_empty=True)
+                self.bn.ensure_registered()
+                scene, lift, hand = self.lift_scene(child=True)
+                player = self.bp.Player(scene, global_matrix=self.play_axes(scene, forward, up))
+                player.start(0.0)
+                player.step(1.0)
+                bpy.context.view_layer.update()
+                # the child's Transform is in its parent's space, which is Blender's: (0, 0, 4) at fraction 0.5 is Z 2
+                self.assertEqual(tuple(round(v, 4) for v in hand.matrix_local.to_translation()), (0.0, 0.0, 2.0))
+                self.assertEqual(tuple(round(v, 4) for v in hand.matrix_world.to_translation()), (5.0, 0.0, 2.0))
+                player.stop()
+                self.assertEqual(tuple(hand.location), (0.0, 0.0, 0.0))
+
+    def test_the_exporter_writes_what_the_player_was_fed(self):
+        for forward, up, _ in self.PAIRS:
+            with self.subTest(forward=forward, up=up):
+                bpy.ops.wm.read_factory_settings(use_empty=True)
+                self.bn.ensure_registered()
+                scene, lift, _ = self.lift_scene()
+                player = self.bp.Player(scene, global_matrix=self.play_axes(scene, forward, up))
+                player.start(0.0)
+                player.step(1.0)
+                target = next(n.id for n in player.graph.nodes.values() if n.role == "target")
+                fed = tuple(round(v, 4) for v in player.sim.values[(target, "translation")])
+                self.assertEqual(fed, (0.0, 2.0, 0.0))
+                bpy.context.view_layer.update()
+                path = os.path.join(self.tmpdir, f"axes_{forward}_{up}.x3d")
+                bpy.ops.export_scene.x3d(filepath=path, axis_forward=forward, axis_up=up)
+                root = ET.parse(path).getroot()
+                interpolator = next(e for e in root.iter() if e.tag.split("}")[-1] == "PositionInterpolator"
+                                    and e.get("DEF") == "Up")
+                self.assertEqual([float(v) for v in interpolator.get("keyValue").split()], [0, 0, 0, 0, 4, 0])
+                transform = next(e for e in root.iter() if e.tag.split("}")[-1] == "Transform"
+                                 and e.get("DEF", "").startswith("Lift"))
+                written = tuple(round(float(v), 4) for v in transform.get("translation", "0 0 0").split())
+                self.assertEqual(written, fed)          # the file puts the object where the player put it
+                player.stop()
