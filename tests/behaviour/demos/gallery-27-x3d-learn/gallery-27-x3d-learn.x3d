@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <component name="Text" level="1" />
+    <meta name="title" content="Gallery 27: the X3D event machine" />
+    <meta name="description" content="Click the green button: one event relays through eight stations, one X3D node type each, over visible ROUTEs." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-27-x3d-learn/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.03 0.04 0.08" />
+    <Viewpoint DEF="Cam" description="Overview" position="0 19.1 13.7" orientation="1 0 0 -0.9486" />
+    <DirectionalLight direction="-0.3 -0.9 -0.4" intensity="1.0" />
+    <Transform DEF="Start" translation="-9 0.65 -4"><TouchSensor DEF="StartTouch" description="Click: start the event" /><Shape><Appearance><PhysicalMaterial DEF="BtnMat" baseColor="0.1 0.75 0.2" emissiveColor="0.05 0.5 0.1"  /></Appearance><Cylinder radius="1.15" height="0.7" /></Shape></Transform>
+    <Transform translation="0 -0.15 0"><Shape><Appearance><PhysicalMaterial baseColor="0.07 0.08 0.11" roughness="0.9" /></Appearance><Box size="36 0.3 30" /></Shape></Transform>
+    <Transform translation="0 0.8 -9.5" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 1" emissiveColor="0.95 0.95 1"  /></Appearance><Text string="&quot;THE X3D EVENT MACHINE&quot;"><FontStyle size="0.95" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.33 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 1" emissiveColor="0.95 0.95 1"  /></Appearance><Text string="&quot;click the green button: one event runs ROUTE by ROUTE through eight nodes&quot;"><FontStyle size="0.38" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.862 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 1" emissiveColor="0.95 0.95 1"  /></Appearance><Text string="&quot;each stage lasts 3 s, slowed so you can follow&quot;"><FontStyle size="0.3" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station1" translation="-9 0.15 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow1" translation="-9 0.15 -4"><Transform DEF="Lamp1" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.85 0.3" emissiveColor="0.15 0.85 0.3"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="-9 2 -2" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.85 0.3" emissiveColor="0.15 0.85 0.3"  /></Appearance><Text string="&quot;TouchSensor&quot;"><FontStyle size="0.5" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.7 0"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.85 0.3" emissiveColor="0.15 0.85 0.3"  /></Appearance><Text string="&quot;isActive  false > true&quot;"><FontStyle size="0.3" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.12 0"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.85 0.3" emissiveColor="0.15 0.85 0.3"  /></Appearance><Text string="&quot;click the green button&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="-10 1.3 -5.9" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.85 0.3" emissiveColor="0.15 0.85 0.3"  /></Appearance><Text string="&quot;1&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station2" translation="-3 0.15 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow2" translation="-3 0.15 -4"><Transform DEF="Lamp2" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.15" emissiveColor="0.95 0.75 0.15"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="-3 2 -2" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.15" emissiveColor="0.95 0.75 0.15"  /></Appearance><Text string="&quot;BooleanFilter&quot;"><FontStyle size="0.5" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.7 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.15" emissiveColor="0.95 0.75 0.15"  /></Appearance><Text string="&quot;inputTrue / inputNegate&quot;"><FontStyle size="0.3" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.12 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.15" emissiveColor="0.95 0.75 0.15"  /></Appearance><Text string="&quot;lets one edge through&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="-4 1.3 -5.9" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.15" emissiveColor="0.95 0.75 0.15"  /></Appearance><Text string="&quot;2&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station3" translation="3 0.15 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow3" translation="3 0.15 -4"><Transform DEF="Lamp3" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.7 0.95" emissiveColor="0.2 0.7 0.95"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="3 2 -2" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.7 0.95" emissiveColor="0.2 0.7 0.95"  /></Appearance><Text string="&quot;TimeSensor&quot;"><FontStyle size="0.5" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.7 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.7 0.95" emissiveColor="0.2 0.7 0.95"  /></Appearance><Text string="&quot;fraction_changed 0 .. 1&quot;"><FontStyle size="0.3" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.12 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.7 0.95" emissiveColor="0.2 0.7 0.95"  /></Appearance><Text string="&quot;cycleInterval 3 s&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="2 1.3 -5.9" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.7 0.95" emissiveColor="0.2 0.7 0.95"  /></Appearance><Text string="&quot;3&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station4" translation="9 0.15 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow4" translation="9 0.15 -4"><Transform DEF="Lamp4" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.3 0.85" emissiveColor="0.85 0.3 0.85"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="9 2 -2" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.3 0.85" emissiveColor="0.85 0.3 0.85"  /></Appearance><Text string="&quot;Position + Color&quot;"><FontStyle size="0.46" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.644 0"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.3 0.85" emissiveColor="0.85 0.3 0.85"  /></Appearance><Text string="&quot;Interpolator&quot;"><FontStyle size="0.46" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.288 0"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.3 0.85" emissiveColor="0.85 0.3 0.85"  /></Appearance><Text string="&quot;value_changed&quot;"><FontStyle size="0.3" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.708 0"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.3 0.85" emissiveColor="0.85 0.3 0.85"  /></Appearance><Text string="&quot;keys become values&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="8 1.3 -5.9" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.3 0.85" emissiveColor="0.85 0.3 0.85"  /></Appearance><Text string="&quot;4&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station5" translation="9 0.15 4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow5" translation="9 0.15 4"><Transform DEF="Lamp5" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="1 0.5 0.15"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="9 2 6" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="1 0.5 0.15"  /></Appearance><Text string="&quot;Orientation&quot;"><FontStyle size="0.46" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.644 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="1 0.5 0.15"  /></Appearance><Text string="&quot;Interpolator&quot;"><FontStyle size="0.46" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.288 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="1 0.5 0.15"  /></Appearance><Text string="&quot;value_changed > rotation&quot;"><FontStyle size="0.28" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.68 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="1 0.5 0.15"  /></Appearance><Text string="&quot;two full turns&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="8 1.3 2.1" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="1 0.5 0.15"  /></Appearance><Text string="&quot;5&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station6" translation="3 0.15 4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow6" translation="3 0.15 4"><Transform DEF="Lamp6" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.3" emissiveColor="0.95 0.95 0.3"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="3 2 6" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.3" emissiveColor="0.95 0.95 0.3"  /></Appearance><Text string="&quot;BooleanSequencer&quot;"><FontStyle size="0.46" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.644 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.3" emissiveColor="0.95 0.95 0.3"  /></Appearance><Text string="&quot;value_changed > visible&quot;"><FontStyle size="0.28" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.036 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.3" emissiveColor="0.95 0.95 0.3"  /></Appearance><Text string="&quot;a lit bulb walks the arc&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="2 1.3 2.1" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.3" emissiveColor="0.95 0.95 0.3"  /></Appearance><Text string="&quot;6&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station7" translation="-3 0.15 4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow7" translation="-3 0.15 4"><Transform DEF="Lamp7" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.9 0.8" emissiveColor="0.3 0.9 0.8"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="-3 2 6" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.9 0.8" emissiveColor="0.3 0.9 0.8"  /></Appearance><Text string="&quot;PositionChaser&quot;"><FontStyle size="0.46" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.644 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.9 0.8" emissiveColor="0.3 0.9 0.8"  /></Appearance><Text string="&quot;set_destination&quot;"><FontStyle size="0.3" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.064 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.9 0.8" emissiveColor="0.3 0.9 0.8"  /></Appearance><Text string="&quot;glides after the target&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="-4 1.3 2.1" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.9 0.8" emissiveColor="0.3 0.9 0.8"  /></Appearance><Text string="&quot;7&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Station8" translation="-9 0.15 4"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.17 0.22" roughness="0.8" /></Appearance><Box size="3 0.3 3" /></Shape></Transform><Transform DEF="Glow8" translation="-9 0.15 4"><Transform DEF="Lamp8" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.3 0.4" emissiveColor="0.95 0.3 0.4"  /></Appearance><Box size="3.3 0.2 3.3" /></Shape></Transform></Transform>
+    <Transform translation="-9 2 6" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.3 0.4" emissiveColor="0.95 0.3 0.4"  /></Appearance><Text string="&quot;ColorChaser&quot;"><FontStyle size="0.46" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.644 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.3 0.4" emissiveColor="0.95 0.3 0.4"  /></Appearance><Text string="&quot;set_destination > colour&quot;"><FontStyle size="0.28" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -1.036 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.3 0.4" emissiveColor="0.95 0.3 0.4"  /></Appearance><Text string="&quot;finale: the route is done&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="-10 1.3 2.1" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.3 0.4" emissiveColor="0.95 0.3 0.4"  /></Appearance><Text string="&quot;8&quot;"><FontStyle size="0.9" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform DEF="Ring1" translation="-9 0.35 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.4 1 0.5" emissiveColor="0.3 0.9 0.4"  /></Appearance><Cylinder radius="1.3" height="0.06" /></Shape></Transform>
+    <Transform DEF="Halo1" translation="-9 0.34 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.5 0.25" emissiveColor="0.1 0.4 0.15"  /></Appearance><Cylinder radius="1.4" height="0.05" /></Shape></Transform>
+    <Transform DEF="DoorL2" translation="-3.7 1.2 -3.5"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.55 0.1" emissiveColor="0.3 0.2 0.0"  /></Appearance><Box size="1.3 1.8 0.3" /></Shape></Transform>
+    <Transform DEF="DoorR2" translation="-2.3 1.2 -3.5"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.55 0.1" emissiveColor="0.3 0.2 0.0"  /></Appearance><Box size="1.3 1.8 0.3" /></Shape></Transform>
+    <Transform DEF="Orb2" translation="-3 1.2 -4.3" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.3" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.55" /></Shape></Transform>
+    <Transform translation="3 0.65 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.12 0.14 0.2"  /></Appearance><Box size="2.8 0.35 0.6" /></Shape></Transform>
+    <Transform DEF="Fill3" translation="1.6 0.65 -3.95" scale="0.01 1 1"><Transform translation="1.4 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.7 0.95" emissiveColor="0.1 0.5 0.8"  /></Appearance><Box size="2.8 0.3 0.5" /></Shape></Transform></Transform>
+    <Transform translation="2.2 1.4 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.18" /></Shape></Transform>
+    <Transform DEF="Tick3_0" translation="2.2 1.4 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.9 1" emissiveColor="0.3 0.8 1"  /></Appearance><Sphere radius="0.26" /></Shape></Transform>
+    <Transform translation="3 1.4 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.18" /></Shape></Transform>
+    <Transform DEF="Tick3_1" translation="3 1.4 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.9 1" emissiveColor="0.3 0.8 1"  /></Appearance><Sphere radius="0.26" /></Shape></Transform>
+    <Transform translation="3.8 1.4 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.18" /></Shape></Transform>
+    <Transform DEF="Tick3_2" translation="3.8 1.4 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.9 1" emissiveColor="0.3 0.8 1"  /></Appearance><Sphere radius="0.26" /></Shape></Transform>
+    <Transform DEF="Cube4" translation="9 1 -4"><Shape><Appearance><PhysicalMaterial DEF="Mat4" baseColor="0.2 0.3 0.9" emissiveColor="0.1 0.15 0.6"  /></Appearance><Box size="1.3 1.3 1.3" /></Shape></Transform>
+    <Transform translation="9 0.5 4"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.22 0.2"  /></Appearance><Cylinder radius="1.35" height="0.25" /></Shape></Transform>
+    <Transform DEF="Spin5" translation="9 1 4"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="0.6 0.25 0.05"  /></Appearance><Box size="2.4 0.3 0.5" /></Shape><Transform translation="1.35 0 0" rotation="0 0 1 -1.5708"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9"  /></Appearance><Cone bottomRadius="0.4" height="0.7" /></Shape></Transform></Transform>
+    <Transform translation="1.75 0.9 4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Bulb6_0" translation="1.75 0.9 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.4" emissiveColor="1 0.95 0.2"  /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform translation="2.25 1.1939 4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Bulb6_1" translation="2.25 1.1939 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.4" emissiveColor="1 0.95 0.2"  /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform translation="2.75 1.3755 4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Bulb6_2" translation="2.75 1.3755 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.4" emissiveColor="1 0.95 0.2"  /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform translation="3.25 1.3755 4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Bulb6_3" translation="3.25 1.3755 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.4" emissiveColor="1 0.95 0.2"  /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform translation="3.75 1.1939 4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Bulb6_4" translation="3.75 1.1939 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.4" emissiveColor="1 0.95 0.2"  /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform translation="4.25 0.9 4"><Shape><Appearance><PhysicalMaterial baseColor="0.18 0.2 0.26"  /></Appearance><Sphere radius="0.22" /></Shape></Transform>
+    <Transform DEF="Bulb6_5" translation="4.25 0.9 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.4" emissiveColor="1 0.95 0.2"  /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform translation="-3 0.45 4"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.25 0.3"  /></Appearance><Box size="3.4 0.12 0.6" /></Shape></Transform>
+    <Transform DEF="Ball7" translation="-4.2 0.95 4"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.9 0.8" emissiveColor="0.15 0.6 0.55"  /></Appearance><Sphere radius="0.5" /></Shape></Transform>
+    <Transform DEF="Flag7" translation="-4.2 2.2 4" rotation="1 0 0 3.1416"><Shape><Appearance><PhysicalMaterial baseColor="1 0.35 0.3" emissiveColor="0.8 0.15 0.1"  /></Appearance><Cone bottomRadius="0.35" height="0.7" /></Shape></Transform>
+    <Transform translation="-9 0.95 4"><Shape><Appearance><PhysicalMaterial DEF="Mat8" baseColor="0.15 0.15 0.18" emissiveColor="0.0 0.0 0.0"  /></Appearance><Box size="3 0.7 1.8" /></Shape></Transform>
+    <Transform DEF="Spark8_0" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.85 0.3" emissiveColor="0.15 0.85 0.3"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform DEF="Spark8_1" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.15" emissiveColor="0.95 0.75 0.15"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform DEF="Spark8_2" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.7 0.95" emissiveColor="0.2 0.7 0.95"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform DEF="Spark8_3" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.3 0.85" emissiveColor="0.85 0.3 0.85"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform DEF="Spark8_4" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.5 0.15" emissiveColor="1 0.5 0.15"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform DEF="Spark8_5" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.3" emissiveColor="0.95 0.95 0.3"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform DEF="Spark8_6" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.9 0.8" emissiveColor="0.3 0.9 0.8"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform DEF="Spark8_7" translation="-9 2 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.3 0.4" emissiveColor="0.95 0.3 0.4"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <Transform translation="-6 0.7 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.32 0.4"  /></Appearance><Box size="2.6 0.12 0.12" /></Shape></Transform>
+    <Transform DEF="WireGlow1" translation="-6 0.7 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.85 0.3"  /></Appearance><Box size="2.6 0.2 0.2" /></Shape></Transform>
+    <Transform DEF="Bead1" translation="-7.3 0.7 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.7" emissiveColor="1 0.9 0.4"  /></Appearance><Sphere radius="0.4" /></Shape></Transform>
+    <Transform translation="-6 2 -3.1" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;ROUTE chain&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.364 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;isActive true>false&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.672 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;inputNegate&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.98 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;triggerTime > startTime&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="0 0.7 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.32 0.4"  /></Appearance><Box size="2.6 0.12 0.12" /></Shape></Transform>
+    <Transform DEF="WireGlow2" translation="0 0.7 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.85 0.3"  /></Appearance><Box size="2.6 0.2 0.2" /></Shape></Transform>
+    <Transform DEF="Bead2" translation="-1.3 0.7 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.7" emissiveColor="1 0.9 0.4"  /></Appearance><Sphere radius="0.4" /></Shape></Transform>
+    <Transform translation="0 2 -3.1" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;ROUTE chain&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.364 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;isActive true>false&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.672 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;inputNegate&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.98 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;triggerTime > startTime&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="6 0.7 -4"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.32 0.4"  /></Appearance><Box size="2.6 0.12 0.12" /></Shape></Transform>
+    <Transform DEF="WireGlow3" translation="6 0.7 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.85 0.3"  /></Appearance><Box size="2.6 0.2 0.2" /></Shape></Transform>
+    <Transform DEF="Bead3" translation="4.7 0.7 -4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.7" emissiveColor="1 0.9 0.4"  /></Appearance><Sphere radius="0.4" /></Shape></Transform>
+    <Transform translation="6 2 -3.1" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;ROUTE chain&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.364 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;isActive true>false&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.672 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;inputNegate&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.98 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;triggerTime > startTime&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="9 0.7 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.32 0.4"  /></Appearance><Box size="0.12 0.12 4.6" /></Shape></Transform>
+    <Transform DEF="WireGlow4" translation="9 0.7 0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.85 0.3"  /></Appearance><Box size="0.2 0.2 4.6" /></Shape></Transform>
+    <Transform DEF="Bead4" translation="9 0.7 -2.3" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.7" emissiveColor="1 0.9 0.4"  /></Appearance><Sphere radius="0.4" /></Shape></Transform>
+    <Transform translation="9 2 0" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;ROUTE chain&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.364 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;isActive true>false&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.672 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;inputNegate&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.98 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;triggerTime > startTime&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="6 0.7 4"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.32 0.4"  /></Appearance><Box size="2.6 0.12 0.12" /></Shape></Transform>
+    <Transform DEF="WireGlow5" translation="6 0.7 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.85 0.3"  /></Appearance><Box size="2.6 0.2 0.2" /></Shape></Transform>
+    <Transform DEF="Bead5" translation="7.3 0.7 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.7" emissiveColor="1 0.9 0.4"  /></Appearance><Sphere radius="0.4" /></Shape></Transform>
+    <Transform translation="6 2 4.9" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;ROUTE chain&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.364 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;isActive true>false&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.672 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;inputNegate&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.98 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;triggerTime > startTime&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="0 0.7 4"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.32 0.4"  /></Appearance><Box size="2.6 0.12 0.12" /></Shape></Transform>
+    <Transform DEF="WireGlow6" translation="0 0.7 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.85 0.3"  /></Appearance><Box size="2.6 0.2 0.2" /></Shape></Transform>
+    <Transform DEF="Bead6" translation="1.3 0.7 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.7" emissiveColor="1 0.9 0.4"  /></Appearance><Sphere radius="0.4" /></Shape></Transform>
+    <Transform translation="0 2 4.9" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;ROUTE chain&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.364 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;isActive true>false&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.672 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;inputNegate&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.98 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;triggerTime > startTime&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <Transform translation="-6 0.7 4"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.32 0.4"  /></Appearance><Box size="2.6 0.12 0.12" /></Shape></Transform>
+    <Transform DEF="WireGlow7" translation="-6 0.7 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.5" emissiveColor="1 0.85 0.3"  /></Appearance><Box size="2.6 0.2 0.2" /></Shape></Transform>
+    <Transform DEF="Bead7" translation="-4.7 0.7 4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.7" emissiveColor="1 0.9 0.4"  /></Appearance><Sphere radius="0.4" /></Shape></Transform>
+    <Transform translation="-6 2 4.9" rotation="1 0 0 -0.9486"><Transform translation="0 0 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;ROUTE chain&quot;"><FontStyle size="0.26" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.364 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;isActive true>false&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.672 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;inputNegate&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform><Transform translation="0 -0.98 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6"  /></Appearance><Text string="&quot;triggerTime > startTime&quot;"><FontStyle size="0.22" justify="&quot;MIDDLE&quot;" /></Text></Shape></Transform></Transform>
+    <BooleanFilter DEF="PressFilter" />
+    <TimeTrigger DEF="Go1" />
+    <ROUTE fromNode="StartTouch" fromField="isActive" toNode="PressFilter" toField="set_boolean" />
+    <ROUTE fromNode="PressFilter" fromField="inputTrue" toNode="Go1" toField="set_boolean" />
+    <TimeSensor DEF="T1" cycleInterval="3.0" />
+    <TimeSensor DEF="T2" cycleInterval="3.0" />
+    <TimeSensor DEF="T3" cycleInterval="3.0" />
+    <TimeSensor DEF="T4" cycleInterval="3.0" />
+    <TimeSensor DEF="T5" cycleInterval="3.0" />
+    <TimeSensor DEF="T6" cycleInterval="3.0" />
+    <TimeSensor DEF="T7" cycleInterval="3.0" />
+    <TimeSensor DEF="T8" cycleInterval="3.5" />
+    <ROUTE fromNode="Go1" fromField="triggerTime" toNode="T1" toField="startTime" />
+    <TimeSensor DEF="W1" cycleInterval="2.5" />
+    <BooleanFilter DEF="Edge1a" />
+    <TimeTrigger DEF="Fire1a" />
+    <BooleanFilter DEF="Edge1b" />
+    <TimeTrigger DEF="Fire1b" />
+    <ROUTE fromNode="T1" fromField="isActive" toNode="Edge1a" toField="set_boolean" />
+    <ROUTE fromNode="Edge1a" fromField="inputNegate" toNode="Fire1a" toField="set_boolean" />
+    <ROUTE fromNode="Fire1a" fromField="triggerTime" toNode="W1" toField="startTime" />
+    <ROUTE fromNode="W1" fromField="isActive" toNode="Edge1b" toField="set_boolean" />
+    <ROUTE fromNode="Edge1b" fromField="inputNegate" toNode="Fire1b" toField="set_boolean" />
+    <ROUTE fromNode="Fire1b" fromField="triggerTime" toNode="T2" toField="startTime" />
+    <TimeSensor DEF="W2" cycleInterval="2.5" />
+    <BooleanFilter DEF="Edge2a" />
+    <TimeTrigger DEF="Fire2a" />
+    <BooleanFilter DEF="Edge2b" />
+    <TimeTrigger DEF="Fire2b" />
+    <ROUTE fromNode="T2" fromField="isActive" toNode="Edge2a" toField="set_boolean" />
+    <ROUTE fromNode="Edge2a" fromField="inputNegate" toNode="Fire2a" toField="set_boolean" />
+    <ROUTE fromNode="Fire2a" fromField="triggerTime" toNode="W2" toField="startTime" />
+    <ROUTE fromNode="W2" fromField="isActive" toNode="Edge2b" toField="set_boolean" />
+    <ROUTE fromNode="Edge2b" fromField="inputNegate" toNode="Fire2b" toField="set_boolean" />
+    <ROUTE fromNode="Fire2b" fromField="triggerTime" toNode="T3" toField="startTime" />
+    <TimeSensor DEF="W3" cycleInterval="2.5" />
+    <BooleanFilter DEF="Edge3a" />
+    <TimeTrigger DEF="Fire3a" />
+    <BooleanFilter DEF="Edge3b" />
+    <TimeTrigger DEF="Fire3b" />
+    <ROUTE fromNode="T3" fromField="isActive" toNode="Edge3a" toField="set_boolean" />
+    <ROUTE fromNode="Edge3a" fromField="inputNegate" toNode="Fire3a" toField="set_boolean" />
+    <ROUTE fromNode="Fire3a" fromField="triggerTime" toNode="W3" toField="startTime" />
+    <ROUTE fromNode="W3" fromField="isActive" toNode="Edge3b" toField="set_boolean" />
+    <ROUTE fromNode="Edge3b" fromField="inputNegate" toNode="Fire3b" toField="set_boolean" />
+    <ROUTE fromNode="Fire3b" fromField="triggerTime" toNode="T4" toField="startTime" />
+    <TimeSensor DEF="W4" cycleInterval="2.5" />
+    <BooleanFilter DEF="Edge4a" />
+    <TimeTrigger DEF="Fire4a" />
+    <BooleanFilter DEF="Edge4b" />
+    <TimeTrigger DEF="Fire4b" />
+    <ROUTE fromNode="T4" fromField="isActive" toNode="Edge4a" toField="set_boolean" />
+    <ROUTE fromNode="Edge4a" fromField="inputNegate" toNode="Fire4a" toField="set_boolean" />
+    <ROUTE fromNode="Fire4a" fromField="triggerTime" toNode="W4" toField="startTime" />
+    <ROUTE fromNode="W4" fromField="isActive" toNode="Edge4b" toField="set_boolean" />
+    <ROUTE fromNode="Edge4b" fromField="inputNegate" toNode="Fire4b" toField="set_boolean" />
+    <ROUTE fromNode="Fire4b" fromField="triggerTime" toNode="T5" toField="startTime" />
+    <TimeSensor DEF="W5" cycleInterval="2.5" />
+    <BooleanFilter DEF="Edge5a" />
+    <TimeTrigger DEF="Fire5a" />
+    <BooleanFilter DEF="Edge5b" />
+    <TimeTrigger DEF="Fire5b" />
+    <ROUTE fromNode="T5" fromField="isActive" toNode="Edge5a" toField="set_boolean" />
+    <ROUTE fromNode="Edge5a" fromField="inputNegate" toNode="Fire5a" toField="set_boolean" />
+    <ROUTE fromNode="Fire5a" fromField="triggerTime" toNode="W5" toField="startTime" />
+    <ROUTE fromNode="W5" fromField="isActive" toNode="Edge5b" toField="set_boolean" />
+    <ROUTE fromNode="Edge5b" fromField="inputNegate" toNode="Fire5b" toField="set_boolean" />
+    <ROUTE fromNode="Fire5b" fromField="triggerTime" toNode="T6" toField="startTime" />
+    <TimeSensor DEF="W6" cycleInterval="2.5" />
+    <BooleanFilter DEF="Edge6a" />
+    <TimeTrigger DEF="Fire6a" />
+    <BooleanFilter DEF="Edge6b" />
+    <TimeTrigger DEF="Fire6b" />
+    <ROUTE fromNode="T6" fromField="isActive" toNode="Edge6a" toField="set_boolean" />
+    <ROUTE fromNode="Edge6a" fromField="inputNegate" toNode="Fire6a" toField="set_boolean" />
+    <ROUTE fromNode="Fire6a" fromField="triggerTime" toNode="W6" toField="startTime" />
+    <ROUTE fromNode="W6" fromField="isActive" toNode="Edge6b" toField="set_boolean" />
+    <ROUTE fromNode="Edge6b" fromField="inputNegate" toNode="Fire6b" toField="set_boolean" />
+    <ROUTE fromNode="Fire6b" fromField="triggerTime" toNode="T7" toField="startTime" />
+    <TimeSensor DEF="W7" cycleInterval="2.5" />
+    <BooleanFilter DEF="Edge7a" />
+    <TimeTrigger DEF="Fire7a" />
+    <BooleanFilter DEF="Edge7b" />
+    <TimeTrigger DEF="Fire7b" />
+    <ROUTE fromNode="T7" fromField="isActive" toNode="Edge7a" toField="set_boolean" />
+    <ROUTE fromNode="Edge7a" fromField="inputNegate" toNode="Fire7a" toField="set_boolean" />
+    <ROUTE fromNode="Fire7a" fromField="triggerTime" toNode="W7" toField="startTime" />
+    <ROUTE fromNode="W7" fromField="isActive" toNode="Edge7b" toField="set_boolean" />
+    <ROUTE fromNode="Edge7b" fromField="inputNegate" toNode="Fire7b" toField="set_boolean" />
+    <ROUTE fromNode="Fire7b" fromField="triggerTime" toNode="T8" toField="startTime" />
+    <TimeSensor DEF="Idle" cycleInterval="2" loop="true" />
+    <PositionInterpolator DEF="HaloPulse" key="0 0.5 1" keyValue="1 1 1 1.18 1 1.18 1 1 1" />
+    <ROUTE fromNode="Idle" fromField="fraction_changed" toNode="HaloPulse" toField="set_fraction" />
+    <ROUTE fromNode="HaloPulse" fromField="value_changed" toNode="Halo1" toField="scale" />
+    <ROUTE fromNode="T1" fromField="isActive" toNode="Ring1" toField="visible" />
+    <PositionInterpolator DEF="RingGrow" key="0 1" keyValue="1 1 1 2.3 1 2.3" />
+    <ROUTE fromNode="T1" fromField="fraction_changed" toNode="RingGrow" toField="set_fraction" />
+    <ROUTE fromNode="RingGrow" fromField="value_changed" toNode="Ring1" toField="scale" />
+    <ColorInterpolator DEF="BtnFlash" key="0 0.2 1" keyValue="0.1 0.75 0.2 1 1 1 0.1 0.75 0.2" />
+    <ROUTE fromNode="T1" fromField="fraction_changed" toNode="BtnFlash" toField="set_fraction" />
+    <ROUTE fromNode="BtnFlash" fromField="value_changed" toNode="BtnMat" toField="baseColor" />
+    <ROUTE fromNode="BtnFlash" fromField="value_changed" toNode="BtnMat" toField="emissiveColor" />
+    <PositionInterpolator DEF="DoorLSlide" key="0 0.25 0.75 1" keyValue="-3.7 1.2 -3.5 -4.68 1.2 -3.5 -4.68 1.2 -3.5 -3.7 1.2 -3.5" />
+    <ROUTE fromNode="T2" fromField="fraction_changed" toNode="DoorLSlide" toField="set_fraction" />
+    <ROUTE fromNode="DoorLSlide" fromField="value_changed" toNode="DoorL2" toField="translation" />
+    <PositionInterpolator DEF="DoorRSlide" key="0 0.25 0.75 1" keyValue="-2.3 1.2 -3.5 -1.32 1.2 -3.5 -1.32 1.2 -3.5 -2.3 1.2 -3.5" />
+    <ROUTE fromNode="T2" fromField="fraction_changed" toNode="DoorRSlide" toField="set_fraction" />
+    <ROUTE fromNode="DoorRSlide" fromField="value_changed" toNode="DoorR2" toField="translation" />
+    <ROUTE fromNode="T2" fromField="isActive" toNode="Orb2" toField="visible" />
+    <PositionInterpolator DEF="FillGrow" key="0 1" keyValue="0.01 1 1 1 1 1" />
+    <ROUTE fromNode="T3" fromField="fraction_changed" toNode="FillGrow" toField="set_fraction" />
+    <ROUTE fromNode="FillGrow" fromField="value_changed" toNode="Fill3" toField="scale" />
+    <BooleanSequencer DEF="TickSeq3_0" key="0 0.25 1" keyValue="false true true" />
+    <ROUTE fromNode="T3" fromField="fraction_changed" toNode="TickSeq3_0" toField="set_fraction" />
+    <ROUTE fromNode="TickSeq3_0" fromField="value_changed" toNode="Tick3_0" toField="visible" />
+    <BooleanSequencer DEF="TickSeq3_1" key="0 0.5 1" keyValue="false true true" />
+    <ROUTE fromNode="T3" fromField="fraction_changed" toNode="TickSeq3_1" toField="set_fraction" />
+    <ROUTE fromNode="TickSeq3_1" fromField="value_changed" toNode="Tick3_1" toField="visible" />
+    <BooleanSequencer DEF="TickSeq3_2" key="0 0.75 1" keyValue="false true true" />
+    <ROUTE fromNode="T3" fromField="fraction_changed" toNode="TickSeq3_2" toField="set_fraction" />
+    <ROUTE fromNode="TickSeq3_2" fromField="value_changed" toNode="Tick3_2" toField="visible" />
+    <PositionInterpolator DEF="CubeBounce" key="0 0.5 1" keyValue="9 1 -4 9 2.8 -4 9 1 -4" />
+    <ROUTE fromNode="T4" fromField="fraction_changed" toNode="CubeBounce" toField="set_fraction" />
+    <ROUTE fromNode="CubeBounce" fromField="value_changed" toNode="Cube4" toField="translation" />
+    <ColorInterpolator DEF="CubeColour" key="0 0.33 0.66 1" keyValue="0.2 0.3 0.9 0.9 0.2 0.8 1 0.85 0.2 0.2 0.3 0.9" />
+    <ROUTE fromNode="T4" fromField="fraction_changed" toNode="CubeColour" toField="set_fraction" />
+    <ROUTE fromNode="CubeColour" fromField="value_changed" toNode="Mat4" toField="baseColor" />
+    <ROUTE fromNode="CubeColour" fromField="value_changed" toNode="Mat4" toField="emissiveColor" />
+    <OrientationInterpolator DEF="SpinKeys" key="0 0.25 0.5 0.75 1" keyValue="0 1 0 0 0 1 0 3.1416 0 1 0 6.2832 0 1 0 9.4248 0 1 0 12.5664" />
+    <ROUTE fromNode="T5" fromField="fraction_changed" toNode="SpinKeys" toField="set_fraction" />
+    <ROUTE fromNode="SpinKeys" fromField="value_changed" toNode="Spin5" toField="rotation" />
+    <BooleanSequencer DEF="BulbSeq6_0" key="0 0.1667 1" keyValue="true false false" />
+    <ROUTE fromNode="T6" fromField="fraction_changed" toNode="BulbSeq6_0" toField="set_fraction" />
+    <ROUTE fromNode="BulbSeq6_0" fromField="value_changed" toNode="Bulb6_0" toField="visible" />
+    <BooleanSequencer DEF="BulbSeq6_1" key="0 0.1667 0.3333 1" keyValue="false true false false" />
+    <ROUTE fromNode="T6" fromField="fraction_changed" toNode="BulbSeq6_1" toField="set_fraction" />
+    <ROUTE fromNode="BulbSeq6_1" fromField="value_changed" toNode="Bulb6_1" toField="visible" />
+    <BooleanSequencer DEF="BulbSeq6_2" key="0 0.3333 0.5 1" keyValue="false true false false" />
+    <ROUTE fromNode="T6" fromField="fraction_changed" toNode="BulbSeq6_2" toField="set_fraction" />
+    <ROUTE fromNode="BulbSeq6_2" fromField="value_changed" toNode="Bulb6_2" toField="visible" />
+    <BooleanSequencer DEF="BulbSeq6_3" key="0 0.5 0.6667 1" keyValue="false true false false" />
+    <ROUTE fromNode="T6" fromField="fraction_changed" toNode="BulbSeq6_3" toField="set_fraction" />
+    <ROUTE fromNode="BulbSeq6_3" fromField="value_changed" toNode="Bulb6_3" toField="visible" />
+    <BooleanSequencer DEF="BulbSeq6_4" key="0 0.6667 0.8333 1" keyValue="false true false false" />
+    <ROUTE fromNode="T6" fromField="fraction_changed" toNode="BulbSeq6_4" toField="set_fraction" />
+    <ROUTE fromNode="BulbSeq6_4" fromField="value_changed" toNode="Bulb6_4" toField="visible" />
+    <BooleanSequencer DEF="BulbSeq6_5" key="0 0.8333 0.999" keyValue="false true false" />
+    <ROUTE fromNode="T6" fromField="fraction_changed" toNode="BulbSeq6_5" toField="set_fraction" />
+    <ROUTE fromNode="BulbSeq6_5" fromField="value_changed" toNode="Bulb6_5" toField="visible" />
+    <PositionInterpolator DEF="TargetKeys" key="0 0.2 0.21 0.45 0.46 0.7 0.71 1" keyValue="-4.2 0.95 4 -4.2 0.95 4 -1.8 0.95 4 -1.8 0.95 4 -3.2 0.95 4 -3.2 0.95 4 -1.8 0.95 4 -1.8 0.95 4" />
+    <PositionInterpolator DEF="FlagKeys" key="0 0.2 0.21 0.45 0.46 0.7 0.71 1" keyValue="-4.2 2.2 4 -4.2 2.2 4 -1.8 2.2 4 -1.8 2.2 4 -3.2 2.2 4 -3.2 2.2 4 -1.8 2.2 4 -1.8 2.2 4" />
+    <PositionChaser DEF="Chase7" duration="0.8" initialDestination="-4.2 0.95 4" initialValue="-4.2 0.95 4" />
+    <ROUTE fromNode="T7" fromField="fraction_changed" toNode="TargetKeys" toField="set_fraction" />
+    <ROUTE fromNode="T7" fromField="fraction_changed" toNode="FlagKeys" toField="set_fraction" />
+    <ROUTE fromNode="TargetKeys" fromField="value_changed" toNode="Chase7" toField="set_destination" />
+    <ROUTE fromNode="Chase7" fromField="value_changed" toNode="Ball7" toField="translation" />
+    <ROUTE fromNode="FlagKeys" fromField="value_changed" toNode="Flag7" toField="translation" />
+    <ColorInterpolator DEF="PlateKeys" key="0 0.25 0.5 0.75 1" keyValue="0.95 0.8 0.2 0.95 0.2 0.8 0.2 0.9 0.95 0.5 0.95 0.2 0.95 0.8 0.2" />
+    <ColorChaser DEF="PlateChase" duration="0.5" initialDestination="0.15 0.15 0.18" initialValue="0.15 0.15 0.18" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="PlateKeys" toField="set_fraction" />
+    <ROUTE fromNode="PlateKeys" fromField="value_changed" toNode="PlateChase" toField="set_destination" />
+    <ROUTE fromNode="PlateChase" fromField="value_changed" toNode="Mat8" toField="baseColor" />
+    <ROUTE fromNode="PlateChase" fromField="value_changed" toNode="Mat8" toField="emissiveColor" />
+    <PositionInterpolator DEF="SparkShrink" key="0 1" keyValue="1 1 1 0.2 0.2 0.2" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkShrink" toField="set_fraction" />
+    <PositionInterpolator DEF="SparkFly0" key="0 1" keyValue="-9 1.8 4 -5.8 3.4 4" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly0" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly0" fromField="value_changed" toNode="Spark8_0" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_0" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_0" toField="scale" />
+    <PositionInterpolator DEF="SparkFly1" key="0 1" keyValue="-9 1.8 4 -6.7373 3.4 5.6971" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly1" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly1" fromField="value_changed" toNode="Spark8_1" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_1" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_1" toField="scale" />
+    <PositionInterpolator DEF="SparkFly2" key="0 1" keyValue="-9 1.8 4 -9 3.4 6.4" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly2" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly2" fromField="value_changed" toNode="Spark8_2" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_2" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_2" toField="scale" />
+    <PositionInterpolator DEF="SparkFly3" key="0 1" keyValue="-9 1.8 4 -11.2627 3.4 5.6971" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly3" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly3" fromField="value_changed" toNode="Spark8_3" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_3" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_3" toField="scale" />
+    <PositionInterpolator DEF="SparkFly4" key="0 1" keyValue="-9 1.8 4 -12.2 3.4 4" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly4" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly4" fromField="value_changed" toNode="Spark8_4" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_4" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_4" toField="scale" />
+    <PositionInterpolator DEF="SparkFly5" key="0 1" keyValue="-9 1.8 4 -11.2627 3.4 2.3029" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly5" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly5" fromField="value_changed" toNode="Spark8_5" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_5" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_5" toField="scale" />
+    <PositionInterpolator DEF="SparkFly6" key="0 1" keyValue="-9 1.8 4 -9 3.4 1.6" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly6" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly6" fromField="value_changed" toNode="Spark8_6" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_6" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_6" toField="scale" />
+    <PositionInterpolator DEF="SparkFly7" key="0 1" keyValue="-9 1.8 4 -6.7373 3.4 2.3029" />
+    <ROUTE fromNode="T8" fromField="fraction_changed" toNode="SparkFly7" toField="set_fraction" />
+    <ROUTE fromNode="SparkFly7" fromField="value_changed" toNode="Spark8_7" toField="translation" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Spark8_7" toField="visible" />
+    <ROUTE fromNode="SparkShrink" fromField="value_changed" toNode="Spark8_7" toField="scale" />
+    <ROUTE fromNode="T1" fromField="isActive" toNode="Lamp1" toField="visible" />
+    <ROUTE fromNode="T2" fromField="isActive" toNode="Lamp2" toField="visible" />
+    <ROUTE fromNode="T3" fromField="isActive" toNode="Lamp3" toField="visible" />
+    <ROUTE fromNode="T4" fromField="isActive" toNode="Lamp4" toField="visible" />
+    <ROUTE fromNode="T5" fromField="isActive" toNode="Lamp5" toField="visible" />
+    <ROUTE fromNode="T6" fromField="isActive" toNode="Lamp6" toField="visible" />
+    <ROUTE fromNode="T7" fromField="isActive" toNode="Lamp7" toField="visible" />
+    <ROUTE fromNode="T8" fromField="isActive" toNode="Lamp8" toField="visible" />
+    <ROUTE fromNode="W1" fromField="isActive" toNode="WireGlow1" toField="visible" />
+    <ROUTE fromNode="W1" fromField="isActive" toNode="Bead1" toField="visible" />
+    <PositionInterpolator DEF="BeadRide1" key="0 1" keyValue="-7.3 0.7 -4 -4.7 0.7 -4" />
+    <ROUTE fromNode="W1" fromField="fraction_changed" toNode="BeadRide1" toField="set_fraction" />
+    <ROUTE fromNode="BeadRide1" fromField="value_changed" toNode="Bead1" toField="translation" />
+    <ROUTE fromNode="W2" fromField="isActive" toNode="WireGlow2" toField="visible" />
+    <ROUTE fromNode="W2" fromField="isActive" toNode="Bead2" toField="visible" />
+    <PositionInterpolator DEF="BeadRide2" key="0 1" keyValue="-1.3 0.7 -4 1.3 0.7 -4" />
+    <ROUTE fromNode="W2" fromField="fraction_changed" toNode="BeadRide2" toField="set_fraction" />
+    <ROUTE fromNode="BeadRide2" fromField="value_changed" toNode="Bead2" toField="translation" />
+    <ROUTE fromNode="W3" fromField="isActive" toNode="WireGlow3" toField="visible" />
+    <ROUTE fromNode="W3" fromField="isActive" toNode="Bead3" toField="visible" />
+    <PositionInterpolator DEF="BeadRide3" key="0 1" keyValue="4.7 0.7 -4 7.3 0.7 -4" />
+    <ROUTE fromNode="W3" fromField="fraction_changed" toNode="BeadRide3" toField="set_fraction" />
+    <ROUTE fromNode="BeadRide3" fromField="value_changed" toNode="Bead3" toField="translation" />
+    <ROUTE fromNode="W4" fromField="isActive" toNode="WireGlow4" toField="visible" />
+    <ROUTE fromNode="W4" fromField="isActive" toNode="Bead4" toField="visible" />
+    <PositionInterpolator DEF="BeadRide4" key="0 1" keyValue="9 0.7 -2.3 9 0.7 2.3" />
+    <ROUTE fromNode="W4" fromField="fraction_changed" toNode="BeadRide4" toField="set_fraction" />
+    <ROUTE fromNode="BeadRide4" fromField="value_changed" toNode="Bead4" toField="translation" />
+    <ROUTE fromNode="W5" fromField="isActive" toNode="WireGlow5" toField="visible" />
+    <ROUTE fromNode="W5" fromField="isActive" toNode="Bead5" toField="visible" />
+    <PositionInterpolator DEF="BeadRide5" key="0 1" keyValue="7.3 0.7 4 4.7 0.7 4" />
+    <ROUTE fromNode="W5" fromField="fraction_changed" toNode="BeadRide5" toField="set_fraction" />
+    <ROUTE fromNode="BeadRide5" fromField="value_changed" toNode="Bead5" toField="translation" />
+    <ROUTE fromNode="W6" fromField="isActive" toNode="WireGlow6" toField="visible" />
+    <ROUTE fromNode="W6" fromField="isActive" toNode="Bead6" toField="visible" />
+    <PositionInterpolator DEF="BeadRide6" key="0 1" keyValue="1.3 0.7 4 -1.3 0.7 4" />
+    <ROUTE fromNode="W6" fromField="fraction_changed" toNode="BeadRide6" toField="set_fraction" />
+    <ROUTE fromNode="BeadRide6" fromField="value_changed" toNode="Bead6" toField="translation" />
+    <ROUTE fromNode="W7" fromField="isActive" toNode="WireGlow7" toField="visible" />
+    <ROUTE fromNode="W7" fromField="isActive" toNode="Bead7" toField="visible" />
+    <PositionInterpolator DEF="BeadRide7" key="0 1" keyValue="-4.7 0.7 4 -7.3 0.7 4" />
+    <ROUTE fromNode="W7" fromField="fraction_changed" toNode="BeadRide7" toField="set_fraction" />
+    <ROUTE fromNode="BeadRide7" fromField="value_changed" toNode="Bead7" toField="translation" />
+  </Scene>
+</X3D>
