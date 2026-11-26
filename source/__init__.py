@@ -54,6 +54,7 @@ from .prefs import X3D_Preferences
 from . import interaction_ui
 from . import behaviour_nodes
 from . import behaviour_play
+from . import behaviour_presets
 
 blender_version = bpy.app.version
 blender_version_higher_279 = blender_version[0] > 2 or (blender_version[0] == 2 and blender_version[1] >= 79)
@@ -775,6 +776,7 @@ def register():
 
     behaviour_nodes.register()
     behaviour_play.register()
+    behaviour_presets.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
@@ -783,6 +785,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
+    behaviour_presets.unregister()
     behaviour_play.unregister()
     behaviour_nodes.unregister()
     for cls in classes:

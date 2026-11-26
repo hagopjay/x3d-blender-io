@@ -29,6 +29,7 @@ from mathutils import Matrix, Quaternion, Vector
 
 from . import behaviour_graph as bg
 from . import behaviour_nodes
+from . import behaviour_presets
 from .behaviour_sim import POINTING, Simulation
 
 EXPORT_AXES = axis_conversion(to_forward='-Z', to_up='Y').to_4x4()      # the export dialog's default: -Z forward, Y up
@@ -567,6 +568,7 @@ class X3D_PT_behaviour_play(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         tree = getattr(context.scene, "x3d_behaviour_tree", None)
+        behaviour_presets.draw_button(layout, context)       # only while the scene has click / proximity presets
         if tree is None:
             layout.label(text="This scene has no behaviour graph yet.")
             return
