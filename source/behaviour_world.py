@@ -433,7 +433,9 @@ class World:
         self.noted = {}
         self._anonymous = 0
         self.version = 0                 # counts changes of any frame or of the viewer
-        self._viewer_state = None
+        self.frames_version = 0          # ... of a frame (or of a Collision's shapes) alone
+        self.viewer_version = 0          # ... of the viewer alone
+        self._memo = {}                  # what was worked out for one state of the frames or the viewer (see ``_cached``)
 
     # -- building ---------------------------------------------------------------------------------------------
 
@@ -457,7 +459,6 @@ class World:
             raise ValueError("a world matrix is sixteen finite numbers")
         frame.fixed = matrix
         self._dirty(frame)
-        self.version += 1
 
     @classmethod
     def from_x3d(cls, document, aspect=1.6):
@@ -477,6 +478,8 @@ class World:
 
     def _dirty(self, frame):
         """Mark a frame and what hangs below it as needing its matrix again (a dirty frame has only dirty children)."""
+        self.version += 1
+        self.frames_version += 1
         stack = [frame]
         while stack:
             current = stack.pop()
@@ -484,6 +487,15 @@ class World:
             for child in current.children:
                 if not self.frames[child].dirty:
                     stack.append(self.frames[child])
+
+    def _cached(self, key, state, make):
+        """``make()``, remembered while ``state`` (a version) stays what it was."""
+        held = self._memo.get(key)
+        if held is not None and held[0] == state:
+            return held[1]
+        value = make()
+        self._memo[key] = (state, value)
+        return value
 
     def matrix(self, name):
         """The world matrix of a frame (None: the scene root, the identity). Worked out only when a frame moved."""
@@ -510,7 +522,6 @@ class World:
             attribute = {"scaleOrientation": "scale_orientation"}.get(field_name, field_name)
             setattr(frame, attribute, tuple(float(v) for v in value))
             self._dirty(frame)
-            self.version += 1
             return True
         if name == self.viewpoint and field_name in ("position", "orientation", "centerOfRotation", "fieldOfView"):
             if not _finite(value):
@@ -522,10 +533,12 @@ class World:
                 setattr(viewer, {"centerOfRotation": "center_of_rotation"}.get(field_name, field_name),
                         tuple(float(v) for v in value))
             self.version += 1
+            self.viewer_version += 1
             return True
         collision = self.collisions.get(name)
         if collision is not None and field_name == "enabled":
             collision["enabled"] = bool(value)
+            self.frames_version += 1
             return True
         return False
 
@@ -538,6 +551,18 @@ class World:
     def sensor_matrix(self, name):
         """The world matrix of the coordinates a sensor's ``center`` and ``size`` are in."""
         return self.matrix(self.sensors.get(name))
+
+    def sensor_inverse(self, name):
+        """The inverse of ``sensor_matrix`` (None when it has none), kept while that matrix stays what it is."""
+        matrix = self.sensor_matrix(name)
+        return self._cached(("inverse", name), matrix, lambda: m_inverse(matrix))
+
+    def camera(self):
+        """(camera to world, world to camera or None), kept while the viewer and its frame stay where they are."""
+        def make():
+            matrix = self.viewer_matrix()
+            return matrix, m_inverse(matrix)
+        return self._cached("camera", (self.viewer_version, self.matrix(self.viewer.frame)), make)
 
     def target_matrix(self, name):
         """The world matrix of a node a TransformSensor aims at (a Transform: its own), or None when unknown."""
@@ -562,10 +587,11 @@ class World:
             if value is not None and _finite(value) and value > 0:
                 setattr(viewer, name, float(value))
         self.version += 1
+        self.viewer_version += 1
 
     def to_local(self, name, point):
         """A world point in the coordinates of a sensor's frame, or None when the frame has no inverse."""
-        inverse = m_inverse(self.sensor_matrix(name))
+        inverse = self.sensor_inverse(name)
         if inverse is None:
             self.note("singular-frame")
             return None
@@ -574,11 +600,11 @@ class World:
     def viewer_in(self, name):
         """The viewer as a ProximitySensor wants it: (position, orientation, centre of rotation) in the coordinates of the
         sensor's frame, or None when the frame has no inverse."""
-        inverse = m_inverse(self.sensor_matrix(name))
+        inverse = self.sensor_inverse(name)
         if inverse is None:
             self.note("singular-frame")
             return None
-        camera = self.viewer_matrix()
+        camera = self.camera()[0]
         viewer = self.viewer
         pivot = m_point(self.matrix(viewer.frame), viewer.center_of_rotation)
         return (m_point(inverse, m_point(camera, (0.0, 0.0, 0.0))), rotation_of(m_mul(inverse, camera)),
@@ -592,20 +618,50 @@ class World:
         far = viewer.far if viewer.far else (self.visibility_limit or _MAX_FAR)
         return near, far
 
+    def frustum(self):
+        """(corners, planes) of the view volume in camera space for the viewer's frustum, kept while it stays the same. A
+        plane is (normal, offset) with the inside where ``normal . p >= offset``."""
+        viewer = self.viewer
+        near, far = self.near_far()
+        key = (viewer.field_of_view, viewer.aspect, near, far)
+
+        def make():
+            corners = view_volume(*key[:2], near, far)
+            inside = (0.0, 0.0, -(near + far) / 2)
+            planes = []
+            for a, b, c in ((0, 1, 2), (7, 4, 0), (6, 2, 1), (2, 6, 7), (1, 0, 4), (4, 7, 6)):
+                normal = _unit(_cross(_sub(corners[b], corners[a]), _sub(corners[c], corners[a])))
+                offset = _dot(normal, corners[a])
+                if _dot(normal, inside) < offset:
+                    normal, offset = (-normal[0], -normal[1], -normal[2]), -offset
+                planes.append((normal, offset))
+            return corners, planes
+        return self._cached(("frustum", key), 0, make)
+
     def sees_box(self, name, center, size):
         """Is any of the box (``center``, ``size`` in the coordinates of sensor ``name``'s frame) in the view volume? A
-        size of -1 -1 -1 is always in. None when the frame or the camera has no inverse."""
+        size of -1 -1 -1 is always in. None when the frame or the camera has no inverse. A ball round the box that is
+        wholly outside one face of the view volume (or wholly inside all six) settles it at once; only a box near the
+        edge of the view is tested axis by axis (``frustum_meets_box``), which is what X_ITE does for every box."""
         if size[0] == -1.0 and size[1] == -1.0 and size[2] == -1.0:
             return True
-        camera_inverse = m_inverse(self.viewer_matrix())
+        camera_inverse = self.camera()[1]
         if camera_inverse is None:
             self.note("singular-frame")
             return None
         m = m_mul(camera_inverse, self.sensor_matrix(name))
         half_axes = tuple(m_dir(m, tuple(size[k] / 2 if j == k else 0.0 for k in range(3))) for j in range(3))
-        near, far = self.near_far()
-        viewer = self.viewer
-        return frustum_meets_box(view_volume(viewer.field_of_view, viewer.aspect, near, far), m_point(m, center), half_axes)
+        corners, planes = self.frustum()
+        middle = m_point(m, center)
+        reach = sum(math.sqrt(_dot(axis, axis)) for axis in half_axes)
+        settled = True
+        for normal, offset in planes:
+            distance = _dot(normal, middle) - offset
+            if distance < -reach:
+                return False
+            if distance < reach:
+                settled = False
+        return True if settled else frustum_meets_box(corners, middle, half_axes)
 
     def collision_hits(self):
         """The Collision groups the viewer is touching. X_ITE looks along the six axes of the viewpoint's frame through a slab
@@ -621,28 +677,33 @@ class World:
         bottom = min(step - height, -radius)
         near = self.near_far()[0]
         far = max(radius * 2, height * 2)
-        inverse = m_inverse(self.matrix(viewer.frame))
-        if inverse is None:
-            self.note("singular-frame")
-            return set()
-        origin = viewer.position
-        boxes = []
-        for name, group in self.collisions.items():
-            if not group["enabled"]:
-                continue
-            for shape in group["shapes"]:
-                to_viewer = m_mul(inverse, self.matrix(shape.frame))
-                half = tuple(m_dir(to_viewer, tuple(shape.size[k] / 2 if j == k else 0.0 for k in range(3)))
-                             for j in range(3))
-                center = m_point(to_viewer, shape.center)
-                rows = _inverse3(*half)
-                if rows is not None:         # a box of no volume draws nothing
-                    boxes.append((name, _box_corners(center, half), (center, rows)))
-        active = set()
+        boxes = self._collision_boxes()
         if not boxes:
-            return active
+            return set()
+        inverse = None
+        if viewer.frame is not None:
+            inverse = m_inverse(self.matrix(viewer.frame))
+            if inverse is None:
+                self.note("singular-frame")
+                return set()
+        origin = viewer.position
+        look_at = []
+        for name, corners, center, rows, bound in boxes:
+            if inverse is not None:               # the viewer's own frame is not the world: bring the box into it
+                corners = [m_point(inverse, c) for c in corners]
+                center = m_point(inverse, center)
+                half = [tuple(v / 2 for v in _sub(corners[k], corners[0])) for k in (4, 2, 1)]
+                rows = _inverse3(*half)
+                if rows is None:
+                    continue
+                bound = sum(math.sqrt(_dot(axis, axis)) for axis in half)
+            offset = _sub(center, origin)
+            if math.sqrt(_dot(offset, offset)) - bound > far:       # too far to be seen by any of the six looks
+                continue
+            look_at.append((name, corners, (center, rows)))
+        active = set()
         for direction, right, up in _LOOKS:
-            near_ones = [(name, box) for name, corners, box in boxes
+            near_ones = [(name, box) for name, corners, box in look_at
                          if (closest_depth(corners, origin, right, up, direction, radius, bottom, radius, near, far) or
                              math.inf) <= reach]
             best, owner = None, None
@@ -657,6 +718,28 @@ class World:
                 name = self.collisions[name]["parent"]
                 active.add(name)
         return active
+
+    def _collision_boxes(self):
+        """[(collision, corners, centre, rows of the inverse of the half axes, bound)] of every shape of every enabled
+        Collision, in world coordinates; kept while the frames of those shapes stay where they are."""
+        def make():
+            boxes = []
+            for name, group in self.collisions.items():
+                if not group["enabled"]:
+                    continue
+                for shape in group["shapes"]:
+                    m = self.matrix(shape.frame)
+                    half = tuple(m_dir(m, tuple(shape.size[k] / 2 if j == k else 0.0 for k in range(3)))
+                                 for j in range(3))
+                    center = m_point(m, shape.center)
+                    rows = _inverse3(*half)
+                    if rows is not None and _finite(center) and _finite(half):      # a box of no volume draws nothing
+                        boxes.append((name, _box_corners(center, half), center, rows,
+                                      sum(math.sqrt(_dot(axis, axis)) for axis in half)))
+            return boxes
+        state = tuple((name, shape.center, shape.size, self.matrix(shape.frame)) for name, group in self.collisions.items()
+                      if group["enabled"] for shape in group["shapes"])
+        return self._cached("collision-boxes", state, make)
 
 
 # (direction, camera right, camera up): X_ITE turns -z onto the direction, then straightens the horizon

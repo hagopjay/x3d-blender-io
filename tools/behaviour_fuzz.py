@@ -53,6 +53,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "source"))
 import behaviour_catalogue as cat      # noqa: E402
 import behaviour_graph as bg           # noqa: E402
 import behaviour_sim as bs             # noqa: E402
+import behaviour_world as bw           # noqa: E402
 
 NODE_TYPES = sorted(cat.NODES)
 TARGET_TYPES = sorted(cat.TARGETS)
@@ -382,6 +383,40 @@ def _resources(rng, hostile):
     return table
 
 
+WORLD_SENSORS = ("ProximitySensor", "VisibilitySensor", "TransformSensor")
+
+
+def make_world(graph, hostile):
+    """A ``World`` for the graph, built from the graph alone (so a second run, and a replay, make the same one): a frame
+    for every Transform target (nested at random), a frame for each environmental sensor (some left out, so that the
+    "no frame" answer is run), a target for each TransformSensor (some left out), shapes for each Collision, the first
+    Viewpoint as the viewer. Hostile worlds also hold zero, tiny, huge and negative scales."""
+    rng = random.Random(len(graph.nodes) * 7919 + len(graph.routes) * 104729 + (1 if hostile else 0))
+    world = bw.World(aspect=rng.choice([1.6, 1.0, 0.5, 1e-3] if hostile else [1.6, 1.0, 0.5]))
+    scales = [1.0, 0.5, 2.0] + ([0.0, 1e-9, 1e12, -1.0] if hostile else [])
+    names = [n.id for n in graph.nodes.values() if n.node_type == "Transform" and n.role == bg.TARGET]
+    for index, name in enumerate(names):
+        parent = rng.choice(names[:index]) if index and rng.random() < 0.4 else None
+        world.add_frame(name, parent, translation=_vector(rng, False), rotation=(*_vector(rng, False), rng.uniform(-4, 4)),
+                        scale=tuple(rng.choice(scales) for _ in range(3)), center=_vector(rng, False))
+        world.targets[name] = name
+    for node in graph.nodes.values():
+        if node.role == bg.BEHAVIOUR and node.node_type in WORLD_SENSORS and rng.random() < 0.9:
+            world.sensors[node.id] = node.parent if node.parent in world.frames else None
+            if node.node_type == "TransformSensor" and names and rng.random() < 0.85:
+                world.sensor_target[node.id] = rng.choice(names)
+        elif node.node_type == "Collision" and node.role == bg.TARGET:
+            world.collisions[node.id] = {"enabled": rng.random() < 0.8, "parent": None, "shapes": [
+                bw.Volume(f"{node.id}.{k}", "box", rng.choice(names) if names and rng.random() < 0.7 else None,
+                          _vector(rng, False), tuple(abs(v) for v in _vector(rng, False)))
+                for k in range(rng.randint(0, 3))]}
+    viewpoint = next((n for n in graph.nodes.values() if n.role == bg.TARGET and n.node_type == "Viewpoint"), None)
+    if viewpoint is not None:
+        world.viewpoint = viewpoint.id
+    world.viewer.position = tuple(_vector(rng, False))
+    return world
+
+
 def schedule(rng, graph, hostile):
     """A list of calls: [name, args...], plain data so a failure can be written out and replayed."""
     calls, clock = [], 0.0
@@ -389,6 +424,8 @@ def schedule(rng, graph, hostile):
     pointing = [n.id for n in graph.nodes.values() if n.node_type in bs.POINTING]
     proximity = [n.id for n in graph.nodes.values() if n.node_type == "ProximitySensor"]
     colliders = [n.id for n in graph.nodes.values() if n.node_type == "CollisionSensor"]
+    in_world = [n.id for n in graph.nodes.values() if n.node_type in WORLD_SENSORS]
+    moving = [n.id for n in graph.nodes.values() if n.node_type == "Transform" and n.role == bg.TARGET]
     behaviours = [n for n in graph.nodes.values() if n.role == bg.BEHAVIOUR]
     behaviours += [n for n in graph.nodes.values() if n.role == bg.TARGET and n.node_type in bs._SCENE_MACHINES]   # clips take events too
     if not hostile:
@@ -423,9 +460,10 @@ def schedule(rng, graph, hostile):
 
     for _ in range(rng.randint(8, 40) if not hostile else rng.randint(8, 50)):
         op = rng.choice(["step", "step", "step", "click", "press", "drag", "release", "hover", "send", "send", "post",
-                         "viewer", "contact"])
+                         "viewer", "contact", "view", "world"])
         if not hostile and ((op in POINTER_OPS and not pointing) or (op == "viewer" and not proximity)
-                            or (op == "contact" and not colliders)):
+                            or (op == "contact" and not colliders)
+                            or (op == "view" and not in_world) or (op == "world" and not moving)):
             op = "step"                                         # a normal schedule only asks a node for what it can do
         now = tick()
         if op == "step":
@@ -452,6 +490,16 @@ def schedule(rng, graph, hostile):
                 names = rng.choice([None, "AB", [1, 2], [None], names + [math.nan]])
             calls.append(["contact", node, rng.random() < 0.5 if not hostile or rng.random() < 0.8 else rng.choice([1, None, "yes"]),
                           names, names if rng.random() < 0.7 else [], now])
+        elif op == "view":                      # the viewer in world coordinates, with a frustum some of the time
+            frustum = {} if rng.random() < 0.6 else {rng.choice(["field_of_view", "aspect", "near", "far"]): rng.choice(
+                [0.5, 1.0, 1.6, 0.1, 50.0, 1e5] + ([math.nan, 0.0, -1.0, 1e300] if hostile else []))}
+            calls.append(["view", list(_vector(rng, hostile)), list(_vector(rng, hostile, 4)), now,
+                          list(_vector(rng, hostile)), None if rng.random() < 0.7 else list(_vector(rng, hostile)), frustum])
+        elif op == "world":                     # a Transform of the world moved from outside (as a ROUTE would)
+            node = rng.choice(moving) if moving and (not hostile or rng.random() < 0.9) else "Nowhere"
+            field_name = rng.choice(["translation", "rotation", "scale", "center", "scaleOrientation"])
+            calls.append(["world", node, field_name, list(_vector(rng, hostile, 4 if "otation" in field_name or
+                                                                 field_name == "scaleOrientation" else 3)), now])
         elif op == "viewer":
             node = rng.choice(proximity) if proximity and rng.random() < 0.9 else rng.choice(ids)
             calls.append(["viewer", node, list(_vector(rng, hostile)), list(_vector(rng, hostile, 4)), now,
@@ -543,6 +591,15 @@ def _apply_call(sim, call):
         return sim.release(args[0], args[1])
     if name == "hover":
         return sim.hover(args[0], args[1], args[2])
+    if name == "view":
+        position, orientation, now, centre, test, frustum = args
+        return sim.view(tuple(position), tuple(orientation), now, tuple(centre), None if test is None else tuple(test),
+                        **frustum)
+    if name == "world":
+        node, field_name, value, now = args
+        if sim.world is not None:
+            sim.world.apply(node, field_name, tuple(value))
+        return sim.step(now)
     if name == "viewer":
         node, position, orientation, now, centre, test = args
         return sim.viewer(node, tuple(position), tuple(orientation), now, tuple(centre), None if test is None else tuple(test))
@@ -596,7 +653,7 @@ def run_case(graph, calls, hostile, *, call_seconds=2.0, graph_seconds=20):
             armed = False
     try:
         try:
-            sim = bs.Simulation(graph, resources=resources)
+            sim = bs.Simulation(graph, resources=resources, world=make_world(graph, hostile))
         except Hang as error:
             return [("b-bounded", f"construction: {error}")], digest, stats
         except bg.BehaviourError as error:

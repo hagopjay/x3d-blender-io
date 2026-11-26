@@ -84,6 +84,54 @@ it once per step. Rules:
   `Simulation.noted`.
 - Cost: one pass over the sensor's own targets per step; no all-pairs search. Budget below.
 
+### P2 results: `World`, TransformSensor, VisibilitySensor, Collision
+
+`source/behaviour_world.py` (no bpy at import): `Frame` (a Transform with a cached world matrix, dirty marking), `Volume`,
+`Viewer`, `World` (`from_x3d` here; `from_blender` in `source/behaviour_play.py`). `Simulation(graph, world=...)` runs a
+sense phase after the event queue has drained, in `start` and in every `step`, then the sensors send. ProximitySensor now
+reads the box test from `World`; its events are unchanged (the 13 proximity streams of the recorded worlds still agree, and
+`sim.view` logs equal the old `sim.viewer` logs to 1e-9, `tests/test_behaviour_world.py`).
+
+Instrument for every verdict: `tools/behaviour_sim_judge.py` replaying `tests/behaviour/x_ite_traces/probe-world.json`
+(X_ITE 16.8.1, headless Chromium, software GL, 641 frames of 1/60 s; world `tests/behaviour/probe-world.x3d`), the viewer
+driven from the recorded camera. Three independent recordings gave the same events.
+
+| probe (sensors) | node | streams | events compared | worst gap |
+|---|---|---:|---:|---:|
+| Gauge, Everywhere, Skew | TransformSensor | 15 | 1,168 | 0 |
+| Ahead, Right, Behind, Always, Nothing | VisibilitySensor | 15 | 64 | 0 |
+| Tilt1, Tilt2, Tilt3 | VisibilitySensor | 9 | 150 | 0 |
+| Wall, Pillar | Collision (`collideTime`, `isActive`) | 4 | 21 | 0 |
+| the other 16 streams of the same world | ProximitySensor, TimeSensor | 16 | 5,712 | 9e-06 |
+
+59 of 59 streams agree. Grade: Confirmed for these 59 streams on X_ITE 16.8.1; Likely for scenes whose geometry the
+probe does not resemble; Suspected for any viewer motion faster than one frame per step.
+
+What X_ITE 16.8.1 does, found by reading its source and then by the recording (the simulator follows it):
+
+- **TransformSensor** tests the origin of the target's matrix, in the sensor's box; there is no frame of lag.
+- **VisibilitySensor** is judged one frame late (it reads the camera of the frame before); `visible` is kept stale when the
+  sensor is disabled and shows again on re-enable; a `size` of `0 0 0` is a point; the frustum-box test is a separating
+  axis test whose table of 24 axes is filled at `i1*3+i2`, so only 14 slots survive. Tilt1 to Tilt3 fail with the exact
+  nine-edge-axis test and agree with the quirk, so it is not a guess.
+- **Collision** renders a 16 by 16 depth image from the viewpoint along six directions of the viewpoint's frame, tests
+  pixel centres, takes the closest shape, and fires when it is nearer than `avatarSize[0] * sqrt(2)` (0.3536 for the
+  default 0.25); faces are not culled but a face seen exactly edge-on is invisible; every enclosing Collision of the hit
+  shape is activated; it fires with NavigationInfo type `NONE`. A frame is: time events, camera, collision, sensor events,
+  display.
+
+Cost, `tools/behaviour_bench.py --shapes world` (`PYTHONHASHSEED=3`, simulator only, median of 300 steps of 1/60 s, Python
+3.13.18, shared 4-core Xeon at load average 18 to 21): 0.15 ms per step at N=10, 3.15 at N=100, 4.45 at N=200 (the
+budget size, 303 nodes), 24.87 at N=1000 (1,503 nodes). N=1000 is over 16.7 ms: a known limit. cProfile at N=1000 puts 55 %
+of the time in the VisibilitySensor frustum test and 20 % in world-matrix products; a broad-phase on the frustum and a
+cheaper matrix chain would be the next step.
+
+Play applies the ProximitySensor (the viewport camera feeds it) and lists TransformSensor and VisibilitySensor as "not
+fed": the Player has no frustum to give a VisibilitySensor and the TransformSensor's `targetObject` is not in the graph
+(these two are `NOT_PLAYED` in the coverage tool); Collision is not fed. Not checked: a real Blender window; the viewer in
+a non-root Transform under a moving camera for VisibilitySensor; frustum motion faster than one step; `avatarSize` other
+than the default for Collision; GEOMETRY-precise Collision (it is a box-and-depth test as X_ITE's).
+
 ### `Resources` (class D)
 
 X3D leaves loading to the browser, so a simulator must be told. `Resources` maps a URL to `{"loads": seconds}` or

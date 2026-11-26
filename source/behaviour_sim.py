@@ -1614,19 +1614,20 @@ class _TransformSensor(_WorldSensor):
             return self.blind("no-world")
         target = world.sensor_target.get(self.id)
         wanted = self.f.get("enabled", True) and tuple(self.f["size"]) != (0.0, 0.0, 0.0)
-        relative = None
+        relative = origin = None
         if wanted and target is not None and self.id in world.sensors:
             target_matrix = world.target_matrix(target)
-            inverse = bw.m_inverse(world.sensor_matrix(self.id)) if target_matrix is not None else None
+            inverse = world.sensor_inverse(self.id) if target_matrix is not None else None
             if inverse is not None:
-                relative = bw.m_mul(inverse, target_matrix)
+                # the target's origin in the sensor's coordinates; the whole matrix is only needed to say how it is turned
+                origin = bw.m_point(inverse, (target_matrix[3], target_matrix[7], target_matrix[11]))
+                relative = (inverse, target_matrix)
             else:
                 self.blind("singular-frame")
         elif wanted:
             self.blind("no-target" if self.id in world.sensors else "no-frame")
-        origin = None if relative is None else (relative[3], relative[7], relative[11])
         if relative is not None and bw.box_contains(self.f["center"], self.f["size"], origin):
-            position, orientation = origin, bw.rotation_of(relative)
+            position, orientation = origin, bw.rotation_of(bw.m_mul(*relative))
             if self.active:
                 for name, value in (("position_changed", position), ("orientation_changed", orientation)):
                     if self.f.get(name) != value:

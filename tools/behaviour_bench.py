@@ -4,7 +4,7 @@
 
 """How the behaviour simulator and the Blender player scale: synthetic graphs, timed.
 
-Five shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a sixth that is asked for by name:
+Six shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a seventh that is asked for by name:
 
   fan     one looping TimeSensor drives N PositionInterpolators, each into its own Transform
   chains  N independent chains: TimeSensor (loop) -> PositionInterpolator -> PositionDamper -> Transform
@@ -16,6 +16,9 @@ Five shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), a
           N CoordinateDampers, each into its own Coordinate: every damper is chasing a new list on every step
   media   N looping AudioClips (an X_ITE-judged clock each, 1 s long) whose elapsedTime and isActive each reach a node,
           and one LoadSensor over N/10 of them; simulation only (the Player lists these nodes as not applied)
+  world   N sensors that read a World of 5 N volumes (N / 2 TransformSensors each aiming at a Transform that one
+          interpolator moves, N / 4 VisibilitySensors, N / 4 Collision groups of 4 boxes), with the viewer flown past
+          by the same interpolator (``world_for`` builds the World, which the simulation reads once per step)
 
 For each case the benchmark times ``Simulation(graph)``, ``start()`` and 300 steps of 1/60 s, and reports the median
 and 95th percentile of a step, the events sent per step, and the peak memory (tracemalloc). With ``--bpy`` (needs the
@@ -45,8 +48,9 @@ sys.path.insert(0, str(ROOT / "source"))
 
 import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
+import behaviour_world as bw      # noqa: E402
 
-SHAPES = ("fan", "chains", "mixed", "hosted", "media")
+SHAPES = ("fan", "chains", "mixed", "hosted", "media", "world")
 OPT_IN_SHAPES = ("lists",)         # run when named; not in the default sweep, and not timed in the player (no Transform to move)
 POINTS = 100                       # points per list in the "lists" shape
 SIZES = (10, 100, 1000, 5000)
@@ -109,6 +113,17 @@ def build(shape: str, n: int) -> bg.Behaviour:
             follow.value_changed >> b.target("Coordinate", f"Mesh{i}").point
     elif shape == "media":
         return bg.Behaviour.from_x3d(media_world(n))
+    elif shape == "world":
+        clock = b.add("TimeSensor", "Clock", cycleInterval=8, loop=True)
+        move = b.add("PositionInterpolator", "Move", key=[0, 0.5, 1], keyValue=[(-8, 1, 6), (8, 1, 6), (-8, 1, 6)])
+        clock.fraction_changed >> move.set_fraction
+        move.value_changed >> b.target("Viewpoint", "Eye").position
+        for i in range(max(1, n // 2)):
+            b.add("TransformSensor", f"Gauge{i}", parent=f"Slot{i}", size=(4, 4, 4))
+            move.value_changed >> _lift(b, f"Ball{i}").translation
+        for i in range(max(1, n // 4)):
+            b.add("VisibilitySensor", f"Seen{i}", parent=f"Spot{i}", size=(2, 2, 2))
+            b.target("Collision", f"Wall{i}")
     else:
         raise ValueError(f"unknown shape {shape!r}")
     return b
@@ -131,6 +146,8 @@ def touch(sim, shape, n, k, now):
     if shape == "hosted":
         for i in range(0, n, 5):
             sim.contact(f"Hit{i}", bool(k % 2), ["A|B"] if k % 2 else (), ["A"] if k % 2 else (), now)
+
+
 def media_world(n: int) -> str:
     """The "media" shape as X3D text: N looping AudioClips with a sink route each, one LoadSensor over the first N/10."""
     body = ['<BooleanToggle DEF="SinkB"/><TimeSensor DEF="SinkT" enabled="false"/>']
@@ -151,6 +168,32 @@ def resources_for(shape: str):
     if shape != "media":
         return None
     return {f"tone{k}.wav": {"loads": 0.05 * (k + 1), "duration": 1.0} for k in range(7)}
+
+
+def world_for(shape: str, n: int):
+    """The World a shape's simulation reads (None for the shapes that need none). Deterministic."""
+    if shape != "world":
+        return None
+    world = bw.World()
+    world.viewpoint = "Eye"
+    world.viewer.position = (-8.0, 1.0, 6.0)
+    for i in range(max(1, n // 2)):
+        x, z = (i % 20) * 3.0 - 30.0, -(i // 20) * 3.0
+        world.add_frame(f"Slot{i}", None, translation=(x, 1.0, z))
+        world.add_frame(f"Ball{i}", None, translation=(x - 8.0, 1.0, z))
+        world.targets[f"Ball{i}"] = f"Ball{i}"
+        world.sensors[f"Gauge{i}"] = f"Slot{i}"
+        world.sensor_target[f"Gauge{i}"] = f"Ball{i}"
+    for i in range(max(1, n // 4)):
+        x, z = (i % 20) * 3.0 - 30.0, -(i // 20) * 3.0 - 12.0
+        world.add_frame(f"Spot{i}", None, translation=(x, 1.0, z))
+        world.sensors[f"Seen{i}"] = f"Spot{i}"
+        world.add_frame(f"Block{i}", None, translation=(x, 1.0, z + 8.0))
+        world.collisions[f"Wall{i}"] = {"enabled": True, "parent": None, "shapes": [
+            bw.Volume(f"Wall{i}.{k}", "box", f"Block{i}", (k * 1.5, 0.0, 0.0), (1.0, 2.0, 1.0)) for k in range(4)]}
+    for k in range(5 * n - len(world.frames) - 1):       # the rest of the 5 N volumes: scenery nothing senses
+        world.volumes[f"Scenery{k}"] = bw.Volume(f"Scenery{k}", "box", None, (k % 50, 0.0, -(k // 50)), (1.0, 1.0, 1.0))
+    return world
 
 
 def clicks(shape: str, n: int, steps: int = STEPS) -> dict[int, list[int]]:
@@ -194,7 +237,7 @@ def _rounded(value, places):
 def digest(shape: str, n: int, steps: int, places: int | None = None) -> str:
     """SHA-256 of everything the simulation sent (its whole log, then every change handed back), as exact text, or
     with floats rounded to ``places`` decimals (for graphs that call exp(): the C library's last bit differs)."""
-    sim = bs.Simulation(build(shape, n), log_size=10_000_000, resources=resources_for(shape))
+    sim = bs.Simulation(build(shape, n), log_size=10_000_000, resources=resources_for(shape), world=world_for(shape, n))
     changes = run_sim(sim, shape, n, steps)
     h = hashlib.sha256()
     for line in sim.log:
@@ -213,7 +256,7 @@ def p95(values):
 def measure_sim(shape: str, n: int, budget: float) -> dict:
     graph = build(shape, n)
     began = time.perf_counter()
-    sim = bs.Simulation(graph, resources=resources_for(shape))
+    sim = bs.Simulation(graph, resources=resources_for(shape), world=world_for(shape, n))
     construct = time.perf_counter() - began
     host(sim, shape)
     began = time.perf_counter()
@@ -240,7 +283,7 @@ def measure_sim(shape: str, n: int, budget: float) -> dict:
            "step_median_ms": statistics.median(steps) * 1e3, "step_p95_ms": p95(steps) * 1e3}
     # events and memory in a second pass (tracemalloc slows everything, so it never shares a pass with the clock)
     tracemalloc.start()
-    sim = bs.Simulation(build(shape, n), resources=resources_for(shape))
+    sim = bs.Simulation(build(shape, n), resources=resources_for(shape), world=world_for(shape, n))
     counted = [0]
 
     class CountingLog(deque):          # every event sent is one entry in the log
