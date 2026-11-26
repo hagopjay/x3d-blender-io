@@ -87,6 +87,17 @@ def _parse_value(text, x3d_type):
 
 def _finite(value):
     """False when a number anywhere in ``value`` is NaN or infinite."""
+    kind = type(value)
+    if kind is float:
+        return value - value == 0.0              # NaN and the infinities are the only floats this is false for
+    if kind is tuple or kind is list:
+        for item in value:
+            if type(item) is float:
+                if item - item != 0.0:
+                    return False
+            elif not _finite(item):
+                return False
+        return True
     if isinstance(value, float):
         return math.isfinite(value)
     if isinstance(value, (tuple, list)):
@@ -113,6 +124,39 @@ def _fits(value, x3d_type):
         return isinstance(value, tuple) and len(value) == _SIZES[base] and \
             all(isinstance(c, (int, float)) and not isinstance(c, bool) for c in value)
     return True
+
+
+def _number(value):
+    kind = type(value)
+    return kind is float or kind is int or (isinstance(value, (int, float)) and not isinstance(value, bool))
+
+
+_FITTERS = {}
+
+
+def _fitter(x3d_type):
+    """``_fits`` for one field type, worked out once: every event that crosses a ROUTE is checked with it."""
+    found = _FITTERS.get(x3d_type)
+    if found is None:
+        base = x3d_type[2:]
+        if x3d_type.startswith("SF") and base in ("Float", "Double", "Time"):
+            found = _number
+        elif x3d_type.startswith("SF") and base in _SIZES:
+            size = _SIZES[base]
+
+            def found(value, size=size):
+                if type(value) is not tuple or len(value) != size:
+                    return False
+                for component in value:
+                    kind = type(component)
+                    if kind is not float and kind is not int and not _number(component):
+                        return False
+                return True
+        else:
+            def found(value, x3d_type=x3d_type):
+                return _fits(value, x3d_type)
+        _FITTERS[x3d_type] = found
+    return found
 
 
 def _strings(text):
@@ -1627,7 +1671,7 @@ class Simulation:
             if source and destination:
                 # the ROUTE's identity is built once here, not for every event that crosses it
                 self._routes.setdefault(source, []).append(
-                    (*destination, self._field_type(*destination), (*source, *destination)))
+                    (*destination, self._fitter_of(*destination), (*source, *destination)))
         self.values = {}                 # (target id, field) -> the last value that reached it
         self.outputs = {}                # (node id, field) -> the last value any node sent
         self.log = deque(maxlen=log_size)   # (time, node id, field, value) of every event sent
@@ -1644,6 +1688,10 @@ class Simulation:
             return (node_id, bg.resolve_field(node.node_type, field_name, direction)[0])
         except bg.BehaviourError:
             return None
+
+    def _fitter_of(self, node_id, field_name):
+        x3d_type = self._field_type(node_id, field_name)
+        return _fitter(x3d_type) if x3d_type is not None else None
 
     def _field_type(self, node_id, field_name):
         node = self.graph.nodes[node_id]
@@ -1687,16 +1735,19 @@ class Simulation:
                 continue
             outputs[(node_id, field_name)] = value
             log.append((now, node_id, field_name, value))
-            for to_id, to_field, to_type, key in routes.get((node_id, field_name), ()):
+            for to_id, to_field, fits, key in routes.get((node_id, field_name), ()):
                 if key in fired:                     # 4.4.8.3: a ROUTE carries one event per timestamp, which
                     continue                         # is also what stops a loop of ROUTEs
-                if to_type is not None and not _fits(value, to_type):
+                if fits is not None and not fits(value):
                     dropped["mismatch"] = dropped.get("mismatch", 0) + 1
                     continue
                 fired.add(key)
                 machine = machines.get(to_id)
                 if machine is not None:
-                    self._try(to_id, "receive", machine.receive, to_field, value, now)
+                    try:
+                        machine.receive(to_field, value, now)
+                    except Exception as error:       # noqa: BLE001 - one bad node must not end the run
+                        self._fault(to_id, "receive", error)
                 elif self.graph.nodes[to_id].role == bg.TARGET:
                     self.values[(to_id, to_field)] = value
                     self._changes.append((to_id, to_field, value))
@@ -1726,7 +1777,10 @@ class Simulation:
         # every time-driven node first works out what it sends, from what it knew before this step; then the events
         # travel. So a follower chases where its destination was one step ago, as it does in X_ITE.
         for machine in self._ticking:
-            self._try(machine.id, "tick", machine.tick, now, dt)
+            try:
+                machine.tick(now, dt)
+            except Exception as error:               # noqa: BLE001 - one bad node must not end the run
+                self._fault(machine.id, "tick", error)
         self._drain()
         return self._collect()
 
