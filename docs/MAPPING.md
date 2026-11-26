@@ -65,19 +65,19 @@ Arc2D, ArcClose2D, AudioClip, BooleanFilter, BooleanSequencer, BooleanToggle, Bo
 
 ## Blender side
 
-262 rows and 3 pattern rows over the probe's datablocks (the probe's datablocks only (v3 plan stop rule): object, mesh, material and its Principled BSDF, camera, world and its Background, four light types); measured with tools/io_sync/perturb.py on Blender 5.3.0 in 3 starting states.
+268 rows and 3 pattern rows over the probe's datablocks (the probe's datablocks only (v3 plan stop rule): object, mesh, material and its Principled BSDF, camera, world and its Background, four light types); measured with tools/io_sync/perturb.py on Blender 5.3.0 in 3 starting states.
 
 | Class | Rows |
 |---|---:|
-| carried | 46 |
+| carried | 45 |
 | approximated | 13 |
-| clamped | 4 |
-| dropped | 172 |
+| clamped | 5 |
+| dropped | 178 |
 | editor_only | 27 |
 
 | Grade of the class claim | Rows |
 |---|---:|
-| Confirmed | 137 |
+| Confirmed | 143 |
 | Likely | 118 |
 | Suspected | 7 |
 
@@ -128,6 +128,7 @@ Arc2D, ArcClose2D, AudioClip, BooleanFilter, BooleanSequencer, BooleanToggle, Bo
 | `light.sun:transmission_factor` | dropped | `{"kind": "neq", "neutral": 1.0}` | per-light contribution factors of Blender's renderers |
 | `light.sun:volume_factor` | dropped | `{"kind": "neq", "neutral": 1.0}` | per-light contribution factors of Blender's renderers |
 | `material:displacement_method` | dropped | `{"kind": "neq", "neutral": "BUMP"}` | displacement is not written |
+| `object:custom_property` | dropped | `{"kind": "neq", "neutral": null}` | a plain custom property on an object is not written; only Metadata the import recorded is carried (#70); the receipt counts the ones lost |
 | `object:hide_render` | dropped | `{"kind": "neq", "neutral": false}` | an object hidden in renders is still written, visible: only what the import hid (a Switch choice, a node with visible=false) is written invisible (extract.py, by design) |
 | `object:is_holdout` | dropped | `{"kind": "neq", "neutral": false, "when": {"in": ["MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME"], "prop": "type"}}` | per-object ray visibility of Blender's renderers; X3D has no per-ray visibility |
 | `object:is_shadow_catcher` | dropped | `{"kind": "neq", "neutral": false, "when": {"in": ["MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME"], "prop": "type"}}` | per-object ray visibility of Blender's renderers; X3D has no per-ray visibility |
@@ -140,6 +141,7 @@ Arc2D, ArcClose2D, AudioClip, BooleanFilter, BooleanSequencer, BooleanToggle, Bo
 | `principled:Anisotropic` | dropped | `{"kind": "neq", "neutral": 0.0}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
 | `principled:Coat Weight` | dropped | `{"kind": "neq", "neutral": 0.0}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
 | `principled:Diffuse Roughness` | dropped | `{"kind": "neq", "neutral": 0.0}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
+| `principled:Emission Strength` | clamped | `{"kind": "gt", "value": 1.0}` | Blender multiplies Emission Color by Emission Strength; X3D 4.0 has no strength field, so channels above 1 are scaled down together (emit_x3d40._sfcolor): the hue is kept, the intensity above 1 is lost (crossing census) |
 | `principled:IOR` | dropped | `{"kind": "neq", "neutral": 1.5}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
 | `principled:Sheen Weight` | dropped | `{"kind": "neq", "neutral": 0.0}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
 | `principled:Specular IOR Level` | dropped | `{"kind": "neq", "neutral": 0.5}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
@@ -149,6 +151,12 @@ Arc2D, ArcClose2D, AudioClip, BooleanFilter, BooleanSequencer, BooleanToggle, Bo
 | `principled:Thin Wall` | dropped | `{"kind": "neq", "neutral": false}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
 | `principled:Transmission Dispersion Scale` | dropped | `{"kind": "neq", "neutral": 0.0}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
 | `principled:Transmission Weight` | dropped | `{"kind": "neq", "neutral": 0.0}` | X3D 4.0 PhysicalMaterial has only baseColor, metallic, roughness, emissive, occlusion, normal and transparency |
+| `principled:Base Color link` | dropped | `{"kind": "neq", "neutral": null}` | a node other than an image texture drives Base Color: the export writes the input's own value; procedural textures are not baked (crossing census) |
+| `principled:Roughness link` | dropped | `{"kind": "neq", "neutral": null}` | a node other than an image texture drives Roughness: the export writes the input's own value; procedural textures are not baked (crossing census) |
+| `principled:Metallic link` | dropped | `{"kind": "neq", "neutral": null}` | a node other than an image texture drives Metallic: the export writes the input's own value; procedural textures are not baked (crossing census) |
+| `principled:Emission Color link` | dropped | `{"kind": "neq", "neutral": null}` | a node other than an image texture drives Emission Color: the export writes the input's own value; procedural textures are not baked (crossing census) |
+| `object.skipped:type` | dropped | `{"kind": "always"}` | an object of a type the X3D 4.0 path does not write (Grease Pencil, volumes, point clouds and the like) is left out of the file (crossing census) |
+| `object.animation:animation_data` | dropped | `{"kind": "always"}` | the Animation option is off, so objects that move (an action, a driver, or shape keys) are written at the current frame; one entry per export, its value the number of moving objects; with the option on, the motion becomes interpolators (crossing census) |
 
 ### Dropped with no per-scene entry
 
@@ -239,7 +247,6 @@ Arc2D, ArcClose2D, AudioClip, BooleanFilter, BooleanSequencer, BooleanToggle, Bo
 | `material:volume_intersection_method` | renderer quality and sorting setting |
 | `mesh:auto_texspace` | no effect without a Generated-coordinate texture |
 | `mesh:use_auto_texspace` | no effect without a Generated-coordinate texture |
-| `object:custom_property` | v1 receipt rules read RNA values, not custom properties |
 | `object:hide_probe_plane` | EEVEE baking setting; no visible effect outside EEVEE |
 | `object:hide_probe_sphere` | EEVEE baking setting; no visible effect outside EEVEE |
 | `object:hide_probe_volume` | EEVEE baking setting; no visible effect outside EEVEE |

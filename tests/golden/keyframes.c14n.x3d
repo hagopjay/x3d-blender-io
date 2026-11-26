@@ -1,7 +1,8 @@
 <X3D profile='Immersive' version='4.0'>
  <head>
   <component level='2' name='Shape'/>
-  <meta content='sha256=4f53cda18c2baa0c0354bb5f9a3ecbe5 dropped=0 approximated=0 clamped=0 schema=x3d-blender-io.loss-receipt/1' name='x3d-blender-io.receipt'/>
+  <meta content='Animation not exported (the Animation option is off): objects that move: 1 by action.' name='info'/>
+  <meta content='sha256=e4083d599f7dd70d764217812e52166b dropped=1 approximated=0 clamped=0 schema=x3d-blender-io.loss-receipt/1' name='x3d-blender-io.receipt'/>
  </head>
  <Scene>
   <NavigationInfo headlight='false' type='"EXAMINE" "ANY"'/>
