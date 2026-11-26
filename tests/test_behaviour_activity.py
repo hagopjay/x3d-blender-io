@@ -165,10 +165,10 @@ class Packets(unittest.TestCase):
         activity.feed([(1.0, "A", "x", 0.5)], 1.0)
         key = ("A", "x", "B", "y")
         self.assertEqual(activity.packets(1.0), [(key, 0.0, 1)])
-        (_k, age, count), = activity.packets(1.0 + 0.35 / 2)
+        (_k, age, count), = activity.packets(1.0 + ba.TRAVEL / 2)
         self.assertAlmostEqual(age, 0.5)
         self.assertEqual(count, 1)
-        self.assertEqual(activity.packets(1.36), [])
+        self.assertEqual(activity.packets(1.0 + ba.TRAVEL + 0.01), [])
 
     def test_a_stream_is_a_steady_flow_capped_per_route(self):
         activity = ba.Activity({("A", "x"): [("B", "y", None)]})
@@ -176,7 +176,7 @@ class Packets(unittest.TestCase):
             activity.feed([(k / 60, "A", "x", k / 60)], k / 60)      # 60 a second
         packets = activity.packets(2.0)
         self.assertEqual(len(packets), ba.PER_ROUTE)
-        self.assertEqual(sum(c for _k, _a, c in packets), 21)        # the events in the last 0.35 s, none invented
+        self.assertEqual(sum(c for _k, _a, c in packets), 36)        # the events in the last 0.6 s, none invented
         self.assertTrue(all(0 <= a <= 1 for _k, a, _c in packets))
 
     def test_the_total_cap(self):
@@ -282,19 +282,57 @@ class Geometry(unittest.TestCase):
         a, b, c = (ba.point_along(points, lengths, f) for f in (0.2, 0.3, 0.4))
         self.assertAlmostEqual(math.dist(a, b), math.dist(b, c), delta=0.02 * math.dist(a, b))
 
-    def test_sockets(self):
-        out = ba.socket_position((100, 200), (240, 150), 1, 3, True)
-        inp = ba.socket_position((100, 200), (240, 150), 2, 3, False)
-        self.assertEqual(out[0], 340)
-        self.assertEqual(inp[0], 100)
-        self.assertLess(out[1], 200)
-        self.assertGreater(inp[1], 200 - 150)
+    def test_sockets_follow_the_measured_layout(self):
+        # a node with 14 outputs and 8 inputs, 577.6 units tall (measured on a screenshot of Blender 5.2.2)
+        left, top, width, height = 100.0, 500.0, 240.0, 577.6
+        first = ba.socket_position(left, top, width, height, 0, 14, True)
+        last = ba.socket_position(left, top, width, height, 13, 14, True)
+        self.assertAlmostEqual(first[0], 340.0)
+        self.assertAlmostEqual(top - first[1], 34.1, places=1)                  # header 23.3 and half a row
+        self.assertAlmostEqual((first[1] - last[1]) / 13, 21.6)                 # one row apart
+        inputs = [ba.socket_position(left, top, width, height, j, 8, False) for j in range(8)]
+        self.assertTrue(all(p[0] == left for p in inputs))
+        self.assertAlmostEqual(inputs[-1][1] - (top - height), 13.7, places=1)  # a row's half and the foot's margin
+        self.assertAlmostEqual((inputs[0][1] - inputs[-1][1]) / 7, 21.6)
+        self.assertGreater(inputs[0][1], inputs[-1][1])                         # the first input is the upper one
+        scaled = ba.socket_position(left, top, width, height, 0, 14, True, unit=2.0)   # the UI scale multiplies the constants
+        self.assertAlmostEqual(top - scaled[1], 68.2, places=1)
+        collapsed = ba.socket_position(left, top, width, 40.0, 3, 8, False, collapsed=True)
+        self.assertEqual(collapsed[0], left)
+        self.assertAlmostEqual(top - collapsed[1], 11.65)
 
-    def test_panel_rectangles_stay_inside_the_region(self):
-        x, y, w, h = ba.hud_rect(800, 600, 390, 250, 12)
-        self.assertTrue(x >= 0 and y >= 0 and x + w <= 800 and y + h <= 600)
-        x, y, w, h = ba.hud_rect(200, 100, 390, 250, 12)                  # a region smaller than the panel
+    def test_the_hud_sits_bottom_left_inside_what_the_sidebar_leaves(self):
+        visible = ba.visible_rect(653, 878, left=0, right=250, top=40, bottom=0)
+        self.assertEqual(visible, (0, 0, 403, 838))
+        x, y, w, h = ba.hud_rect(visible, 400, 300, margin=12, max_fraction=0.6)
+        self.assertEqual((x, y), (12, 12))
+        self.assertLessEqual(w, 0.6 * 403 + 1e-9)
+        self.assertTrue(x + w <= visible[0] + visible[2] and y + h <= visible[1] + visible[3])
+        x, y, w, h = ba.hud_rect(ba.visible_rect(200, 100), 400, 300)        # smaller than the block: still inside
         self.assertTrue(x >= 0 and y >= 0 and x + w <= 200 and y + h <= 100)
+
+    def test_counter_labels_skip_what_would_touch(self):
+        width = lambda t: 10.0 * len(t)                                      # noqa: E731
+        far = [("a", (0, 0, 100, 80), "in 1  out 2"), ("b", (400, 0, 100, 80), "in 3  out 4")]
+        placed = ba.counter_labels(far, width, 10)
+        self.assertEqual(len(placed), 2)
+        text, (x, y, w, h) = placed[0]
+        self.assertEqual((x + w, y), (100, 83))                              # right-aligned to the node, just above it
+        near = [("a", (0, 0, 100, 80), "in 1  out 2"), ("b", (60, 0, 100, 80), "in 3  out 4")]
+        self.assertLess(len(ba.counter_labels(near, width, 10)), 2)          # closer than the label is wide
+        over = [("a", (0, 0, 100, 80), "in 1"), ("b", (0, 85, 100, 80), "in 2")]   # b sits where a's label would go
+        self.assertEqual([t for t, _r in ba.counter_labels(over, width, 10)], ["in 2"])
+
+    def test_a_badge_finds_a_spot_off_the_nodes(self):
+        points = [(float(x), 0.0) for x in range(0, 101, 10)]
+        lengths = ba.arc_lengths(points)
+        self.assertEqual(ba.badge_spot(points, lengths, 20, 10, []), (50.0, 0.0))
+        moved = ba.badge_spot(points, lengths, 20, 10, [(40, -20, 20, 40)])    # a node on the middle
+        self.assertNotEqual(moved, (50.0, 0.0))
+        self.assertIsNotNone(moved)
+        self.assertIsNone(ba.badge_spot(points, lengths, 20, 10, [(-50, -50, 300, 100)]))
+
+    def test_panel_rectangles(self):
         bx, by, bw, bh = ba.badge_rect(50, 50, 20, 10, 4)
         self.assertEqual((bx + bw / 2, by + bh / 2), (50, 50))
         points = ba.rounded_rect(0, 0, 100, 40, 8)
@@ -313,6 +351,7 @@ class Geometry(unittest.TestCase):
         self.assertEqual(strengths[0], 1.0)
         self.assertEqual(strengths, sorted(strengths, reverse=True))
         self.assertEqual(len(ba.packet_trail(points, ba.arc_lengths(points), 0.0)), 1)
+        self.assertEqual(ba.TRAVEL, 0.6)
 
 
 def world_graph(name):

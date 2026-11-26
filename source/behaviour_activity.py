@@ -31,7 +31,7 @@ from collections import deque
 from itertools import islice
 
 SCHEMA = "x3d.activity/1"
-TRAVEL = 0.35            # seconds a packet takes along a link
+TRAVEL = 0.6             # seconds a packet takes along a link
 WINDOW = 1.0             # seconds in "per second"
 COALESCE = 0.25          # a stream: the same ROUTE within this many seconds updates one stream line
 RING = 200               # event lines kept
@@ -560,26 +560,73 @@ def to_region(view2d, points):
     return [tuple(view2d.view_to_region(x, y, clip=False)) for x, y in points]
 
 
-NODE_HEADER = 26.0       # view units from a node's top to its first output row: an estimate of Blender's layout
-NODE_ROW = 21.0
-NODE_FOOT = 8.0
+# The layout of a node in the editor, measured on a screenshot of Blender 5.2.2 (a TimeSensor node: 14 outputs, 8 inputs):
+# the header is 23.3 view units, every socket row 21.6 (a row of 20 and 1.6 between), outputs hang from the header, the
+# node's own properties block comes next (its height is whatever ``draw_buttons`` drew, so it is never computed here),
+# and the inputs sit at the foot, the last one a row above a 2.9 margin. So outputs are measured from the top and inputs
+# from the bottom, and the properties block does not matter: only the node's own height does (``node.dimensions``).
+NODE_HEADER = 23.3
+NODE_ROW = 21.6
+NODE_FOOT = 2.9
 
 
-def socket_position(location, size, index, count, is_output):
-    """Where a node's socket is, in view units. ``location`` is the node's top-left, ``size`` (width, height) in view
-    units. Blender lists outputs under the header and inputs at the foot; this is the layout's arithmetic, not a read
-    of Blender's own socket positions (which Python cannot reach), so it is an estimate for nodes with unusual rows."""
-    x, top = location
-    width, height = size
+def socket_position(left, top, width, height, index, count, is_output, unit=1.0, collapsed=False):
+    """Where a node's socket centre is, in view space. ``left``, ``top``, ``width``, ``height``: the node's box (``top``
+    is its upper edge, y up). ``index`` counts only the sockets that are drawn (not hidden, not unavailable) of that
+    side, ``count`` is how many there are. ``unit`` is the UI scale the layout constants are multiplied by. A collapsed
+    node draws every socket on its header's middle."""
+    x = left + width if is_output else left
+    if collapsed:
+        return (x, top - NODE_HEADER * unit / 2)
     if is_output:
-        return (x + width, top - NODE_HEADER - NODE_ROW * (index + 0.5))
-    return (x, top - height + NODE_FOOT + NODE_ROW * (count - index - 0.5))
+        return (x, top - (NODE_HEADER + NODE_ROW * (index + 0.5)) * unit)
+    return (x, top - height + (NODE_FOOT + NODE_ROW * (count - index - 0.5)) * unit)
 
 
-def hud_rect(region_width, region_height, width, height, margin=12.0):
-    """(x, y, w, h) of a panel in the top-left of the region (y up from the bottom), kept inside it."""
-    w, h = min(width, max(0.0, region_width - 2 * margin)), min(height, max(0.0, region_height - 2 * margin))
-    return (margin, region_height - margin - h, w, h)
+def visible_rect(region_width, region_height, left=0.0, right=0.0, top=0.0, bottom=0.0):
+    """(x, y, w, h) of what of a region is not under its own sidebar, tool shelf, header or footer (sizes in pixels,
+    y up from the region's bottom)."""
+    return (left, bottom, max(0.0, region_width - left - right), max(0.0, region_height - top - bottom))
+
+
+def hud_rect(visible, width, height, margin=12.0, max_fraction=0.6):
+    """(x, y, w, h) of the activity block in the bottom-left of ``visible`` (see ``visible_rect``), inset by ``margin``,
+    at most ``max_fraction`` of its width and kept inside it."""
+    x, y, vw, vh = visible
+    w = min(width, vw * max_fraction, max(0.0, vw - 2 * margin))
+    h = min(height, max(0.0, vh - 2 * margin))
+    return (x + margin, y + margin, w, h)
+
+
+def rects_overlap(a, b, gap=0.0):
+    return a[0] < b[0] + b[2] + gap and b[0] < a[0] + a[2] + gap and a[1] < b[1] + b[3] + gap and b[1] < a[1] + a[3] + gap
+
+
+def counter_labels(nodes, text_width, text_height, gap=3.0):
+    """Which per-node labels to draw. ``nodes``: [(key, (x, y, w, h) of the node in pixels, text)]. Each label sits above
+    its node's own top-right corner, right-aligned to the node; one that would touch another node or an already placed
+    label is left out. Returns [(text, (x, y, w, h))] with the label's rectangle."""
+    placed, out = [], []
+    for key, box, text in nodes:
+        width = text_width(text)
+        label = (box[0] + box[2] - width, box[1] + box[3] + gap, width, text_height)
+        if any(rects_overlap(label, other[1]) for other in nodes if other[0] != key) or \
+                any(rects_overlap(label, r) for r in placed):
+            continue
+        placed.append(label)
+        out.append((text, label))
+    return out
+
+
+def badge_spot(points, lengths, width, height, blockers, fractions=(0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74)):
+    """Where along a link (polyline in pixels) a badge of ``width`` x ``height`` goes: the first of ``fractions`` whose
+    rectangle touches none of ``blockers`` (node rectangles); the middle when none is free (None: every spot is blocked)."""
+    for fraction in fractions:
+        x, y = point_along(points, lengths, fraction)
+        rect = (x - width / 2, y - height / 2, width, height)
+        if not any(rects_overlap(rect, blocker) for blocker in blockers):
+            return (x, y)
+    return None
 
 
 def badge_rect(cx, cy, text_width, text_height, pad=4.0):
@@ -610,8 +657,9 @@ def rounded_rect(x, y, w, h, radius, segments=6):
     return points
 
 
-def packet_trail(points, lengths, age, tail=0.12, samples=4):
-    """[(point, strength)] for one packet at ``age``: the head (strength 1) and a tail behind it that fades."""
+def packet_trail(points, lengths, age, tail=0.12, samples=8):
+    """[(point, strength)] for one packet at ``age`` (0..1 along the link): the head (strength 1) and a tail of ``tail``
+    (a fraction of the link) behind it that fades."""
     out = []
     for i in range(samples + 1):
         behind = age - tail * i / samples
@@ -623,10 +671,15 @@ def packet_trail(points, lengths, age, tail=0.12, samples=4):
 
 # ---------------------------------------------------------------------------------------------------------------
 # Half 2: drawing in the node editor (bpy, gpu, blf; needs a window)
+#
+# Two handlers. The first draws in the editor's own view space (POST_VIEW: the very matrices the nodes and links are
+# drawn with, so a link's glow and a packet cannot drift from the link whatever the zoom, and the region's scroll
+# margins and overlaps do not matter). It also works out where, in pixels, the text goes. The second (POST_PIXEL)
+# draws that text, the badges and the HUD.
 # ---------------------------------------------------------------------------------------------------------------
 
-_state = {"handle": None, "player": None, "failed": None, "gpu": None, "index": None, "font": None,
-          "last": None, "classes": None, "draws": 0, "debug": False}
+_state = {"handles": [], "player": None, "failed": None, "gpu": None, "index": None, "font": None,
+          "last": None, "classes": None, "draws": 0, "debug": False, "frame": None, "diag": {}}
 
 
 def last_activity():
@@ -635,7 +688,7 @@ def last_activity():
 
 
 def handler_active():
-    return _state["handle"] is not None
+    return bool(_state["handles"])
 
 
 def draw_count():
@@ -644,8 +697,20 @@ def draw_count():
     return _state["draws"]
 
 
+def failure():
+    """Why the overlay disabled itself or could not start, else None."""
+    return _state["failed"]
+
+
+def diagnostics():
+    """What the last frame measured (viewport, scale, a node's box), for a person reading a log from a machine with a
+    window and no one to look at it."""
+    return dict(_state["diag"])
+
+
 def set_debug(on):
-    """Draw a cross at every socket position the overlay estimates, to calibrate the estimate against the editor's own."""
+    """Draw each node's box and a cross at every socket position the overlay computes, to check them against the editor's
+    own drawing."""
     _state["debug"] = bool(on)
     _redraw()
 
@@ -659,24 +724,34 @@ def start_overlay(player):
         return False
     _state["last"] = activity
     import bpy
+    handles = []
     try:
-        _state["handle"] = bpy.types.SpaceNodeEditor.draw_handler_add(_draw, (), "WINDOW", "POST_PIXEL")
+        add = bpy.types.SpaceNodeEditor.draw_handler_add
+        handles.append(add(_draw_view, (), "WINDOW", "POST_VIEW"))
+        handles.append(add(_draw_pixel, (), "WINDOW", "POST_PIXEL"))
     except Exception as error:      # noqa: BLE001 - an API that differs: no overlay, Play still works
         _state["failed"] = f"{type(error).__name__}: {error}"
+        _state["handles"] = handles
+        stop_overlay()
         return False
-    _state["player"], _state["failed"], _state["index"] = player, None, None
+    _state["handles"], _state["player"], _state["failed"], _state["index"] = handles, player, None, None
+    _state["frame"] = None
     _redraw()
     return True
 
 
 def stop_overlay():
-    handle, _state["handle"], _state["player"] = _state["handle"], None, None
-    if handle is None:
+    handles, _state["handles"], _state["player"], _state["frame"] = _state["handles"], [], None, None
+    if not handles:
         return
     try:
         import bpy
-        bpy.types.SpaceNodeEditor.draw_handler_remove(handle, "WINDOW")
-    except Exception:       # noqa: BLE001 - already gone (file load, unregister)
+        for handle in handles:
+            try:
+                bpy.types.SpaceNodeEditor.draw_handler_remove(handle, "WINDOW")
+            except Exception:       # noqa: BLE001 - already gone (file load, unregister)
+                pass
+    except Exception:       # noqa: BLE001
         pass
     _redraw()
 
@@ -698,13 +773,6 @@ def _fail(error):
     _state["failed"] = f"{type(error).__name__}: {error}"
     print("[x3d activity] overlay disabled:", traceback.format_exc())
     stop_overlay()
-
-
-def _draw():
-    try:
-        _draw_overlay()
-    except Exception as error:      # noqa: BLE001
-        _fail(error)
 
 
 def _shaders():
@@ -737,6 +805,10 @@ def _colour(x3d_type):
     return behaviour_nodes._COLOURS.get(x3d_type, (0.62, 0.62, 0.62, 1.0))[:3]
 
 
+def _bright(colour, amount=0.4):
+    return tuple(c + (1.0 - c) * amount for c in colour)
+
+
 def _font():
     """A monospaced font id (digits that line up), else the default."""
     if _state["font"] is None:
@@ -763,112 +835,205 @@ def _text_size(fid, px):
         blf.size(fid, px, 72)
 
 
-def _node_box(node, ui):
-    scale = ui or 1.0
-    return (node.location.x, node.location.y), (node.dimensions.x / scale, node.dimensions.y / scale)
-
-
-def _socket_index(node, socket):
-    return list(node.outputs if socket.is_output else node.inputs).index(socket)
-
-
-def _link_points(link, view, ui, curving):
-    a, b = link.from_node, link.to_node
-    start = socket_position(*_node_box(a, ui), _socket_index(a, link.from_socket), len(a.outputs), True)
-    end = socket_position(*_node_box(b, ui), _socket_index(b, link.to_socket), len(b.inputs), False)
-    return to_region(view, link_curve(start, end, curving))
-
-
-def _draw_overlay():
-    import blf
+def _editor(player):
+    """(space, region, tree, scene) when this is the X3D behaviour editor of the playing scene and the overlay is on."""
     import bpy
-    import gpu
-    from gpu_extras.batch import batch_for_shader
-    player = _state["player"]
-    if player is None or _running_player() is not player:
-        return
+    from . import behaviour_nodes, behaviour_play
+    if player is None or behaviour_play._running["player"] is not player:
+        return None
     context = bpy.context
     space, region = context.space_data, context.region
-    from . import behaviour_nodes
     if space is None or getattr(space, "tree_type", "") != behaviour_nodes.TREE_IDNAME or region is None:
-        return
+        return None
     scene = player.scene
     tree = scene.x3d_behaviour_tree
     if tree is None or space.edit_tree != tree or not getattr(scene, "x3d_activity_show", True):
+        return None
+    return space, region, tree, scene
+
+
+def _sides(sockets):
+    """The sockets a node draws (not hidden, not unavailable), in order."""
+    return [s for s in sockets if getattr(s, "enabled", True) and not s.hide and not getattr(s, "is_unavailable", False)]
+
+
+class _Layout:
+    """Where nodes and sockets are, in view space, for one frame."""
+
+    def __init__(self, tree, unit):
+        self.unit, self.nodes = unit, {}
+        for node in tree.nodes:
+            left, top = node.location.x * unit, node.location.y * unit
+            self.nodes[node.name] = (node, left, top, node.dimensions.x, node.dimensions.y,
+                                     _sides(node.outputs), _sides(node.inputs))
+
+    def box(self, node):
+        _n, left, top, width, height, _o, _i = self.nodes[node.name]
+        return left, top, width, height
+
+    def socket(self, node, socket):
+        """(x, y) of ``socket`` of ``node`` in view space, or None when it is not drawn."""
+        _n, left, top, width, height, outs, ins = self.nodes[node.name]
+        sockets = outs if socket.is_output else ins
+        if socket not in sockets:
+            return None
+        return socket_position(left, top, width, height, sockets.index(socket), len(sockets), socket.is_output,
+                               self.unit, bool(node.hide))
+
+
+def _link_points(layout, link, curving):
+    start, end = layout.socket(link.from_node, link.from_socket), layout.socket(link.to_node, link.to_socket)
+    if start is None or end is None:
+        return None
+    return link_curve(start, end, curving)
+
+
+def _draw_view(*_args):
+    try:
+        _draw_in_view()
+    except Exception as error:      # noqa: BLE001
+        _fail(error)
+
+
+def _draw_in_view():
+    import bpy
+    import gpu
+    from gpu_extras.batch import batch_for_shader
+    from mathutils import Vector
+    player = _state["player"]
+    found = _editor(player)
+    if found is None:
         return
+    space, region, tree, scene = found
+    context = bpy.context
     activity = player.activity
     now = player.sim.now if player.sim.now is not None else activity.now
-    view, ui = region.view2d, context.preferences.system.ui_scale or 1.0
+    unit = context.preferences.system.ui_scale or 1.0
     try:
         curving = context.preferences.themes[0].node_editor.noodle_curving
     except Exception:       # noqa: BLE001
         curving = 5.0
-    index, shaders = _link_index(tree), _shaders()
-    size = (region.width, region.height)
-    _state["draws"] += 1
-    gpu.state.blend_set("ADDITIVE")
+    matrix = gpu.matrix.get_projection_matrix() @ gpu.matrix.get_model_view_matrix()
+    _vx, _vy, vw, vh = gpu.state.viewport_get()
 
-    # glow on the links that carried an event within the last second, and the packets riding them
-    lines_pos, lines_col, shape = [], [], {}
+    def pixels(x, y):
+        v = matrix @ Vector((x, y, 0.0, 1.0))
+        return ((v.x / v.w * 0.5 + 0.5) * vw, (v.y / v.w * 0.5 + 0.5) * vh)
+
+    origin = pixels(0.0, 0.0)
+    per_unit = abs(pixels(1.0, 0.0)[0] - origin[0]) or 1.0          # pixels in one view unit
+    shaders, index = _shaders(), _link_index(tree)
+    layout = _Layout(tree, unit)
+    _state["draws"] += 1
+    size = (vw, vh)
+    node_rects = {}
+    for name, (node, left, top, width, height, _o, _i) in layout.nodes.items():
+        x0, y0 = pixels(left, top - height)
+        x1, y1 = pixels(left + width, top)
+        node_rects[name] = (min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))
+    first = next(iter(layout.nodes.values()), None)
+    _state["diag"] = {"viewport": [vw, vh], "region": [region.width, region.height], "px_per_unit": per_unit, "ui": unit,
+                      "origin_px": list(origin), "curving": curving, "nodes": len(layout.nodes),
+                      "first_node": None if first is None else {"name": first[0].name, "left": first[1], "top": first[2],
+                                                                "width": first[3], "height": first[4],
+                                                                "px_rect": list(node_rects[first[0].name])}}
+
+    gpu.state.blend_set("ADDITIVE")
+    halo_pos, halo_col, core_pos, core_col, paths = [], [], [], [], {}
     for key in activity.active_keys(now):
         link = index.get(key)
         if link is None:
             continue
-        points = _link_points(link, view, ui, curving)
-        shape[key] = (points, arc_lengths(points))
-        colour = _colour(activity.route_type(key))
-        strength = activity.glow(key, now)
-        for a, b in zip(points, points[1:]):
-            lines_pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
-            lines_col += [(*colour, 0.55 * strength)] * 2
-    if lines_pos:
-        shader = shaders["line"]
-        shader.uniform_float("viewportSize", size)
-        shader.uniform_float("lineWidth", 5.0 * ui)
-        batch_for_shader(shader, "LINES", {"pos": lines_pos, "color": lines_col}).draw(shader)
-
-    halo, body, core = ([], []), ([], []), ([], [])
-    for key, age, count in activity.packets(now):
-        found = shape.get(key)
-        if found is None:
+        points = _link_points(layout, link, curving)
+        if points is None:
             continue
-        colour, weight = _colour(activity.route_type(key)), min(1.0, 0.7 + 0.1 * count)
-        for position, strength in packet_trail(found[0], found[1], age):
-            body[0].append((*position, 0.0))
-            body[1].append((*colour, 0.85 * strength * weight))
-            if strength == 1.0:
-                halo[0].append((*position, 0.0))
-                halo[1].append((*colour, 0.22))
-                core[0].append((*position, 0.0))
-                core[1].append((1.0, 1.0, 1.0, 0.9))
-    shader = shaders["point"]
-    for layer, px in ((halo, 20.0), (body, 8.0), (core, 4.0)):
-        if layer[0]:
-            shader.uniform_float("size", px * ui)
-            batch_for_shader(shader, "POINTS", {"pos": layer[0], "color": layer[1]}).draw(shader)
+        lengths = arc_lengths(points)
+        paths[key] = (points, lengths)
+        colour, strength = _colour(activity.route_type(key)), activity.glow(key, now)
+        for a, b in zip(points, points[1:]):
+            halo_pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
+            halo_col += [(*colour, 0.20 * strength)] * 2
+            core_pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
+            core_col += [(*_bright(colour, 0.5), 0.95 * strength)] * 2
+    line = shaders["line"]
+    line.uniform_float("viewportSize", size)
+    for pos, col, width in ((halo_pos, halo_col, 9.0 * unit), (core_pos, core_col, 2.0 * unit)):
+        if pos:
+            line.uniform_float("lineWidth", width)
+            batch_for_shader(line, "LINES", {"pos": pos, "color": col}).draw(line)
+
+    layers = {"halo": ([], []), "tail": ([], []), "head": ([], []), "core": ([], [])}
+    for key, age, count in activity.packets(now):
+        found_path = paths.get(key)
+        if found_path is None:
+            continue
+        points, lengths = found_path
+        if lengths[-1] <= 0:
+            continue
+        colour = _colour(activity.route_type(key))
+        tail = min(0.5, 40.0 * unit / (per_unit * lengths[-1]))             # about 40 pixels
+        for number, (position, strength) in enumerate(packet_trail(points, lengths, age, tail)):
+            spot = (position[0], position[1], 0.0)
+            if number == 0:
+                layers["halo"][0].append(spot)
+                layers["halo"][1].append((*colour, 0.35))
+                layers["head"][0].append(spot)
+                layers["head"][1].append((*_bright(colour, 0.55), 1.0))
+                layers["core"][0].append(spot)
+                layers["core"][1].append((1.0, 1.0, 1.0, 1.0))
+            else:
+                layers["tail"][0].append(spot)
+                layers["tail"][1].append((*_bright(colour, 0.3), 0.8 * strength))
+    point = shaders["point"]
+    for name, px in (("halo", 20.0), ("tail", 4.0), ("head", 8.0), ("core", 4.0)):
+        pos, col = layers[name]
+        if pos:
+            point.uniform_float("size", px * unit)
+            batch_for_shader(point, "POINTS", {"pos": pos, "color": col}).draw(point)
     gpu.state.blend_set("ALPHA")
     if _state["debug"]:
-        _draw_debug_sockets(tree, view, ui, size, batch_for_shader, shaders)
+        _draw_debug(layout, node_rects, per_unit, unit, size, batch_for_shader, shaders)
 
-    fid = _font()
+    # where the text goes, in pixels, for the second handler
+    badges, spots = [], []
     if getattr(scene, "x3d_activity_badges", True):
-        _draw_badges(activity, index, view, ui, curving, size, fid, batch_for_shader, shaders)
-    _draw_node_counters(activity, tree, view, ui, size, fid)
-    _draw_hud(activity, now, size, ui, fid, bool(getattr(scene, "x3d_activity_stream", True)),
-              batch_for_shader, shaders)
+        for key in activity.route_keys():
+            total = activity.route_total(key)
+            link = index.get(key)
+            if not total or link is None or len(badges) >= 250:
+                continue
+            points = _link_points(layout, link, curving)
+            if points is None:
+                continue
+            on_screen = [pixels(x, y) for x, y in points]
+            lengths = arc_lengths(on_screen)
+            spots.append((key, total, on_screen, lengths))
+        badges = spots
+    counters = []
+    if len(layout.nodes) <= 600:
+        for name, (node, _l, _t, _w, _h, _o, _i) in layout.nodes.items():
+            record = activity.nodes.get(getattr(node, "x3d_def", "") or node.name)
+            if record is not None:
+                counters.append((name, node_rects[name], f"in {record[0]}  out {record[1]}"))
+    _state["frame"] = {"size": size, "badges": badges, "counters": counters, "rects": list(node_rects.values()),
+                       "colours": {key: _colour(activity.route_type(key)) for key, *_rest in badges}}
     gpu.state.blend_set("NONE")
 
 
-def _draw_debug_sockets(tree, view, ui, size, batch_for_shader, shaders):
-    """A cross (magenta: outputs, cyan: inputs) where the overlay thinks each socket is."""
+def _draw_debug(layout, node_rects, per_unit, unit, size, batch_for_shader, shaders):
+    """The box of every node (green) and a cross at every socket position (magenta: outputs, cyan: inputs)."""
     pos, col = [], []
-    for node in tree.nodes:
-        box = _node_box(node, ui)
-        for sockets, is_output, colour in ((node.outputs, True, (1.0, 0.0, 1.0, 1.0)), (node.inputs, False, (0.0, 1.0, 1.0, 1.0))):
-            for i in range(len(sockets)):
-                x, y = view.view_to_region(*socket_position(*box, i, len(sockets), is_output), clip=False)
-                for dx, dy in ((-6, 0), (6, 0), (0, -6), (0, 6)):
-                    pos.append((x + dx * ui, y + dy * ui, 0.0))
+    arm = 6.0 * unit / per_unit
+    for node, left, top, width, height, outs, ins in layout.nodes.values():
+        corners = [(left, top), (left + width, top), (left + width, top - height), (left, top - height)]
+        for a, b in zip(corners, corners[1:] + corners[:1]):
+            pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
+            col += [(0.2, 1.0, 0.3, 1.0)] * 2
+        for sockets, colour in ((outs, (1.0, 0.0, 1.0, 1.0)), (ins, (0.0, 1.0, 1.0, 1.0))):
+            for socket in sockets:
+                x, y = layout.socket(node, socket)
+                for dx, dy in ((-arm, 0), (arm, 0), (0, -arm), (0, arm)):
+                    pos.append((x + dx, y + dy, 0.0))
                     col.append(colour)
     if pos:
         shader = shaders["line"]
@@ -877,9 +1042,29 @@ def _draw_debug_sockets(tree, view, ui, size, batch_for_shader, shaders):
         batch_for_shader(shader, "LINES", {"pos": pos, "color": col}).draw(shader)
 
 
-def _running_player():
-    from . import behaviour_play
-    return behaviour_play._running["player"]
+def _draw_pixel(*_args):
+    try:
+        _draw_in_pixels()
+    except Exception as error:      # noqa: BLE001
+        _fail(error)
+
+
+def _insets(area):
+    """Pixels of the editor's main region covered by its own sidebar, tool shelf, header and footer."""
+    left = right = top = bottom = 0.0
+    for region in area.regions:
+        if region.type == "WINDOW" or region.width <= 1 or region.height <= 1:
+            continue
+        side = region.alignment
+        if side == "RIGHT":
+            right = max(right, region.width)
+        elif side == "LEFT":
+            left = max(left, region.width)
+        elif side == "TOP":
+            top += region.height
+        elif side == "BOTTOM":
+            bottom += region.height
+    return left, right, top, bottom
 
 
 def _panel(shaders, batch_for_shader, rect, radius, fill, border, size):
@@ -898,81 +1083,82 @@ def _panel(shaders, batch_for_shader, rect, radius, fill, border, size):
     gpu.state.blend_set("ALPHA")
 
 
-def _draw_badges(activity, index, view, ui, curving, size, fid, batch_for_shader, shaders):
+def _draw_in_pixels():
     import blf
-    px = 11.0 * ui
-    _text_size(fid, px)
-    drawn = 0
-    for key in activity.route_keys():
-        total = activity.route_total(key)
-        link = index.get(key)
-        if not total or link is None:
-            continue
-        points = _link_points(link, view, ui, curving)
-        cx, cy = point_along(points, arc_lengths(points), 0.5)
-        if not (-40 < cx < size[0] + 40 and -20 < cy < size[1] + 20):
-            continue
-        text = str(total)
-        width, height = blf.dimensions(fid, text)
-        x, y, w, h = badge_rect(cx, cy, width, height, 3.0 * ui)
-        _panel(shaders, batch_for_shader, (x, y, w, h), h / 2, (0.05, 0.06, 0.08, 0.72),
-               (*_colour(activity.route_type(key)), 0.9), size)
-        blf.color(fid, 0.95, 0.97, 1.0, 1.0)
-        blf.position(fid, x + 3.0 * ui, y + 3.0 * ui + 1.0, 0)
-        blf.draw(fid, text)
-        drawn += 1
-        if drawn >= 250:
-            break
+    import bpy
+    import gpu
+    from gpu_extras.batch import batch_for_shader
+    player = _state["player"]
+    frame = _state["frame"]
+    found = _editor(player)
+    if found is None or frame is None:
+        return
+    space, region, tree, scene = found
+    context = bpy.context
+    activity = player.activity
+    now = player.sim.now if player.sim.now is not None else activity.now
+    unit = context.preferences.system.ui_scale or 1.0
+    shaders, fid = _shaders(), _font()
+    size = (region.width, region.height)
+    gpu.state.blend_set("ALPHA")
 
+    # count badges on the links, where they touch no node
+    if frame["badges"]:
+        _text_size(fid, 11.0 * unit)
+        for key, total, points, lengths in frame["badges"]:
+            text = str(total)
+            width, height = blf.dimensions(fid, text)
+            w, h = width + 6.0 * unit, height + 6.0 * unit
+            spot = badge_spot(points, lengths, w, h, frame["rects"])
+            if spot is None or not (-20 < spot[0] < size[0] + 20 and -20 < spot[1] < size[1] + 20):
+                continue
+            x, y, w, h = badge_rect(spot[0], spot[1], width, height, 3.0 * unit)
+            _panel(shaders, batch_for_shader, (x, y, w, h), h / 2, (0.05, 0.06, 0.08, 0.78),
+                   (*frame["colours"][key], 0.95), size)
+            blf.color(fid, 0.95, 0.97, 1.0, 1.0)
+            blf.position(fid, x + 3.0 * unit, y + 3.0 * unit + 1.0, 0)
+            blf.draw(fid, text)
 
-def _draw_node_counters(activity, tree, view, ui, size, fid):
-    import blf
-    _text_size(fid, 10.0 * ui)
-    drawn = 0
-    for node in tree.nodes:
-        record = activity.nodes.get(node.x3d_def or node.name) if hasattr(node, "x3d_def") else None
-        if record is None:
-            continue
-        (x, top), (w, _h) = _node_box(node, ui)
-        sx, sy = view.view_to_region(x + w, top, clip=False)
-        if not (-200 < sx < size[0] + 200 and -50 < sy < size[1] + 50):
-            continue
-        text = f"in {record[0]}  out {record[1]}"
-        width, _height = blf.dimensions(fid, text)
-        blf.color(fid, 0.98, 0.78, 0.35, 0.95)
-        blf.position(fid, sx - width - 4.0 * ui, sy + 4.0 * ui, 0)
-        blf.draw(fid, text)
-        drawn += 1
-        if drawn >= 300:
-            break
+    # in / out above each node's own top-right corner, small, only where it touches nothing
+    if frame["counters"]:
+        _text_size(fid, 9.0 * unit)
+        height = blf.dimensions(fid, "0")[1]
+        for text, (x, y, w, h) in counter_labels(frame["counters"], lambda t: blf.dimensions(fid, t)[0], height):
+            if x < -50 or y < -20 or x > size[0] or y > size[1]:
+                continue
+            blf.color(fid, 0.98, 0.78, 0.35, 0.95)
+            blf.position(fid, x, y, 0)
+            blf.draw(fid, text)
 
-
-def _draw_hud(activity, now, size, ui, fid, stream, batch_for_shader, shaders):
-    import blf
-    head_px, line_px = 13.0 * ui, 11.0 * ui
-    pad, line_h = 10.0 * ui, 16.0 * ui
+    # the HUD: bottom-left of what the sidebar and header leave, see-through
+    left, right, top, bottom = _insets(context.area)
+    visible = visible_rect(region.width, region.height, left, right, top, bottom)
+    head_px, line_px = 13.0 * unit, 11.0 * unit
+    pad, line_h = 10.0 * unit, 16.0 * unit
     stats = [f"ACTIVITY   t {now:8.2f}s",
              f"events {activity.events:>8}   {activity.events_per_second(now):>6.0f}/s",
              f"ROUTEs {activity.routes_active(now)}/{activity.route_count()} active   cascade {activity.widest}"]
-    lines = activity.ring if stream else ()
-    shown = list(lines)[-10:]
-    height = 2 * pad + line_h * (len(stats) + (len(shown) + 0.5 if shown else 0))
-    rect = hud_rect(size[0], size[1], 390.0 * ui, height, 12.0 * ui)
-    _panel(shaders, batch_for_shader, rect, 8.0 * ui, (0.04, 0.05, 0.07, 0.78), (0.35, 0.8, 1.0, 0.9), size)
-    x, top = rect[0] + pad, rect[1] + rect[3] - pad
+    lines = list(activity.ring)[-10:] if getattr(scene, "x3d_activity_stream", True) else []
+    room = int((visible[3] - 24.0 * unit - 2 * pad) / line_h) - len(stats) - 1
+    lines = lines[-max(0, min(len(lines), room)):] if lines and room > 0 else []
+    height = 2 * pad + line_h * (len(stats) + (len(lines) + 0.5 if lines else 0))
+    rect = hud_rect(visible, 400.0 * unit, height, 12.0 * unit, 0.6)
+    _panel(shaders, batch_for_shader, rect, 8.0 * unit, (0.04, 0.05, 0.07, 0.8), (0.35, 0.8, 1.0, 0.9), size)
+    x, ytop = rect[0] + pad, rect[1] + rect[3] - pad
     inner = rect[2] - 2 * pad
+    measure = lambda t: blf.dimensions(fid, t)[0]                   # noqa: E731
     for row, text in enumerate(stats):
         _text_size(fid, head_px if row == 0 else line_px)
         blf.color(fid, 0.55, 0.9, 1.0, 1.0) if row == 0 else blf.color(fid, 0.95, 0.97, 1.0, 1.0)
-        blf.position(fid, x, top - line_h * (row + 0.8), 0)
-        blf.draw(fid, trim_text(lambda s: blf.dimensions(fid, s)[0], text, inner))
+        blf.position(fid, x, ytop - line_h * (row + 0.8), 0)
+        blf.draw(fid, trim_text(measure, text, inner))
     _text_size(fid, line_px)
     chips_pos, chips_col = [], []
-    base = top - line_h * (len(stats) + 0.5)
-    for row, entry in enumerate(reversed(shown)):
+    base = ytop - line_h * (len(stats) + 0.5)
+    for row, entry in enumerate(reversed(lines)):
         yy = base - line_h * (row + 0.8)
         colour = _colour(entry.type)
-        s = 7.0 * ui
+        s = 7.0 * unit
         chips_pos += [(x, yy, 0), (x + s, yy, 0), (x + s, yy + s, 0), (x, yy, 0), (x + s, yy + s, 0), (x, yy + s, 0)]
         chips_col += [(*colour, 1.0)] * 6
         key = entry.key
@@ -980,11 +1166,13 @@ def _draw_hud(activity, now, size, ui, fid, stream, batch_for_shader, shaders):
         if entry.count > 1:
             text += f"  x{entry.count} {entry.rate:.0f}/s"
         blf.color(fid, 0.82, 0.88, 0.95, 0.95 - 0.05 * row)
-        blf.position(fid, x + 12.0 * ui, yy, 0)
-        blf.draw(fid, trim_text(lambda s: blf.dimensions(fid, s)[0], text, inner - 12.0 * ui))
+        blf.position(fid, x + 12.0 * unit, yy, 0)
+        blf.draw(fid, trim_text(measure, text, inner - 12.0 * unit))
     if chips_pos:
         flat = shaders["flat"]
         batch_for_shader(flat, "TRIS", {"pos": chips_pos, "color": chips_col}).draw(flat)
+    _state["diag"]["hud"] = {"rect": list(rect), "visible": list(visible), "insets": [left, right, top, bottom]}
+    gpu.state.blend_set("NONE")
 
 
 # ---------------------------------------------------------------------------------------------------------------

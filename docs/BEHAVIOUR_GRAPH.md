@@ -321,12 +321,14 @@ Checked, with the instrument:
 - Cost: `Player.step` on the `fan` benchmark graph, N = 1000, 300 steps, `PYTHONHASHSEED=3`, bpy 5.3.0 wheel, a shared
   4-core machine, four runs each way alternating: median 4.35 ms per step off, 4.99 ms on (+15 %; one on-run was disturbed by another job).
 
-Not checked by anyone: the drawing. It needs a Blender window and the machine this was written on had none, so the
-overlay code has never run on a screen. In particular the socket positions (Python cannot read Blender's own, so they
-are computed from the node's size, header and row height and may sit a few pixels off, more on nodes with tall
-bodies), the look of the glow, dots, badges and HUD, the monospaced font, UI scales other than 1, and Blender 4.2 to
-5.2. `tools/behaviour_eyetest.py --activity` plays door, counter and snake and screenshots the editor at two zoom
-levels for a person to look at.
+The drawing was first seen in a CI run (Blender 5.2.2 LTS, Xvfb, Mesa llvmpipe, OpenGL 4.5, the `eyetest.yml`
+workflow), which showed that the first version's socket estimate and its HUD were wrong (inputs about 10 px off, the
+HUD under the sidebar). Now: links, glow and packets are drawn in the editor's own view space (a POST_VIEW handler, so
+they follow the links at any zoom), text and the HUD in pixels (POST_PIXEL; the HUD in the bottom-left of what the
+sidebar and header leave). Socket positions come from a layout measured on that screenshot (header 23.3, row 21.6,
+inputs from the node's foot, outputs from its head: `socket_position`), which `--activity-debug` draws as crosses and
+node boxes so a run can be checked. Still not looked at by a person: UI scales other than 1, HiDPI, a real GPU,
+Blender 4.2 to 5.1, and the latest layout rule on a screen.
 
 ## Presets to graph (26 Nov 2026)
 

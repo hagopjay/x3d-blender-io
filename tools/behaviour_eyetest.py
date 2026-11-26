@@ -375,19 +375,20 @@ def activity_shots(name, editor, win, player, targets):
                 for _ in range(3):
                     bpy.ops.view2d.zoom_in()
         yield 0.3
-        if point is not None:                         # an event stream while the shot is taken
+        if point is not None:                         # an event stream: the shot is taken within a packet's travel time
             mouse(*point)
-            yield 0.1
-            mouse(*point, "LEFTMOUSE", "PRESS")
             yield 0.05
+            mouse(*point, "LEFTMOUSE", "PRESS")
+            yield 0.03
             mouse(*point, "LEFTMOUSE", "RELEASE")
         for key in ("a", "d", "w"):
             if player.has_keys():
                 type_key(key)
-        yield 0.18
+        yield 0.05
+        mod = act_module()
         note(name, f"activity_{zoom}", {"shot": shot(f"{name}-activity-{zoom}", editor), "events": act.events,
                                         "deliveries": act.deliveries, "packets": len(act.packets(player.sim.now)),
-                                        "overlay": __import__("x3d_blender_io.behaviour_activity", fromlist=["x"]).handler_active()})
+                                        "overlay": mod.handler_active(), "diagnostics": mod.diagnostics()})
         yield 0.1
     if ACTIVITY_DEBUG:
         mod = act_module()
@@ -395,11 +396,12 @@ def activity_shots(name, editor, win, player, targets):
             bpy.ops.node.view_all()
         mod.set_debug(True)
         yield 0.4
-        note(name, "activity_debug", shot(f"{name}-activity-debug", editor))
+        note(name, "activity_debug", {"shot": shot(f"{name}-activity-debug", editor), "diagnostics": mod.diagnostics()})
         mod.set_debug(False)
         yield 0.2
     mod = act_module()
     check(name, "overlay_drew", mod.draw_count() > 0, {"draws": mod.draw_count()})
+    check(name, "overlay_did_not_fail", mod.failure() is None, mod.failure())
     check(name, "events_equal_sim_log", act.events == player.sim.log.appended,
           {"activity": act.events, "log": player.sim.log.appended})
     check(name, "has_events", act.events > 0, act.events)
@@ -479,10 +481,11 @@ def world_steps(world, tag=""):
     editor = shown[0]
     editor.spaces.active.show_region_ui = True    # the sidebar: every field, the key table
     interp = next((n for n in tree.nodes if "Interpolator" in n.bl_idname or "Sequencer" in n.bl_idname), None)
+    active = interp or next((n for n in tree.nodes if getattr(n, "x3d_role", None) == "behaviour"), None)
     for n in tree.nodes:
-        n.select = n is interp
-    if interp is not None:
-        tree.nodes.active = interp
+        n.select = n is active
+    if active is not None:                        # the sidebar's Node tab needs an active node (counter has no interpolator)
+        tree.nodes.active = active
     yield 0.6                                     # the sidebar only lists the Node tab once a node is active and drawn
     yield from open_tab(name, editor, "sidebar_node_tab", ("NODE_PT_active_node", "NODE_PT_node_"), ("Node", "Item"))
     yield 0.4
