@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 14: slot machine" />
+    <meta name="description" content="Pull the lever: three decelerating reels, a jackpot of flashing lamps and flying coins." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-14-slot-machine/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.04 0.02 0.08" />
+    <Viewpoint DEF="View" description="Front" position="0 2.6 11" orientation="1 0 0 -0.08" />
+    <DirectionalLight direction="-0.2 -0.4 -1" intensity="1.0" />
+    <PointLight location="0 3 5" color="1 0.9 0.8" intensity="80" radius="20" />
+    <Transform translation="0 -0.1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.12 0.1 0.15" roughness="0.9" /></Appearance><Box size="20 0.2 12" /></Shape></Transform>
+    <Transform translation="0 1.8 0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.55 0.1 0.15" metallic="0.3" roughness="0.4" /></Appearance><Box size="5.2 4.2 1.0" /></Shape>
+    </Transform>
+    <Transform translation="0 2.3 0.52"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.9 0.85"  /></Appearance><Box size="4.2 1.2 0.1" /></Shape></Transform>
+    <Transform translation="0 0.35 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.3 0.34" metallic="1" /></Appearance><Box size="2.4 0.5 0.8" /></Shape></Transform>
+    <Transform DEF="Sign" translation="0 4.3 0.1"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.2" emissiveColor="0.4 0.3 0.0" DEF="SignPaint" /></Appearance><Box size="3.6 0.7 0.3" /></Shape></Transform>
+    <Transform translation="2.9 2.4 0"><Shape><Appearance><PhysicalMaterial baseColor="0.6 0.6 0.65" metallic="1" /></Appearance><Cylinder radius="0.12" height="0.6" /></Shape>
+      <Transform DEF="Lever" translation="0 0.3 0">
+        <TouchSensor DEF="LeverTouch" description="Pull the lever" />
+        <Transform translation="0 0.8 0"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.8 0.85" metallic="1" /></Appearance><Cylinder radius="0.07" height="1.6" /></Shape></Transform>
+        <Transform translation="0 1.7 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.1 0.1" emissiveColor="0.4 0.0 0.0"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      </Transform></Transform>
+    <Transform translation="-1.3 2.3 0.65">
+      <Transform DEF="Sym00" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.1 0.1" emissiveColor="0.6 0.0 0.0"  /></Appearance><Box size="0.55 0.8 0.15" /></Shape></Transform>
+      <Transform DEF="Sym01" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.05 0.2"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Sym02" visible="false"><Transform scale="1.3 0.8 1"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.1"  /></Appearance><Sphere radius="0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Sym03" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.7 0.1" emissiveColor="0.3 0.2 0.0"  /></Appearance><Cone bottomRadius="0.3" height="0.6" /></Shape></Transform>
+      <Transform DEF="Sym04" visible="false"><Transform rotation="0 0 1 0.785"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.9 0.3" emissiveColor="0.4 0.4 0.0"  /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform></Transform>
+      <Transform DEF="Sym05" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.15 0.18"  /></Appearance><Box size="0.8 0.25 0.12" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0.0 2.3 0.65">
+      <Transform DEF="Sym10" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.1 0.1" emissiveColor="0.6 0.0 0.0"  /></Appearance><Box size="0.55 0.8 0.15" /></Shape></Transform>
+      <Transform DEF="Sym11" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.05 0.2"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Sym12" visible="false"><Transform scale="1.3 0.8 1"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.1"  /></Appearance><Sphere radius="0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Sym13" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.7 0.1" emissiveColor="0.3 0.2 0.0"  /></Appearance><Cone bottomRadius="0.3" height="0.6" /></Shape></Transform>
+      <Transform DEF="Sym14" visible="false"><Transform rotation="0 0 1 0.785"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.9 0.3" emissiveColor="0.4 0.4 0.0"  /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform></Transform>
+      <Transform DEF="Sym15" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.15 0.18"  /></Appearance><Box size="0.8 0.25 0.12" /></Shape></Transform>
+    </Transform>
+    <Transform translation="1.3 2.3 0.65">
+      <Transform DEF="Sym20" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.1 0.1" emissiveColor="0.6 0.0 0.0"  /></Appearance><Box size="0.55 0.8 0.15" /></Shape></Transform>
+      <Transform DEF="Sym21" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.05 0.2"  /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Sym22" visible="false"><Transform scale="1.3 0.8 1"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.1"  /></Appearance><Sphere radius="0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Sym23" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.7 0.1" emissiveColor="0.3 0.2 0.0"  /></Appearance><Cone bottomRadius="0.3" height="0.6" /></Shape></Transform>
+      <Transform DEF="Sym24" visible="false"><Transform rotation="0 0 1 0.785"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.9 0.3" emissiveColor="0.4 0.4 0.0"  /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform></Transform>
+      <Transform DEF="Sym25" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.15 0.18"  /></Appearance><Box size="0.8 0.25 0.12" /></Shape></Transform>
+    </Transform>
+
+    <Transform DEF="Lamp0" translation="2.42 1.80 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp1" translation="2.09 2.80 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp2" translation="1.21 3.53 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp3" translation="0.00 3.80 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp4" translation="-1.21 3.53 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp5" translation="-2.09 2.80 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp6" translation="-2.42 1.80 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp7" translation="-2.09 0.80 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp8" translation="-1.21 0.07 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp9" translation="-0.00 -0.20 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp10" translation="1.21 0.07 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform><Transform DEF="Lamp11" translation="2.09 0.80 0.58" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.13" /></Shape></Transform>
+    <Transform DEF="Coin0" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin1" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin2" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin3" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin4" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin5" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin6" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin7" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin8" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin9" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin10" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin11" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin12" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform><Transform DEF="Coin13" translation="0 0.7 1.0" rotation="1 0 0 1.5708" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.2" emissiveColor="0.5 0.4 0.0" metallic="1" /></Appearance><Cylinder radius="0.2" height="0.05" /></Shape></Transform>
+    <TimeSensor DEF="Spin" cycleInterval="4.0" />
+    <TimeSensor DEF="Win" cycleInterval="3.0" />
+    <TimeSensor DEF="Pull" cycleInterval="0.7" />
+    <BooleanFilter DEF="Press" />
+    <BooleanFilter DEF="SpinDone" />
+    <TimeTrigger DEF="GoSpin" />
+    <TimeTrigger DEF="GoWin" />
+    <ROUTE fromNode="LeverTouch" fromField="isActive" toNode="Press" toField="set_boolean" />
+    <ROUTE fromNode="Press" fromField="inputTrue" toNode="GoSpin" toField="set_boolean" />
+    <ROUTE fromNode="GoSpin" fromField="triggerTime" toNode="Spin" toField="startTime" />
+    <ROUTE fromNode="GoSpin" fromField="triggerTime" toNode="Pull" toField="startTime" />
+    <ROUTE fromNode="Spin" fromField="isActive" toNode="SpinDone" toField="set_boolean" />
+    <ROUTE fromNode="SpinDone" fromField="inputNegate" toNode="GoWin" toField="set_boolean" />
+    <ROUTE fromNode="GoWin" fromField="triggerTime" toNode="Win" toField="startTime" />
+    <BooleanSequencer DEF="Show00" key="0 0.0102 0.023 0.1633 0.2066 0.5 1" keyValue="false true false true false true true" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show00" toField="set_fraction" />
+    <ROUTE fromNode="Show00" fromField="value_changed" toNode="Sym00" toField="visible" />
+    <BooleanSequencer DEF="Show01" key="0 0.023 0.0408 0.2066 0.2551 1" keyValue="false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show01" toField="set_fraction" />
+    <ROUTE fromNode="Show01" fromField="value_changed" toNode="Sym01" toField="visible" />
+    <BooleanSequencer DEF="Show02" key="0 0.0408 0.0638 0.2551 0.3087 1" keyValue="false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show02" toField="set_fraction" />
+    <ROUTE fromNode="Show02" fromField="value_changed" toNode="Sym02" toField="visible" />
+    <BooleanSequencer DEF="Show03" key="0 0.0638 0.0918 0.3087 0.3673 1" keyValue="false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show03" toField="set_fraction" />
+    <ROUTE fromNode="Show03" fromField="value_changed" toNode="Sym03" toField="visible" />
+    <BooleanSequencer DEF="Show04" key="0 0.0026 0.0918 0.125 0.3673 0.4311 1" keyValue="true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show04" toField="set_fraction" />
+    <ROUTE fromNode="Show04" fromField="value_changed" toNode="Sym04" toField="visible" />
+    <BooleanSequencer DEF="Show05" key="0 0.0026 0.0102 0.125 0.1633 0.4311 0.5 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show05" toField="set_fraction" />
+    <ROUTE fromNode="Show05" fromField="value_changed" toNode="Sym05" toField="visible" />
+    <BooleanSequencer DEF="Show10" key="0 0.0649 0.0934 0.314 0.3737 0.75 1" keyValue="false true false true false true true" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show10" toField="set_fraction" />
+    <ROUTE fromNode="Show10" fromField="value_changed" toNode="Sym10" toField="visible" />
+    <BooleanSequencer DEF="Show11" key="0 0.0026 0.0934 0.1272 0.3737 0.4386 1" keyValue="true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show11" toField="set_fraction" />
+    <ROUTE fromNode="Show11" fromField="value_changed" toNode="Sym11" toField="visible" />
+    <BooleanSequencer DEF="Show12" key="0 0.0026 0.0104 0.1272 0.1661 0.4386 0.5087 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show12" toField="set_fraction" />
+    <ROUTE fromNode="Show12" fromField="value_changed" toNode="Sym12" toField="visible" />
+    <BooleanSequencer DEF="Show13" key="0 0.0104 0.0234 0.1661 0.2102 0.5087 0.5839 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show13" toField="set_fraction" />
+    <ROUTE fromNode="Show13" fromField="value_changed" toNode="Sym13" toField="visible" />
+    <BooleanSequencer DEF="Show14" key="0 0.0234 0.0415 0.2102 0.2595 0.5839 0.6644 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show14" toField="set_fraction" />
+    <ROUTE fromNode="Show14" fromField="value_changed" toNode="Sym14" toField="visible" />
+    <BooleanSequencer DEF="Show15" key="0 0.0415 0.0649 0.2595 0.314 0.6644 0.75 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show15" toField="set_fraction" />
+    <ROUTE fromNode="Show15" fromField="value_changed" toNode="Sym15" toField="visible" />
+    <BooleanSequencer DEF="Show20" key="0 0.01 0.0225 0.16 0.2025 0.49 0.5625 1" keyValue="false true false true false true false true" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show20" toField="set_fraction" />
+    <ROUTE fromNode="Show20" fromField="value_changed" toNode="Sym20" toField="visible" />
+    <BooleanSequencer DEF="Show21" key="0 0.0225 0.04 0.2025 0.25 0.5625 0.64 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show21" toField="set_fraction" />
+    <ROUTE fromNode="Show21" fromField="value_changed" toNode="Sym21" toField="visible" />
+    <BooleanSequencer DEF="Show22" key="0 0.04 0.0625 0.25 0.3025 0.64 0.7225 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show22" toField="set_fraction" />
+    <ROUTE fromNode="Show22" fromField="value_changed" toNode="Sym22" toField="visible" />
+    <BooleanSequencer DEF="Show23" key="0 0.0625 0.09 0.3025 0.36 0.7225 0.81 1" keyValue="false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show23" toField="set_fraction" />
+    <ROUTE fromNode="Show23" fromField="value_changed" toNode="Sym23" toField="visible" />
+    <BooleanSequencer DEF="Show24" key="0 0.0025 0.09 0.1225 0.36 0.4225 0.81 0.9025 1" keyValue="true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show24" toField="set_fraction" />
+    <ROUTE fromNode="Show24" fromField="value_changed" toNode="Sym24" toField="visible" />
+    <BooleanSequencer DEF="Show25" key="0 0.0025 0.01 0.1225 0.16 0.4225 0.49 0.9025 1" keyValue="false true false true false true false true false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Show25" toField="set_fraction" />
+    <ROUTE fromNode="Show25" fromField="value_changed" toNode="Sym25" toField="visible" />
+    <OrientationInterpolator DEF="PullDown" key="0 0.4 1" keyValue="0 0 1 0 0 0 1 -1.3 0 0 1 0" />
+    <ROUTE fromNode="Pull" fromField="fraction_changed" toNode="PullDown" toField="set_fraction" />
+    <ROUTE fromNode="PullDown" fromField="value_changed" toNode="Lever" toField="rotation" />
+    <BooleanSequencer DEF="Chase0" key="0 0 0.03 0.25 0.28 0.5 0.53 0.75 0.78 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase0" toField="set_fraction" />
+    <ROUTE fromNode="Chase0" fromField="value_changed" toNode="Lamp0" toField="visible" />
+    <BooleanSequencer DEF="Flash0" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash0" toField="set_fraction" />
+    <ROUTE fromNode="Flash0" fromField="value_changed" toNode="Lamp0" toField="visible" />
+    <BooleanSequencer DEF="Chase1" key="0 0.0208 0.0508 0.2708 0.3008 0.5208 0.5508 0.7708 0.8008 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase1" toField="set_fraction" />
+    <ROUTE fromNode="Chase1" fromField="value_changed" toNode="Lamp1" toField="visible" />
+    <BooleanSequencer DEF="Flash1" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash1" toField="set_fraction" />
+    <ROUTE fromNode="Flash1" fromField="value_changed" toNode="Lamp1" toField="visible" />
+    <BooleanSequencer DEF="Chase2" key="0 0.0417 0.0717 0.2917 0.3217 0.5417 0.5717 0.7917 0.8217 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase2" toField="set_fraction" />
+    <ROUTE fromNode="Chase2" fromField="value_changed" toNode="Lamp2" toField="visible" />
+    <BooleanSequencer DEF="Flash2" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash2" toField="set_fraction" />
+    <ROUTE fromNode="Flash2" fromField="value_changed" toNode="Lamp2" toField="visible" />
+    <BooleanSequencer DEF="Chase3" key="0 0.0625 0.0925 0.3125 0.3425 0.5625 0.5925 0.8125 0.8425 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase3" toField="set_fraction" />
+    <ROUTE fromNode="Chase3" fromField="value_changed" toNode="Lamp3" toField="visible" />
+    <BooleanSequencer DEF="Flash3" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash3" toField="set_fraction" />
+    <ROUTE fromNode="Flash3" fromField="value_changed" toNode="Lamp3" toField="visible" />
+    <BooleanSequencer DEF="Chase4" key="0 0.0833 0.1133 0.3333 0.3633 0.5833 0.6133 0.8333 0.8633 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase4" toField="set_fraction" />
+    <ROUTE fromNode="Chase4" fromField="value_changed" toNode="Lamp4" toField="visible" />
+    <BooleanSequencer DEF="Flash4" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash4" toField="set_fraction" />
+    <ROUTE fromNode="Flash4" fromField="value_changed" toNode="Lamp4" toField="visible" />
+    <BooleanSequencer DEF="Chase5" key="0 0.1042 0.1342 0.3542 0.3842 0.6042 0.6342 0.8542 0.8842 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase5" toField="set_fraction" />
+    <ROUTE fromNode="Chase5" fromField="value_changed" toNode="Lamp5" toField="visible" />
+    <BooleanSequencer DEF="Flash5" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash5" toField="set_fraction" />
+    <ROUTE fromNode="Flash5" fromField="value_changed" toNode="Lamp5" toField="visible" />
+    <BooleanSequencer DEF="Chase6" key="0 0.125 0.155 0.375 0.405 0.625 0.655 0.875 0.905 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase6" toField="set_fraction" />
+    <ROUTE fromNode="Chase6" fromField="value_changed" toNode="Lamp6" toField="visible" />
+    <BooleanSequencer DEF="Flash6" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash6" toField="set_fraction" />
+    <ROUTE fromNode="Flash6" fromField="value_changed" toNode="Lamp6" toField="visible" />
+    <BooleanSequencer DEF="Chase7" key="0 0.1458 0.1758 0.3958 0.4258 0.6458 0.6758 0.8958 0.9258 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase7" toField="set_fraction" />
+    <ROUTE fromNode="Chase7" fromField="value_changed" toNode="Lamp7" toField="visible" />
+    <BooleanSequencer DEF="Flash7" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash7" toField="set_fraction" />
+    <ROUTE fromNode="Flash7" fromField="value_changed" toNode="Lamp7" toField="visible" />
+    <BooleanSequencer DEF="Chase8" key="0 0.1667 0.1967 0.4167 0.4467 0.6667 0.6967 0.9167 0.9467 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase8" toField="set_fraction" />
+    <ROUTE fromNode="Chase8" fromField="value_changed" toNode="Lamp8" toField="visible" />
+    <BooleanSequencer DEF="Flash8" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash8" toField="set_fraction" />
+    <ROUTE fromNode="Flash8" fromField="value_changed" toNode="Lamp8" toField="visible" />
+    <BooleanSequencer DEF="Chase9" key="0 0.1875 0.2175 0.4375 0.4675 0.6875 0.7175 0.9375 0.9675 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase9" toField="set_fraction" />
+    <ROUTE fromNode="Chase9" fromField="value_changed" toNode="Lamp9" toField="visible" />
+    <BooleanSequencer DEF="Flash9" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash9" toField="set_fraction" />
+    <ROUTE fromNode="Flash9" fromField="value_changed" toNode="Lamp9" toField="visible" />
+    <BooleanSequencer DEF="Chase10" key="0 0.2083 0.2383 0.4583 0.4883 0.7083 0.7383 0.9583 0.9883 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase10" toField="set_fraction" />
+    <ROUTE fromNode="Chase10" fromField="value_changed" toNode="Lamp10" toField="visible" />
+    <BooleanSequencer DEF="Flash10" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash10" toField="set_fraction" />
+    <ROUTE fromNode="Flash10" fromField="value_changed" toNode="Lamp10" toField="visible" />
+    <BooleanSequencer DEF="Chase11" key="0 0.2292 0.2592 0.4792 0.5092 0.7292 0.7592 0.9792 1.0092 1" keyValue="false true false true false true false true false false" />
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Chase11" toField="set_fraction" />
+    <ROUTE fromNode="Chase11" fromField="value_changed" toNode="Lamp11" toField="visible" />
+    <BooleanSequencer DEF="Flash11" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="true false true false true false true false true false false" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Flash11" toField="set_fraction" />
+    <ROUTE fromNode="Flash11" fromField="value_changed" toNode="Lamp11" toField="visible" />
+    <ColorInterpolator DEF="SignGlow" key="0 0.2 0.4 0.6 0.8 1" keyValue="0.4 0.3 0 1 0.8 0.1 0.4 0.3 0 1 0.2 0.2 1 0.8 0.1 0.4 0.3 0" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="SignGlow" toField="set_fraction" />
+    <ROUTE fromNode="SignGlow" fromField="value_changed" toNode="SignPaint" toField="emissiveColor" />
+    <ROUTE fromNode="SignGlow" fromField="value_changed" toNode="SignPaint" toField="baseColor" />
+    <PositionInterpolator DEF="Fly0" key="0 0.12 0.35 0.55" keyValue="0 0.7 1 -0.84 3 1.6 -1.68 3.6 2.3 -2.4 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly0" toField="set_fraction" />
+    <ROUTE fromNode="Fly0" fromField="value_changed" toNode="Coin0" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin0" toField="visible" />
+    <PositionInterpolator DEF="Fly1" key="0 0.16 0.39 0.59" keyValue="0 0.7 1 -0.7054 3 1.6 -1.4108 3.6 2.3 -2.0154 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly1" toField="set_fraction" />
+    <ROUTE fromNode="Fly1" fromField="value_changed" toNode="Coin1" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin1" toField="visible" />
+    <PositionInterpolator DEF="Fly2" key="0 0.2 0.43 0.63" keyValue="0 0.7 1 -0.5708 3 1.6 -1.1415 3.6 2.3 -1.6308 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly2" toField="set_fraction" />
+    <ROUTE fromNode="Fly2" fromField="value_changed" toNode="Coin2" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin2" toField="visible" />
+    <PositionInterpolator DEF="Fly3" key="0 0.24 0.47 0.67" keyValue="0 0.7 1 -0.4362 3 1.6 -0.8723 3.6 2.3 -1.2462 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly3" toField="set_fraction" />
+    <ROUTE fromNode="Fly3" fromField="value_changed" toNode="Coin3" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin3" toField="visible" />
+    <PositionInterpolator DEF="Fly4" key="0 0.28 0.51 0.71" keyValue="0 0.7 1 -0.3015 3 1.6 -0.6031 3.6 2.3 -0.8615 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly4" toField="set_fraction" />
+    <ROUTE fromNode="Fly4" fromField="value_changed" toNode="Coin4" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin4" toField="visible" />
+    <PositionInterpolator DEF="Fly5" key="0 0.32 0.55 0.75" keyValue="0 0.7 1 -0.1669 3 1.6 -0.3338 3.6 2.3 -0.4769 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly5" toField="set_fraction" />
+    <ROUTE fromNode="Fly5" fromField="value_changed" toNode="Coin5" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin5" toField="visible" />
+    <PositionInterpolator DEF="Fly6" key="0 0.36 0.59 0.79" keyValue="0 0.7 1 -0.0323 3 1.6 -0.0646 3.6 2.3 -0.0923 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly6" toField="set_fraction" />
+    <ROUTE fromNode="Fly6" fromField="value_changed" toNode="Coin6" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin6" toField="visible" />
+    <PositionInterpolator DEF="Fly7" key="0 0.4 0.63 0.83" keyValue="0 0.7 1 0.1023 3 1.6 0.2046 3.6 2.3 0.2923 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly7" toField="set_fraction" />
+    <ROUTE fromNode="Fly7" fromField="value_changed" toNode="Coin7" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin7" toField="visible" />
+    <PositionInterpolator DEF="Fly8" key="0 0.44 0.67 0.87" keyValue="0 0.7 1 0.2369 3 1.6 0.4738 3.6 2.3 0.6769 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly8" toField="set_fraction" />
+    <ROUTE fromNode="Fly8" fromField="value_changed" toNode="Coin8" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin8" toField="visible" />
+    <PositionInterpolator DEF="Fly9" key="0 0.48 0.71 0.91" keyValue="0 0.7 1 0.3715 3 1.6 0.7431 3.6 2.3 1.0615 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly9" toField="set_fraction" />
+    <ROUTE fromNode="Fly9" fromField="value_changed" toNode="Coin9" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin9" toField="visible" />
+    <PositionInterpolator DEF="Fly10" key="0 0.52 0.75 0.95" keyValue="0 0.7 1 0.5062 3 1.6 1.0123 3.6 2.3 1.4462 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly10" toField="set_fraction" />
+    <ROUTE fromNode="Fly10" fromField="value_changed" toNode="Coin10" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin10" toField="visible" />
+    <PositionInterpolator DEF="Fly11" key="0 0.56 0.79 0.99" keyValue="0 0.7 1 0.6408 3 1.6 1.2815 3.6 2.3 1.8308 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly11" toField="set_fraction" />
+    <ROUTE fromNode="Fly11" fromField="value_changed" toNode="Coin11" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin11" toField="visible" />
+    <PositionInterpolator DEF="Fly12" key="0 0.6 0.83 0.99" keyValue="0 0.7 1 0.7754 3 1.6 1.5508 3.6 2.3 2.2154 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly12" toField="set_fraction" />
+    <ROUTE fromNode="Fly12" fromField="value_changed" toNode="Coin12" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin12" toField="visible" />
+    <PositionInterpolator DEF="Fly13" key="0 0.64 0.87 0.99" keyValue="0 0.7 1 0.91 3 1.6 1.82 3.6 2.3 2.6 0.15 3" />
+    <ROUTE fromNode="Win" fromField="fraction_changed" toNode="Fly13" toField="set_fraction" />
+    <ROUTE fromNode="Fly13" fromField="value_changed" toNode="Coin13" toField="translation" />
+    <ROUTE fromNode="Win" fromField="isActive" toNode="Coin13" toField="visible" />
+  </Scene>
+</X3D>

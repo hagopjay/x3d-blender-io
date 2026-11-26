@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 12: kaleidoscope" />
+    <meta name="description" content="A mandala of 12 mirrored sectors driven by 24 animations; click the hub to pause." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-12-kaleidoscope/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.01 0.0 0.02" />
+    <Viewpoint DEF="View" description="Front" position="0 0 14" />
+    <DirectionalLight direction="0 0 -1" intensity="1.0" />
+    <Transform DEF="Mandala">
+    <Transform translation="0 0 0" rotation="0 0 1 0.0000" scale="1 1 1">
+      <Transform DEF="Petal000" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint000" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal001" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint001" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal002" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint002" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal003" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint003" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal004" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint004" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal005" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint005" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal006" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint006" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal007" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint007" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 0.0000" scale="1 -1 1">
+      <Transform DEF="Petal010" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint010" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal011" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint011" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal012" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint012" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal013" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint013" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal014" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint014" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal015" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint015" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal016" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint016" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal017" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint017" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 1.0472" scale="1 1 1">
+      <Transform DEF="Petal100" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint100" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal101" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint101" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal102" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint102" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal103" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint103" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal104" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint104" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal105" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint105" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal106" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint106" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal107" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint107" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 1.0472" scale="1 -1 1">
+      <Transform DEF="Petal110" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint110" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal111" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint111" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal112" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint112" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal113" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint113" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal114" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint114" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal115" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint115" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal116" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint116" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal117" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint117" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 2.0944" scale="1 1 1">
+      <Transform DEF="Petal200" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint200" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal201" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint201" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal202" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint202" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal203" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint203" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal204" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint204" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal205" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint205" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal206" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint206" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal207" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint207" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 2.0944" scale="1 -1 1">
+      <Transform DEF="Petal210" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint210" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal211" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint211" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal212" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint212" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal213" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint213" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal214" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint214" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal215" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint215" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal216" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint216" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal217" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint217" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 3.1416" scale="1 1 1">
+      <Transform DEF="Petal300" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint300" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal301" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint301" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal302" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint302" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal303" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint303" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal304" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint304" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal305" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint305" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal306" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint306" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal307" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint307" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 3.1416" scale="1 -1 1">
+      <Transform DEF="Petal310" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint310" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal311" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint311" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal312" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint312" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal313" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint313" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal314" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint314" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal315" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint315" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal316" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint316" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal317" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint317" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 4.1888" scale="1 1 1">
+      <Transform DEF="Petal400" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint400" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal401" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint401" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal402" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint402" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal403" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint403" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal404" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint404" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal405" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint405" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal406" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint406" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal407" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint407" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 4.1888" scale="1 -1 1">
+      <Transform DEF="Petal410" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint410" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal411" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint411" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal412" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint412" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal413" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint413" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal414" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint414" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal415" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint415" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal416" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint416" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal417" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint417" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 5.2360" scale="1 1 1">
+      <Transform DEF="Petal500" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint500" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal501" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint501" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal502" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint502" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal503" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint503" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal504" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint504" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal505" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint505" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal506" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint506" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal507" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint507" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0 0 0" rotation="0 0 1 5.2360" scale="1 -1 1">
+      <Transform DEF="Petal510" translation="3 0 0.00"><Shape><Appearance><PhysicalMaterial DEF="Paint510" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal511" translation="3 0 0.02"><Shape><Appearance><PhysicalMaterial DEF="Paint511" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal512" translation="3 0 0.04"><Shape><Appearance><PhysicalMaterial DEF="Paint512" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal513" translation="3 0 0.06"><Shape><Appearance><PhysicalMaterial DEF="Paint513" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+      <Transform DEF="Petal514" translation="3 0 0.08"><Shape><Appearance><PhysicalMaterial DEF="Paint514" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+      <Transform DEF="Petal515" translation="3 0 0.10"><Shape><Appearance><PhysicalMaterial DEF="Paint515" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Box size="0.45 0.45 0.12" /></Shape></Transform>
+      <Transform DEF="Petal516" translation="3 0 0.12"><Shape><Appearance><PhysicalMaterial DEF="Paint516" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cone bottomRadius="0.25" height="0.55" /></Shape></Transform>
+      <Transform DEF="Petal517" translation="3 0 0.14"><Shape><Appearance><PhysicalMaterial DEF="Paint517" baseColor="1 1 1" emissiveColor="0.4 0.4 0.4" roughness="0.3" /></Appearance><Cylinder radius="0.2" height="0.5" /></Shape></Transform>
+    </Transform>
+
+    </Transform>
+    <Transform DEF="Hub" rotation="1 0 0 1.5708">
+      <TouchSensor DEF="HubTouch" description="Click: pause or resume" />
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.5" emissiveColor="0.8 0.6 0.2" metallic="1" /></Appearance><Cylinder radius="0.55" height="0.4" /></Shape>
+    </Transform>
+    <PositionInterpolator DEF="Path0" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="2.9 0 0 3.34 0.7372 0 3.75 1.212 0 4.1021 1.2803 0 4.3722 0.9743 0 4.5421 0.4721 0 4.6 0 0 4.5421 -0.2779 0 4.3722 -0.3248 0 4.1021 -0.2197 0 3.75 -0.087 0 3.34 -0.0128 0 2.9 -0 0 2.46 0.0128 0 2.05 0.087 0 1.6979 0.2197 0 1.4278 0.3248 0 1.2579 0.2779 0 1.2 0 0 1.2579 -0.4721 0 1.4278 -0.9743 0 1.6979 -1.2803 0 2.05 -1.212 0 2.46 -0.7372 0 2.9 -0 0" />
+    <PositionInterpolator DEF="Pulse0" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 0.9294 0.9294 0.9294 1.05 1.05 1.05 1.1536 1.1536 1.1536 1.233 1.233 1.233 1.283 1.283 1.283 1.3 1.3 1.3 1.283 1.283 1.283 1.233 1.233 1.233 1.1536 1.1536 1.1536 1.05 1.05 1.05 0.9294 0.9294 0.9294 0.8 0.8 0.8 0.6706 0.6706 0.6706 0.55 0.55 0.55 0.4464 0.4464 0.4464 0.367 0.367 0.367 0.317 0.317 0.317 0.3 0.3 0.3 0.317 0.317 0.317 0.367 0.367 0.367 0.4464 0.4464 0.4464 0.55 0.55 0.55 0.6706 0.6706 0.6706 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue0" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.775 0.155 0.155 0.8332 0.4254 0.1666 0.8875 0.71 0.1775 0.8888 0.9341 0.1868 0.7378 0.9699 0.194 0.636 0.9923 0.1985 0.6 1 0.2 0.636 0.9923 0.1985 0.7378 0.9699 0.194 0.8888 0.9341 0.1868 0.8875 0.71 0.1775 0.8332 0.4254 0.1666 0.775 0.155 0.155 0.7168 0.1434 0.366 0.6625 0.1325 0.53 0.586 0.1232 0.6159 0.4414 0.116 0.5801 0.3574 0.1115 0.5577 0.33 0.11 0.55 0.3574 0.1115 0.5577 0.4414 0.116 0.5801 0.586 0.1232 0.6159 0.6625 0.1325 0.53 0.7168 0.1434 0.366 0.775 0.155 0.155" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path0" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse0" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue0" toField="set_fraction" />
+    <PositionInterpolator DEF="Path1" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="4.1392 1.497 0 4.5551 1.3974 0 4.5274 1.1657 0 4.0637 0.8467 0 3.2882 0.5002 0 2.4086 0.1866 0 1.6608 -0.0471 0 1.2449 -0.1773 0 1.2726 -0.2075 0 1.7363 -0.1648 0 2.5118 -0.09 0 3.3914 -0.0251 0 4.1392 -0 0 4.5551 -0.0242 0 4.5274 -0.0837 0 4.0637 -0.1453 0 3.2882 -0.1667 0 2.4086 -0.1099 0 1.6608 0.0471 0 1.2449 0.3011 0 1.2726 0.6226 0 1.7363 0.9604 0 2.5118 1.2536 0 3.3914 1.4454 0 4.1392 1.497 0" />
+    <PositionInterpolator DEF="Pulse1" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 1.05 1.05 1.05 1.233 1.233 1.233 1.3 1.3 1.3 1.233 1.233 1.233 1.05 1.05 1.05 0.8 0.8 0.8 0.55 0.55 0.55 0.367 0.367 0.367 0.3 0.3 0.3 0.367 0.367 0.367 0.55 0.55 0.55 0.8 0.8 0.8 1.05 1.05 1.05 1.233 1.233 1.233 1.3 1.3 1.3 1.233 1.233 1.233 1.05 1.05 1.05 0.8 0.8 0.8 0.55 0.55 0.55 0.367 0.367 0.367 0.3 0.3 0.3 0.367 0.367 0.367 0.55 0.55 0.55 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue1" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.939 0.7512 0.1878 0.8841 0.9941 0.1988 0.5942 0.9904 0.1981 0.3265 0.929 0.1858 0.1653 0.8264 0.1977 0.142 0.71 0.255 0.1222 0.611 0.2444 0.1112 0.5559 0.1996 0.1119 0.5596 0.1339 0.2183 0.621 0.1242 0.4342 0.7236 0.1447 0.7471 0.84 0.168 0.939 0.7512 0.1878 0.9941 0.4865 0.1988 0.9904 0.1981 0.1981 0.929 0.1858 0.4167 0.8264 0.1653 0.5282 0.71 0.142 0.5389 0.611 0.1222 0.4888 0.5559 0.1112 0.422 0.5596 0.1119 0.3577 0.621 0.1242 0.2785 0.7236 0.1447 0.1447 0.84 0.4111 0.168 0.939 0.7512 0.1878" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path1" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse1" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue1" toField="set_fraction" />
+    <PositionInterpolator DEF="Path2" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="4.5966 -0.188 0 4.0242 -0.8914 0 2.7933 -1.2902 0 1.6248 -1.2702 0 1.2034 -0.8961 0 1.7758 -0.3659 0 3.0067 0.094 0 4.1752 0.3361 0 4.5966 0.3457 0 4.0242 0.2179 0 2.7933 0.08 0 1.6248 0.0099 0 1.2034 -0 0 1.7758 -0.0155 0 3.0067 -0.0926 0 4.1752 -0.2179 0 4.5966 -0.2987 0 4.0242 -0.2154 0 2.7933 0.094 0 1.6248 0.5708 0 1.2034 1.0371 0 1.7758 1.2702 0 3.0067 1.1148 0 4.1752 0.5714 0 4.5966 -0.188 0" />
+    <PositionInterpolator DEF="Pulse2" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 1.1536 1.1536 1.1536 1.3 1.3 1.3 1.1536 1.1536 1.1536 0.8 0.8 0.8 0.4464 0.4464 0.4464 0.3 0.3 0.3 0.4464 0.4464 0.4464 0.8 0.8 0.8 1.1536 1.1536 1.1536 1.3 1.3 1.3 1.1536 1.1536 1.1536 0.8 0.8 0.8 0.4464 0.4464 0.4464 0.3 0.3 0.3 0.4464 0.4464 0.4464 0.8 0.8 0.8 1.1536 1.1536 1.1536 1.3 1.3 1.3 1.1536 1.1536 1.1536 0.8 0.8 0.8 0.4464 0.4464 0.4464 0.3 0.3 0.3 0.4464 0.4464 0.4464 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue2" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.5997 0.9996 0.1999 0.2674 0.9238 0.1848 0.1522 0.7609 0.3043 0.1212 0.6062 0.3932 0.1101 0.5504 0.4619 0.1252 0.6262 0.6006 0.1578 0.7891 0.7891 0.1888 0.9438 0.9052 0.1999 0.9996 0.8389 0.1848 0.9238 0.5991 0.1522 0.7609 0.3043 0.1755 0.6062 0.1212 0.3303 0.5504 0.1101 0.5702 0.6262 0.1252 0.7891 0.6313 0.1578 0.9438 0.5205 0.1888 0.9996 0.3606 0.1999 0.9238 0.2225 0.1848 0.7609 0.1522 0.1522 0.6062 0.146 0.1212 0.5504 0.1986 0.1101 0.6262 0.3453 0.1252 0.7891 0.6313 0.1578 0.8594 0.9438 0.1888 0.5997 0.9996 0.1999" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path2" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse2" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue2" toField="set_fraction" />
+    <PositionInterpolator DEF="Path3" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="3.9836 -1.4734 0 3.1835 -0.8288 0 2.3074 0.2622 0 1.5901 1.0589 0 1.2238 1.1051 0 1.3066 0.5307 0 1.8164 -0.1405 0 2.6165 -0.4598 0 3.4926 -0.3684 0 4.2099 -0.1235 0 4.5762 0.0188 0 4.4934 0.0211 0 3.9836 0 0 3.1835 0.0144 0 2.3074 -0.0188 0 1.5901 -0.1817 0 1.2238 -0.3684 0 1.3066 -0.3125 0 1.8164 0.1405 0 2.6165 0.7809 0 3.4926 1.1051 0 4.2099 0.7197 0 4.5762 -0.2622 0 4.4934 -1.2195 0 3.9836 -1.4734 0" />
+    <PositionInterpolator DEF="Pulse3" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 0.9294 0.9294 0.9294 1.05 1.05 1.05 1.1536 1.1536 1.1536 1.233 1.233 1.233 1.283 1.283 1.283 1.3 1.3 1.3 1.283 1.283 1.283 1.233 1.233 1.233 1.1536 1.1536 1.1536 1.05 1.05 1.05 0.9294 0.9294 0.9294 0.8 0.8 0.8 0.6706 0.6706 0.6706 0.55 0.55 0.55 0.4464 0.4464 0.4464 0.367 0.367 0.367 0.317 0.317 0.317 0.3 0.3 0.3 0.317 0.317 0.317 0.367 0.367 0.367 0.4464 0.4464 0.4464 0.55 0.55 0.55 0.6706 0.6706 0.6706 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue3" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.1837 0.9184 0.3674 0.1625 0.8125 0.5774 0.1393 0.6966 0.6966 0.1203 0.4521 0.6016 0.1106 0.3102 0.5532 0.1128 0.2487 0.5641 0.1263 0.2526 0.6316 0.1475 0.3251 0.7375 0.1707 0.4786 0.8534 0.1897 0.7127 0.9484 0.1994 0.9968 0.9968 0.1972 0.9859 0.7006 0.1837 0.9184 0.3674 0.2524 0.8125 0.1625 0.4179 0.6966 0.1393 0.5105 0.6016 0.1203 0.5532 0.5315 0.1106 0.5641 0.4744 0.1128 0.6316 0.5053 0.1263 0.7375 0.6201 0.1475 0.8534 0.8199 0.1707 0.8047 0.9484 0.1897 0.5981 0.9968 0.1994 0.3062 0.9859 0.1972 0.1837 0.9184 0.3674" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path3" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse3" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue3" toField="set_fraction" />
+    <PositionInterpolator DEF="Path4" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="2.6869 0.373 0 2.2577 1.2691 0 1.8722 1.3556 0 1.5567 0.6517 0 1.3328 -0.2798 0 1.2157 -0.8126 0 1.2134 -0.7264 0 1.326 -0.283 0 1.5459 0.0933 0 1.8581 0.1891 0 2.2412 0.0973 0 2.6693 0.013 0 3.1131 -0 0 3.5423 -0.022 0 3.9278 -0.0973 0 4.2433 -0.1118 0 4.4672 0.0933 0 4.5843 0.4785 0 4.5866 0.7264 0 4.474 0.4806 0 4.2541 -0.2798 0 3.9419 -1.102 0 3.5588 -1.3556 0 3.1307 -0.7506 0 2.6869 0.373 0" />
+    <PositionInterpolator DEF="Pulse4" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 1.05 1.05 1.05 1.233 1.233 1.233 1.3 1.3 1.3 1.233 1.233 1.233 1.05 1.05 1.05 0.8 0.8 0.8 0.55 0.55 0.55 0.367 0.367 0.367 0.3 0.3 0.3 0.367 0.367 0.367 0.55 0.55 0.55 0.8 0.8 0.8 1.05 1.05 1.05 1.233 1.233 1.233 1.3 1.3 1.3 1.233 1.233 1.233 1.05 1.05 1.05 0.8 0.8 0.8 0.55 0.55 0.55 0.367 0.367 0.367 0.3 0.3 0.3 0.367 0.367 0.367 0.55 0.55 0.55 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue4" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.1494 0.7468 0.7468 0.138 0.4757 0.69 0.1278 0.2556 0.639 0.1484 0.1194 0.5972 0.2493 0.1135 0.5676 0.3087 0.1104 0.5521 0.3311 0.1104 0.5518 0.3168 0.1133 0.5667 0.2617 0.1192 0.5958 0.1583 0.1274 0.6371 0.1376 0.2751 0.6878 0.1489 0.5132 0.7445 0.1606 0.8032 0.8032 0.172 0.86 0.5929 0.1822 0.911 0.3644 0.2368 0.9528 0.1906 0.4315 0.9824 0.1965 0.5579 0.9979 0.1996 0.5989 0.9982 0.1996 0.5498 0.9833 0.1967 0.4191 0.9542 0.1908 0.2269 0.9129 0.1826 0.1724 0.8622 0.3449 0.1611 0.8055 0.5554 0.1494 0.7468 0.7468" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path4" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse4" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue4" toField="set_fraction" />
+    <PositionInterpolator DEF="Path5" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="1.5247 1.4266 0 1.2209 1.2366 0 1.9008 0.9365 0 3.1659 0.5813 0 4.2753 0.2339 0 4.5791 -0.0494 0 3.8992 -0.2318 0 2.6341 -0.3028 0 1.5247 -0.2787 0 1.2209 -0.1957 0 1.9008 -0.0983 0 3.1659 -0.0255 0 4.2753 -0 0 4.5791 -0.0214 0 3.8992 -0.0672 0 2.6341 -0.0997 0 1.5247 -0.078 0 1.2209 0.0291 0 1.9008 0.2318 0 3.1659 0.5142 0 4.2753 0.836 0 4.5791 1.1408 0 3.8992 1.3689 0 2.6341 1.4724 0 1.5247 1.4266 0" />
+    <PositionInterpolator DEF="Pulse5" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 1.1536 1.1536 1.1536 1.3 1.3 1.3 1.1536 1.1536 1.1536 0.8 0.8 0.8 0.4464 0.4464 0.4464 0.3 0.3 0.3 0.4464 0.4464 0.4464 0.8 0.8 0.8 1.1536 1.1536 1.1536 1.3 1.3 1.3 1.1536 1.1536 1.1536 0.8 0.8 0.8 0.4464 0.4464 0.4464 0.3 0.3 0.3 0.4464 0.4464 0.4464 0.8 0.8 0.8 1.1536 1.1536 1.1536 1.3 1.3 1.3 1.1536 1.1536 1.1536 0.8 0.8 0.8 0.4464 0.4464 0.4464 0.3 0.3 0.3 0.4464 0.4464 0.4464 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue5" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.1186 0.2372 0.593 0.1717 0.1106 0.5528 0.3856 0.1285 0.6427 0.6875 0.162 0.8102 0.957 0.1914 0.9195 0.9972 0.1994 0.8386 0.9073 0.1815 0.7258 0.7398 0.148 0.6221 0.593 0.1186 0.5697 0.469 0.1106 0.5528 0.3856 0.1285 0.6427 0.2516 0.162 0.8102 0.1914 0.3828 0.957 0.1994 0.7086 0.9972 0.1815 0.9073 0.9073 0.148 0.7398 0.5559 0.1186 0.593 0.3325 0.1106 0.5528 0.2437 0.1285 0.6427 0.2571 0.162 0.8102 0.3572 0.1914 0.957 0.5367 0.1994 0.9972 0.7494 0.1815 0.9073 0.9073 0.148 0.5257 0.7398 0.1186 0.2372 0.593" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path5" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse5" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue5" toField="set_fraction" />
+    <PositionInterpolator DEF="Path6" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="1.2301 -0.5522 0 1.6131 -0.8791 0 2.3409 -1.0968 0 3.2185 -1.175 0 4.0108 -1.1129 0 4.5054 -0.9379 0 4.5699 -0.6973 0 4.1869 -0.4463 0 3.4591 -0.2329 0 2.5815 -0.0872 0 1.7892 -0.0147 0 1.2946 0.0029 0 1.2301 0 0 1.6131 0.0152 0 2.3409 0.0787 0 3.2185 0.2016 0 4.0108 0.371 0 4.5054 0.5522 0 4.5699 0.6973 0 4.1869 0.758 0 3.4591 0.6988 0 2.5815 0.5085 0 1.7892 0.2044 0 1.2946 -0.1695 0 1.2301 -0.5522 0" />
+    <PositionInterpolator DEF="Pulse6" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 0.9294 0.9294 0.9294 1.05 1.05 1.05 1.1536 1.1536 1.1536 1.233 1.233 1.233 1.283 1.283 1.283 1.3 1.3 1.3 1.283 1.283 1.283 1.233 1.233 1.233 1.1536 1.1536 1.1536 1.05 1.05 1.05 0.9294 0.9294 0.9294 0.8 0.8 0.8 0.6706 0.6706 0.6706 0.55 0.55 0.55 0.4464 0.4464 0.4464 0.367 0.367 0.367 0.317 0.317 0.317 0.3 0.3 0.3 0.317 0.317 0.317 0.367 0.367 0.367 0.4464 0.4464 0.4464 0.55 0.55 0.55 0.6706 0.6706 0.6706 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue6" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.3324 0.1108 0.554 0.5506 0.1209 0.6047 0.701 0.1402 0.5608 0.8172 0.1634 0.4506 0.922 0.1844 0.3326 0.9875 0.1975 0.2379 0.996 0.1992 0.1992 0.9453 0.1891 0.2277 0.849 0.1698 0.3063 0.7328 0.1466 0.4041 0.628 0.1256 0.5024 0.5122 0.1125 0.5625 0.3324 0.1108 0.554 0.175 0.1209 0.6047 0.1402 0.2804 0.701 0.1634 0.53 0.8172 0.1844 0.7738 0.922 0.1975 0.9471 0.9875 0.1992 0.996 0.996 0.1891 0.9067 0.9453 0.1698 0.7125 0.849 0.1466 0.4753 0.7328 0.1256 0.2512 0.628 0.1628 0.1125 0.5625 0.3324 0.1108 0.554" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path6" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse6" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue6" toField="set_fraction" />
+    <PositionInterpolator DEF="Path7" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="1.9891 -1.3572 0 2.3916 -0.8415 0 2.8288 -0.1171 0 3.2708 0.5451 0 3.6876 0.9238 0 4.0507 0.9408 0 4.3354 0.6786 0 4.5222 0.3173 0 4.5985 0.0314 0 4.5591 -0.0935 0 4.4065 -0.0825 0 4.1514 -0.0255 0 3.8109 -0 0 3.4084 -0.0146 0 2.9712 -0.0084 0 2.5292 0.0935 0 2.1124 0.3079 0 1.7493 0.5539 0 1.4646 0.6786 0 1.2778 0.5388 0 1.2015 0.0941 0 1.2409 -0.5451 0 1.3935 -1.1492 0 1.6486 -1.4693 0 1.9891 -1.3572 0" />
+    <PositionInterpolator DEF="Pulse7" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.8 0.8 0.8 1.05 1.05 1.05 1.233 1.233 1.233 1.3 1.3 1.3 1.233 1.233 1.233 1.05 1.05 1.05 0.8 0.8 0.8 0.55 0.55 0.55 0.367 0.367 0.367 0.3 0.3 0.3 0.367 0.367 0.367 0.55 0.55 0.55 0.8 0.8 0.8 1.05 1.05 1.05 1.233 1.233 1.233 1.3 1.3 1.3 1.233 1.233 1.233 1.05 1.05 1.05 0.8 0.8 0.8 0.55 0.55 0.55 0.367 0.367 0.367 0.3 0.3 0.3 0.367 0.367 0.367 0.55 0.55 0.55 0.8 0.8 0.8" />
+    <ColorInterpolator DEF="Hue7" key="0 0.0417 0.0833 0.125 0.1667 0.2083 0.25 0.2917 0.3333 0.375 0.4167 0.4583 0.5 0.5417 0.5833 0.625 0.6667 0.7083 0.75 0.7917 0.8333 0.875 0.9167 0.9583 1" keyValue="0.6544 0.1309 0.5236 0.7077 0.1415 0.3464 0.7656 0.1531 0.1531 0.8241 0.3696 0.1648 0.8792 0.562 0.1758 0.9273 0.7039 0.1855 0.965 0.772 0.193 0.9897 0.7513 0.1979 0.9998 0.6391 0.2 0.9946 0.4461 0.1989 0.9744 0.1949 0.1949 0.9406 0.1881 0.4604 0.8956 0.1791 0.7164 0.7491 0.1685 0.8423 0.4707 0.1569 0.7844 0.2551 0.1452 0.7259 0.1342 0.1605 0.6708 0.1245 0.2236 0.6227 0.117 0.234 0.585 0.1121 0.2012 0.5603 0.11 0.1316 0.5502 0.1952 0.1111 0.5554 0.3454 0.1151 0.5756 0.542 0.1219 0.6094 0.6544 0.1309 0.5236" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Path7" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Pulse7" toField="set_fraction" />
+    <ROUTE fromNode="Beat" fromField="fraction_changed" toNode="Hue7" toField="set_fraction" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal000" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal000" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint000" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint000" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal001" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal001" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint001" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint001" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal002" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal002" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint002" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint002" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal003" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal003" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint003" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint003" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal004" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal004" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint004" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint004" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal005" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal005" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint005" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint005" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal006" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal006" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint006" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint006" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal007" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal007" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint007" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint007" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal010" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal010" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint010" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint010" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal011" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal011" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint011" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint011" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal012" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal012" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint012" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint012" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal013" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal013" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint013" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint013" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal014" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal014" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint014" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint014" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal015" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal015" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint015" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint015" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal016" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal016" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint016" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint016" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal017" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal017" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint017" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint017" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal100" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal100" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint100" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint100" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal101" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal101" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint101" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint101" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal102" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal102" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint102" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint102" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal103" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal103" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint103" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint103" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal104" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal104" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint104" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint104" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal105" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal105" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint105" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint105" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal106" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal106" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint106" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint106" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal107" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal107" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint107" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint107" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal110" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal110" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint110" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint110" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal111" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal111" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint111" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint111" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal112" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal112" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint112" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint112" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal113" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal113" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint113" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint113" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal114" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal114" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint114" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint114" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal115" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal115" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint115" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint115" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal116" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal116" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint116" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint116" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal117" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal117" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint117" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint117" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal200" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal200" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint200" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint200" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal201" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal201" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint201" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint201" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal202" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal202" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint202" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint202" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal203" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal203" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint203" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint203" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal204" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal204" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint204" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint204" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal205" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal205" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint205" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint205" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal206" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal206" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint206" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint206" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal207" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal207" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint207" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint207" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal210" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal210" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint210" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint210" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal211" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal211" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint211" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint211" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal212" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal212" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint212" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint212" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal213" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal213" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint213" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint213" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal214" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal214" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint214" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint214" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal215" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal215" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint215" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint215" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal216" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal216" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint216" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint216" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal217" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal217" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint217" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint217" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal300" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal300" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint300" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint300" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal301" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal301" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint301" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint301" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal302" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal302" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint302" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint302" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal303" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal303" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint303" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint303" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal304" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal304" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint304" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint304" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal305" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal305" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint305" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint305" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal306" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal306" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint306" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint306" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal307" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal307" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint307" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint307" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal310" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal310" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint310" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint310" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal311" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal311" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint311" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint311" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal312" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal312" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint312" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint312" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal313" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal313" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint313" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint313" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal314" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal314" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint314" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint314" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal315" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal315" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint315" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint315" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal316" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal316" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint316" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint316" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal317" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal317" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint317" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint317" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal400" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal400" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint400" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint400" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal401" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal401" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint401" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint401" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal402" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal402" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint402" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint402" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal403" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal403" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint403" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint403" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal404" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal404" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint404" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint404" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal405" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal405" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint405" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint405" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal406" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal406" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint406" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint406" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal407" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal407" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint407" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint407" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal410" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal410" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint410" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint410" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal411" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal411" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint411" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint411" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal412" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal412" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint412" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint412" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal413" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal413" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint413" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint413" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal414" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal414" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint414" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint414" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal415" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal415" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint415" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint415" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal416" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal416" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint416" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint416" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal417" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal417" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint417" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint417" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal500" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal500" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint500" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint500" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal501" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal501" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint501" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint501" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal502" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal502" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint502" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint502" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal503" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal503" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint503" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint503" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal504" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal504" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint504" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint504" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal505" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal505" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint505" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint505" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal506" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal506" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint506" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint506" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal507" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal507" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint507" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint507" toField="emissiveColor" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Petal510" toField="translation" />
+    <ROUTE fromNode="Pulse0" fromField="value_changed" toNode="Petal510" toField="scale" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint510" toField="baseColor" />
+    <ROUTE fromNode="Hue0" fromField="value_changed" toNode="Paint510" toField="emissiveColor" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Petal511" toField="translation" />
+    <ROUTE fromNode="Pulse1" fromField="value_changed" toNode="Petal511" toField="scale" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint511" toField="baseColor" />
+    <ROUTE fromNode="Hue1" fromField="value_changed" toNode="Paint511" toField="emissiveColor" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Petal512" toField="translation" />
+    <ROUTE fromNode="Pulse2" fromField="value_changed" toNode="Petal512" toField="scale" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint512" toField="baseColor" />
+    <ROUTE fromNode="Hue2" fromField="value_changed" toNode="Paint512" toField="emissiveColor" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Petal513" toField="translation" />
+    <ROUTE fromNode="Pulse3" fromField="value_changed" toNode="Petal513" toField="scale" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint513" toField="baseColor" />
+    <ROUTE fromNode="Hue3" fromField="value_changed" toNode="Paint513" toField="emissiveColor" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Petal514" toField="translation" />
+    <ROUTE fromNode="Pulse4" fromField="value_changed" toNode="Petal514" toField="scale" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint514" toField="baseColor" />
+    <ROUTE fromNode="Hue4" fromField="value_changed" toNode="Paint514" toField="emissiveColor" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Petal515" toField="translation" />
+    <ROUTE fromNode="Pulse5" fromField="value_changed" toNode="Petal515" toField="scale" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint515" toField="baseColor" />
+    <ROUTE fromNode="Hue5" fromField="value_changed" toNode="Paint515" toField="emissiveColor" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Petal516" toField="translation" />
+    <ROUTE fromNode="Pulse6" fromField="value_changed" toNode="Petal516" toField="scale" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint516" toField="baseColor" />
+    <ROUTE fromNode="Hue6" fromField="value_changed" toNode="Paint516" toField="emissiveColor" />
+    <ROUTE fromNode="Path7" fromField="value_changed" toNode="Petal517" toField="translation" />
+    <ROUTE fromNode="Pulse7" fromField="value_changed" toNode="Petal517" toField="scale" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint517" toField="baseColor" />
+    <ROUTE fromNode="Hue7" fromField="value_changed" toNode="Paint517" toField="emissiveColor" />
+    <OrientationInterpolator DEF="Drift" key="0 0.0833 0.1667 0.25 0.3333 0.4167 0.5 0.5833 0.6667 0.75 0.8333 0.9167 1" keyValue="0 0 1 0 0 0 1 0.5236 0 0 1 1.0472 0 0 1 1.5708 0 0 1 2.0944 0 0 1 2.618 0 0 1 3.1416 0 0 1 3.6652 0 0 1 4.1888 0 0 1 4.7124 0 0 1 5.236 0 0 1 5.7596 0 0 1 6.2832" />
+    <ROUTE fromNode="Slow" fromField="fraction_changed" toNode="Drift" toField="set_fraction" />
+    <ROUTE fromNode="Drift" fromField="value_changed" toNode="Mandala" toField="rotation" />
+    <TimeSensor DEF="Beat" cycleInterval="12.0" loop="true" />
+    <TimeSensor DEF="Slow" cycleInterval="60" loop="true" />
+    <BooleanFilter DEF="HubPress" />
+    <BooleanToggle DEF="Halt" />
+    <BooleanFilter DEF="Running" />
+    <ROUTE fromNode="HubTouch" fromField="isActive" toNode="HubPress" toField="set_boolean" />
+    <ROUTE fromNode="HubPress" fromField="inputTrue" toNode="Halt" toField="set_boolean" />
+    <ROUTE fromNode="Halt" fromField="toggle_changed" toNode="Running" toField="set_boolean" />
+    <ROUTE fromNode="Running" fromField="inputNegate" toNode="Beat" toField="enabled" />
+    <ROUTE fromNode="Running" fromField="inputNegate" toNode="Slow" toField="enabled" />
+  </Scene>
+</X3D>

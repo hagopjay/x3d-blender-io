@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Interpolation" level="2" />
+    <component name="Lighting" level="1" />
+    <meta name="title" content="Gallery 20: living garden" />
+    <meta name="description" content="Click a seed mound: a plant grows and blooms. Bees and butterflies fly, the day turns to dusk and fireflies blink." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-20-living-garden/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.45 0.75 1.0" />
+    <Viewpoint DEF="View" description="Garden" position="0 5.2 10.5" orientation="1 0 0 -0.32" />
+    <DirectionalLight DEF="Sun" direction="-0.4 -1 -0.5" intensity="1.0" color="1 0.97 0.9" />
+    <Transform translation="0 10 -9"><Shape><Appearance><PhysicalMaterial DEF="SkyMat" baseColor="0.45 0.75 1.0" emissiveColor="0.45 0.75 1.0"  /></Appearance><Box size="70 50 0.2" /></Shape></Transform>
+    <Transform translation="0 -0.1 0"><Shape><Appearance><PhysicalMaterial DEF="GrassMat" baseColor="0.3 0.65 0.25" emissiveColor="0.3 0.65 0.25" roughness="0.9" /></Appearance><Box size="24 0.2 14" /></Shape></Transform>
+    <Transform translation="-9.00 0.1 -1.90" rotation="0 1 0 0.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="2.12 0.1 0.16" rotation="0 1 0 1.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-4.75 0.1 2.22" rotation="0 1 0 2.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="6.37 0.1 -1.13" rotation="0 1 0 3.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-0.50 0.1 0.93" rotation="0 1 0 4.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-7.38 0.1 -2.41" rotation="0 1 0 5.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="3.74 0.1 -0.35" rotation="0 1 0 6.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-3.13 0.1 1.70" rotation="0 1 0 7.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="7.99 0.1 -1.64" rotation="0 1 0 8.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="1.12 0.1 0.42" rotation="0 1 0 9.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-5.76 0.1 2.48" rotation="0 1 0 10.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="5.36 0.1 -0.87" rotation="0 1 0 11.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-1.51 0.1 1.19" rotation="0 1 0 12.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-8.39 0.1 -2.15" rotation="0 1 0 13.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="2.74 0.1 -0.09" rotation="0 1 0 14.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-4.14 0.1 1.96" rotation="0 1 0 15.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="6.98 0.1 -1.38" rotation="0 1 0 16.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="0.11 0.1 0.68" rotation="0 1 0 17.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-6.77 0.1 2.74" rotation="0 1 0 18.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="4.36 0.1 -0.61" rotation="0 1 0 19.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-2.52 0.1 1.45" rotation="0 1 0 20.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="8.60 0.1 -1.89" rotation="0 1 0 21.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="1.73 0.1 0.16" rotation="0 1 0 22.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-5.15 0.1 2.22" rotation="0 1 0 23.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.58" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="5.98 0.1 -1.12" rotation="0 1 0 24.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.34" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform translation="-0.90 0.1 0.94" rotation="0 1 0 25.00"><Transform translation="0 0.17 0" rotation="0 0 1 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.06" height="0.46" /></Shape></Transform><Transform translation="0.06 0.14 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.62 0.22" emissiveColor="0.08 0.2 0.05" roughness="0.8" /></Appearance><Cone bottomRadius="0.05" height="0.28" /></Shape></Transform></Transform>
+    <Transform DEF="Cloud0" translation="-8 6.4 -5"><Transform translation="0 0 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="1.0" /></Shape></Transform><Transform translation="1.0 -0.1 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="0.8" /></Shape></Transform><Transform translation="-0.9 -0.1 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="0.75" /></Shape></Transform><Transform translation="0.3 0.3 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="0.7" /></Shape></Transform></Transform>
+    <Transform DEF="Cloud1" translation="3 5.6 -5"><Transform translation="0 0 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="1.0" /></Shape></Transform><Transform translation="1.0 -0.1 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="0.8" /></Shape></Transform><Transform translation="-0.9 -0.1 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="0.75" /></Shape></Transform><Transform translation="0.3 0.3 0" scale="1 0.55 0.6"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="0.9 0.9 0.95" roughness="1" /></Appearance><Sphere radius="0.7" /></Shape></Transform></Transform>
+    <Transform DEF="Mound0" translation="-5.4 0.05 0.4">
+      <TouchSensor DEF="Touch0" description="Click: plant a seed" />
+      <Transform scale="1 0.38 1"><Shape><Appearance><PhysicalMaterial baseColor="0.380 0.240 0.130" emissiveColor="0.120 0.070 0.030" roughness="0.95" /></Appearance><Sphere radius="0.8" /></Shape></Transform>
+      <Transform DEF="Stem0" translation="0 0.1 0" scale="1 0.01 1"><Transform translation="0 1.300 0"><Shape><Appearance><PhysicalMaterial baseColor="0.212 0.527 0.170" emissiveColor="0.050 0.124 0.040" roughness="0.7" /></Appearance><Cylinder radius="0.07" height="2.6" /></Shape></Transform></Transform>
+      <Transform DEF="LeafA0" translation="0 0.910 0" rotation="0 1 0 0.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="LeafB0" translation="0 1.430 0" rotation="0 1 0 3.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="Head0" translation="0 0.12 0">
+        <Transform DEF="Bud0" scale="0.05 0.05 0.05">
+          <Transform rotation="0 1 0 0.0000"><Transform DEF="Pet0_0" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_0" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 0.7854"><Transform DEF="Pet0_1" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_1" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 1.5708"><Transform DEF="Pet0_2" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_2" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 2.3562"><Transform DEF="Pet0_3" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_3" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.1416"><Transform DEF="Pet0_4" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_4" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.9270"><Transform DEF="Pet0_5" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_5" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 4.7124"><Transform DEF="Pet0_6" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_6" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 5.4978"><Transform DEF="Pet0_7" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat0_7" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform>
+          <Transform DEF="Eye0" translation="0 0.04 0" scale="1 0.55 1"><Shape><Appearance><PhysicalMaterial baseColor="0.450 0.250 0.080" emissiveColor="0.300 0.150 0.040" roughness="0.8" /></Appearance><Sphere radius="0.34" /></Shape></Transform>
+        </Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Mound1" translation="-1.8 0.05 -0.7">
+      <TouchSensor DEF="Touch1" description="Click: plant a seed" />
+      <Transform scale="1 0.38 1"><Shape><Appearance><PhysicalMaterial baseColor="0.380 0.240 0.130" emissiveColor="0.120 0.070 0.030" roughness="0.95" /></Appearance><Sphere radius="0.8" /></Shape></Transform>
+      <Transform DEF="Stem1" translation="0 0.1 0" scale="1 0.01 1"><Transform translation="0 1.650 0"><Shape><Appearance><PhysicalMaterial baseColor="0.212 0.527 0.170" emissiveColor="0.050 0.124 0.040" roughness="0.7" /></Appearance><Cylinder radius="0.07" height="3.3" /></Shape></Transform></Transform>
+      <Transform DEF="LeafA1" translation="0 1.155 0" rotation="0 1 0 0.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="LeafB1" translation="0 1.815 0" rotation="0 1 0 3.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="Head1" translation="0 0.12 0">
+        <Transform DEF="Bud1" scale="0.05 0.05 0.05">
+          <Transform rotation="0 1 0 0.0000"><Transform DEF="Pet1_0" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_0" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 0.7854"><Transform DEF="Pet1_1" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_1" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 1.5708"><Transform DEF="Pet1_2" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_2" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 2.3562"><Transform DEF="Pet1_3" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_3" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.1416"><Transform DEF="Pet1_4" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_4" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.9270"><Transform DEF="Pet1_5" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_5" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 4.7124"><Transform DEF="Pet1_6" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_6" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 5.4978"><Transform DEF="Pet1_7" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat1_7" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform>
+          <Transform DEF="Eye1" translation="0 0.04 0" scale="1 0.55 1"><Shape><Appearance><PhysicalMaterial baseColor="0.450 0.250 0.080" emissiveColor="0.300 0.150 0.040" roughness="0.8" /></Appearance><Sphere radius="0.34" /></Shape></Transform>
+        </Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Mound2" translation="1.8 0.05 0.5">
+      <TouchSensor DEF="Touch2" description="Click: plant a seed" />
+      <Transform scale="1 0.38 1"><Shape><Appearance><PhysicalMaterial baseColor="0.380 0.240 0.130" emissiveColor="0.120 0.070 0.030" roughness="0.95" /></Appearance><Sphere radius="0.8" /></Shape></Transform>
+      <Transform DEF="Stem2" translation="0 0.1 0" scale="1 0.01 1"><Transform translation="0 1.200 0"><Shape><Appearance><PhysicalMaterial baseColor="0.212 0.527 0.170" emissiveColor="0.050 0.124 0.040" roughness="0.7" /></Appearance><Cylinder radius="0.07" height="2.4" /></Shape></Transform></Transform>
+      <Transform DEF="LeafA2" translation="0 0.840 0" rotation="0 1 0 0.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="LeafB2" translation="0 1.320 0" rotation="0 1 0 3.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="Head2" translation="0 0.12 0">
+        <Transform DEF="Bud2" scale="0.05 0.05 0.05">
+          <Transform rotation="0 1 0 0.0000"><Transform DEF="Pet2_0" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_0" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 0.7854"><Transform DEF="Pet2_1" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_1" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 1.5708"><Transform DEF="Pet2_2" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_2" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 2.3562"><Transform DEF="Pet2_3" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_3" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.1416"><Transform DEF="Pet2_4" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_4" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.9270"><Transform DEF="Pet2_5" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_5" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 4.7124"><Transform DEF="Pet2_6" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_6" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 5.4978"><Transform DEF="Pet2_7" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat2_7" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform>
+          <Transform DEF="Eye2" translation="0 0.04 0" scale="1 0.55 1"><Shape><Appearance><PhysicalMaterial baseColor="0.450 0.250 0.080" emissiveColor="0.300 0.150 0.040" roughness="0.8" /></Appearance><Sphere radius="0.34" /></Shape></Transform>
+        </Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Mound3" translation="5.4 0.05 -0.4">
+      <TouchSensor DEF="Touch3" description="Click: plant a seed" />
+      <Transform scale="1 0.38 1"><Shape><Appearance><PhysicalMaterial baseColor="0.380 0.240 0.130" emissiveColor="0.120 0.070 0.030" roughness="0.95" /></Appearance><Sphere radius="0.8" /></Shape></Transform>
+      <Transform DEF="Stem3" translation="0 0.1 0" scale="1 0.01 1"><Transform translation="0 1.500 0"><Shape><Appearance><PhysicalMaterial baseColor="0.212 0.527 0.170" emissiveColor="0.050 0.124 0.040" roughness="0.7" /></Appearance><Cylinder radius="0.07" height="3.0" /></Shape></Transform></Transform>
+      <Transform DEF="LeafA3" translation="0 1.050 0" rotation="0 1 0 0.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="LeafB3" translation="0 1.650 0" rotation="0 1 0 3.6" scale="0.01 0.01 0.01"><Transform translation="0.45 0.1 0" rotation="0 0 1 0.35" scale="1 0.14 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.225 0.558 0.180" emissiveColor="0.062 0.155 0.050" roughness="0.6" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform>
+      <Transform DEF="Head3" translation="0 0.12 0">
+        <Transform DEF="Bud3" scale="0.05 0.05 0.05">
+          <Transform rotation="0 1 0 0.0000"><Transform DEF="Pet3_0" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_0" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 0.7854"><Transform DEF="Pet3_1" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_1" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 1.5708"><Transform DEF="Pet3_2" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_2" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 2.3562"><Transform DEF="Pet3_3" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_3" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.1416"><Transform DEF="Pet3_4" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_4" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 3.9270"><Transform DEF="Pet3_5" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_5" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 4.7124"><Transform DEF="Pet3_6" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_6" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform><Transform rotation="0 1 0 5.4978"><Transform DEF="Pet3_7" rotation="0 0 1 1.45"><Transform translation="0.6 0 0" scale="1 0.2 0.6"><Shape><Appearance><PhysicalMaterial DEF="PetMat3_7" baseColor="0.250 0.620 0.200" emissiveColor="0.075 0.186 0.060" roughness="0.5" /></Appearance><Sphere radius="0.5" /></Shape></Transform></Transform></Transform>
+          <Transform DEF="Eye3" translation="0 0.04 0" scale="1 0.55 1"><Shape><Appearance><PhysicalMaterial baseColor="0.450 0.250 0.080" emissiveColor="0.300 0.150 0.040" roughness="0.8" /></Appearance><Sphere radius="0.34" /></Shape></Transform>
+        </Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Bee0" translation="0 3.1 1.2" rotation="-0 -1 -0 0.526">
+      <Transform scale="1.25 0.8 0.8"><Shape><Appearance><PhysicalMaterial baseColor="1.0 0.8 0.1" emissiveColor="0.35 0.25 0.0" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform>
+      <Transform translation="-0.07 0 0" scale="0.2 1 1"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.08 0.05" roughness="0.6" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+      <Transform translation="0.2 0.03 0"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.08 0.05" roughness="0.6" /></Appearance><Sphere radius="0.09" /></Shape></Transform>
+      <Transform DEF="Bee0WingR" translation="0 0.12 0.06"><Transform translation="0 0 0.12"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.97 1.0" emissiveColor="0.5 0.55 0.6" transparency="0.45" roughness="0.1" /></Appearance><Box size="0.18 0.01 0.26" /></Shape></Transform></Transform>
+      <Transform DEF="Bee0WingL" translation="0 0.12 -0.06"><Transform translation="0 0 -0.12"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.97 1.0" emissiveColor="0.5 0.55 0.6" transparency="0.45" roughness="0.1" /></Appearance><Box size="0.18 0.01 0.26" /></Shape></Transform></Transform>
+    </Transform>
+    <Transform DEF="Bee1" translation="5.2283 2.6947 0.7405" rotation="0 1 0 2.4605">
+      <Transform scale="1.25 0.8 0.8"><Shape><Appearance><PhysicalMaterial baseColor="1.0 0.8 0.1" emissiveColor="0.35 0.25 0.0" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform>
+      <Transform translation="-0.07 0 0" scale="0.2 1 1"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.08 0.05" roughness="0.6" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+      <Transform translation="0.2 0.03 0"><Shape><Appearance><PhysicalMaterial baseColor="0.1 0.08 0.05" roughness="0.6" /></Appearance><Sphere radius="0.09" /></Shape></Transform>
+      <Transform DEF="Bee1WingR" translation="0 0.12 0.06"><Transform translation="0 0 0.12"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.97 1.0" emissiveColor="0.5 0.55 0.6" transparency="0.45" roughness="0.1" /></Appearance><Box size="0.18 0.01 0.26" /></Shape></Transform></Transform>
+      <Transform DEF="Bee1WingL" translation="0 0.12 -0.06"><Transform translation="0 0 -0.12"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.97 1.0" emissiveColor="0.5 0.55 0.6" transparency="0.45" roughness="0.1" /></Appearance><Box size="0.18 0.01 0.26" /></Shape></Transform></Transform>
+    </Transform>
+    <Transform DEF="Fly0" translation="4.0488 1.9946 3.8549" rotation="0 1 0 0.4095">
+      <Transform scale="3 0.6 0.6"><Shape><Appearance><PhysicalMaterial baseColor="0.250 0.100 0.050" roughness="0.4" /></Appearance><Sphere radius="0.06" /></Shape></Transform>
+      <Transform DEF="Fly0WingR" translation="0 0.04 0.03"><Transform translation="0 0 0.26"><Shape><Appearance><PhysicalMaterial baseColor="1.000 0.550 0.100" emissiveColor="0.400 0.220 0.040" roughness="0.4" /></Appearance><Box size="0.34 0.012 0.5" /></Shape></Transform><Transform translation="-0.1 0.007 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.250 0.100 0.050" roughness="0.4" /></Appearance><Box size="0.12 0.012 0.18" /></Shape></Transform></Transform><Transform DEF="Fly0WingL" translation="0 0.04 -0.03"><Transform translation="0 0 -0.26"><Shape><Appearance><PhysicalMaterial baseColor="1.000 0.550 0.100" emissiveColor="0.400 0.220 0.040" roughness="0.4" /></Appearance><Box size="0.34 0.012 0.5" /></Shape></Transform><Transform translation="-0.1 0.007 -0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.250 0.100 0.050" roughness="0.4" /></Appearance><Box size="0.12 0.012 0.18" /></Shape></Transform></Transform>
+    </Transform>
+    <Transform DEF="Fly1" translation="-3.0867 1.4985 3.3872" rotation="0 1 0 3.0292">
+      <Transform scale="3 0.6 0.6"><Shape><Appearance><PhysicalMaterial baseColor="0.050 0.100 0.400" roughness="0.4" /></Appearance><Sphere radius="0.06" /></Shape></Transform>
+      <Transform DEF="Fly1WingR" translation="0 0.04 0.03"><Transform translation="0 0 0.26"><Shape><Appearance><PhysicalMaterial baseColor="0.300 0.550 1.000" emissiveColor="0.120 0.220 0.400" roughness="0.4" /></Appearance><Box size="0.34 0.012 0.5" /></Shape></Transform><Transform translation="-0.1 0.007 0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.050 0.100 0.400" roughness="0.4" /></Appearance><Box size="0.12 0.012 0.18" /></Shape></Transform></Transform><Transform DEF="Fly1WingL" translation="0 0.04 -0.03"><Transform translation="0 0 -0.26"><Shape><Appearance><PhysicalMaterial baseColor="0.300 0.550 1.000" emissiveColor="0.120 0.220 0.400" roughness="0.4" /></Appearance><Box size="0.34 0.012 0.5" /></Shape></Transform><Transform translation="-0.1 0.007 -0.2"><Shape><Appearance><PhysicalMaterial baseColor="0.050 0.100 0.400" roughness="0.4" /></Appearance><Box size="0.12 0.012 0.18" /></Shape></Transform></Transform>
+    </Transform>
+    <Transform DEF="Glim0" translation="-6.50 0.80 -1.40" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <Transform DEF="Glim1" translation="-4.60 2.30 -0.30" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <Transform DEF="Glim2" translation="-2.70 1.80 0.80" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <Transform DEF="Glim3" translation="-0.80 1.30 1.90" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <Transform DEF="Glim4" translation="1.10 0.80 -1.40" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <Transform DEF="Glim5" translation="3.00 2.30 -0.30" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <Transform DEF="Glim6" translation="4.90 1.80 0.80" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <Transform DEF="Glim7" translation="6.80 1.30 1.90" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.9 1.0 0.3" emissiveColor="0.9 1.0 0.2" roughness="0.3" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Day" cycleInterval="30.0" loop="true" />
+    <ColorInterpolator DEF="SkyTint" key="0 0.3 0.45 0.55 0.85 0.95 1" keyValue="0.450 0.750 1.000 0.950 0.750 0.500 0.500 0.300 0.450 0.040 0.050 0.160 0.040 0.050 0.160 0.900 0.600 0.550 0.450 0.750 1.000" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="SkyTint" toField="set_fraction" />
+    <ColorInterpolator DEF="SunTint" key="0 0.3 0.45 0.55 0.85 0.95 1" keyValue="1.000 0.970 0.900 1.000 0.700 0.400 0.600 0.350 0.500 0.150 0.200 0.450 0.150 0.200 0.450 1.000 0.700 0.550 1.000 0.970 0.900" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="SunTint" toField="set_fraction" />
+    <ColorInterpolator DEF="GrassTint" key="0 0.3 0.45 0.55 0.85 0.95 1" keyValue="0.300 0.650 0.250 0.350 0.500 0.200 0.200 0.300 0.200 0.040 0.100 0.080 0.040 0.100 0.080 0.250 0.450 0.200 0.300 0.650 0.250" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="GrassTint" toField="set_fraction" />
+    <ROUTE fromNode="SkyTint" fromField="value_changed" toNode="SkyMat" toField="baseColor" />
+    <ROUTE fromNode="SkyTint" fromField="value_changed" toNode="SkyMat" toField="emissiveColor" />
+    <ROUTE fromNode="SunTint" fromField="value_changed" toNode="Sun" toField="color" />
+    <ROUTE fromNode="GrassTint" fromField="value_changed" toNode="GrassMat" toField="baseColor" />
+    <ROUTE fromNode="GrassTint" fromField="value_changed" toNode="GrassMat" toField="emissiveColor" />
+    <BooleanFilter DEF="Press0" />
+    <TimeTrigger DEF="Plant0" />
+    <TimeSensor DEF="Grow0" cycleInterval="5.0" />
+    <ROUTE fromNode="Touch0" fromField="isActive" toNode="Press0" toField="set_boolean" />
+    <ROUTE fromNode="Press0" fromField="inputTrue" toNode="Plant0" toField="set_boolean" />
+    <ROUTE fromNode="Plant0" fromField="triggerTime" toNode="Grow0" toField="startTime" />
+    <PositionInterpolator DEF="StemUp0" key="0 0.5 0.65 1" keyValue="1 0.01 1 1 1.05 1 1 0.98 1 1 1 1" />
+    <PositionInterpolator DEF="HeadUp0" key="0 0.5 0.65 1" keyValue="0 0.12 0 0 2.830 0 0 2.648 0 0 2.700 0" />
+    <PositionInterpolator DEF="LeafUp0" key="0 0.2 0.55 0.75 1" keyValue="0.01 0.01 0.01 0.01 0.01 0.01 1.1 1.1 1.1 0.95 0.95 0.95 1 1 1" />
+    <PositionInterpolator DEF="BudUp0" key="0 0.4 0.6 1" keyValue="0.05 0.05 0.05 0.5 0.5 0.5 1 1 1 1.15 1.15 1.15" />
+    <OrientationInterpolator DEF="Open0" key="0 0.45 0.8 0.92 1" keyValue="0 0 1 1.45 0 0 1 1.45 0 0 1 -0.12 0 0 1 0.1 0 0 1 0.02" />
+    <ColorInterpolator DEF="Bloom0" key="0 0.45 0.8 1" keyValue="0.250 0.620 0.200 0.250 0.620 0.200 0.950 0.150 0.200 1.000 0.215 0.270" />
+    <ROUTE fromNode="Grow0" fromField="fraction_changed" toNode="StemUp0" toField="set_fraction" />
+    <ROUTE fromNode="Grow0" fromField="fraction_changed" toNode="HeadUp0" toField="set_fraction" />
+    <ROUTE fromNode="Grow0" fromField="fraction_changed" toNode="LeafUp0" toField="set_fraction" />
+    <ROUTE fromNode="Grow0" fromField="fraction_changed" toNode="BudUp0" toField="set_fraction" />
+    <ROUTE fromNode="Grow0" fromField="fraction_changed" toNode="Open0" toField="set_fraction" />
+    <ROUTE fromNode="Grow0" fromField="fraction_changed" toNode="Bloom0" toField="set_fraction" />
+    <ROUTE fromNode="StemUp0" fromField="value_changed" toNode="Stem0" toField="scale" />
+    <ROUTE fromNode="HeadUp0" fromField="value_changed" toNode="Head0" toField="translation" />
+    <ROUTE fromNode="LeafUp0" fromField="value_changed" toNode="LeafA0" toField="scale" />
+    <ROUTE fromNode="LeafUp0" fromField="value_changed" toNode="LeafB0" toField="scale" />
+    <ROUTE fromNode="BudUp0" fromField="value_changed" toNode="Bud0" toField="scale" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_0" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_0" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_0" toField="emissiveColor" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_1" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_1" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_1" toField="emissiveColor" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_2" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_2" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_2" toField="emissiveColor" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_3" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_3" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_3" toField="emissiveColor" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_4" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_4" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_4" toField="emissiveColor" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_5" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_5" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_5" toField="emissiveColor" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_6" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_6" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_6" toField="emissiveColor" />
+    <ROUTE fromNode="Open0" fromField="value_changed" toNode="Pet0_7" toField="rotation" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_7" toField="baseColor" />
+    <ROUTE fromNode="Bloom0" fromField="value_changed" toNode="PetMat0_7" toField="emissiveColor" />
+    <BooleanFilter DEF="Press1" />
+    <TimeTrigger DEF="Plant1" />
+    <TimeSensor DEF="Grow1" cycleInterval="5.0" />
+    <ROUTE fromNode="Touch1" fromField="isActive" toNode="Press1" toField="set_boolean" />
+    <ROUTE fromNode="Press1" fromField="inputTrue" toNode="Plant1" toField="set_boolean" />
+    <ROUTE fromNode="Plant1" fromField="triggerTime" toNode="Grow1" toField="startTime" />
+    <PositionInterpolator DEF="StemUp1" key="0 0.5 0.65 1" keyValue="1 0.01 1 1 1.05 1 1 0.98 1 1 1 1" />
+    <PositionInterpolator DEF="HeadUp1" key="0 0.5 0.65 1" keyValue="0 0.12 0 0 3.565 0 0 3.334 0 0 3.400 0" />
+    <PositionInterpolator DEF="LeafUp1" key="0 0.2 0.55 0.75 1" keyValue="0.01 0.01 0.01 0.01 0.01 0.01 1.1 1.1 1.1 0.95 0.95 0.95 1 1 1" />
+    <PositionInterpolator DEF="BudUp1" key="0 0.4 0.6 1" keyValue="0.05 0.05 0.05 0.5 0.5 0.5 1 1 1 1.15 1.15 1.15" />
+    <OrientationInterpolator DEF="Open1" key="0 0.45 0.8 0.92 1" keyValue="0 0 1 1.45 0 0 1 1.45 0 0 1 -0.12 0 0 1 0.1 0 0 1 0.02" />
+    <ColorInterpolator DEF="Bloom1" key="0 0.45 0.8 1" keyValue="0.250 0.620 0.200 0.250 0.620 0.200 1.000 0.820 0.100 1.000 0.952 0.160" />
+    <ROUTE fromNode="Grow1" fromField="fraction_changed" toNode="StemUp1" toField="set_fraction" />
+    <ROUTE fromNode="Grow1" fromField="fraction_changed" toNode="HeadUp1" toField="set_fraction" />
+    <ROUTE fromNode="Grow1" fromField="fraction_changed" toNode="LeafUp1" toField="set_fraction" />
+    <ROUTE fromNode="Grow1" fromField="fraction_changed" toNode="BudUp1" toField="set_fraction" />
+    <ROUTE fromNode="Grow1" fromField="fraction_changed" toNode="Open1" toField="set_fraction" />
+    <ROUTE fromNode="Grow1" fromField="fraction_changed" toNode="Bloom1" toField="set_fraction" />
+    <ROUTE fromNode="StemUp1" fromField="value_changed" toNode="Stem1" toField="scale" />
+    <ROUTE fromNode="HeadUp1" fromField="value_changed" toNode="Head1" toField="translation" />
+    <ROUTE fromNode="LeafUp1" fromField="value_changed" toNode="LeafA1" toField="scale" />
+    <ROUTE fromNode="LeafUp1" fromField="value_changed" toNode="LeafB1" toField="scale" />
+    <ROUTE fromNode="BudUp1" fromField="value_changed" toNode="Bud1" toField="scale" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_0" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_0" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_0" toField="emissiveColor" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_1" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_1" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_1" toField="emissiveColor" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_2" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_2" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_2" toField="emissiveColor" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_3" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_3" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_3" toField="emissiveColor" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_4" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_4" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_4" toField="emissiveColor" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_5" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_5" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_5" toField="emissiveColor" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_6" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_6" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_6" toField="emissiveColor" />
+    <ROUTE fromNode="Open1" fromField="value_changed" toNode="Pet1_7" toField="rotation" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_7" toField="baseColor" />
+    <ROUTE fromNode="Bloom1" fromField="value_changed" toNode="PetMat1_7" toField="emissiveColor" />
+    <BooleanFilter DEF="Press2" />
+    <TimeTrigger DEF="Plant2" />
+    <TimeSensor DEF="Grow2" cycleInterval="5.0" />
+    <ROUTE fromNode="Touch2" fromField="isActive" toNode="Press2" toField="set_boolean" />
+    <ROUTE fromNode="Press2" fromField="inputTrue" toNode="Plant2" toField="set_boolean" />
+    <ROUTE fromNode="Plant2" fromField="triggerTime" toNode="Grow2" toField="startTime" />
+    <PositionInterpolator DEF="StemUp2" key="0 0.5 0.65 1" keyValue="1 0.01 1 1 1.05 1 1 0.98 1 1 1 1" />
+    <PositionInterpolator DEF="HeadUp2" key="0 0.5 0.65 1" keyValue="0 0.12 0 0 2.620 0 0 2.452 0 0 2.500 0" />
+    <PositionInterpolator DEF="LeafUp2" key="0 0.2 0.55 0.75 1" keyValue="0.01 0.01 0.01 0.01 0.01 0.01 1.1 1.1 1.1 0.95 0.95 0.95 1 1 1" />
+    <PositionInterpolator DEF="BudUp2" key="0 0.4 0.6 1" keyValue="0.05 0.05 0.05 0.5 0.5 0.5 1 1 1 1.15 1.15 1.15" />
+    <OrientationInterpolator DEF="Open2" key="0 0.45 0.8 0.92 1" keyValue="0 0 1 1.45 0 0 1 1.45 0 0 1 -0.12 0 0 1 0.1 0 0 1 0.02" />
+    <ColorInterpolator DEF="Bloom2" key="0 0.45 0.8 1" keyValue="0.250 0.620 0.200 0.250 0.620 0.200 1.000 0.450 0.720 1.000 0.545 0.842" />
+    <ROUTE fromNode="Grow2" fromField="fraction_changed" toNode="StemUp2" toField="set_fraction" />
+    <ROUTE fromNode="Grow2" fromField="fraction_changed" toNode="HeadUp2" toField="set_fraction" />
+    <ROUTE fromNode="Grow2" fromField="fraction_changed" toNode="LeafUp2" toField="set_fraction" />
+    <ROUTE fromNode="Grow2" fromField="fraction_changed" toNode="BudUp2" toField="set_fraction" />
+    <ROUTE fromNode="Grow2" fromField="fraction_changed" toNode="Open2" toField="set_fraction" />
+    <ROUTE fromNode="Grow2" fromField="fraction_changed" toNode="Bloom2" toField="set_fraction" />
+    <ROUTE fromNode="StemUp2" fromField="value_changed" toNode="Stem2" toField="scale" />
+    <ROUTE fromNode="HeadUp2" fromField="value_changed" toNode="Head2" toField="translation" />
+    <ROUTE fromNode="LeafUp2" fromField="value_changed" toNode="LeafA2" toField="scale" />
+    <ROUTE fromNode="LeafUp2" fromField="value_changed" toNode="LeafB2" toField="scale" />
+    <ROUTE fromNode="BudUp2" fromField="value_changed" toNode="Bud2" toField="scale" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_0" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_0" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_0" toField="emissiveColor" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_1" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_1" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_1" toField="emissiveColor" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_2" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_2" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_2" toField="emissiveColor" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_3" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_3" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_3" toField="emissiveColor" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_4" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_4" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_4" toField="emissiveColor" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_5" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_5" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_5" toField="emissiveColor" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_6" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_6" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_6" toField="emissiveColor" />
+    <ROUTE fromNode="Open2" fromField="value_changed" toNode="Pet2_7" toField="rotation" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_7" toField="baseColor" />
+    <ROUTE fromNode="Bloom2" fromField="value_changed" toNode="PetMat2_7" toField="emissiveColor" />
+    <BooleanFilter DEF="Press3" />
+    <TimeTrigger DEF="Plant3" />
+    <TimeSensor DEF="Grow3" cycleInterval="5.0" />
+    <ROUTE fromNode="Touch3" fromField="isActive" toNode="Press3" toField="set_boolean" />
+    <ROUTE fromNode="Press3" fromField="inputTrue" toNode="Plant3" toField="set_boolean" />
+    <ROUTE fromNode="Plant3" fromField="triggerTime" toNode="Grow3" toField="startTime" />
+    <PositionInterpolator DEF="StemUp3" key="0 0.5 0.65 1" keyValue="1 0.01 1 1 1.05 1 1 0.98 1 1 1 1" />
+    <PositionInterpolator DEF="HeadUp3" key="0 0.5 0.65 1" keyValue="0 0.12 0 0 3.250 0 0 3.040 0 0 3.100 0" />
+    <PositionInterpolator DEF="LeafUp3" key="0 0.2 0.55 0.75 1" keyValue="0.01 0.01 0.01 0.01 0.01 0.01 1.1 1.1 1.1 0.95 0.95 0.95 1 1 1" />
+    <PositionInterpolator DEF="BudUp3" key="0 0.4 0.6 1" keyValue="0.05 0.05 0.05 0.5 0.5 0.5 1 1 1 1.15 1.15 1.15" />
+    <OrientationInterpolator DEF="Open3" key="0 0.45 0.8 0.92 1" keyValue="0 0 1 1.45 0 0 1 1.45 0 0 1 -0.12 0 0 1 0.1 0 0 1 0.02" />
+    <ColorInterpolator DEF="Bloom3" key="0 0.45 0.8 1" keyValue="0.250 0.620 0.200 0.250 0.620 0.200 0.600 0.300 0.950 0.710 0.380 1.000" />
+    <ROUTE fromNode="Grow3" fromField="fraction_changed" toNode="StemUp3" toField="set_fraction" />
+    <ROUTE fromNode="Grow3" fromField="fraction_changed" toNode="HeadUp3" toField="set_fraction" />
+    <ROUTE fromNode="Grow3" fromField="fraction_changed" toNode="LeafUp3" toField="set_fraction" />
+    <ROUTE fromNode="Grow3" fromField="fraction_changed" toNode="BudUp3" toField="set_fraction" />
+    <ROUTE fromNode="Grow3" fromField="fraction_changed" toNode="Open3" toField="set_fraction" />
+    <ROUTE fromNode="Grow3" fromField="fraction_changed" toNode="Bloom3" toField="set_fraction" />
+    <ROUTE fromNode="StemUp3" fromField="value_changed" toNode="Stem3" toField="scale" />
+    <ROUTE fromNode="HeadUp3" fromField="value_changed" toNode="Head3" toField="translation" />
+    <ROUTE fromNode="LeafUp3" fromField="value_changed" toNode="LeafA3" toField="scale" />
+    <ROUTE fromNode="LeafUp3" fromField="value_changed" toNode="LeafB3" toField="scale" />
+    <ROUTE fromNode="BudUp3" fromField="value_changed" toNode="Bud3" toField="scale" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_0" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_0" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_0" toField="emissiveColor" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_1" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_1" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_1" toField="emissiveColor" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_2" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_2" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_2" toField="emissiveColor" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_3" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_3" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_3" toField="emissiveColor" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_4" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_4" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_4" toField="emissiveColor" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_5" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_5" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_5" toField="emissiveColor" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_6" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_6" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_6" toField="emissiveColor" />
+    <ROUTE fromNode="Open3" fromField="value_changed" toNode="Pet3_7" toField="rotation" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_7" toField="baseColor" />
+    <ROUTE fromNode="Bloom3" fromField="value_changed" toNode="PetMat3_7" toField="emissiveColor" />
+    <TimeSensor DEF="Bee0Clock" cycleInterval="16" loop="true" />
+    <PositionInterpolator DEF="Bee0Pos" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="0 3.1 1.2 1.3796 3.4741 1.981 2.6901 3.685 2.6073 3.8656 3.6406 2.9549 4.8474 3.3603 2.9549 5.586 2.9665 2.6073 6.0446 2.6309 1.981 6.2 2.5 1.2 6.0446 2.6309 0.419 5.586 2.9665 -0.2073 4.8474 3.3603 -0.5549 3.8656 3.6406 -0.5549 2.6901 3.685 -0.2073 1.3796 3.4741 0.419 0 3.1 1.2 -1.3796 2.7259 1.981 -2.6901 2.515 2.6073 -3.8656 2.5594 2.9549 -4.8474 2.8397 2.9549 -5.586 3.2335 2.6073 -6.0446 3.5691 1.981 -6.2 3.7 1.2 -6.0446 3.5691 0.419 -5.586 3.2335 -0.2073 -4.8474 2.8397 -0.5549 -3.8656 2.5594 -0.5549 -2.6901 2.515 -0.2073 -1.3796 2.7259 0.419 -0 3.1 1.2" />
+    <OrientationInterpolator DEF="Bee0Turn" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="-0 -1 -0 0.526 -0 -1 -0 0.4895 -0 -1 -0 0.3754 -0 -1 -0 0.1516 0 1 0 0.2232 0 1 0 0.7166 0 1 0 1.1867 0 1 0 1.587 0 1 0 1.9912 0 1 0 2.4675 0 1 0 2.9559 -0 -1 -0 2.9659 -0 -1 -0 2.753 -0 -1 -0 2.6463 -0 -1 -0 2.6156 -0 -1 -0 2.6521 -0 -1 -0 2.7662 -0 -1 -0 2.99 0 1 0 2.9184 0 1 0 2.425 0 1 0 1.9549 0 1 0 1.5546 0 1 0 1.1504 0 1 0 0.6741 0 1 0 0.1857 -0 -1 -0 0.1757 -0 -1 -0 0.3886 -0 -1 -0 0.4953 -0 -1 -0 0.526" />
+    <ROUTE fromNode="Bee0Clock" fromField="fraction_changed" toNode="Bee0Pos" toField="set_fraction" />
+    <ROUTE fromNode="Bee0Clock" fromField="fraction_changed" toNode="Bee0Turn" toField="set_fraction" />
+    <ROUTE fromNode="Bee0Pos" fromField="value_changed" toNode="Bee0" toField="translation" />
+    <ROUTE fromNode="Bee0Turn" fromField="value_changed" toNode="Bee0" toField="rotation" />
+    <TimeSensor DEF="Bee0Beat" cycleInterval="0.14" loop="true" />
+    <OrientationInterpolator DEF="Bee0FlapR" key="0 0.5 1" keyValue="1 0 0 -0.9 1 0 0 0.18000000000000002 1 0 0 -0.9" />
+    <OrientationInterpolator DEF="Bee0FlapL" key="0 0.5 1" keyValue="1 0 0 0.9 1 0 0 -0.18000000000000002 1 0 0 0.9" />
+    <ROUTE fromNode="Bee0Beat" fromField="fraction_changed" toNode="Bee0FlapR" toField="set_fraction" />
+    <ROUTE fromNode="Bee0Beat" fromField="fraction_changed" toNode="Bee0FlapL" toField="set_fraction" />
+    <ROUTE fromNode="Bee0FlapR" fromField="value_changed" toNode="Bee0WingR" toField="rotation" />
+    <ROUTE fromNode="Bee0FlapL" fromField="value_changed" toNode="Bee0WingL" toField="rotation" />
+    <TimeSensor DEF="Bee1Clock" cycleInterval="21" loop="true" />
+    <PositionInterpolator DEF="Bee1Pos" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="5.2283 2.6947 0.7405 4.6283 2.5414 0.4484 3.8212 2.2392 0.4239 2.8476 1.9198 0.6721 1.7562 1.7227 1.1436 0.6019 1.7339 1.7451 -0.5576 1.9485 2.3576 -1.664 2.2728 2.8595 -2.6619 2.5653 3.1516 -3.5012 2.6985 3.1761 -4.1399 2.6141 2.9279 -4.546 2.3491 2.4564 -4.699 2.019 1.8549 -4.5913 1.7679 1.2424 -4.2283 1.7053 0.7405 -3.6283 1.8586 0.4484 -2.8212 2.1608 0.4239 -1.8476 2.4802 0.6721 -0.7562 2.6773 1.1436 0.3981 2.6661 1.7451 1.5576 2.4515 2.3576 2.664 2.1272 2.8595 3.6619 1.8347 3.1516 4.5012 1.7015 3.1761 5.1399 1.7859 2.9279 5.546 2.0509 2.4564 5.699 2.381 1.8549 5.5913 2.6321 1.2424 5.2283 2.6947 0.7405" />
+    <OrientationInterpolator DEF="Bee1Turn" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="0 1 0 2.4605 0 1 0 2.9327 -0 -1 -0 3.0018 -0 -1 -0 2.7918 -0 -1 -0 2.6829 -0 -1 -0 2.6477 -0 -1 -0 2.677 -0 -1 -0 2.7783 -0 -1 -0 2.9775 0 1 0 2.9705 0 1 0 2.5056 0 1 0 2.0215 0 1 0 1.5897 0 1 0 1.1613 0 1 0 0.6811 0 1 0 0.2089 -0 -1 -0 0.1398 -0 -1 -0 0.3498 -0 -1 -0 0.4587 -0 -1 -0 0.4939 -0 -1 -0 0.4646 -0 -1 -0 0.3633 -0 -1 -0 0.1641 0 1 0 0.1711 0 1 0 0.636 0 1 0 1.1201 0 1 0 1.5519 0 1 0 1.9803 0 1 0 2.4605" />
+    <ROUTE fromNode="Bee1Clock" fromField="fraction_changed" toNode="Bee1Pos" toField="set_fraction" />
+    <ROUTE fromNode="Bee1Clock" fromField="fraction_changed" toNode="Bee1Turn" toField="set_fraction" />
+    <ROUTE fromNode="Bee1Pos" fromField="value_changed" toNode="Bee1" toField="translation" />
+    <ROUTE fromNode="Bee1Turn" fromField="value_changed" toNode="Bee1" toField="rotation" />
+    <TimeSensor DEF="Bee1Beat" cycleInterval="0.14" loop="true" />
+    <OrientationInterpolator DEF="Bee1FlapR" key="0 0.5 1" keyValue="1 0 0 -0.9 1 0 0 0.18000000000000002 1 0 0 -0.9" />
+    <OrientationInterpolator DEF="Bee1FlapL" key="0 0.5 1" keyValue="1 0 0 0.9 1 0 0 -0.18000000000000002 1 0 0 0.9" />
+    <ROUTE fromNode="Bee1Beat" fromField="fraction_changed" toNode="Bee1FlapR" toField="set_fraction" />
+    <ROUTE fromNode="Bee1Beat" fromField="fraction_changed" toNode="Bee1FlapL" toField="set_fraction" />
+    <ROUTE fromNode="Bee1FlapR" fromField="value_changed" toNode="Bee1WingR" toField="rotation" />
+    <ROUTE fromNode="Bee1FlapL" fromField="value_changed" toNode="Bee1WingL" toField="rotation" />
+    <TimeSensor DEF="Fly0Clock" cycleInterval="26" loop="true" />
+    <PositionInterpolator DEF="Fly0Pos" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="4.0488 1.9946 3.8549 4.6436 1.8006 3.4219 4.9554 1.9555 2.7865 4.9686 2.3916 2.0746 4.6824 2.9186 1.4271 4.1114 3.3066 0.9723 3.284 3.3863 0.8003 2.2418 3.1229 0.9451 1.0371 2.6313 1.3781 -0.2698 2.1261 2.0135 -1.6133 1.8276 2.7254 -2.9261 1.8662 3.3729 -4.1423 2.2249 3.8277 -5.2009 2.7473 3.9997 -6.0488 3.2054 3.8549 -6.6436 3.3994 3.4219 -6.9554 3.2445 2.7865 -6.9686 2.8084 2.0746 -6.6824 2.2814 1.4271 -6.1114 1.8934 0.9723 -5.284 1.8137 0.8003 -4.2418 2.0771 0.9451 -3.0371 2.5687 1.3781 -1.7302 3.0739 2.0135 -0.3867 3.3724 2.7254 0.9261 3.3338 3.3729 2.1423 2.9751 3.8277 3.2009 2.4527 3.9997 4.0488 1.9946 3.8549" />
+    <OrientationInterpolator DEF="Fly0Turn" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="0 1 0 0.4095 0 1 0 0.9001 0 1 0 1.358 0 1 0 1.7822 0 1 0 2.2399 0 1 0 2.7306 0 1 0 3.141 -0 -1 -0 2.8752 -0 -1 -0 2.7258 -0 -1 -0 2.6596 -0 -1 -0 2.6595 -0 -1 -0 2.7255 -0 -1 -0 2.8745 -0 -1 -0 3.141 0 1 0 2.7321 0 1 0 2.2415 0 1 0 1.7836 0 1 0 1.3594 0 1 0 0.9017 0 1 0 0.411 0 1 0 0.0006 -0 -1 -0 0.2664 -0 -1 -0 0.4158 -0 -1 -0 0.482 -0 -1 -0 0.4821 -0 -1 -0 0.4161 -0 -1 -0 0.2671 -0 -1 -0 0.0006 0 1 0 0.4095" />
+    <ROUTE fromNode="Fly0Clock" fromField="fraction_changed" toNode="Fly0Pos" toField="set_fraction" />
+    <ROUTE fromNode="Fly0Clock" fromField="fraction_changed" toNode="Fly0Turn" toField="set_fraction" />
+    <ROUTE fromNode="Fly0Pos" fromField="value_changed" toNode="Fly0" toField="translation" />
+    <ROUTE fromNode="Fly0Turn" fromField="value_changed" toNode="Fly0" toField="rotation" />
+    <TimeSensor DEF="Fly0Beat" cycleInterval="0.55" loop="true" />
+    <OrientationInterpolator DEF="Fly0FlapR" key="0 0.5 1" keyValue="1 0 0 -1.0 1 0 0 0.2 1 0 0 -1.0" />
+    <OrientationInterpolator DEF="Fly0FlapL" key="0 0.5 1" keyValue="1 0 0 1.0 1 0 0 -0.2 1 0 0 1.0" />
+    <ROUTE fromNode="Fly0Beat" fromField="fraction_changed" toNode="Fly0FlapR" toField="set_fraction" />
+    <ROUTE fromNode="Fly0Beat" fromField="fraction_changed" toNode="Fly0FlapL" toField="set_fraction" />
+    <ROUTE fromNode="Fly0FlapR" fromField="value_changed" toNode="Fly0WingR" toField="rotation" />
+    <ROUTE fromNode="Fly0FlapL" fromField="value_changed" toNode="Fly0WingL" toField="rotation" />
+    <TimeSensor DEF="Fly1Clock" cycleInterval="31" loop="true" />
+    <PositionInterpolator DEF="Fly1Pos" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="-3.0867 1.4985 3.3872 -3.7697 1.1245 3.1939 -4.2135 1.0016 2.8037 -4.3959 1.1835 2.294 -4.3076 1.5907 1.7656 -3.9533 2.0456 1.3233 -3.3506 2.3498 1.0546 -2.5297 2.3704 1.0128 -1.5318 2.0985 1.2061 -0.407 1.6527 1.5963 0.7884 1.2276 2.106 1.9944 1.0086 2.6344 3.1506 1.0913 3.0767 4.1988 1.4396 3.3454 5.0867 1.9015 3.3872 5.7697 2.2755 3.1939 6.2135 2.3984 2.8037 6.3959 2.2165 2.294 6.3076 1.8093 1.7656 5.9533 1.3544 1.3233 5.3506 1.0502 1.0546 4.5297 1.0296 1.0128 3.5318 1.3015 1.2061 2.407 1.7473 1.5963 1.2116 2.1724 2.106 0.0056 2.3914 2.6344 -1.1506 2.3087 3.0767 -2.1988 1.9604 3.3454 -3.0867 1.4985 3.3872" />
+    <OrientationInterpolator DEF="Fly1Turn" key="0.00000 0.03571 0.07143 0.10714 0.14286 0.17857 0.21429 0.25000 0.28571 0.32143 0.35714 0.39286 0.42857 0.46429 0.50000 0.53571 0.57143 0.60714 0.64286 0.67857 0.71429 0.75000 0.78571 0.82143 0.85714 0.89286 0.92857 0.96429 1.00000" keyValue="0 1 0 3.0292 0 1 0 2.6343 0 1 0 2.1455 0 1 0 1.6378 0 1 0 1.1311 0 1 0 0.631 0 1 0 0.2046 -0 -1 -0 0.0953 -0 -1 -0 0.2807 -0 -1 -0 0.3815 -0 -1 -0 0.4177 -0 -1 -0 0.3969 -0 -1 -0 0.3146 -0 -1 -0 0.1544 0 1 0 0.1124 0 1 0 0.5073 0 1 0 0.9961 0 1 0 1.5038 0 1 0 2.0105 0 1 0 2.5106 0 1 0 2.937 -0 -1 -0 3.0463 -0 -1 -0 2.8609 -0 -1 -0 2.7601 -0 -1 -0 2.7239 -0 -1 -0 2.7447 -0 -1 -0 2.827 -0 -1 -0 2.9872 0 1 0 3.0292" />
+    <ROUTE fromNode="Fly1Clock" fromField="fraction_changed" toNode="Fly1Pos" toField="set_fraction" />
+    <ROUTE fromNode="Fly1Clock" fromField="fraction_changed" toNode="Fly1Turn" toField="set_fraction" />
+    <ROUTE fromNode="Fly1Pos" fromField="value_changed" toNode="Fly1" toField="translation" />
+    <ROUTE fromNode="Fly1Turn" fromField="value_changed" toNode="Fly1" toField="rotation" />
+    <TimeSensor DEF="Fly1Beat" cycleInterval="0.55" loop="true" />
+    <OrientationInterpolator DEF="Fly1FlapR" key="0 0.5 1" keyValue="1 0 0 -1.0 1 0 0 0.2 1 0 0 -1.0" />
+    <OrientationInterpolator DEF="Fly1FlapL" key="0 0.5 1" keyValue="1 0 0 1.0 1 0 0 -0.2 1 0 0 1.0" />
+    <ROUTE fromNode="Fly1Beat" fromField="fraction_changed" toNode="Fly1FlapR" toField="set_fraction" />
+    <ROUTE fromNode="Fly1Beat" fromField="fraction_changed" toNode="Fly1FlapL" toField="set_fraction" />
+    <ROUTE fromNode="Fly1FlapR" fromField="value_changed" toNode="Fly1WingR" toField="rotation" />
+    <ROUTE fromNode="Fly1FlapL" fromField="value_changed" toNode="Fly1WingL" toField="rotation" />
+    <TimeSensor DEF="Drift0" cycleInterval="4.0" loop="true" />
+    <PositionInterpolator DEF="Wander0" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="-6.5 0.8 -0.9 -5.9804 1.1031 -1.15 -5.9804 0.4969 -1.65 -6.5 0.8 -1.9 -7.0196 1.1031 -1.65 -7.0196 0.4969 -1.15 -6.5 0.8 -0.9" />
+    <ROUTE fromNode="Drift0" fromField="fraction_changed" toNode="Wander0" toField="set_fraction" />
+    <ROUTE fromNode="Wander0" fromField="value_changed" toNode="Glim0" toField="translation" />
+    <BooleanSequencer DEF="Blink0" key="0 0.46 0.48 0.49 0.504 0.522 0.542 0.556 0.57 0.58 0.6 0.618 0.632 0.646 0.666 0.676 0.69 0.708 0.728 0.742 0.756 0.766 0.786 0.804 0.818 0.832 0.852 0.862 0.876 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false true false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink0" toField="set_fraction" />
+    <ROUTE fromNode="Blink0" fromField="value_changed" toNode="Glim0" toField="visible" />
+    <TimeSensor DEF="Drift1" cycleInterval="4.7" loop="true" />
+    <PositionInterpolator DEF="Wander1" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="-4.0951 2.5945 -0.0298 -4.0668 2.3165 -0.5293 -4.5717 1.989 -0.7994 -5.1049 2.5945 -0.5702 -5.1332 2.3165 -0.0707 -4.6283 1.989 0.1994 -4.0951 2.5945 -0.0298" />
+    <ROUTE fromNode="Drift1" fromField="fraction_changed" toNode="Wander1" toField="set_fraction" />
+    <ROUTE fromNode="Wander1" fromField="value_changed" toNode="Glim1" toField="translation" />
+    <BooleanSequencer DEF="Blink1" key="0 0.464 0.487 0.505 0.522 0.536 0.559 0.569 0.586 0.604 0.627 0.641 0.658 0.668 0.691 0.709 0.726 0.74 0.763 0.773 0.79 0.808 0.831 0.845 0.862 0.872 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false true false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink1" toField="set_fraction" />
+    <ROUTE fromNode="Blink1" fromField="value_changed" toNode="Glim1" toField="visible" />
+    <TimeSensor DEF="Drift2" cycleInterval="5.4" loop="true" />
+    <PositionInterpolator DEF="Wander2" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="-2.1544 2.1183 0.5919 -2.6434 1.5147 0.3022 -3.189 1.767 0.5103 -3.2456 2.1183 1.0081 -2.7566 1.5147 1.2978 -2.211 1.767 1.0897 -2.1544 2.1183 0.5919" />
+    <ROUTE fromNode="Drift2" fromField="fraction_changed" toNode="Wander2" toField="set_fraction" />
+    <ROUTE fromNode="Wander2" fromField="value_changed" toNode="Glim2" toField="translation" />
+    <BooleanSequencer DEF="Blink2" key="0 0.468 0.482 0.496 0.516 0.526 0.54 0.558 0.578 0.592 0.606 0.616 0.636 0.654 0.668 0.682 0.702 0.712 0.726 0.744 0.764 0.778 0.792 0.802 0.822 0.84 0.854 0.868 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false true false true false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink2" toField="set_fraction" />
+    <ROUTE fromNode="Blink2" fromField="value_changed" toNode="Glim2" toField="visible" />
+    <TimeSensor DEF="Drift3" cycleInterval="6.1" loop="true" />
+    <PositionInterpolator DEF="Wander3" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="-0.7153 1.3494 1.405 -1.2721 0.9752 1.5914 -1.3568 1.5754 2.0864 -0.8847 1.3494 2.395 -0.3279 0.9752 2.2086 -0.2432 1.5754 1.7136 -0.7153 1.3494 1.405" />
+    <ROUTE fromNode="Drift3" fromField="fraction_changed" toNode="Wander3" toField="set_fraction" />
+    <ROUTE fromNode="Wander3" fromField="value_changed" toNode="Glim3" toField="translation" />
+    <BooleanSequencer DEF="Blink3" key="0 0.472 0.489 0.499 0.522 0.54 0.557 0.571 0.594 0.604 0.621 0.639 0.662 0.676 0.693 0.703 0.726 0.744 0.761 0.775 0.798 0.808 0.825 0.843 0.866 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink3" toField="set_fraction" />
+    <ROUTE fromNode="Blink3" fromField="value_changed" toNode="Glim3" toField="visible" />
+    <TimeSensor DEF="Drift4" cycleInterval="6.8" loop="true" />
+    <PositionInterpolator DEF="Wander4" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="0.6459 0.5351 -1.7268 0.5333 0.7343 -1.2357 0.9874 1.1306 -0.9089 1.5541 0.5351 -1.0732 1.6667 0.7343 -1.5643 1.2126 1.1306 -1.8911 0.6459 0.5351 -1.7268" />
+    <ROUTE fromNode="Drift4" fromField="fraction_changed" toNode="Wander4" toField="set_fraction" />
+    <ROUTE fromNode="Wander4" fromField="value_changed" toNode="Glim4" toField="translation" />
+    <BooleanSequencer DEF="Blink4" key="0 0.476 0.496 0.514 0.528 0.542 0.562 0.572 0.586 0.604 0.624 0.638 0.652 0.662 0.682 0.7 0.714 0.728 0.748 0.758 0.772 0.79 0.81 0.824 0.838 0.848 0.868 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink4" toField="set_fraction" />
+    <ROUTE fromNode="Blink4" fromField="value_changed" toNode="Glim4" toField="visible" />
+    <TimeSensor DEF="Drift5" cycleInterval="7.5" loop="true" />
+    <PositionInterpolator DEF="Wander5" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="2.4246 1.9644 -0.1582 2.8597 2.5538 0.1861 3.4351 2.3818 0.0443 3.5754 1.9644 -0.4418 3.1403 2.5538 -0.7861 2.5649 2.3818 -0.6443 2.4246 1.9644 -0.1582" />
+    <ROUTE fromNode="Drift5" fromField="fraction_changed" toNode="Wander5" toField="set_fraction" />
+    <ROUTE fromNode="Wander5" fromField="value_changed" toNode="Glim5" toField="translation" />
+    <BooleanSequencer DEF="Blink5" key="0 0.48 0.503 0.517 0.534 0.544 0.567 0.585 0.602 0.616 0.639 0.649 0.666 0.684 0.707 0.721 0.738 0.748 0.771 0.789 0.806 0.82 0.843 0.853 0.87 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink5" toField="set_fraction" />
+    <ROUTE fromNode="Blink5" fromField="value_changed" toNode="Glim5" toField="visible" />
+    <TimeSensor DEF="Drift6" cycleInterval="8.2" loop="true" />
+    <PositionInterpolator DEF="Wander6" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="4.7324 1.7022 1.2801 5.3151 2.1399 1.161 5.4827 1.5579 0.6809 5.0676 1.7022 0.3199 4.4849 2.1399 0.439 4.3173 1.5579 0.9191 4.7324 1.7022 1.2801" />
+    <ROUTE fromNode="Drift6" fromField="fraction_changed" toNode="Wander6" toField="set_fraction" />
+    <ROUTE fromNode="Wander6" fromField="value_changed" toNode="Glim6" toField="translation" />
+    <BooleanSequencer DEF="Blink6" key="0 0.484 0.498 0.508 0.528 0.546 0.56 0.574 0.594 0.604 0.618 0.636 0.656 0.67 0.684 0.694 0.714 0.732 0.746 0.76 0.78 0.79 0.804 0.822 0.842 0.856 0.87 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink6" toField="set_fraction" />
+    <ROUTE fromNode="Blink6" fromField="value_changed" toNode="Glim6" toField="visible" />
+    <TimeSensor DEF="Drift7" cycleInterval="8.899999999999999" loop="true" />
+    <PositionInterpolator DEF="Wander7" key="0 0.1667 0.3333 0.5 0.6667 0.8333 1" keyValue="7.1942 1.5299 2.277 7.3888 1.4135 1.804 6.9946 0.9565 1.427 6.4058 1.5299 1.523 6.2112 1.4135 1.996 6.6054 0.9565 2.373 7.1942 1.5299 2.277" />
+    <ROUTE fromNode="Drift7" fromField="fraction_changed" toNode="Wander7" toField="set_fraction" />
+    <ROUTE fromNode="Wander7" fromField="value_changed" toNode="Glim7" toField="translation" />
+    <BooleanSequencer DEF="Blink7" key="0 0.488 0.505 0.523 0.546 0.56 0.577 0.587 0.61 0.628 0.645 0.659 0.682 0.692 0.709 0.727 0.75 0.764 0.781 0.791 0.814 0.832 0.849 0.863 0.9" keyValue="false true false true false true false true false true false true false true false true false true false true false true false true false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Blink7" toField="set_fraction" />
+    <ROUTE fromNode="Blink7" fromField="value_changed" toNode="Glim7" toField="visible" />
+    <TimeSensor DEF="Drifting0" cycleInterval="48" loop="true" />
+    <PositionInterpolator DEF="CloudPath0" key="0 0.5 1" keyValue="-9 6.4 -5 0 6.4 -5 9 6.4 -5" />
+    <ROUTE fromNode="Drifting0" fromField="fraction_changed" toNode="CloudPath0" toField="set_fraction" />
+    <ROUTE fromNode="CloudPath0" fromField="value_changed" toNode="Cloud0" toField="translation" />
+    <TimeSensor DEF="Drifting1" cycleInterval="64" loop="true" />
+    <PositionInterpolator DEF="CloudPath1" key="0 0.5 1" keyValue="-9 5.6 -5 0 5.6 -5 9 5.6 -5" />
+    <ROUTE fromNode="Drifting1" fromField="fraction_changed" toNode="CloudPath1" toField="set_fraction" />
+    <ROUTE fromNode="CloudPath1" fromField="value_changed" toNode="Cloud1" toField="translation" />
+  </Scene>
+</X3D>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <meta name="title" content="Gallery 15: bead puppet" />
+    <meta name="description" content="Drag the crossbar; six beads hang from it and follow through PositionChasers of different speeds." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-15-bead-puppet/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.06 0.04 0.1" />
+    <Viewpoint DEF="View" description="Front" position="0 2.5 9" orientation="1 0 0 -0.03" />
+    <DirectionalLight direction="-0.3 -0.6 -0.8" intensity="1.1" color="1 0.95 0.85" />
+    <PointLight DEF="Spot" location="0 5.5 4" color="1 0.85 0.6" intensity="500" radius="30" />
+    <Transform translation="0 -0.15 0"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.12 0.3" roughness="0.7" metallic="0.0" /></Appearance><Box size="14 0.3 5" /></Shape></Transform>
+    <Transform translation="0 2.6 -2.6"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.1 0.2" roughness="0.9" metallic="0.0" /></Appearance><Box size="14 6.4 0.2" /></Shape></Transform>
+    <Transform DEF="Glow" translation="0 0.02 0" scale="1 0.02 0.55" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.35" emissiveColor="1 0.7 0.2" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="2.6" height="1" /></Shape></Transform>
+    <Transform DEF="Pull">
+      <PlaneSensor DEF="Drag" description="Drag the crossbar sideways" autoOffset="true" minPosition="-4 0" maxPosition="4 0" />
+      <Transform translation="0 4.4 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BarPaint" baseColor="0.75 0.5 0.2" roughness="0.4" metallic="0.0" /></Appearance><Box size="2.2 0.16 0.3" /></Shape>
+        <Transform translation="0 0.35 0"><Shape><Appearance><PhysicalMaterial baseColor="0.75 0.5 0.2" roughness="0.4" metallic="0.0" /></Appearance><Box size="0.16 0.7 0.16" /></Shape></Transform>
+      </Transform>
+    </Transform>
+    <ROUTE fromNode="Drag" fromField="translation_changed" toNode="Pull" toField="translation" />
+    <ROUTE fromNode="Drag" fromField="isActive" toNode="Glow" toField="visible" />
+    <Transform DEF="Head">
+      <Transform translation="0.0 2.75 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.55" roughness="0.35" metallic="0.0" /></Appearance><Sphere radius="0.34" /></Shape>
+      </Transform>
+      <Transform translation="0.0 3.575 0"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.8 0.75" emissiveColor="0.35 0.35 0.3" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="0.012" height="1.650" /></Shape></Transform>
+    </Transform>
+    <PositionChaser DEF="LagHead" duration="0.25" initialDestination="0 0 0" initialValue="0 0 0" />
+    <ROUTE fromNode="Pull" fromField="translation_changed" toNode="LagHead" toField="set_destination" />
+    <ROUTE fromNode="LagHead" fromField="value_changed" toNode="Head" toField="translation" />
+    <Transform DEF="Torso">
+      <Transform translation="0.0 1.85 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.85 0.2 0.25" roughness="0.35" metallic="0.0" /></Appearance><Box size="0.7 1.0 0.4" /></Shape>
+      </Transform>
+      <Transform translation="0.0 3.125 0"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.8 0.75" emissiveColor="0.35 0.35 0.3" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="0.012" height="2.550" /></Shape></Transform>
+    </Transform>
+    <PositionChaser DEF="LagTorso" duration="0.45" initialDestination="0 0 0" initialValue="0 0 0" />
+    <ROUTE fromNode="Pull" fromField="translation_changed" toNode="LagTorso" toField="set_destination" />
+    <ROUTE fromNode="LagTorso" fromField="value_changed" toNode="Torso" toField="translation" />
+    <TimeSensor DEF="RockClockHandL" cycleInterval="2.4" loop="true" />
+    <OrientationInterpolator DEF="RockSwingHandL" key="0 0.25 0.5 0.75 1" keyValue="0 0 1 0 0 0 1 0.45 0 0 1 0 0 0 1 -0.45 0 0 1 0" />
+    <ROUTE fromNode="RockClockHandL" fromField="fraction_changed" toNode="RockSwingHandL" toField="set_fraction" />
+    <ROUTE fromNode="RockSwingHandL" fromField="value_changed" toNode="RockHandL" toField="rotation" />
+    <Transform DEF="HandL">
+      <Transform translation="-0.95 1.7 0">
+        <Transform DEF="RockHandL" translation="0 0.5 0"><Transform translation="0 -0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.55" roughness="0.35" metallic="0.0" /></Appearance><Sphere radius="0.2" /></Shape></Transform></Transform>
+      </Transform>
+      <Transform translation="-0.95 3.050 0"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.8 0.75" emissiveColor="0.35 0.35 0.3" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="0.012" height="2.700" /></Shape></Transform>
+    </Transform>
+    <PositionChaser DEF="LagHandL" duration="0.8" initialDestination="0 0 0" initialValue="0 0 0" />
+    <ROUTE fromNode="Pull" fromField="translation_changed" toNode="LagHandL" toField="set_destination" />
+    <ROUTE fromNode="LagHandL" fromField="value_changed" toNode="HandL" toField="translation" />
+    <TimeSensor DEF="RockClockHandR" cycleInterval="3.1" loop="true" />
+    <OrientationInterpolator DEF="RockSwingHandR" key="0 0.25 0.5 0.75 1" keyValue="0 0 1 0 0 0 1 -0.45 0 0 1 0 0 0 1 0.45 0 0 1 0" />
+    <ROUTE fromNode="RockClockHandR" fromField="fraction_changed" toNode="RockSwingHandR" toField="set_fraction" />
+    <ROUTE fromNode="RockSwingHandR" fromField="value_changed" toNode="RockHandR" toField="rotation" />
+    <Transform DEF="HandR">
+      <Transform translation="0.95 1.7 0">
+        <Transform DEF="RockHandR" translation="0 0.5 0"><Transform translation="0 -0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.75 0.55" roughness="0.35" metallic="0.0" /></Appearance><Sphere radius="0.2" /></Shape></Transform></Transform>
+      </Transform>
+      <Transform translation="0.95 3.050 0"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.8 0.75" emissiveColor="0.35 0.35 0.3" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="0.012" height="2.700" /></Shape></Transform>
+    </Transform>
+    <PositionChaser DEF="LagHandR" duration="1.0" initialDestination="0 0 0" initialValue="0 0 0" />
+    <ROUTE fromNode="Pull" fromField="translation_changed" toNode="LagHandR" toField="set_destination" />
+    <ROUTE fromNode="LagHandR" fromField="value_changed" toNode="HandR" toField="translation" />
+    <TimeSensor DEF="ShuffleClockFootL" cycleInterval="1.6" loop="true" />
+    <PositionInterpolator DEF="ShuffleStepFootL" key="0 0.25 0.5 0.75 1" keyValue="0 0 0 0 0.18 0 0 0 0 0 0 0 0 0 0" />
+    <ROUTE fromNode="ShuffleClockFootL" fromField="fraction_changed" toNode="ShuffleStepFootL" toField="set_fraction" />
+    <ROUTE fromNode="ShuffleStepFootL" fromField="value_changed" toNode="ShuffleFootL" toField="translation" />
+    <Transform DEF="FootL">
+      <Transform translation="-0.38 0.55 0">
+        <Transform DEF="ShuffleFootL"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.3 0.8" roughness="0.35" metallic="0.0" /></Appearance><Box size="0.38 0.2 0.55" /></Shape></Transform>
+      </Transform>
+      <Transform translation="-0.38 2.475 0"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.8 0.75" emissiveColor="0.35 0.35 0.3" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="0.012" height="3.850" /></Shape></Transform>
+    </Transform>
+    <PositionChaser DEF="LagFootL" duration="1.2" initialDestination="0 0 0" initialValue="0 0 0" />
+    <ROUTE fromNode="Pull" fromField="translation_changed" toNode="LagFootL" toField="set_destination" />
+    <ROUTE fromNode="LagFootL" fromField="value_changed" toNode="FootL" toField="translation" />
+    <TimeSensor DEF="ShuffleClockFootR" cycleInterval="1.9" loop="true" />
+    <PositionInterpolator DEF="ShuffleStepFootR" key="0 0.25 0.5 0.75 1" keyValue="0 0 0 0 0 0 0 0 0 0 0.18 0 0 0 0" />
+    <ROUTE fromNode="ShuffleClockFootR" fromField="fraction_changed" toNode="ShuffleStepFootR" toField="set_fraction" />
+    <ROUTE fromNode="ShuffleStepFootR" fromField="value_changed" toNode="ShuffleFootR" toField="translation" />
+    <Transform DEF="FootR">
+      <Transform translation="0.38 0.55 0">
+        <Transform DEF="ShuffleFootR"><Shape><Appearance><PhysicalMaterial baseColor="0.15 0.3 0.8" roughness="0.35" metallic="0.0" /></Appearance><Box size="0.38 0.2 0.55" /></Shape></Transform>
+      </Transform>
+      <Transform translation="0.38 2.475 0"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.8 0.75" emissiveColor="0.35 0.35 0.3" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="0.012" height="3.850" /></Shape></Transform>
+    </Transform>
+    <PositionChaser DEF="LagFootR" duration="1.5" initialDestination="0 0 0" initialValue="0 0 0" />
+    <ROUTE fromNode="Pull" fromField="translation_changed" toNode="LagFootR" toField="set_destination" />
+    <ROUTE fromNode="LagFootR" fromField="value_changed" toNode="FootR" toField="translation" />
+  </Scene>
+</X3D>
