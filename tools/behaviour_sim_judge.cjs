@@ -52,6 +52,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         if (/Sensor$/.test(node.getNodeTypeName()) && node.getNodeTypeName() !== 'TimeSensor' && !sensors.includes(d)) sensors.push(d);
       } catch (e) { missing.push([d, f, String(e)]); }
     });
+    // what every source held when recording began (an output that last changed before then is still in force)
+    window.__initial = sources.map(([d, f]) => { try { return [d, f, text(s.getNamedNode(d).getField(f).getValue())]; } catch (e) { return null; } }).filter(Boolean);
     const tick = () => { window.__frames.push(B.getCurrentTime()); requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
     return { missing, sensors, began: B.getCurrentTime(), version: B.version, name: B.name };
@@ -77,8 +79,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     drags.push({ sensor: drag.sensor, touch: drag.touch, at: drag.at, down });
   }
   await sleep(Number(secondsArg) * 1000);
-  const out = await p.evaluate(() => ({ events: window.__events, frames: window.__frames, pointer: window.__pointer }));
+  const out = await p.evaluate(() => ({ events: window.__events, frames: window.__frames, pointer: window.__pointer, initial: window.__initial }));
   await b.close(); srv.close();
-  console.log(JSON.stringify({ file: path.basename(file), browser: `${info.name} ${info.version}`, began: info.began, sensorAt: hit, clicks: Number(clicksArg), missing: info.missing, pageErrors: errors, frames: out.frames, events: out.events,
+  console.log(JSON.stringify({ file: path.basename(file), browser: `${info.name} ${info.version}`, began: info.began, sensorAt: hit, clicks: Number(clicksArg), missing: info.missing, pageErrors: errors, frames: out.frames, events: out.events, initial: out.initial,
     ...(plan ? { view: plan.view, drags, pointer: out.pointer } : {}) }));
 })();

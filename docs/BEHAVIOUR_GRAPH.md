@@ -80,7 +80,7 @@ Nothing is keyframed and nothing is left changed.
 
 | Simulated | Not simulated (named in the sidebar, never silently skipped) |
 |---|---|
-| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer | Coordinate and Normal interpolators, coordinate and texture-coordinate followers, ProximitySensor, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
+| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer; ProximitySensor from the viewer | Coordinate and Normal interpolators, coordinate and texture-coordinate followers, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
 
 Shown on Blender data: Transform translation, rotation, scale, visible; material baseColor / diffuseColor,
 emissiveColor, transparency, roughness, metallic; light color and on; Viewpoint set_bind (the scene camera). Anything
@@ -106,6 +106,7 @@ in `tests/behaviour/x_ite_traces/` and replayed by `tests/test_behaviour_sim.py`
 | probe.x3d (2 clicks; every simulated kind, built by `tools/behaviour_probe.py`) | 25 | 25 | 0.0645 (followers) |
 | probe-spline.x3d (2 clicks; EaseInEaseOut, the Spline interpolators, Squad, PositionDamper2D; same tool) | 12 | 12 | 0.000001 exact; 0.0202 (follower) |
 | probe-drag.x3d (7 real drags on 5 sensors, `probe-drag.drags.json`; same tools) | 7 | 7 | 0.000007 (matched event for event) |
+| probe-proximity.x3d (a camera flight a TimeSensor drives through the Viewpoint; 10 s) | 13 | 13 | 0.000001 |
 
 Tolerances: 0.002 for everything exact, 0.08 for dampers and chasers and what they feed (X_ITE steps them by its frame
 rate, the simulator by the clock). Discrete streams must also have the same number of events. What the comparison
@@ -164,6 +165,28 @@ press, sphere ignoring "behind", cylinder never "behind", limits ignored, never 
 the two "behind" ones passed until the probe got boxes behind their sensor's origin. Through Blender the world keeps 7
 of 12 ROUTEs: the 5 into empty Transforms (hit markers) are left out and named. A sensor's empty parent now keeps its
 DEF on export (it came back as `OB_CylBase`).
+
+**ProximitySensor (26 Nov 2026).** `Simulation.viewer(sensor, position, orientation, now, center_of_rotation=)` takes
+the viewer in the sensor's own coordinates once a frame: inside the box (`center`, `size`; size -1 -1 -1 is
+everywhere) it is active; entering sends isActive, enterTime and all three of position, orientation and centre of
+rotation; inside, only what changed; leaving sends isActive false and exitTime. In Blender, Play gives it the scene
+camera when the viewport looks through it, else the viewport's eye, with Blender's orbit centre as the centre of
+rotation; and a ROUTE into a Viewpoint's `position` or `orientation` now moves the camera, so a scripted camera flight
+plays. Judged on `probe-proximity.x3d`: the camera flies a loop through a gate and a turned room with an off-centre
+box; a root ProximitySensor of size -1 is X_ITE's own report of the viewer each frame, and the judge hands that pose to
+the simulator's other sensors in their coordinates. The recorder now also logs what every source held when recording
+began (the room was already active). What the recording taught: X_ITE tests the box against the camera as it was
+drawn, one frame behind a viewpoint a ROUTE moves, and reports where the camera is now (`test_position`). 13 of 13
+streams agree; four wrong versions are rejected (box tested on the current camera, centre ignored, orientation left in
+world axes, the sensor's frame without its rotation). Not caught by this judge: a continuous output re-sent unchanged.
+Fixed on the way: a sensor or target in a DEF'd Transform whose unnamed child Transforms hold shapes was bound to a
+child (the importer gives them the parent's DEF and name, and calls the Transform "Name.001"); the binding now takes the
+outermost object that carries the DEF.
+
+**Host-eyes witness.** `tools/behaviour_eyetest.py` ends by writing `host-eyes.json`, a `loom.witness/1` record: the
+add-on's source hash as the subject, the Blender version, flags and window as the instrument, per world whether it was
+shown, overlaps, played and restored, drags and proximity toggles, every screenshot by sha256 as evidence, and pass only
+when every world shown has no overlapping nodes and every world played was put back.
 
 ## Looked at on a real screen (25 Nov 2026)
 

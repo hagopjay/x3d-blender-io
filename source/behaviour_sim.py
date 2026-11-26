@@ -1026,6 +1026,39 @@ class _DragSensor(_Machine):
         return [("offset", self.rotation.value())] if self.f["autoOffset"] else []
 
 
+class _ProximitySensor(_Machine):
+    """X_ITE's ProximitySensor. ``Simulation.viewer`` hands it the viewer's position, orientation and centre of
+    rotation in the sensor's own coordinates, once per frame; it is active while the position is inside its box
+    (size -1 -1 -1: everywhere; a size of 0 in any axis: a box of no width). Entering sends isActive, enterTime and all
+    three; inside, only what changed; leaving sends isActive false and exitTime. A disabled sensor is outside."""
+
+    def setup(self):
+        self.active = False
+        self.last = {}
+
+    def inside(self, position):
+        size, center = self.f["size"], self.f["center"]
+        if tuple(size) == (-1.0, -1.0, -1.0):
+            return True
+        return all(center[i] - size[i] / 2 <= position[i] <= center[i] + size[i] / 2 for i in range(3))
+
+    def sense(self, position, orientation, center_of_rotation, now, test_position=None):
+        if self.f.get("enabled", True) and self.inside(position if test_position is None else test_position):
+            values = {"position_changed": tuple(position), "orientation_changed": tuple(orientation),
+                      "centerOfRotation_changed": tuple(center_of_rotation)}
+            if not self.active:
+                self.active = True
+                sent = [("isActive", True), ("enterTime", now)] + list(values.items())
+            else:
+                sent = [(name, value) for name, value in values.items() if self.last.get(name) != value]
+            self.last.update(values)
+            return sent
+        if self.active:
+            self.active = False
+            return [("isActive", False), ("exitTime", now)]
+        return []
+
+
 class _Sensor(_Machine):
     """A sensor the caller drives: its outputs are posted from outside (``Simulation.post``, ``press``, ``drag``)."""
 
@@ -1049,7 +1082,7 @@ _MACHINES = {
     "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _Chaser, "ColorChaser": _Chaser,
     "OrientationChaser": _OrientationChaser,
     "TouchSensor": _Sensor, "PlaneSensor": _Sensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
-    "ProximitySensor": _Sensor, "VisibilitySensor": _Sensor, "KeySensor": _Sensor, "StringSensor": _Sensor,
+    "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _Sensor, "StringSensor": _Sensor,
 }
 
 # sensors the caller can drive with press / release / drag; the others only through post()
@@ -1165,6 +1198,19 @@ class Simulation:
         return self._collect()
 
     # pointing sensors: the caller is the pointer
+
+    def viewer(self, node_id, position, orientation, now, center_of_rotation=(0.0, 0.0, 0.0), test_position=None):
+        """Where the viewer is, for one ProximitySensor, in that sensor's own coordinates: position, orientation
+        (axis and angle) and the bound viewpoint's centre of rotation. Call it once per frame for each sensor.
+        ``test_position``, when given, is the position the box test uses (X_ITE tests the camera as it was drawn, one
+        frame behind a viewpoint that a ROUTE moves, and reports where it is now)."""
+        machine = self.machines.get(node_id)
+        if machine is None or machine.node_type != "ProximitySensor":
+            raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a ProximitySensor in this graph")
+        changes = []
+        for field_name, value in machine.sense(position, orientation, center_of_rotation, now, test_position):
+            changes += self.post(node_id, field_name, value, now)
+        return changes
 
     def _sensor(self, node_id):
         machine = self.machines.get(node_id)

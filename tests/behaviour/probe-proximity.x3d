@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: proximity" />
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint DEF="Eye" position="0 1.6 12" centerOfRotation="0 1 0" />
+    <Transform translation="0 -0.05 0">
+      <Shape>
+        <Appearance>
+          <Material diffuseColor="0.25 0.27 0.3" />
+        </Appearance>
+        <Box size="30 0.1 30" />
+      </Shape>
+    </Transform>
+    <Transform DEF="GateBase" translation="0 1.5 4">
+      <Transform translation="-2.1 0 0">
+        <Shape>
+          <Appearance>
+            <Material DEF="GatePaint" diffuseColor="0.9 0.6 0.2" />
+          </Appearance>
+          <Box size="0.2 3 0.4" />
+        </Shape>
+      </Transform>
+      <Transform translation="2.1 0 0">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="0.9 0.6 0.2" />
+          </Appearance>
+          <Box size="0.2 3 0.4" />
+        </Shape>
+      </Transform>
+      <Transform translation="0 1.6 0">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="0.9 0.6 0.2" />
+          </Appearance>
+          <Box size="4.4 0.2 0.4" />
+        </Shape>
+      </Transform>
+      <Transform DEF="GateLamp" translation="0 2 0" visible="false">
+        <Shape>
+          <Appearance>
+            <Material emissiveColor="1 0.9 0.3" />
+          </Appearance>
+          <Sphere radius="0.25" />
+        </Shape>
+      </Transform>
+      <Transform DEF="GateEcho" />
+      <ProximitySensor DEF="Gate" size="4 3 3" />
+    </Transform>
+    <Transform DEF="RoomBase" translation="2.5 1.5 -4" rotation="0 1 0 0.6">
+      <Transform translation="0.5 -1.45 0">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="0.3 0.6 0.9" />
+          </Appearance>
+          <Box size="3 0.1 5" />
+        </Shape>
+      </Transform>
+      <Transform DEF="RoomCompass" translation="0.5 -1.2 0">
+        <Shape>
+          <Appearance>
+            <Material emissiveColor="0.2 0.9 1" />
+          </Appearance>
+          <Cone bottomRadius="0.2" height="0.8" />
+        </Shape>
+      </Transform>
+      <Transform DEF="RoomPivot">
+        <Shape>
+          <Appearance>
+            <Material emissiveColor="1 0.3 0.8" />
+          </Appearance>
+          <Sphere radius="0.12" />
+        </Shape>
+      </Transform>
+      <Transform DEF="RoomLamp" translation="0.5 1.6 0" visible="false">
+        <Shape>
+          <Appearance>
+            <Material emissiveColor="0.3 1 0.6" />
+          </Appearance>
+          <Sphere radius="0.25" />
+        </Shape>
+      </Transform>
+      <Transform DEF="RoomEcho" />
+      <ProximitySensor DEF="Room" center="0.5 0 0" size="3 3 5" />
+    </Transform>
+    <Transform DEF="CamEcho" />
+    <TimeSensor DEF="Flight" cycleInterval="8" loop="true" />
+    <PositionInterpolator DEF="FlightPath" key="0 0.25 0.5 0.75 1" keyValue="0 1.6 12 0 1.6 4 2.5 1.6 -3.5 -3 1.6 -2 0 1.6 12" />
+    <OrientationInterpolator DEF="FlightLook" key="0 0.25 0.5 0.75 1" keyValue="0 1 0 0 0 1 0 0 0 1 0 -0.6 0 1 0 1.2 0 1 0 0" />
+    <ProximitySensor DEF="Cam" size="-1 -1 -1" />
+    <TimeSensor DEF="Pulse" cycleInterval="0.6" />
+    <ScalarInterpolator DEF="GateGlow" key="0 0.5 1" keyValue="0 0.7 0" />
+    <TimeSensor DEF="Fade" cycleInterval="0.5" />
+    <TimeSensor DEF="Flash" cycleInterval="0.5" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightPath" toField="set_fraction" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightLook" toField="set_fraction" />
+    <ROUTE fromNode="FlightPath" fromField="value_changed" toNode="Eye" toField="position" />
+    <ROUTE fromNode="FlightLook" fromField="value_changed" toNode="Eye" toField="orientation" />
+    <ROUTE fromNode="Cam" fromField="position_changed" toNode="CamEcho" toField="translation" />
+    <ROUTE fromNode="Cam" fromField="orientation_changed" toNode="CamEcho" toField="rotation" />
+    <ROUTE fromNode="Cam" fromField="centerOfRotation_changed" toNode="GateEcho" toField="translation" />
+    <ROUTE fromNode="Gate" fromField="isActive" toNode="GateLamp" toField="visible" />
+    <ROUTE fromNode="Gate" fromField="enterTime" toNode="Pulse" toField="startTime" />
+    <ROUTE fromNode="Pulse" fromField="fraction_changed" toNode="GateGlow" toField="set_fraction" />
+    <ROUTE fromNode="GateGlow" fromField="value_changed" toNode="GatePaint" toField="transparency" />
+    <ROUTE fromNode="Gate" fromField="position_changed" toNode="RoomEcho" toField="translation" />
+    <ROUTE fromNode="Room" fromField="isActive" toNode="RoomLamp" toField="visible" />
+    <ROUTE fromNode="Room" fromField="orientation_changed" toNode="RoomCompass" toField="rotation" />
+    <ROUTE fromNode="Room" fromField="centerOfRotation_changed" toNode="RoomPivot" toField="translation" />
+    <ROUTE fromNode="Room" fromField="exitTime" toNode="Fade" toField="startTime" />
+    <ROUTE fromNode="Room" fromField="enterTime" toNode="Flash" toField="startTime" />
+  </Scene>
+</X3D>

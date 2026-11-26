@@ -261,6 +261,20 @@ class NodeTests(unittest.TestCase):
         self.assertAlmostEqual(angle, math.asin(0.5), places=6)
         self.assertLess(bs._rotation_distance(sent(held, "S", "rotation_changed"), (0, 1, 0, 0.2)), 1e-9)
 
+    def test_a_proximity_sensor_enters_reports_and_leaves(self):
+        g = bg.Behaviour()
+        g.add("ProximitySensor", "Box", size=(2, 2, 2), center=(1, 0, 0))
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        turn = (0.0, 1.0, 0.0, 0.3)
+        sim.viewer("Box", (5.0, 0.0, 0.0), turn, 0.1)
+        self.assertEqual([e[2] for e in sim.log if e[1] == "Box"], [])
+        sim.viewer("Box", (1.5, 0.5, 0.0), turn, 0.2)
+        self.assertEqual([e[2] for e in sim.log if e[1] == "Box"][:2], ["isActive", "enterTime"])
+        sim.viewer("Box", (1.5, 0.5, 0.0), turn, 0.3)         # nothing changed: nothing sent
+        sim.viewer("Box", (-0.5, 0.0, 0.0), turn, 0.4)
+        self.assertEqual([e[2:] for e in sim.log if e[1] == "Box"][-2:], [("isActive", False), ("exitTime", 0.4)])
+
     def test_ease_in_ease_out_sends_the_eased_weight_of_the_segment(self):
         # X_ITE: the output is the eased weight within the segment (0 to 1), not a fraction mapped onto the keys
         g = self.graph()
@@ -324,15 +338,20 @@ class XiteAgreementTests(unittest.TestCase):
         # event for event
         self.agree("probe-drag", 7)
 
+    def test_proximity_from_the_viewer_x_ite_reported(self):
+        # a camera flight (a TimeSensor driving the Viewpoint) through a gate and a turned room with an off-centre box;
+        # X_ITE's own report of the viewer (a root ProximitySensor of size -1) drives the simulator's other sensors
+        self.agree("probe-proximity", 13)
+
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
-        used = {graph.nodes[route.from_id].node_type for graph in map(world, ("probe", "snake", "probe-spline", "probe-drag"))
+        used = {graph.nodes[route.from_id].node_type for graph in map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity"))
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one
         self.assertEqual(unjudged, ["ColorChaser", "KeySensor", "PlaneSensor", "PositionChaser2D",
-                                    "PositionInterpolator2D", "ProximitySensor", "StringSensor", "VisibilitySensor"])
+                                    "PositionInterpolator2D", "StringSensor", "VisibilitySensor"])
 
 
 if __name__ == "__main__":

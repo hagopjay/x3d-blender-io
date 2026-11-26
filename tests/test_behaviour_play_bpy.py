@@ -193,6 +193,33 @@ class PlayTests(_Base):
         gap = max(abs(a - b) for row_a, row_b in zip(ball.matrix_basis, before) for a, b in zip(row_a, row_b))
         self.assertLess(gap, 1e-6)
 
+    def test_a_scripted_flight_carries_the_camera_through_the_proximity_sensors(self):
+        # probe-proximity.x3d: a looping timer flies the Viewpoint; Play moves the camera and the ProximitySensors see
+        # it (the gate lamp lights while the camera is in the gate); stop puts the camera back
+        scene = self.load("probe-proximity")
+        camera = next(o for o in scene.objects if o.type == "CAMERA" and o.get("x3d_def") == "Eye")
+        lamp = scene.objects["GateLamp"]
+        before = camera.matrix_world.copy()
+        shown = lambda obj: not (obj.hide_viewport or obj.hide_get())
+        self.assertFalse(shown(lamp))                             # visible="false" in the file
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        lit, frames = [], 0
+        while frames < 8 * 30:                                    # one 8 s flight at 30 frames a second
+            frames += 1
+            now = frames / 30
+            bpy.context.view_layer.update()
+            player.view(camera.matrix_world.copy(), (0.0, 0.0, 0.0), now)
+            player.step(now)
+            lit.append(shown(lamp))
+        self.assertNotEqual(camera.matrix_world, before)
+        self.assertTrue(any(lit) and not lit[-1], "the lamp lights in the gate and goes out after it")
+        self.assertEqual(player.not_applied, [])
+        player.stop()
+        bpy.context.view_layer.update()
+        gap = max(abs(a - b) for row_a, row_b in zip(camera.matrix_world, before) for a, b in zip(row_a, row_b))
+        self.assertLess(gap, 1e-6)
+
     def test_the_nodes_that_sent_an_event_light_up_and_go_back(self):
         scene = self.load("door")
         tree = scene.x3d_behaviour_tree

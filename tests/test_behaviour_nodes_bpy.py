@@ -238,6 +238,18 @@ class BehaviourNodeTests(unittest.TestCase):
         bpy.ops.import_scene.x3d(filepath=str(ROUTE_DEMO))
         self.assertEqual(sorted(action.name for action in bpy.data.actions), ["Beacon_x3d", "Door_x3d", "Spinner_x3d"])
 
+    def test_a_sensor_binds_to_its_transform_not_to_a_child_that_inherited_the_def(self):
+        # probe-proximity.x3d: GateBase and RoomBase hold unnamed Transforms with shapes; the importer gives those the
+        # parent's DEF (and the name), the Transform itself becoming an empty "GateBase.001" or the like
+        path = ROUTE_DEMO.parent / "probe-proximity.x3d"
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=str(path), use_behaviour_graph=True), {"FINISHED"})
+        tree = self.scene.x3d_behaviour_tree
+        for sensor in ("Gate", "Room"):
+            parent = tree.nodes[sensor].x3d_parent
+            self.assertEqual(parent.type, "EMPTY")
+            self.assertTrue(parent.parent is None or parent.parent.get("x3d_def") != parent.get("x3d_def"))
+            self.assertEqual(len(parent.children), 4)          # three shapes or more, and the lamp
+
     def test_import_says_where_the_graph_went(self):
         # Backlog 1: with no window (a script, blender -b) nothing can be shown; the line says how to see it
         tree = self._import_demo()

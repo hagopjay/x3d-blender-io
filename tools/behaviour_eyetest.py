@@ -265,6 +265,20 @@ def world_steps(world, tag=""):
                       if tuple(round(v, 4) for v in o.matrix_basis.to_euler()) != before_full.get(o.name, (None, None))[1]}
             dragged.append({"grabbed": obj.name, "sensors": player.sensors_for(obj), "turned": sorted(turned)})
         note(name, "drags", dragged)
+    # proximity sensors: let the camera fly (a scripted Viewpoint, or the viewport) and watch what lights
+    if player.proximity_sensors():
+        shown = lambda o: not (o.hide_viewport or o.hide_get())
+        seen = {}
+        for tick in range(90):                       # 9 seconds: one 8 s flight and a little more
+            yield 0.1
+            for o in scene.objects:
+                seen.setdefault(o.name, set()).add(shown(o))
+            if tick % 15 == 14:
+                shot(f"{name}-fly-{tick // 15}")
+        note(name, "proximity_toggled", sorted(n for n, states in seen.items() if len(states) == 2))
+        camera_now = scene.camera.matrix_world.translation if scene.camera else None
+        note(name, "camera_moved", camera_now is not None and
+             tuple(round(v, 3) for v in camera_now) != before_full.get(scene.camera.name, ((None,),))[0])
     glowing = [n.name for n in tree.nodes if n.use_custom_color]
     note(name, "glowing_after_click", glowing)
     note(name, "shot_glow", shot(f"{name}-4-play-glow"))
@@ -285,6 +299,52 @@ def world_steps(world, tag=""):
     note(name, "shot_restored", shot(f"{name}-6-restored"))
 
 
+def _sha256(path):
+    import hashlib
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def witness_record():
+    """The run as a Loom witness record (loom.witness/1, LOOM-v1 section 5): the Host-eyes witness. Pass when nothing
+    errored, every world imported with a node editor open was shown in it with no overlapping nodes, and every world
+    that played was put back as it was."""
+    import hashlib
+    import platform
+    tree = hashlib.sha256()
+    for path in sorted(SOURCE.rglob("*")):
+        if path.is_file() and path.suffix in (".py", ".toml") and "__pycache__" not in path.parts:
+            tree.update(path.relative_to(SOURCE).as_posix().encode() + b"\0" + _sha256(path).encode() + b"\n")
+    worlds = {name: v for name, v in LOG["worlds"].items() if not name.endswith("-no-editor")}
+    checks = {name: {"shown": v.get("shown_in_editor") is True, "overlaps": len(v.get("overlaps") or []),
+                     "played": v.get("playing") is True, "restored": v.get("restored"),
+                     "not_simulated": v.get("not_simulated"), "drags": len(v.get("drags") or []),
+                     "proximity_toggled": v.get("proximity_toggled")} for name, v in worlds.items()}
+    failed = [name for name, c in checks.items()
+              if not c["shown"] or c["overlaps"] or (c["played"] and c["restored"] is not True)]
+    status = "pass" if not failed and not LOG["errors"] else "fail"
+    evidence = [{"path": p.name, "sha256": _sha256(p)} for p in sorted(OUT.glob("*.png"))]
+    evidence.append({"path": "eyetest.json", "sha256": _sha256(OUT / "eyetest.json")})
+    return {
+        "schema": "loom.witness/1", "witness": "host-eyes", "status": status, "grade": "C",
+        "subject_sha256": tree.hexdigest(),
+        "instrument": {"tool": "tools/behaviour_eyetest.py", "blender": bpy.app.version_string,
+                       "flags": ["--factory-startup", "--enable-event-simulate"],
+                       "window": [window().width, window().height], "os": f"{platform.system()} {platform.release()}",
+                       "machine": platform.machine()},
+        "measurements": checks,
+        "coverage": sorted(worlds),
+        "limitations": ["taste is not judged: the screenshots are for a person", "one window size and UI scale",
+                        "events come from Blender's queue, not the operating system's",
+                        "Blender versions other than the one named were not run"],
+        "evidence": evidence,
+        "development": True,
+        "reason": (f"{len(worlds) - len(failed)} of {len(worlds)} worlds shown, laid out, played and restored"
+                   + (f"; failed: {', '.join(failed)}" if failed else "")
+                   + (f"; {len(LOG['errors'])} error(s)" if LOG["errors"] else "")),
+        "environment": {"python": sys.version.split()[0], "optimized": bool(sys.flags.optimize)},
+    }
+
+
 def run():
     load_addon()
     yield 0.5
@@ -301,6 +361,7 @@ def run():
             LOG["errors"].append(f"{world}: {traceback.format_exc()}")
             print(traceback.format_exc())
     (OUT / "eyetest.json").write_text(json.dumps(LOG, indent=1))
+    (OUT / "host-eyes.json").write_text(json.dumps(witness_record(), indent=1))
     print(f"[eyetest] done: {OUT}")
     if not KEEP_OPEN:
         bpy.ops.wm.quit_blender()

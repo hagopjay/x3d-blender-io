@@ -118,6 +118,19 @@ class Player:
         self._apply(self.sim.step(now))
         self._flash_nodes()
 
+    def proximity_sensors(self):
+        return [node_id for node_id, node in self.graph.nodes.items() if node.node_type == "ProximitySensor"]
+
+    def view(self, eye, pivot, now):
+        """The viewer for every ProximitySensor: ``eye`` is the camera's matrix in Blender world (looking down its -Z,
+        as an X3D viewer does), ``pivot`` the point the view turns about (Blender's orbit centre)."""
+        for sensor in self.proximity_sensors():
+            local = self._frame(sensor).inverted() @ eye
+            position, turn, _scale = local.decompose()
+            axis, angle = turn.to_axis_angle()
+            center = self._frame(sensor).inverted() @ Vector(pivot)
+            self._apply(self.sim.viewer(sensor, tuple(position), (*axis, angle), now, center_of_rotation=tuple(center)))
+
     def hover(self, obj, now):
         """The pointer is over ``obj`` (None: over nothing a sensor senses)."""
         wanted = self.sensors_for(obj) if obj is not None else []
@@ -215,6 +228,17 @@ class Player:
                 obj = bpy.data.objects.get(name)
                 if field_name == "set_bind" and value and obj is not None:
                     self.scene.camera = obj
+                elif field_name in ("position", "orientation") and obj is not None:
+                    # an imported camera's transform in the file's axes is the Viewpoint's position and orientation
+                    state = self._transforms.get(name)
+                    if state is None:
+                        state = self._transforms[name] = _TransformState(obj, self.global_matrix)
+                    if field_name == "position":
+                        state.location = Vector(value)
+                    else:
+                        axis = Vector(value[:3])
+                        state.rotation = Quaternion(axis.normalized(), value[3]) if axis.length > 0 else Quaternion()
+                    touched[name] = state
                 else:
                     self._skip(node, field_name)
             else:
@@ -377,6 +401,21 @@ def is_playing():
     return _running["player"] is not None
 
 
+def _viewer(context):
+    """(camera matrix, orbit centre) in Blender world for the first 3D viewport: the scene camera when the view looks
+    through it (so a Viewpoint that a ROUTE flies carries the viewer with it), else the viewport's own eye."""
+    area = next((a for a in context.window.screen.areas if a.type == "VIEW_3D"), None)
+    if area is None:
+        return None
+    region_3d = area.spaces.active.region_3d
+    camera = context.scene.camera
+    if region_3d.view_perspective == "CAMERA" and camera is not None:
+        eye = camera.matrix_world.copy()
+    else:
+        eye = region_3d.view_matrix.inverted()
+    return eye, tuple(region_3d.view_location)
+
+
 def _eye(context, event):
     """Where the viewer is and which way is back (Blender world) for the 3D viewport under the pointer."""
     found = _view_under(context, event)
@@ -443,6 +482,10 @@ class X3D_OT_behaviour_play(bpy.types.Operator):
         if event.type == "ESC" or _running["player"] is not self.player:
             return self._finish(context)
         if event.type == "TIMER":
+            if self.player.proximity_sensors():
+                viewer = _viewer(context)
+                if viewer is not None:
+                    self.player.view(*viewer, now)
             self.player.step(now)
             for area in context.window.screen.areas:
                 if area.type in ("VIEW_3D", "NODE_EDITOR"):
