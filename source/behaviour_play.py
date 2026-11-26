@@ -35,6 +35,7 @@ from . import behaviour_graph as bg
 from . import behaviour_hosted
 from . import behaviour_nodes
 from . import behaviour_presets
+from . import behaviour_world
 from .behaviour_sim import POINTING, Simulation
 
 SWITCH_PROPERTY = "x3d_switch"     # set by the importer on an object under a DEF'd Switch (import_x3d.SWITCH_BRANCH_PROPERTY)
@@ -207,6 +208,30 @@ class _JointState:
         pose.rotation_axis_angle = axis_angle
 
 
+WORLD_SENSORS = ("ProximitySensor",)          # the environmental sensors Play gives a frame (and a viewer) to
+UNFED_SENSORS = ("VisibilitySensor", "TransformSensor")   # simulated from a World, which Play does not fill for them
+
+
+def world_from_blender(scene, graph, global_matrix=None):
+    """A ``behaviour_world.World`` for the Player: one frame per ProximitySensor, named by the sensor, holding the matrix
+    that takes the sensor's coordinates to Blender world (its parent object's matrix, or the inverse of the Play axes at the
+    scene root). ``Player.view`` refreshes those matrices and the viewer every frame. Nothing else is described: a
+    VisibilitySensor (it needs the viewport's frustum), a TransformSensor (its ``targetObject`` is not in the graph) and a
+    Collision are not given a frame, so the simulation says "no-frame" for them and the Player lists them as not applied."""
+    world = behaviour_world.World()
+    axes = global_matrix if global_matrix is not None else EXPORT_AXES
+    for node in graph.nodes.values():
+        if node.role == bg.BEHAVIOUR and node.node_type in WORLD_SENSORS:
+            parent = bpy.data.objects.get(node.parent) if node.parent else None
+            matrix = parent.matrix_world if parent is not None else axes.inverted()
+            world.set_frame_matrix(node.id, [matrix[row][column] for row in range(4) for column in range(4)])
+            world.sensors[node.id] = node.id
+    return world
+
+
+behaviour_world.World.from_blender = staticmethod(world_from_blender)     # World.from_blender(scene, graph, global_matrix)
+
+
 class Player:
     """A scene's behaviour graph, running on the scene's own objects."""
 
@@ -215,12 +240,15 @@ class Player:
         self.graph = graph if graph is not None else behaviour_nodes.read(scene)
         if self.graph is None:
             raise bg.BehaviourError("no-graph", "this scene has no X3D Behaviour node tree to play")
-        self.sim = Simulation(self.graph)
+        self.global_matrix = global_matrix if global_matrix is not None else EXPORT_AXES
+        self.world = behaviour_world.World.from_blender(scene, self.graph, self.global_matrix)
+        self.sim = Simulation(self.graph, world=self.world)
         self.activity = behaviour_activity.Activity.from_simulation(
             self.sim, record=bool(getattr(scene, "x3d_activity_record", False)) if record is None else record,
             world=scene.name) if activity else None   # see behaviour_activity
-        self.global_matrix = global_matrix if global_matrix is not None else EXPORT_AXES
         self.not_applied = []          # "Type.field" an event reached but the player does not show
+        self.not_applied += [f"{node.node_type} {node.id}: Play does not feed it a world" for node in self.graph.nodes.values()
+                             if node.role == bg.BEHAVIOUR and node.node_type in UNFED_SENSORS]
         self.now = 0.0
         self._transforms, self._hidden, self._materials, self._lights, self._camera = {}, {}, {}, {}, scene.camera
         self._switches, self._choices = {}, {}    # Switch DEF -> [(object, tags)]; Switch DEF -> the whichChoice it was last given
@@ -410,15 +438,22 @@ class Player:
 
     def view(self, eye, pivot, now):
         """The viewer for every ProximitySensor: ``eye`` is the camera's matrix in Blender world (looking down its -Z,
-        as an X3D viewer does), ``pivot`` the point the view turns about (Blender's orbit centre)."""
-        for sensor in self.proximity_sensors():
-            local = self._frame(sensor).inverted() @ eye
-            position, turn, _scale = local.decompose()
-            axis, angle = turn.to_axis_angle()
-            center = self._frame(sensor).inverted() @ Vector(pivot)
-            self._note("viewer", sensor, now, position=tuple(position), orientation=(*axis, angle),
-                       center_of_rotation=tuple(center))
-            self._apply(self.sim.viewer(sensor, tuple(position), (*axis, angle), now, center_of_rotation=tuple(center)))
+        as an X3D viewer does), ``pivot`` the point the view turns about (Blender's orbit centre). The World holds the
+        viewer and each sensor's frame (refreshed here: the objects move); the simulation turns the one into the other."""
+        sensors = self.proximity_sensors()
+        for sensor in sensors:
+            frame = self._frame(sensor)
+            self.world.set_frame_matrix(sensor, [frame[row][column] for row in range(4) for column in range(4)])
+        location, turn, _scale = eye.decompose()
+        axis, angle = turn.to_axis_angle()
+        position, orientation, centre = tuple(location), (*axis, angle), tuple(Vector(pivot))
+        if self.activity is not None and self.activity.stimulus is not None:
+            self.world.set_viewer(position, orientation, centre)
+            for sensor in sensors:
+                local = self.world.viewer_in(sensor)
+                if local is not None:
+                    self._note("viewer", sensor, now, position=local[0], orientation=local[1], center_of_rotation=local[2])
+        self._apply(self.sim.view(position, orientation, now, center_of_rotation=centre))
 
     def hover(self, obj, now):
         """The pointer is over ``obj`` (None: over nothing a sensor senses)."""

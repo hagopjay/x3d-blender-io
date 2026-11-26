@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: the world (TransformSensor, VisibilitySensor, Collision)" />
+    <meta name="generator" content="x3d-blender-io tests/behaviour (recorded with tools/behaviour_sim_judge.cjs on X_ITE 16.8.1)" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint DEF="Eye" position="0 1.6 12" />
+    <Transform translation="0 -0.05 0">
+      <Shape><Appearance><Material diffuseColor="0.25 0.27 0.3" /></Appearance><Box size="40 0.1 40" /></Shape>
+    </Transform>
+
+    <!-- the viewer: flight and look -->
+    <TimeSensor DEF="Flight" cycleInterval="12" loop="true" />
+    <PositionInterpolator DEF="FlightPath" key="0 0.15 0.3 0.45 0.6 0.75 0.9 1"
+      keyValue="0 1.6 12  0 1.6 -2  0 1.6 -5.8  0 1.6 -3  0 1.6 6  6 1.6 6  6 1.6 12  0 1.6 12" />
+    <OrientationInterpolator DEF="FlightLook" key="0 0.15 0.3 0.45 0.6 0.75 0.9 1"
+      keyValue="0 1 0 0  0 1 0 0  0 1 0 0  0 1 0 3.14159  0 1 0 3.14159  0 1 0 4.7  0 1 0 6.28318  0 1 0 6.28318" />
+    <ProximitySensor DEF="Cam" size="-1 -1 -1" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightPath" toField="set_fraction" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightLook" toField="set_fraction" />
+    <ROUTE fromNode="FlightPath" fromField="value_changed" toNode="Eye" toField="position" />
+    <ROUTE fromNode="FlightLook" fromField="value_changed" toNode="Eye" toField="orientation" />
+
+    <!-- TransformSensor: a ball driven through a turned sensor box, its own centre and turn moving its origin -->
+    <Transform DEF="Ball" translation="-9 1 -2" center="0 0.5 0">
+      <Shape><Appearance><Material diffuseColor="0.9 0.3 0.2" /></Appearance><Sphere radius="0.3" /></Shape>
+    </Transform>
+    <Transform DEF="Slot" translation="-4 0 -2" rotation="0 1 0 0.5">
+      <Shape><Appearance><Material transparency="0.7" /></Appearance><Box size="4 2 4" /></Shape>
+      <TransformSensor DEF="Gauge" size="4 2 4" center="0 1 0"><Transform USE="Ball" containerField="targetObject" /></TransformSensor>
+    </Transform>
+    <TransformSensor DEF="Everywhere" size="-1 -1 -1"><Transform USE="Ball" containerField="targetObject" /></TransformSensor>
+    <TimeSensor DEF="Roll" cycleInterval="9" loop="true" />
+    <PositionInterpolator DEF="RollPath" key="0 0.5 1" keyValue="-9 1 -2  -3 1 -2  3 1 -2" />
+    <OrientationInterpolator DEF="RollTurn" key="0 0.5 1" keyValue="0 0 1 0  0 0 1 1.5  0 0 1 3" />
+    <ROUTE fromNode="Roll" fromField="fraction_changed" toNode="RollPath" toField="set_fraction" />
+    <ROUTE fromNode="Roll" fromField="fraction_changed" toNode="RollTurn" toField="set_fraction" />
+    <ROUTE fromNode="RollPath" fromField="value_changed" toNode="Ball" toField="translation" />
+    <ROUTE fromNode="RollTurn" fromField="value_changed" toNode="Ball" toField="rotation" />
+
+    <!-- VisibilitySensor: boxes ahead, to the right, behind, always, and nowhere -->
+    <Transform DEF="VisBase" translation="0 1 -8">
+      <Shape><Appearance><Material diffuseColor="0.2 0.8 0.3" /></Appearance><Box size="2 2 2" /></Shape>
+      <VisibilitySensor DEF="Ahead" size="2 2 2" />
+    </Transform>
+    <Transform translation="9 1 0">
+      <Shape><Appearance><Material diffuseColor="0.2 0.4 0.9" /></Appearance><Box size="2 2 2" /></Shape>
+      <VisibilitySensor DEF="Right" size="2 2 2" />
+    </Transform>
+    <Transform translation="0 1 18">
+      <Shape><Appearance><Material diffuseColor="0.8 0.8 0.2" /></Appearance><Box size="2 2 2" /></Shape>
+      <VisibilitySensor DEF="Behind" size="2 2 2" center="0 0 0" />
+    </Transform>
+    <VisibilitySensor DEF="Always" size="-1 -1 -1" />
+    <VisibilitySensor DEF="Nothing" size="0 0 0" />
+
+    <!-- Collision: a wall the viewer flies up to, and a pillar it passes -->
+    <Collision DEF="Wall">
+      <Transform translation="0 1 -6.2"><Shape><Appearance><Material diffuseColor="0.8 0.5 0.3" /></Appearance><Box size="6 3 0.4" /></Shape></Transform>
+    </Collision>
+    <Collision DEF="Pillar">
+      <Transform translation="6 1 5.4"><Shape><Appearance><Material diffuseColor="0.5 0.5 0.8" /></Appearance><Box size="0.6 2 0.6" /></Shape></Transform>
+    </Collision>
+
+    <!-- a skewed frame: a scaled, turned target through a stretched, turned sensor frame (the orientation is the rotation left when scale and shear are taken out) -->
+    <Transform DEF="Crate" translation="9 3 -2" rotation="1 0 0 0.4" scale="1 2 0.5" scaleOrientation="0 0 1 0.5" center="0 0.5 0">
+      <Shape><Appearance><Material diffuseColor="0.6 0.6 0.9" /></Appearance><Box size="0.5 0.5 0.5" /></Shape>
+    </Transform>
+    <Transform translation="0 0 0.5">
+      <Transform DEF="Stretch" translation="2 3 -2" rotation="0 1 0 0.3" scale="2 1 1">
+        <TransformSensor DEF="Skew" size="6 3 3" center="1 0 0"><Transform USE="Crate" containerField="targetObject" /></TransformSensor>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Slide" cycleInterval="8" loop="true" />
+    <PositionInterpolator DEF="SlidePath" key="0 1" keyValue="9 3 -2  -9 3 -2" />
+    <OrientationInterpolator DEF="SlideTurn" key="0 0.5 1" keyValue="1 0 0 0.4  1 1 0 2  0 1 1 3.5" />
+    <ROUTE fromNode="Slide" fromField="fraction_changed" toNode="SlidePath" toField="set_fraction" />
+    <ROUTE fromNode="Slide" fromField="fraction_changed" toNode="SlideTurn" toField="set_fraction" />
+    <ROUTE fromNode="SlidePath" fromField="value_changed" toNode="Crate" toField="translation" />
+    <ROUTE fromNode="SlideTurn" fromField="value_changed" toNode="Crate" toField="rotation" />
+
+    <!-- boxes turned so that X_ITE's separating-axis test and the exact one part ways -->
+    <Transform translation="5.611994991784986 3.0066313401937967 5.124654577185737" rotation="0.18648323035309033 -0.5125157481760874 0.9914683195078469 3.0522725164629647">
+      <Shape><Appearance><Material diffuseColor="0.9 0.5 0.9" /></Appearance><Box size="1.09226337017519 1.8479932738006175 2.029481087269554" /></Shape>
+      <VisibilitySensor DEF="Tilt1" size="1.09226337017519 1.8479932738006175 2.029481087269554" />
+    </Transform>
+    <Transform translation="-2.9120777369323347 3.853229350058487 -6.0825580089318985" rotation="-0.10932966514873921 -0.15959726949464792 -0.9577942116338187 0.5921036352467896">
+      <Shape><Appearance><Material diffuseColor="0.5 0.9 0.9" /></Appearance><Box size="1.5854539334558226 2.1126095809728924 2.18006461591577" /></Shape>
+      <VisibilitySensor DEF="Tilt2" size="1.5854539334558226 2.1126095809728924 2.18006461591577" />
+    </Transform>
+    <Transform translation="8.095687039610258 2.979850723330773 9.978958807318616" rotation="0.6043371212496973 0.1807632023800081 -0.12935818156861179 2.5910457553629085">
+      <Shape><Appearance><Material diffuseColor="0.9 0.9 0.5" /></Appearance><Box size="2.0904176591446153 2.2545657521084164 1.1680455142352484" /></Shape>
+      <VisibilitySensor DEF="Tilt3" size="2.0904176591446153 2.2545657521084164 1.1680455142352484" />
+    </Transform>
+
+    <!-- sensors switched off and on, and a sensor box resized to nothing -->
+    <TimeSensor DEF="Switch1" cycleInterval="13" loop="true" />
+    <BooleanSequencer DEF="Off1" key="0 0.3 0.6 1" keyValue="true false true true" />
+    <TimeSensor DEF="Switch2" cycleInterval="26" loop="true" />
+    <BooleanSequencer DEF="Off2" key="0 0.6 0.9 1" keyValue="true false true true" />
+    <BooleanSequencer DEF="Off3" key="0 0.4 0.7 1" keyValue="true false true true" />
+    <PositionInterpolator DEF="Shrink" key="0 0.3 0.31 0.6 0.61 1" keyValue="4 2 4  4 2 4  0 0 0  0 0 0  4 2 4  4 2 4" />
+    <TimeSensor DEF="Switch3" cycleInterval="10" loop="true" />
+    <ROUTE fromNode="Switch1" fromField="fraction_changed" toNode="Off1" toField="set_fraction" />
+    <ROUTE fromNode="Switch2" fromField="fraction_changed" toNode="Off2" toField="set_fraction" />
+    <ROUTE fromNode="Switch2" fromField="fraction_changed" toNode="Off3" toField="set_fraction" />
+    <ROUTE fromNode="Switch3" fromField="fraction_changed" toNode="Shrink" toField="set_fraction" />
+    <ROUTE fromNode="Off1" fromField="value_changed" toNode="Always" toField="enabled" />
+    <ROUTE fromNode="Off1" fromField="value_changed" toNode="Ahead" toField="enabled" />
+    <ROUTE fromNode="Off2" fromField="value_changed" toNode="Wall" toField="enabled" />
+    <ROUTE fromNode="Off3" fromField="value_changed" toNode="Everywhere" toField="enabled" />
+    <ROUTE fromNode="Shrink" fromField="value_changed" toNode="Gauge" toField="size" />
+    <Transform DEF="Sink" />
+    <Transform DEF="S1" />
+    <TimeSensor DEF="S2" cycleInterval="0.1" />
+    <TimeSensor DEF="S3" cycleInterval="0.1" />
+    <Transform DEF="S4" />
+    <Transform DEF="S5" />
+    <Transform DEF="S6" />
+    <TimeSensor DEF="S7" cycleInterval="0.1" />
+    <TimeSensor DEF="S8" cycleInterval="0.1" />
+    <Transform DEF="S9" />
+    <Transform DEF="S10" />
+    <Transform DEF="S11" />
+    <TimeSensor DEF="S12" cycleInterval="0.1" />
+    <TimeSensor DEF="S13" cycleInterval="0.1" />
+    <Transform DEF="S14" />
+    <Transform DEF="S15" />
+    <Transform DEF="S16" />
+    <TimeSensor DEF="S17" cycleInterval="0.1" />
+    <TimeSensor DEF="S18" cycleInterval="0.1" />
+    <Transform DEF="S19" />
+    <TimeSensor DEF="S20" cycleInterval="0.1" />
+    <TimeSensor DEF="S21" cycleInterval="0.1" />
+    <Transform DEF="S22" />
+    <TimeSensor DEF="S23" cycleInterval="0.1" />
+    <TimeSensor DEF="S24" cycleInterval="0.1" />
+    <Transform DEF="S25" />
+    <TimeSensor DEF="S26" cycleInterval="0.1" />
+    <TimeSensor DEF="S27" cycleInterval="0.1" />
+    <Transform DEF="S28" />
+    <TimeSensor DEF="S29" cycleInterval="0.1" />
+    <TimeSensor DEF="S30" cycleInterval="0.1" />
+    <Transform DEF="S31" />
+    <TimeSensor DEF="S32" cycleInterval="0.1" />
+    <TimeSensor DEF="S33" cycleInterval="0.1" />
+    <Transform DEF="S34" />
+    <TimeSensor DEF="S35" cycleInterval="0.1" />
+    <TimeSensor DEF="S36" cycleInterval="0.1" />
+    <Transform DEF="S37" />
+    <TimeSensor DEF="S38" cycleInterval="0.1" />
+    <TimeSensor DEF="S39" cycleInterval="0.1" />
+    <Transform DEF="S40" />
+    <TimeSensor DEF="S41" cycleInterval="0.1" />
+    <Transform DEF="S42" />
+    <TimeSensor DEF="S43" cycleInterval="0.1" />
+    <Transform DEF="S44" />
+    <Transform DEF="S45" />
+    <ROUTE fromNode="Gauge" fromField="isActive" toNode="S1" toField="visible" />
+    <ROUTE fromNode="Gauge" fromField="enterTime" toNode="S2" toField="startTime" />
+    <ROUTE fromNode="Gauge" fromField="exitTime" toNode="S3" toField="startTime" />
+    <ROUTE fromNode="Gauge" fromField="position_changed" toNode="S4" toField="translation" />
+    <ROUTE fromNode="Gauge" fromField="orientation_changed" toNode="S5" toField="rotation" />
+    <ROUTE fromNode="Everywhere" fromField="isActive" toNode="S6" toField="visible" />
+    <ROUTE fromNode="Everywhere" fromField="enterTime" toNode="S7" toField="startTime" />
+    <ROUTE fromNode="Everywhere" fromField="exitTime" toNode="S8" toField="startTime" />
+    <ROUTE fromNode="Everywhere" fromField="position_changed" toNode="S9" toField="translation" />
+    <ROUTE fromNode="Everywhere" fromField="orientation_changed" toNode="S10" toField="rotation" />
+    <ROUTE fromNode="Skew" fromField="isActive" toNode="S11" toField="visible" />
+    <ROUTE fromNode="Skew" fromField="enterTime" toNode="S12" toField="startTime" />
+    <ROUTE fromNode="Skew" fromField="exitTime" toNode="S13" toField="startTime" />
+    <ROUTE fromNode="Skew" fromField="position_changed" toNode="S14" toField="translation" />
+    <ROUTE fromNode="Skew" fromField="orientation_changed" toNode="S15" toField="rotation" />
+    <ROUTE fromNode="Ahead" fromField="isActive" toNode="S16" toField="visible" />
+    <ROUTE fromNode="Ahead" fromField="enterTime" toNode="S17" toField="startTime" />
+    <ROUTE fromNode="Ahead" fromField="exitTime" toNode="S18" toField="startTime" />
+    <ROUTE fromNode="Right" fromField="isActive" toNode="S19" toField="visible" />
+    <ROUTE fromNode="Right" fromField="enterTime" toNode="S20" toField="startTime" />
+    <ROUTE fromNode="Right" fromField="exitTime" toNode="S21" toField="startTime" />
+    <ROUTE fromNode="Behind" fromField="isActive" toNode="S22" toField="visible" />
+    <ROUTE fromNode="Behind" fromField="enterTime" toNode="S23" toField="startTime" />
+    <ROUTE fromNode="Behind" fromField="exitTime" toNode="S24" toField="startTime" />
+    <ROUTE fromNode="Always" fromField="isActive" toNode="S25" toField="visible" />
+    <ROUTE fromNode="Always" fromField="enterTime" toNode="S26" toField="startTime" />
+    <ROUTE fromNode="Always" fromField="exitTime" toNode="S27" toField="startTime" />
+    <ROUTE fromNode="Nothing" fromField="isActive" toNode="S28" toField="visible" />
+    <ROUTE fromNode="Nothing" fromField="enterTime" toNode="S29" toField="startTime" />
+    <ROUTE fromNode="Nothing" fromField="exitTime" toNode="S30" toField="startTime" />
+    <ROUTE fromNode="Tilt1" fromField="isActive" toNode="S31" toField="visible" />
+    <ROUTE fromNode="Tilt1" fromField="enterTime" toNode="S32" toField="startTime" />
+    <ROUTE fromNode="Tilt1" fromField="exitTime" toNode="S33" toField="startTime" />
+    <ROUTE fromNode="Tilt2" fromField="isActive" toNode="S34" toField="visible" />
+    <ROUTE fromNode="Tilt2" fromField="enterTime" toNode="S35" toField="startTime" />
+    <ROUTE fromNode="Tilt2" fromField="exitTime" toNode="S36" toField="startTime" />
+    <ROUTE fromNode="Tilt3" fromField="isActive" toNode="S37" toField="visible" />
+    <ROUTE fromNode="Tilt3" fromField="enterTime" toNode="S38" toField="startTime" />
+    <ROUTE fromNode="Tilt3" fromField="exitTime" toNode="S39" toField="startTime" />
+    <ROUTE fromNode="Wall" fromField="isActive" toNode="S40" toField="visible" />
+    <ROUTE fromNode="Wall" fromField="collideTime" toNode="S41" toField="startTime" />
+    <ROUTE fromNode="Pillar" fromField="isActive" toNode="S42" toField="visible" />
+    <ROUTE fromNode="Pillar" fromField="collideTime" toNode="S43" toField="startTime" />
+    <ROUTE fromNode="Cam" fromField="position_changed" toNode="S44" toField="translation" />
+    <ROUTE fromNode="Cam" fromField="orientation_changed" toNode="S45" toField="rotation" />
+  </Scene>
+</X3D>

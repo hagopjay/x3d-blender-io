@@ -28,6 +28,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "source"))
 import behaviour_graph as bg          # noqa: E402
 import behaviour_sim as bs            # noqa: E402
+import behaviour_world as bw          # noqa: E402
 
 EXACT, FOLLOWER = 2e-3, 8e-2
 PIXEL_CENTRE = 0.0       # drag rays: X_ITE uses the pointer as given (getPointerFromEvent); the press point comes from its pick
@@ -109,6 +110,26 @@ def _viewer_actions(graph, x3d_text, trace):
                             _to_local_rotation(chain, pose["orientation_changed"]),
                             _to_local(chain, pose["centerOfRotation_changed"]), _to_local(chain, drawn)))
     return drivers, actions
+
+
+def _world_views(trace, driver):
+    """[(time, position, orientation, centre of rotation, position as drawn)] in world coordinates: the viewer as the
+    driver ProximitySensor reported it each frame (what ``Simulation.view`` takes), the position as drawn being last frame's."""
+    pose = {field: _numbers_of(value) for d, field, value in trace.get("initial", []) if d == driver}
+    pose.setdefault("position_changed", (0.0, 0.0, 10.0))
+    pose.setdefault("orientation_changed", (0.0, 0.0, 1.0, 0.0))
+    pose.setdefault("centerOfRotation_changed", (0.0, 0.0, 0.0))
+    by_time = {}
+    for when, node_id, field_name, value in sorted(trace["events"], key=lambda e: e[0]):
+        if node_id == driver:
+            by_time.setdefault(when, []).append((field_name, _numbers_of(value)))
+    views = []
+    for when in sorted(by_time):
+        drawn = pose["position_changed"]
+        for field_name, value in by_time[when]:
+            pose[field_name] = value
+        views.append((when, pose["position_changed"], pose["orientation_changed"], pose["centerOfRotation_changed"], drawn))
+    return views
 
 
 def _view_turn(view):
@@ -213,10 +234,10 @@ def _gap(a, b, x3d_type):
     return max((abs(x - y) for x, y in zip(a, b)), default=0.0)
 
 
-def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None):
+def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=False):
     x3d_text = pathlib.Path(x3d_path).read_text(encoding="utf-8")
     graph = bg.Behaviour.from_x3d(x3d_text)
-    sim = bs.Simulation(graph, log_size=10 ** 7)
+    sim = bs.Simulation(graph, log_size=10 ** 7, world=bw.World.from_x3d(x3d_text))     # the world the sensors read
     for script_id, handler in (handlers or {}).items():      # Python handlers for Scripts: judged against X_ITE's JavaScript
         sim.host(script_id, handler)
     pointing = {node.id for node in graph.nodes.values() if node.node_type in bs.POINTING}
@@ -229,9 +250,13 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None):
     # proximity: a root ProximitySensor of size -1 reports the viewer; the others are run from that report
     drivers, views = _viewer_actions(graph, x3d_text, trace)
     pointing = pointing | drivers
-    by_view = {}
+    by_view, by_world = {}, {}
     for view in views:
         by_view.setdefault(view[0], []).append(view)
+    if world_viewer and drivers:      # the same reports in world coordinates: ``Simulation.view`` turns them into each sensor's own
+        for view in _world_views(trace, sorted(drivers)[0]):
+            by_world[view[0]] = view
+        by_view = {}
     for d, field_name, value in trace.get("initial", []):      # start where X_ITE was when recording began
         machine = sim.machines.get(d)
         if machine is not None and machine.node_type == "ProximitySensor" and d not in drivers:
@@ -244,7 +269,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None):
     by_key = {}
     for key_action in keys:
         by_key.setdefault(key_action[0], []).append(key_action)
-    times = sorted(set(trace["frames"]) | {e[0] for e in events} | set(by_action) | set(by_view) | set(by_key))
+    times = sorted(set(trace["frames"]) | {e[0] for e in events} | set(by_action) | set(by_view) | set(by_world) | set(by_key))
     if not times:
         return {"file": trace["file"], "verdict": "no events recorded", "streams": []}
     # X_ITE had been running for a few seconds before recording began; the simulator is started earlier still, so
@@ -263,6 +288,18 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None):
     while t + 1 / 60 < times[0]:
         t += 1 / 60
         sim.step(t)
+    # the world's sensors run in the pre-roll like everything else, but X_ITE's frames are coarser than its steps: they start
+    # the recording where X_ITE was (what it held when recording began)
+    for d, field_name, value in trace.get("initial", []):
+        machine = sim.machines.get(d)
+        if isinstance(machine, bs._WorldSensor):
+            if field_name == "isActive":
+                machine.active = value is True or str(value) == "true"
+            elif field_name in ("position_changed", "orientation_changed"):
+                machine.f[field_name] = _numbers_of(value)
+        for group in sim._collisions:
+            if group.id == d and field_name == "isActive":
+                group.active = value is True or str(value) == "true"
     sim.log.clear()
     by_time = {}
     for event in events:
@@ -270,7 +307,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None):
     # X_ITE steps its followers once a frame, and a frame is a moment something time-driven spoke (the page's own
     # animation-frame stamps include the moments the pointer moved, when X_ITE does not step). The simulator is stepped
     # at the same moments; pointer actions and viewer reports happen at their own times without a step.
-    stepped = {event[0] for event in events if event[1] not in pointing} | set(by_view)
+    stepped = {event[0] for event in events if event[1] not in pointing} | set(by_view) | set(by_world)
     for when in times:
         for _when, kind, event in by_key.get(when, ()):
             sim.key(kind, event, when)
@@ -286,8 +323,12 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None):
         for _when, sensor, position, orientation, center, drawn in by_view.get(when, ()):
             sim.now = when
             sim.viewer(sensor, position, orientation, when, center_of_rotation=center, test_position=drawn)
+        if when in by_world:
+            _when, position, orientation, center, drawn = by_world[when]
+            sim.now = when
+            sim.view(position, orientation, when, center_of_rotation=center, test_position=drawn)
         for _when, node_id, field_name, value in by_time.get(when, ()):
-            if node_id in pointing and node_id not in driven:
+            if node_id in pointing and node_id not in driven and not (world_viewer and node_id in drivers):
                 x3d_type = bg.resolve_field(graph.nodes[node_id].node_type, field_name, "out", graph.nodes[node_id].declared)[1]
                 sim.now = when
                 machine = sim.machines[node_id]
