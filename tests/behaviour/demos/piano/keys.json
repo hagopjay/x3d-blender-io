@@ -1,0 +1,133 @@
+{
+ "keys": [
+  {
+   "press": "a"
+  },
+  {
+   "press": "Enter"
+  },
+  {
+   "press": "Escape"
+  },
+  {
+   "press": "Tab"
+  },
+  {
+   "press": "Delete"
+  },
+  {
+   "press": "Home"
+  },
+  {
+   "press": "PageDown"
+  },
+  {
+   "press": "Shift+A"
+  },
+  {
+   "press": "Control+b"
+  },
+  {
+   "press": "Alt+c"
+  },
+  {
+   "press": "ArrowUp"
+  },
+  {
+   "press": "F2"
+  },
+  {
+   "press": "ArrowLeft"
+  },
+  {
+   "down": "Shift"
+  },
+  {
+   "click": "SheetTouch",
+   "at": [
+    390,
+    90
+   ]
+  },
+  {
+   "up": "Shift"
+  },
+  {
+   "type": "Hello Pianos"
+  },
+  {
+   "press": "Backspace"
+  },
+  {
+   "click": "LockTouch",
+   "at": [
+    630,
+    180
+   ]
+  },
+  {
+   "press": "Backspace"
+  },
+  {
+   "click": "LockTouch",
+   "at": [
+    630,
+    180
+   ]
+  },
+  {
+   "type": "!"
+  },
+  {
+   "press": "Backspace"
+  },
+  {
+   "type": "!"
+  },
+  {
+   "press": "Enter"
+  },
+  {
+   "press": "z"
+  },
+  {
+   "click": "SheetTouch",
+   "at": [
+    390,
+    90
+   ]
+  },
+  {
+   "type": "ok"
+  },
+  {
+   "press": "Enter"
+  },
+  {
+   "click": "SheetTouch",
+   "at": [
+    390,
+    90
+   ]
+  },
+  {
+   "press": "Enter"
+  },
+  {
+   "type": "x"
+  },
+  {
+   "press": "Backspace"
+  },
+  {
+   "press": "Backspace"
+  },
+  {
+   "press": "Escape"
+  },
+  {
+   "press": "q"
+  }
+ ],
+ "gap_ms": 150
+}
