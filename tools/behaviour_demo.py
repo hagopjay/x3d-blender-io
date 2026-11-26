@@ -17,7 +17,13 @@ demo.json, the demo's contract with these tools:
      "clicks": int, "seconds": number,         # what the recorder does: real clicks on the first pointing sensor ...
      "drags": "drags.json" | null,             # ... or real drags from this file (clicks must be 0)
      "keys": "keys.json" | null,               # ... or typed keys from this file (KeySensor / StringSensor demos)
-     "judges": [node types this demo is the first to judge against X_ITE]}
+     "click_plan": ["SensorDEF", ...],         # ... or one real click on each named pointing sensor, in this order (clicks 0)
+     "judges": [node types this demo is the first to judge against X_ITE],
+     "idle": ["Node.field", ...]}              # optional: ROUTE sources the recorded click cannot fire (see below)
+
+idle: the recorder clicks one spot, so a world with several click chains fires only one of them. A source named here
+must send nothing in X_ITE and nothing in the simulator (so the simulator cannot invent events); it still counts in
+"streams", and the demo's act.py proves its chain in the live window. Every other source needs an X_ITE event.
 """
 
 import json
@@ -62,6 +68,9 @@ def check(name):
     for key in ("drags", "keys"):
         if data.get(key) and not (here / data[key]).is_file():
             problems.append(f"{key} file {data[key]} is missing")
+    if data.get("click_plan"):
+        names = {n.id for n in graph.nodes.values() if n.node_type in ("TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor")}
+        problems += [f"click_plan names {d}, which is not a pointing sensor of the world" for d in data["click_plan"] if d not in names]
     if data.get("drags") and data["clicks"]:
         problems.append("drags and clicks together: the recorder does one or the other")
     if not (here / "act.py").is_file():
@@ -69,6 +78,10 @@ def check(name):
     if not (here / "README.md").is_file():
         problems.append("no README.md (what the demo shows, how to play it, what was checked)")
     sources = judge.sources_of(graph)
+    known = {f"{node}.{field}" for node, field in sources}
+    for idle in data.get("idle", []):
+        if idle not in known:
+            problems.append(f"idle source {idle} is not a ROUTE source of the world")
     print(f"{name}: {len(graph.nodes)} nodes, {len(graph.routes)} ROUTEs, {len(sources)} ROUTE sources; "
           f"contract expects {data['streams']} compared streams")
     for problem in problems:
@@ -92,8 +105,16 @@ def record(name):
         args.append(str(here / data["drags"]))
     if data.get("keys"):
         args += ["--keys", str(here / data["keys"])]
+    plan = None
+    if data.get("click_plan"):
+        plan = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(data["click_plan"], plan)
+        plan.close()
+        args += ["--click-plan", plan.name]
     out = subprocess.run(args, capture_output=True, text=True)
     pathlib.Path(sources.name).unlink()
+    if plan is not None:
+        pathlib.Path(plan.name).unlink()
     if out.returncode != 0:
         sys.exit(f"recorder failed ({out.returncode}):\n{out.stderr[-2000:]}")
     trace = json.loads(out.stdout)
@@ -110,11 +131,15 @@ def run_judge(name):
     result = judge.judge(here / f"{name}.x3d", json.loads(trace_path.read_text(encoding="utf-8")))
     streams = result["streams"]
     for s in streams:
-        print(f"  {'ok ' if s['agree'] else 'BAD'} {s['source']:40} x_ite {s['x_ite_events']:4}  "
+        print(f"  {'ok ' if s['agree'] else 'BAD'}{'~' if s['source'] in set(data.get('idle', [])) else ' '}{s['source']:40} x_ite {s['x_ite_events']:4}  "
               f"simulator {s['simulator_events']:4}  worst gap {s['worst_gap']:.6f} (tolerance {s['tolerance']})")
-    ok = bool(result.get("agree")) and len(streams) == data["streams"] and all(s["x_ite_events"] > 0 for s in streams)
+    idle = set(data.get("idle", []))
+    live = [s for s in streams if s["source"] not in idle]
+    quiet = [s for s in streams if s["source"] in idle]
+    ok = bool(result.get("agree")) and len(streams) == data["streams"] and all(s["x_ite_events"] > 0 for s in live) \
+        and len(quiet) == len(idle) and all(s["x_ite_events"] == 0 and s["simulator_events"] == 0 for s in quiet)
     print(f"{name}: {sum(s['agree'] for s in streams)} of {len(streams)} streams agree "
-          f"(contract: {data['streams']}); {'PASS' if ok else 'FAIL'}")
+          f"(contract: {data['streams']}; {len(quiet)} idle, silent in both); {'PASS' if ok else 'FAIL'}")
     return 0 if ok else 1
 
 

@@ -21,6 +21,8 @@ its parent's space. The player turns each object into that Transform once, chang
 back, so a value means here what it means in the file.
 """
 
+import json
+import math
 import time
 
 import bpy
@@ -79,6 +81,39 @@ def is_keyboard(event):
         and not event.type.startswith(("NDOF", "TIMER", "WINDOW", "TRACKPAD", "MOUSE", "INBETWEEN"))
 
 
+def _texture_matrix(values, center):
+    """An X3D TextureTransform as a 3x3 on (s, t, 1): translation * center * rotation * scale * -center."""
+    tx, ty = values["translation"]
+    sx, sy = values["scale"]
+    cx, cy = center
+    c, d = math.cos(values["rotation"]), math.sin(values["rotation"])
+    move = lambda x, y: Matrix(((1, 0, x), (0, 1, y), (0, 0, 1)))               # noqa: E731
+    return move(tx, ty) @ move(cx, cy) @ Matrix(((c, -d, 0), (d, c, 0), (0, 0, 1))) @ \
+        Matrix(((sx, 0, 0), (0, sy, 0), (0, 0, 1))) @ move(-cx, -cy)
+
+
+def _mapping_matrix(socket_values):
+    """What a Mapping node (type Point) does to a texture coordinate, as a 3x3: Location + Rotation Z * Scale * v."""
+    (lx, ly, _lz), (_rx, _ry, rz), (sx, sy, _sz) = (tuple(socket_values[n]) for n in ("Location", "Rotation", "Scale"))
+    c, d = math.cos(rz), math.sin(rz)
+    return Matrix(((c * sx, -d * sy, lx), (d * sx, c * sy, ly), (0, 0, 1)))
+
+
+def _initial_texture_transform(material):
+    """The authored TextureTransform recorded on the material at import (``x3d_texture_transform``, JSON), as numbers;
+    the X3D defaults when there is none."""
+    try:
+        raw = json.loads(material.get("x3d_texture_transform") or "{}")
+    except ValueError:
+        raw = {}
+    numbers = lambda key, default: tuple(float(v) for v in str(raw.get(key, default)).replace(",", " ").split())   # noqa: E731
+    try:
+        return {"translation": numbers("translation", "0 0")[:2], "rotation": numbers("rotation", "0")[0],
+                "scale": numbers("scale", "1 1")[:2], "center": numbers("center", "0 0")[:2]}
+    except (ValueError, IndexError):
+        return {"translation": (0.0, 0.0), "rotation": 0.0, "scale": (1.0, 1.0), "center": (0.0, 0.0)}
+
+
 class _TransformState:
     """One object as the X3D Transform the exporter writes for it."""
 
@@ -122,6 +157,7 @@ class Player:
         self._down = {}                # Blender key -> (key, which) it went down as, so it comes up as the same key
         self._flash = self._tree_nodes() if flash else {}
         self._colours = {}
+        self._maps = {}              # material name -> the Mapping nodes Play drives for a TextureTransform, and how to undo them
         self._burst = {}             # node id -> when its current run of events began (for the glow)
 
     # -- what can be clicked ------------------------------------------------------------------------------------
@@ -307,6 +343,8 @@ class Player:
                 self._paint(node, bpy.data.materials.get(name), field_name, value)
             elif kind == "light":
                 self._light(node, bpy.data.objects.get(name), field_name, value)
+            elif kind == "texture":
+                self._texture(node, bpy.data.materials.get(name), field_name, value)
             elif kind == "viewpoint":
                 obj = bpy.data.objects.get(name)
                 if field_name == "set_bind" and value and obj is not None:
@@ -391,6 +429,97 @@ class Player:
         if shader is not None and socket in shader.inputs:
             shader.inputs[socket].default_value = new
 
+    def _texture(self, node, material, field_name, value):
+        """TextureTransform ``translation``, ``rotation`` and ``scale`` onto the Mapping node in front of the material's
+        Image Texture nodes. The importer bakes the authored TextureTransform into the UVs and makes no Mapping node, so
+        the first event makes one (Texture Coordinate UV -> Mapping -> each Image Texture's Vector) and ``stop`` takes it
+        away again. The Mapping node holds only the change from the authored transform (new composed with the inverse
+        of the initial one, recorded on the material at import), so a value equal to the authored one changes nothing."""
+        if material is None or not material.use_nodes or material.node_tree is None:
+            return
+        if field_name not in ("translation", "rotation", "scale"):
+            return self._skip(node, field_name)
+        state = self._maps.get(material.name)
+        if state is None:
+            state = self._maps[material.name] = self._mapping_for(material)
+        if state is None:
+            return self._skip(node, field_name)
+        state["now"][field_name] = float(value) if field_name == "rotation" else tuple(float(v) for v in value[:2])
+        change = state["base"] @ _texture_matrix(state["now"], state["center"]) @ _texture_matrix(
+            state["initial"], state["center"]).inverted()
+        sx_axis, sy_axis = Vector((change[0][0], change[1][0])), Vector((change[0][1], change[1][1]))
+        scale_x = sx_axis.length
+        if scale_x < 1e-9 or abs(sx_axis.dot(sy_axis)) > 1e-4 * scale_x * max(sy_axis.length, 1e-9):
+            return self._skip(node, f"{field_name} (the composed transform has shear or no size: a Mapping node cannot show it)")
+        entries = {"Location": (change[0][2], change[1][2], 0.0),
+                   "Rotation": (0.0, 0.0, math.atan2(sx_axis.y, sx_axis.x)),
+                   "Scale": (scale_x, (sx_axis.x * sy_axis.y - sx_axis.y * sy_axis.x) / scale_x, 1.0)}
+        for mapping in state["mappings"]:
+            for socket, entry in entries.items():
+                mapping.inputs[socket].default_value = entry
+
+    @staticmethod
+    def _mapping_for(material):
+        """Mapping nodes in front of ``material``'s Image Textures (found, or made), and what ``stop`` must undo; None
+        when the material has no Image Texture."""
+        tree = material.node_tree
+        images = [n for n in tree.nodes if n.type == "TEX_IMAGE"]
+        if not images:
+            return None
+        initial = _initial_texture_transform(material)
+        state = {"mappings": [], "made": [], "relink": [], "saved": [], "base": Matrix.Identity(3),
+                 "initial": dict(initial), "now": dict(initial), "center": initial["center"]}
+        coords = fresh = None
+        for image in images:
+            vector = image.inputs["Vector"]
+            upstream = vector.links[0].from_node if vector.links else None
+            if upstream is not None and upstream.type == "MAPPING":
+                mapping = upstream
+                if mapping not in state["mappings"]:
+                    saved = {name: tuple(mapping.inputs[name].default_value) for name in ("Location", "Rotation", "Scale")}
+                    state["saved"].append((mapping, saved))
+                    state["mappings"].append(mapping)
+                    state["base"] = _mapping_matrix(saved)                  # what the Mapping node already did stays
+                continue
+            origin = had = vector.links[0].from_socket if vector.links else None
+            if origin is None and fresh is not None:          # unlinked images share the one Mapping node made for them
+                tree.links.new(fresh.outputs["Vector"], vector)
+                state["relink"].append((vector, None))
+                continue
+            if origin is None:
+                if coords is None:
+                    coords = tree.nodes.new("ShaderNodeTexCoord")
+                    coords.location = (image.location.x - 560, image.location.y)
+                    state["made"].append(coords)
+                origin = coords.outputs["UV"]
+            mapping = tree.nodes.new("ShaderNodeMapping")
+            mapping.vector_type = "POINT"
+            mapping.location = (image.location.x - 280, image.location.y)
+            state["made"].append(mapping)
+            state["mappings"].append(mapping)
+            tree.links.new(origin, mapping.inputs["Vector"])
+            tree.links.new(mapping.outputs["Vector"], vector)
+            state["relink"].append((vector, had))
+            if had is None:
+                fresh = mapping
+        return state
+
+    def _undo_textures(self):
+        for name, state in self._maps.items():
+            material = bpy.data.materials.get(name)
+            if material is None or state is None or material.node_tree is None:
+                continue
+            tree = material.node_tree
+            for mapping, saved in state["saved"]:
+                for socket, entry in saved.items():
+                    mapping.inputs[socket].default_value = entry
+            for vector, origin in state["relink"]:
+                if origin is not None:
+                    tree.links.new(origin, vector)
+            for made in state["made"]:
+                if tree.nodes.get(made.name) is not None:
+                    tree.nodes.remove(made)
+
     def _light(self, node, obj, field_name, value):
         if obj is None or obj.type != "LIGHT":
             return
@@ -464,12 +593,14 @@ class Player:
             obj = bpy.data.objects.get(name)
             if obj is not None:
                 obj.data.color, obj.hide_viewport, obj.hide_render = colour, viewport, render
+        self._undo_textures()
         for node_id, (custom, colour) in self._colours.items():
             item = self._flash.get(node_id)
             if item is not None:
                 item.use_custom_color, item.color = custom, colour
         self.scene.camera = self._camera
         self._transforms, self._hidden, self._materials, self._lights, self._colours = {}, {}, {}, {}, {}
+        self._maps = {}
         self._burst, self._down = {}, {}
 
 

@@ -1,0 +1,19 @@
+{
+ "title": "Orrery: a clockwork sky",
+ "streams": 29,
+ "clicks": 0,
+ "seconds": 20,
+ "drags": null,
+ "keys": null,
+ "click_plan": [
+  "LeverTouch",
+  "TerraTouch",
+  "VenusTouch",
+  "SunTouch",
+  "LeverTouch"
+ ],
+ "judges": [
+  "PositionInterpolator2D",
+  "PositionChaser2D"
+ ]
+}

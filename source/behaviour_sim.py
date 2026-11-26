@@ -706,6 +706,84 @@ class _Chaser(_Machine):
             self.emit("isActive", False)
 
 
+class _BufferChaser(_Machine):
+    """X_ITE 16.7's X3DChaserNode as written there, for PositionChaser2D: the answer to a destination is sampled through
+    60 buffers ``duration / 60`` apart, each frame shifts them by the time that passed (a frame that took longer fills
+    the skipped ones by blending the destination into the old value) and sums the step responses (half a cosine).
+    Written so that a slow frame gives what X_ITE gives, not what a clean ramp would."""
+    ticks = True
+    NUM = 60
+
+    def setup(self):
+        destination, value = tuple(self.f["initialDestination"]), tuple(self.f["initialValue"])
+        self.destination, self.previous, self.value = destination, value, value
+        self.buffer = [destination] + [value] * (self.NUM - 1)
+        self.end, self.active = None, False
+
+    def start(self, now):
+        self.end = now
+        if _distance(self.destination, self.value) >= 1e-8:
+            self.active = True
+            self.emit("isActive", True)
+
+    def _activate(self, now):
+        if not self.active:
+            self.end = now
+            self.active = True
+            self.emit("isActive", True)
+
+    def receive(self, name, value, now):
+        if name == "set_destination":
+            self.destination = tuple(value)
+            self._activate(now)
+        elif name == "set_value":
+            value = tuple(value)
+            self.buffer = [value] * self.NUM
+            if not self.active:
+                self.end = now
+            self.previous, self.value = value, value
+            self.emit("value_changed", value)
+            self.active = False
+            self._activate(now)
+        else:
+            super().receive(name, value, now)
+
+    def _response(self, t):
+        duration = self.f["duration"]
+        if t <= 0:
+            return 0.0
+        if t >= duration:
+            return 1.0
+        return 0.5 - 0.5 * math.cos(t / duration * math.pi)
+
+    def tick(self, now, dt):
+        if not self.active:
+            return
+        n, step_time = self.NUM, self.f["duration"] / self.NUM
+        lerp = lambda a, b, w: tuple(x + (y - x) * w for x, y in zip(a, b))          # noqa: E731
+        fraction = (now - self.end) / step_time
+        if fraction >= 1:
+            seconds = math.floor(fraction)
+            fraction -= seconds
+            if seconds < n:
+                self.previous = self.buffer[n - seconds]
+                old = self.buffer
+                self.buffer = [lerp(self.destination, old[0], i / seconds) for i in range(seconds)] + old[:n - seconds]   # old[0] has moved to buffer[seconds]
+            else:
+                self.previous = self.buffer[0] if seconds == n else self.destination
+                self.buffer = [self.destination] * n
+            self.end += seconds * step_time
+        output = lerp(self.previous, self.buffer[n - 1], self._response((n - 1 + fraction) * step_time))
+        for i in range(n - 2, -1, -1):
+            weight = self._response((i + fraction) * step_time)
+            output = tuple(o + (a - b) * weight for o, a, b in zip(output, self.buffer[i], self.buffer[i + 1]))
+        self.value = output
+        self.emit("value_changed", output)
+        if _distance(output, self.destination) < 1e-8:
+            self.active = False
+            self.emit("isActive", False)
+
+
 class _OrientationChaser(_Machine):
     """One ramp at a time: slerp from where it was when the destination last changed."""
     ticks = True
@@ -1218,7 +1296,7 @@ _MACHINES = {
     "IntegerTrigger": _IntegerTrigger, "TimeTrigger": _TimeTrigger,
     "ScalarDamper": _Damper, "PositionDamper": _Damper, "PositionDamper2D": _Damper, "ColorDamper": _ColorDamper,
     "OrientationDamper": _OrientationDamper,
-    "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _Chaser, "ColorChaser": _Chaser,
+    "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _BufferChaser, "ColorChaser": _Chaser,
     "OrientationChaser": _OrientationChaser,
     "TouchSensor": _Sensor, "PlaneSensor": _Sensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
     "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _KeySensor, "StringSensor": _StringSensor,
