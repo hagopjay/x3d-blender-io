@@ -917,6 +917,11 @@ def import_graph(scene, filepath, new_actions=None):
             tagged = any(def_name == entry.rsplit(":", 2)[0] for obj in scene.objects
                          for entry in str(obj.get("x3d_switch") or "").split())
             return (kind, def_name) if tagged else None
+        if kind == "scene":
+            # a scene node the graph leaves in place (Collision, AudioClip, MovieTexture): Blender's import keeps none of it,
+            # so an import with the graph treats it as it always did (carried whole when top-level, else its ROUTEs are
+            # listed as lost). A graph made from the file (``Behaviour.from_x3d``) or by script binds it by name.
+            return None
         if kind in NAMED_KINDS:
             # kept whether or not Blender has it: Play finds the bone or object by this name, and says "not shown" when
             # it does not. A joint is the bone the importer named after the joint's ``name`` (else its DEF).

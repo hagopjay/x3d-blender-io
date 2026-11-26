@@ -49,6 +49,18 @@ class WiredNodeTests(unittest.TestCase):
         self.assertEqual(bpy.ops.import_scene.x3d(filepath=str(WORLDS / f"{name}.x3d"), use_behaviour_graph=True), {"FINISHED"})
         return self.scene.x3d_behaviour_tree
 
+    def _apply(self, name):
+        """The tree of a world's graph made straight from the file (``from_x3d``), with no importer: scene nodes the
+        importer does not keep (Collision, AudioClip, MovieTexture) are bound by name there."""
+        graph = self.bg.Behaviour.from_x3d((WORLDS / f"{name}.x3d").read_text(encoding="utf-8"))
+        for node in graph.nodes.values():            # an empty object for each Transform the graph sits in or drives
+            wanted = node.parent if node.role == "behaviour" else node.id if node.binding and node.binding[0] == "transform" else None
+            if node.role == "target" and node.binding and node.binding[0] == "material":
+                bpy.data.materials.new(node.binding[1])
+            if wanted and wanted not in bpy.data.objects:
+                self.scene.collection.objects.link(bpy.data.objects.new(wanted, None))
+        return graph, self.bn.apply(graph, self.scene)
+
     def _export(self, name):
         path = os.path.join(self.tmpdir, f"{name}.x3d")
         self.assertEqual(bpy.ops.export_scene.x3d(filepath=path, x3d_version="X3D40"), {"FINISHED"})
@@ -61,12 +73,21 @@ class WiredNodeTests(unittest.TestCase):
                 bpy.ops.wm.read_factory_settings(use_empty=True)
                 self.bn.ensure_registered()
                 self.scene = bpy.context.scene
-                self._import(name)
-                parsed = self.bg.Behaviour.from_x3d((WORLDS / f"{name}.x3d").read_text(encoding="utf-8"))
+                parsed, _tree = self._apply(name)
                 back = self.bn.read(self.scene)
                 difference = self.bg.difference(parsed, back)
                 self.assertEqual({k: v for k, v in difference.items() if v}, {})
                 self.assertEqual(len(back.routes), len(parsed.routes))
+                self.assertEqual({n.id: n.binding for n in back.nodes.values() if n.role == "target"},
+                                 {n.id: n.binding for n in parsed.nodes.values() if n.role == "target"})
+
+    def test_an_import_with_the_graph_keeps_every_route_between_nodes_the_importer_keeps(self):
+        for name in ("wired-script", "wired-pick", "wired-geo"):
+            with self.subTest(world=name):
+                self._import_again(name)
+                parsed = self.bg.Behaviour.from_x3d((WORLDS / f"{name}.x3d").read_text(encoding="utf-8"))
+                back = self.bn.read(self.scene)
+                self.assertEqual({k: v for k, v in self.bg.difference(parsed, back).items() if v}, {})
 
     def test_a_script_shows_its_declared_fields_as_typed_sockets(self):
         tree = self._import("wired-script")
@@ -106,13 +127,16 @@ class WiredNodeTests(unittest.TestCase):
         self.assertEqual(len(tree.links), before)
 
     def test_the_scene_nodes_are_target_nodes_with_outputs(self):
-        tree = self._import("wired-collision")
+        _graph, tree = self._apply("wired-collision")
         wall = tree.nodes["Wall"]
         self.assertEqual((wall.x3d_role, wall.x3d_type, wall.x3d_bone), ("target", "Collision", "Wall"))
         self.assertEqual(wall.outputs["collideTime"].x3d_type, "SFTime")
         self.assertEqual(wall.outputs["isActive"].x3d_type, "SFBool")
         self.assertEqual(len([link for link in tree.links if link.from_node == wall]), 2)
-        media = self._import_again("wired-media")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        self.scene = bpy.context.scene
+        _graph, media = self._apply("wired-media")
         self.assertEqual(media.nodes["Film"].outputs["duration_changed"].x3d_type, "SFTime")
         self.assertEqual(media.nodes["Tone"].inputs["startTime"].x3d_type, "SFTime")
 
@@ -149,7 +173,10 @@ class WiredNodeTests(unittest.TestCase):
     def test_a_scene_node_the_file_does_not_hold_is_named_and_its_routes_counted(self):
         for name, left_out, written, named in (("wired-collision", 2, 3, "Wall"), ("wired-media", 6, 0, "Film")):
             with self.subTest(world=name):
-                self._import_again(name)
+                bpy.ops.wm.read_factory_settings(use_empty=True)
+                self.bn.ensure_registered()
+                self.scene = bpy.context.scene
+                self._apply(name)
                 text, root = self._export(name)
                 self.assertEqual(len(list(root.iter("ROUTE"))), written)
                 self.assertIn(f"Target '{named}'", text)
