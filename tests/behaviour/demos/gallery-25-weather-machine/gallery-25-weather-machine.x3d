@@ -1,0 +1,685 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Interpolation" level="2" />
+    <component name="Followers" level="1" />
+    <component name="PointingDeviceSensor" level="1" />
+    <component name="Lighting" level="1" />
+    <component name="Geometry3D" level="2" />
+    <meta name="title" content="Gallery 25: weather machine" />
+    <meta name="description" content="A small island under a sky with four buttons: rain, snow, storm, sun. Exactly one weather runs at a time." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-25-weather-machine/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.45 0.7 1" />
+    <Viewpoint DEF="View" description="Front" position="0 5 19.5" orientation="1 0 0 -0.12" fieldOfView="0.95" />
+    <DirectionalLight DEF="SunLight" direction="-0.3 -1 -0.5" intensity="1.0" color="1 0.95 0.85" />
+    <Transform translation="0 -0.1 8.4"><Shape><Appearance DEF="Panel"><PhysicalMaterial DEF="PanelMat" baseColor="0.25 0.25 0.3"  /></Appearance><Box size="11 0.5 2.6" /></Shape></Transform>
+        <Transform translation="0 8 -16"><Shape><Appearance DEF="Sky"><PhysicalMaterial DEF="SkyMat" baseColor="0.45 0.7 1" emissiveColor="0.45 0.7 1"  /></Appearance><Box size="80 40 0.2" /></Shape></Transform>
+    <Transform translation="0 -0.4 2"><Shape><Appearance DEF="Sea"><PhysicalMaterial DEF="SeaMat" baseColor="0.15 0.45 0.75" roughness="0.9" /></Appearance><Box size="80 0.2 44" /></Shape></Transform>
+    <Transform translation="0 -0.05 0"><Shape><Appearance DEF="Sand"><PhysicalMaterial DEF="SandMat" baseColor="0.85 0.78 0.55"  /></Appearance><Cylinder radius="5.6" height="0.5" /></Shape></Transform>
+    <Transform DEF="Ground"><Shape><Appearance DEF="Grass"><PhysicalMaterial DEF="GrassMat" baseColor="0.3 0.65 0.25" roughness="0.9" /></Appearance><Cylinder radius="5" height="0.6" /></Shape></Transform>
+    <Transform translation="-2.4 0.3 0.8">
+      <Transform translation="0 0.75 0"><Shape><Appearance DEF="Wall"><PhysicalMaterial DEF="WallMat" baseColor="0.9 0.85 0.75"  /></Appearance><Box size="2.6 1.5 1.9" /></Shape></Transform>
+      <Transform DEF="RoofL" translation="-0.62 1.82 0" rotation="0 0 1 0.72"><Shape><Appearance DEF="Roof"><PhysicalMaterial DEF="RoofMat" baseColor="0.75 0.25 0.18"  /></Appearance><Box size="1.9 0.14 2.2" /></Shape></Transform>
+      <Transform DEF="RoofR" translation="0.62 1.82 0" rotation="0 0 1 -0.72"><Shape><Appearance USE="Roof" /><Box size="1.9 0.14 2.2" /></Shape></Transform>
+      <Transform translation="0.7 2.3 -0.3"><Shape><Appearance DEF="Brick"><PhysicalMaterial DEF="BrickMat" baseColor="0.5 0.3 0.25"  /></Appearance><Box size="0.35 0.9 0.35" /></Shape></Transform>
+      <Transform translation="0 0.5 0.97"><Shape><Appearance DEF="Door"><PhysicalMaterial DEF="DoorMat" baseColor="0.4 0.25 0.15"  /></Appearance><Box size="0.5 0.9 0.06" /></Shape></Transform>
+      <Transform translation="-0.85 0.85 0.97"><Shape><Appearance DEF="Glass"><PhysicalMaterial DEF="GlassMat" baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.4 0.4 0.06" /></Shape></Transform>
+      <Transform translation="0.85 0.85 0.97"><Shape><Appearance USE="Glass" /><Box size="0.4 0.4 0.06" /></Shape></Transform>
+    </Transform>
+    <Transform translation="-4.0 0.3 -1.2" scale="1.0 1.0 1.0">
+      <Transform translation="0 0.45 0"><Shape><Appearance DEF="Trunk"><PhysicalMaterial DEF="TrunkMat" baseColor="0.4 0.27 0.15"  /></Appearance><Cylinder radius="0.16" height="0.9" /></Shape></Transform>
+      <Transform translation="0 1.45 0"><Shape><Appearance DEF="Leaf"><PhysicalMaterial DEF="LeafMat" baseColor="0.2 0.62 0.25"  /></Appearance><Cone bottomRadius="0.85" height="1.5" /></Shape></Transform>
+      <Transform translation="0 2.3 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.6" height="1.2" /></Shape></Transform>
+    </Transform>
+    <Transform translation="-3.4 0.3 2.6" scale="0.85 0.85 0.85">
+      <Transform translation="0 0.45 0"><Shape><Appearance USE="Trunk" /><Cylinder radius="0.16" height="0.9" /></Shape></Transform>
+      <Transform translation="0 1.45 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.85" height="1.5" /></Shape></Transform>
+      <Transform translation="0 2.3 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.6" height="1.2" /></Shape></Transform>
+    </Transform>
+    <Transform translation="0.4 0.3 2.7" scale="0.9 0.9 0.9">
+      <Transform translation="0 0.45 0"><Shape><Appearance USE="Trunk" /><Cylinder radius="0.16" height="0.9" /></Shape></Transform>
+      <Transform translation="0 1.45 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.85" height="1.5" /></Shape></Transform>
+      <Transform translation="0 2.3 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.6" height="1.2" /></Shape></Transform>
+    </Transform>
+    <Transform translation="1.3 0.3 -2.9" scale="1.1 1.1 1.1">
+      <Transform translation="0 0.45 0"><Shape><Appearance USE="Trunk" /><Cylinder radius="0.16" height="0.9" /></Shape></Transform>
+      <Transform translation="0 1.45 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.85" height="1.5" /></Shape></Transform>
+      <Transform translation="0 2.3 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.6" height="1.2" /></Shape></Transform>
+    </Transform>
+    <Transform translation="4.0 0.3 1.8" scale="0.95 0.95 0.95">
+      <Transform translation="0 0.45 0"><Shape><Appearance USE="Trunk" /><Cylinder radius="0.16" height="0.9" /></Shape></Transform>
+      <Transform translation="0 1.45 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.85" height="1.5" /></Shape></Transform>
+      <Transform translation="0 2.3 0"><Shape><Appearance USE="Leaf" /><Cone bottomRadius="0.6" height="1.2" /></Shape></Transform>
+    </Transform>
+    <Transform translation="3.1 0.3 -1.6">
+      <Transform translation="0 0.75 0"><Shape><Appearance DEF="Stripe0"><PhysicalMaterial DEF="Stripe0Mat" baseColor="0.85 0.15 0.15"  /></Appearance><Cylinder radius="0.55" height="1.5" /></Shape></Transform>
+      <Transform translation="0 2.25 0"><Shape><Appearance DEF="Stripe1"><PhysicalMaterial DEF="Stripe1Mat" baseColor="0.95 0.95 0.95"  /></Appearance><Cylinder radius="0.5" height="1.5" /></Shape></Transform>
+      <Transform translation="0 3.75 0"><Shape><Appearance USE="Stripe0" /><Cylinder radius="0.45" height="1.5" /></Shape></Transform>
+      <Transform translation="0 5.0 0"><Shape><Appearance DEF="Lantern"><PhysicalMaterial DEF="LanternMat" baseColor="1 0.92 0.5" emissiveColor="1 0.9 0.4"  /></Appearance><Box size="0.8 0.8 0.8" /></Shape></Transform>
+      <Transform translation="0 5.75 0"><Shape><Appearance USE="Stripe0" /><Cone bottomRadius="0.65" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Cloud0" translation="-9.0 6.6 -5" scale="0.45 0.45 0.45"><Transform translation="-1.3 -0.1 0" scale="1.0 0.8 1.0"><Shape><Appearance DEF="CloudP"><PhysicalMaterial DEF="CloudPMat" baseColor="0.97 0.97 1" roughness="0.9" /></Appearance><Sphere radius="1" /></Shape></Transform><Transform translation="0 0.3 0" scale="1.4 1.1 1.4"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="1.4 -0.1 0" scale="1.1 0.85 1.1"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0.2 -0.35 0" scale="1.9 0.6 1.9"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform></Transform>
+    <Transform DEF="Cloud1" translation="-4.4 7.9 -6" scale="0.45 0.45 0.45"><Transform translation="-1.3 -0.1 0" scale="1.0 0.8 1.0"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0 0.3 0" scale="1.4 1.1 1.4"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="1.4 -0.1 0" scale="1.1 0.85 1.1"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0.2 -0.35 0" scale="1.9 0.6 1.9"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform></Transform>
+    <Transform DEF="Cloud2" translation="0.4 7.1 -4" scale="0.45 0.45 0.45"><Transform translation="-1.3 -0.1 0" scale="1.0 0.8 1.0"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0 0.3 0" scale="1.4 1.1 1.4"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="1.4 -0.1 0" scale="1.1 0.85 1.1"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0.2 -0.35 0" scale="1.9 0.6 1.9"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform></Transform>
+    <Transform DEF="Cloud3" translation="4.8 7.8 -5.5" scale="0.45 0.45 0.45"><Transform translation="-1.3 -0.1 0" scale="1.0 0.8 1.0"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0 0.3 0" scale="1.4 1.1 1.4"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="1.4 -0.1 0" scale="1.1 0.85 1.1"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0.2 -0.35 0" scale="1.9 0.6 1.9"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform></Transform>
+    <Transform DEF="Cloud4" translation="9.2 6.8 -7" scale="0.45 0.45 0.45"><Transform translation="-1.3 -0.1 0" scale="1.0 0.8 1.0"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0 0.3 0" scale="1.4 1.1 1.4"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="1.4 -0.1 0" scale="1.1 0.85 1.1"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform><Transform translation="0.2 -0.35 0" scale="1.9 0.6 1.9"><Shape><Appearance USE="CloudP" /><Sphere radius="1" /></Shape></Transform></Transform>
+    
+    <Transform DEF="RainGrp" visible="false">
+      <Transform DEF="Drop0" translation="0 8 0"><Transform translation="-2.34 0 4.77" rotation="0 0 1 0.14"><Shape DEF="DropShape"><Appearance DEF="Drop"><PhysicalMaterial DEF="DropMat" baseColor="0.2 0.4 0.9" emissiveColor="0.25 0.45 0.9"  /></Appearance><Cylinder radius="0.05" height="0.95" /></Shape></Transform></Transform>
+      <Transform DEF="Drop1" translation="0 8 0"><Transform translation="6.53 0 -2.36" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop2" translation="0 8 0"><Transform translation="7.06 0 1.86" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop3" translation="0 8 0"><Transform translation="-8.69 0 5.03" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop4" translation="0 8 0"><Transform translation="-4.64 0 -1.44" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop5" translation="0 8 0"><Transform translation="-1.44 0 1.39" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop6" translation="0 8 0"><Transform translation="-7.14 0 2.37" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop7" translation="0 8 0"><Transform translation="6.31 0 0.62" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop8" translation="0 8 0"><Transform translation="5.59 0 1.75" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop9" translation="0 8 0"><Transform translation="6.17 0 -2.69" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop10" translation="0 8 0"><Transform translation="-2.69 0 0.19" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop11" translation="0 8 0"><Transform translation="-7.52 0 5.23" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop12" translation="0 8 0"><Transform translation="2.58 0 -3.52" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop13" translation="0 8 0"><Transform translation="1.57 0 -0.36" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop14" translation="0 8 0"><Transform translation="-5.90 0 -2.89" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop15" translation="0 8 0"><Transform translation="-0.75 0 -3.80" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop16" translation="0 8 0"><Transform translation="1.20 0 0.65" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop17" translation="0 8 0"><Transform translation="-7.09 0 4.25" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop18" translation="0 8 0"><Transform translation="-8.73 0 -2.78" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop19" translation="0 8 0"><Transform translation="6.03 0 -2.29" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop20" translation="0 8 0"><Transform translation="-1.44 0 1.10" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop21" translation="0 8 0"><Transform translation="-1.22 0 0.44" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop22" translation="0 8 0"><Transform translation="0.09 0 0.33" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop23" translation="0 8 0"><Transform translation="-8.41 0 3.66" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop24" translation="0 8 0"><Transform translation="-4.13 0 -4.02" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop25" translation="0 8 0"><Transform translation="-1.74 0 3.64" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop26" translation="0 8 0"><Transform translation="2.45 0 0.07" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop27" translation="0 8 0"><Transform translation="-0.42 0 -2.30" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop28" translation="0 8 0"><Transform translation="2.24 0 -1.00" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop29" translation="0 8 0"><Transform translation="-8.28 0 -3.20" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop30" translation="0 8 0"><Transform translation="-7.74 0 2.34" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop31" translation="0 8 0"><Transform translation="7.26 0 3.05" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop32" translation="0 8 0"><Transform translation="-5.33 0 -3.03" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop33" translation="0 8 0"><Transform translation="8.56 0 -0.76" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop34" translation="0 8 0"><Transform translation="-6.32 0 1.21" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop35" translation="0 8 0"><Transform translation="2.26 0 0.91" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop36" translation="0 8 0"><Transform translation="-0.91 0 -1.46" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop37" translation="0 8 0"><Transform translation="-0.10 0 0.08" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop38" translation="0 8 0"><Transform translation="3.45 0 -0.02" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop39" translation="0 8 0"><Transform translation="-2.76 0 5.36" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop40" translation="0 8 0"><Transform translation="-7.40 0 3.06" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop41" translation="0 8 0"><Transform translation="-1.57 0 3.55" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop42" translation="0 8 0"><Transform translation="3.96 0 1.16" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop43" translation="0 8 0"><Transform translation="2.09 0 -2.20" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop44" translation="0 8 0"><Transform translation="-9.19 0 2.97" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop45" translation="0 8 0"><Transform translation="-4.58 0 -3.39" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop46" translation="0 8 0"><Transform translation="5.92 0 1.41" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop47" translation="0 8 0"><Transform translation="-8.89 0 0.69" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop48" translation="0 8 0"><Transform translation="-6.39 0 4.15" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop49" translation="0 8 0"><Transform translation="-4.35 0 4.90" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop50" translation="0 8 0"><Transform translation="2.14 0 -3.72" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop51" translation="0 8 0"><Transform translation="-1.73 0 5.16" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop52" translation="0 8 0"><Transform translation="3.82 0 -2.95" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop53" translation="0 8 0"><Transform translation="-2.51 0 -1.76" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop54" translation="0 8 0"><Transform translation="-7.73 0 1.44" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop55" translation="0 8 0"><Transform translation="3.70 0 -2.33" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop56" translation="0 8 0"><Transform translation="0.99 0 4.11" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop57" translation="0 8 0"><Transform translation="7.45 0 -2.79" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop58" translation="0 8 0"><Transform translation="-8.08 0 4.62" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Drop59" translation="0 8 0"><Transform translation="-3.30 0 -2.84" rotation="0 0 1 0.14"><Shape USE="DropShape" /></Transform></Transform>
+      <Transform DEF="Splash0" translation="-0.34 0.32999999999999996 3.83" scale="0.15 1 0.15"><Transform><Shape DEF="SplashShape"><Appearance DEF="Splash"><PhysicalMaterial DEF="SplashMat" baseColor="0.75 0.88 1" emissiveColor="0.6 0.8 1"  /></Appearance><Cylinder radius="0.3" height="0.02" /></Shape></Transform></Transform>
+      <Transform DEF="Splash1" translation="-1.32 0.32999999999999996 -3.40" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash2" translation="1.34 0.32999999999999996 0.56" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash3" translation="0.80 0.32999999999999996 -2.17" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash4" translation="-0.34 0.32999999999999996 2.27" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash5" translation="-0.66 0.32999999999999996 3.93" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash6" translation="0.77 0.32999999999999996 -0.28" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash7" translation="-0.04 0.32999999999999996 0.19" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash8" translation="3.68 0.32999999999999996 -0.44" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash9" translation="1.11 0.32999999999999996 0.36" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash10" translation="2.58 0.32999999999999996 0.08" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash11" translation="1.02 0.32999999999999996 -0.03" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash12" translation="-0.92 0.32999999999999996 2.16" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash13" translation="0.70 0.32999999999999996 -4.05" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash14" translation="2.33 0.32999999999999996 1.10" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash15" translation="0.81 0.32999999999999996 0.56" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash16" translation="-1.35 0.32999999999999996 -0.77" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      <Transform DEF="Splash17" translation="2.13 0.32999999999999996 2.26" scale="0.15 1 0.15"><Shape USE="SplashShape" /></Transform>
+      </Transform>
+    <Transform DEF="SnowGrp" visible="false">
+      <Transform DEF="Flake0" translation="0 8 0"><Transform translation="7.19 0 2.20" scale="1.44 1.44 1.44"><Shape DEF="FlakeShape"><Appearance DEF="Flake"><PhysicalMaterial DEF="FlakeMat" baseColor="1 1 1" emissiveColor="0.9 0.95 1"  /></Appearance><Sphere radius="0.07" /></Shape></Transform></Transform>
+      <Transform DEF="Flake1" translation="0 8 0"><Transform translation="7.52 0 -1.36" scale="1.61 1.61 1.61"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake2" translation="0 8 0"><Transform translation="9.05 0 4.59" scale="0.84 0.84 0.84"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake3" translation="0 8 0"><Transform translation="6.66 0 5.34" scale="0.90 0.90 0.90"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake4" translation="0 8 0"><Transform translation="6.94 0 3.65" scale="0.83 0.83 0.83"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake5" translation="0 8 0"><Transform translation="3.94 0 3.09" scale="1.47 1.47 1.47"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake6" translation="0 8 0"><Transform translation="-8.40 0 5.20" scale="0.87 0.87 0.87"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake7" translation="0 8 0"><Transform translation="-7.89 0 4.97" scale="1.23 1.23 1.23"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake8" translation="0 8 0"><Transform translation="-6.11 0 -0.55" scale="1.36 1.36 1.36"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake9" translation="0 8 0"><Transform translation="-4.40 0 4.64" scale="1.41 1.41 1.41"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake10" translation="0 8 0"><Transform translation="-2.16 0 -0.83" scale="0.90 0.90 0.90"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake11" translation="0 8 0"><Transform translation="9.23 0 -1.43" scale="1.64 1.64 1.64"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake12" translation="0 8 0"><Transform translation="0.76 0 0.87" scale="0.96 0.96 0.96"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake13" translation="0 8 0"><Transform translation="0.05 0 -3.51" scale="1.20 1.20 1.20"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake14" translation="0 8 0"><Transform translation="2.15 0 4.76" scale="1.00 1.00 1.00"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake15" translation="0 8 0"><Transform translation="-6.05 0 3.38" scale="0.92 0.92 0.92"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake16" translation="0 8 0"><Transform translation="-5.80 0 0.28" scale="1.18 1.18 1.18"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake17" translation="0 8 0"><Transform translation="9.36 0 -3.85" scale="1.58 1.58 1.58"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake18" translation="0 8 0"><Transform translation="-0.71 0 -3.12" scale="1.01 1.01 1.01"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake19" translation="0 8 0"><Transform translation="7.77 0 -2.73" scale="1.18 1.18 1.18"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake20" translation="0 8 0"><Transform translation="-8.76 0 0.37" scale="1.43 1.43 1.43"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake21" translation="0 8 0"><Transform translation="4.49 0 -1.10" scale="1.18 1.18 1.18"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake22" translation="0 8 0"><Transform translation="6.18 0 4.27" scale="1.20 1.20 1.20"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake23" translation="0 8 0"><Transform translation="-8.45 0 4.89" scale="1.11 1.11 1.11"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake24" translation="0 8 0"><Transform translation="-0.46 0 -4.03" scale="0.82 0.82 0.82"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake25" translation="0 8 0"><Transform translation="-7.35 0 0.94" scale="1.04 1.04 1.04"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake26" translation="0 8 0"><Transform translation="5.58 0 -3.04" scale="1.39 1.39 1.39"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake27" translation="0 8 0"><Transform translation="-9.09 0 -0.91" scale="1.65 1.65 1.65"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake28" translation="0 8 0"><Transform translation="-4.62 0 -1.36" scale="0.83 0.83 0.83"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake29" translation="0 8 0"><Transform translation="7.08 0 0.43" scale="1.02 1.02 1.02"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake30" translation="0 8 0"><Transform translation="1.15 0 -1.83" scale="1.60 1.60 1.60"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake31" translation="0 8 0"><Transform translation="-1.42 0 -3.83" scale="1.00 1.00 1.00"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake32" translation="0 8 0"><Transform translation="-8.48 0 3.13" scale="0.89 0.89 0.89"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake33" translation="0 8 0"><Transform translation="-0.29 0 1.43" scale="0.88 0.88 0.88"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake34" translation="0 8 0"><Transform translation="2.68 0 1.78" scale="1.64 1.64 1.64"><Shape USE="FlakeShape" /></Transform></Transform>
+      <Transform DEF="Flake35" translation="0 8 0"><Transform translation="8.30 0 5.29" scale="1.27 1.27 1.27"><Shape USE="FlakeShape" /></Transform></Transform>
+      </Transform>
+    <Transform DEF="FlashBack" translation="0 8 -15" visible="false"><Shape><Appearance DEF="Flash"><PhysicalMaterial DEF="FlashMat" baseColor="1 1 1" emissiveColor="1 1 1"  /></Appearance><Box size="80 40 0.2" /></Shape></Transform>
+    <Transform DEF="FlashFront" translation="0 8.6 9" visible="false"><Shape><Appearance USE="Flash" /><Box size="60 5 0.1" /></Shape></Transform>
+    <PointLight DEF="BoltLight" location="0 9 2" color="0.8 0.85 1" intensity="400" radius="40" on="false" />
+    <Transform DEF="BoltA" visible="false">
+      <Transform translation="-3.65 7.00 -3.0" rotation="0 0 1 -2.7292" scale="0.2 1.75 0.2"><Shape DEF="BoltBox"><Appearance DEF="Bolt"><PhysicalMaterial DEF="BoltMat" baseColor="1 1 0.85" emissiveColor="1 1 0.8"  /></Appearance><Box size="1 1 1" /></Shape></Transform>
+      <Transform translation="-3.75 5.55 -3.0" rotation="0 0 1 2.5360" scale="0.2 1.58 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="-3.75 4.05 -3.0" rotation="0 0 1 -2.6547" scale="0.2 1.92 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="-3.65 2.60 -3.0" rotation="0 0 1 2.6135" scale="0.2 1.39 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="-3.75 1.15 -3.0" rotation="0 0 1 -2.8555" scale="0.2 1.77 0.2"><Shape USE="BoltBox" /></Transform>
+      </Transform>
+    <Transform DEF="BoltB" visible="false">
+      <Transform translation="1.15 7.00 -6.5" rotation="0 0 1 -2.7292" scale="0.2 1.75 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="1.05 5.55 -6.5" rotation="0 0 1 2.5360" scale="0.2 1.58 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="1.05 4.05 -6.5" rotation="0 0 1 -2.6547" scale="0.2 1.92 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="1.15 2.60 -6.5" rotation="0 0 1 2.6135" scale="0.2 1.39 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="1.05 1.15 -6.5" rotation="0 0 1 -2.8555" scale="0.2 1.77 0.2"><Shape USE="BoltBox" /></Transform>
+      </Transform>
+    <Transform DEF="BoltC" visible="false">
+      <Transform translation="6.95 7.00 -2.4" rotation="0 0 1 -2.7292" scale="0.2 1.75 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="6.85 5.55 -2.4" rotation="0 0 1 2.5360" scale="0.2 1.58 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="6.85 4.05 -2.4" rotation="0 0 1 -2.6547" scale="0.2 1.92 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="6.95 2.60 -2.4" rotation="0 0 1 2.6135" scale="0.2 1.39 0.2"><Shape USE="BoltBox" /></Transform>
+      <Transform translation="6.85 1.15 -2.4" rotation="0 0 1 -2.8555" scale="0.2 1.77 0.2"><Shape USE="BoltBox" /></Transform>
+      </Transform>
+    <Transform DEF="StormGrp" visible="false"><Transform translation="3.1 5.3 -1.6">
+      <Transform DEF="BeamArm">
+        <Transform translation="4 0 0" scale="8 0.22 0.5"><Shape USE="BoltBox" /></Transform>
+        <Transform translation="-4 0 0" scale="8 0.22 0.5"><Shape USE="BoltBox" /></Transform>
+      </Transform>
+    </Transform></Transform>
+    <Transform DEF="SunGrp">
+      <Transform translation="-8.5 7.0 -9"><Shape><Appearance DEF="Sun"><PhysicalMaterial DEF="SunMat" baseColor="1 0.9 0.35" emissiveColor="1 0.85 0.25"  /></Appearance><Sphere radius="1.4" /></Shape><Transform DEF="SunRays"><Transform rotation="0 0 1 0.0000"><Transform translation="0 2.3 0"><Shape DEF="RayShape"><Appearance DEF="Ray"><PhysicalMaterial DEF="RayMat" baseColor="1 0.85 0.3" emissiveColor="1 0.8 0.2"  /></Appearance><Box size="0.28 1.0 0.1" /></Shape></Transform></Transform><Transform rotation="0 0 1 0.7854"><Transform translation="0 2.3 0"><Shape USE="RayShape" /></Transform></Transform><Transform rotation="0 0 1 1.5708"><Transform translation="0 2.3 0"><Shape USE="RayShape" /></Transform></Transform><Transform rotation="0 0 1 2.3562"><Transform translation="0 2.3 0"><Shape USE="RayShape" /></Transform></Transform><Transform rotation="0 0 1 3.1416"><Transform translation="0 2.3 0"><Shape USE="RayShape" /></Transform></Transform><Transform rotation="0 0 1 3.9270"><Transform translation="0 2.3 0"><Shape USE="RayShape" /></Transform></Transform><Transform rotation="0 0 1 4.7124"><Transform translation="0 2.3 0"><Shape USE="RayShape" /></Transform></Transform><Transform rotation="0 0 1 5.4978"><Transform translation="0 2.3 0"><Shape USE="RayShape" /></Transform></Transform></Transform></Transform>
+      <Transform DEF="Bird0" translation="-12 6.4 -2"><Shape><Appearance DEF="Wing"><PhysicalMaterial DEF="WingMat" baseColor="None"  /></Appearance><Box size="0.5 0.16 0.22" /></Shape><Transform DEF="WingL0"><Transform translation="-0.5 0 0"><Shape DEF="WingShape"><Appearance USE="Wing" /><Box size="0.95 0.05 0.3" /></Shape></Transform></Transform><Transform DEF="WingR0"><Transform translation="0.5 0 0"><Shape USE="WingShape" /></Transform></Transform></Transform>
+      <Transform DEF="Bird1" translation="-12 6.4 -2"><Shape><Appearance USE="Wing" /><Box size="0.5 0.16 0.22" /></Shape><Transform DEF="WingL1"><Transform translation="-0.5 0 0"><Shape USE="WingShape" /></Transform></Transform><Transform DEF="WingR1"><Transform translation="0.5 0 0"><Shape USE="WingShape" /></Transform></Transform></Transform>
+      <Transform DEF="Bird2" translation="-12 6.4 -2"><Shape><Appearance USE="Wing" /><Box size="0.5 0.16 0.22" /></Shape><Transform DEF="WingL2"><Transform translation="-0.5 0 0"><Shape USE="WingShape" /></Transform></Transform><Transform DEF="WingR2"><Transform translation="0.5 0 0"><Shape USE="WingShape" /></Transform></Transform></Transform>
+      <Transform DEF="Bird3" translation="-12 6.4 -2"><Shape><Appearance USE="Wing" /><Box size="0.5 0.16 0.22" /></Shape><Transform DEF="WingL3"><Transform translation="-0.5 0 0"><Shape USE="WingShape" /></Transform></Transform><Transform DEF="WingR3"><Transform translation="0.5 0 0"><Shape USE="WingShape" /></Transform></Transform></Transform>
+      </Transform>
+    <Transform DEF="Arc0" translation="0 0.3 -6.5"><Shape><Appearance DEF="Arc0"><PhysicalMaterial DEF="Arc0Mat" baseColor="0.9 0.1 0.1" emissiveColor="0.9 0.1 0.1"  /></Appearance><Extrusion crossSection="0.14 0 0.099 0.099 0 0.14 -0.099 0.099 -0.14 0 -0.099 -0.099 -0 -0.14 0.099 -0.099 0.14 -0" spine="5.2 0 0 5.0696 1.1571 0 4.685 2.2562 0 4.0655 3.2421 0 3.2421 4.0655 0 2.2562 4.685 0 1.1571 5.0696 0 0 5.2 0 -1.1571 5.0696 0 -2.2562 4.685 0 -3.2421 4.0655 0 -4.0655 3.2421 0 -4.685 2.2562 0 -5.0696 1.1571 0 -5.2 0 0" solid="false" creaseAngle="1.2" beginCap="false" endCap="false" /></Shape></Transform>
+    <Transform DEF="Arc1" translation="0 0.3 -6.5"><Shape><Appearance DEF="Arc1"><PhysicalMaterial DEF="Arc1Mat" baseColor="1 0.5 0.1" emissiveColor="1 0.5 0.1"  /></Appearance><Extrusion crossSection="0.14 0 0.099 0.099 0 0.14 -0.099 0.099 -0.14 0 -0.099 -0.099 -0 -0.14 0.099 -0.099 0.14 -0" spine="5.48 0 0 5.3426 1.2194 0 4.9373 2.3777 0 4.2844 3.4167 0 3.4167 4.2844 0 2.3777 4.9373 0 1.2194 5.3426 0 0 5.48 0 -1.2194 5.3426 0 -2.3777 4.9373 0 -3.4167 4.2844 0 -4.2844 3.4167 0 -4.9373 2.3777 0 -5.3426 1.2194 0 -5.48 0 0" solid="false" creaseAngle="1.2" beginCap="false" endCap="false" /></Shape></Transform>
+    <Transform DEF="Arc2" translation="0 0.3 -6.5"><Shape><Appearance DEF="Arc2"><PhysicalMaterial DEF="Arc2Mat" baseColor="1 0.9 0.15" emissiveColor="1 0.9 0.15"  /></Appearance><Extrusion crossSection="0.14 0 0.099 0.099 0 0.14 -0.099 0.099 -0.14 0 -0.099 -0.099 -0 -0.14 0.099 -0.099 0.14 -0" spine="5.76 0 0 5.6156 1.2817 0 5.1896 2.4992 0 4.5033 3.5913 0 3.5913 4.5033 0 2.4992 5.1896 0 1.2817 5.6156 0 0 5.76 0 -1.2817 5.6156 0 -2.4992 5.1896 0 -3.5913 4.5033 0 -4.5033 3.5913 0 -5.1896 2.4992 0 -5.6156 1.2817 0 -5.76 0 0" solid="false" creaseAngle="1.2" beginCap="false" endCap="false" /></Shape></Transform>
+    <Transform DEF="Arc3" translation="0 0.3 -6.5"><Shape><Appearance DEF="Arc3"><PhysicalMaterial DEF="Arc3Mat" baseColor="0.2 0.75 0.25" emissiveColor="0.2 0.75 0.25"  /></Appearance><Extrusion crossSection="0.14 0 0.099 0.099 0 0.14 -0.099 0.099 -0.14 0 -0.099 -0.099 -0 -0.14 0.099 -0.099 0.14 -0" spine="6.04 0 0 5.8886 1.344 0 5.4419 2.6207 0 4.7223 3.7659 0 3.7659 4.7223 0 2.6207 5.4419 0 1.344 5.8886 0 0 6.04 0 -1.344 5.8886 0 -2.6207 5.4419 0 -3.7659 4.7223 0 -4.7223 3.7659 0 -5.4419 2.6207 0 -5.8886 1.344 0 -6.04 0 0" solid="false" creaseAngle="1.2" beginCap="false" endCap="false" /></Shape></Transform>
+    <Transform DEF="Arc4" translation="0 0.3 -6.5"><Shape><Appearance DEF="Arc4"><PhysicalMaterial DEF="Arc4Mat" baseColor="0.2 0.5 1" emissiveColor="0.2 0.5 1"  /></Appearance><Extrusion crossSection="0.14 0 0.099 0.099 0 0.14 -0.099 0.099 -0.14 0 -0.099 -0.099 -0 -0.14 0.099 -0.099 0.14 -0" spine="6.32 0 0 6.1615 1.4063 0 5.6941 2.7421 0 4.9412 3.9405 0 3.9405 4.9412 0 2.7421 5.6941 0 1.4063 6.1615 0 0 6.32 0 -1.4063 6.1615 0 -2.7421 5.6941 0 -3.9405 4.9412 0 -4.9412 3.9405 0 -5.6941 2.7421 0 -6.1615 1.4063 0 -6.32 0 0" solid="false" creaseAngle="1.2" beginCap="false" endCap="false" /></Shape></Transform>
+    <Transform DEF="Arc5" translation="0 0.3 -6.5"><Shape><Appearance DEF="Arc5"><PhysicalMaterial DEF="Arc5Mat" baseColor="0.3 0.2 0.8" emissiveColor="0.3 0.2 0.8"  /></Appearance><Extrusion crossSection="0.14 0 0.099 0.099 0 0.14 -0.099 0.099 -0.14 0 -0.099 -0.099 -0 -0.14 0.099 -0.099 0.14 -0" spine="6.6 0 0 6.4345 1.4686 0 5.9464 2.8636 0 5.1601 4.115 0 4.115 5.1601 0 2.8636 5.9464 0 1.4686 6.4345 0 0 6.6 0 -1.4686 6.4345 0 -2.8636 5.9464 0 -4.115 5.1601 0 -5.1601 4.115 0 -5.9464 2.8636 0 -6.4345 1.4686 0 -6.6 0 0" solid="false" creaseAngle="1.2" beginCap="false" endCap="false" /></Shape></Transform>
+    <Transform DEF="Arc6" translation="0 0.3 -6.5"><Shape><Appearance DEF="Arc6"><PhysicalMaterial DEF="Arc6Mat" baseColor="0.6 0.2 0.75" emissiveColor="0.6 0.2 0.75"  /></Appearance><Extrusion crossSection="0.14 0 0.099 0.099 0 0.14 -0.099 0.099 -0.14 0 -0.099 -0.099 -0 -0.14 0.099 -0.099 0.14 -0" spine="6.88 0 0 6.7075 1.5309 0 6.1987 2.9851 0 5.379 4.2896 0 4.2896 5.379 0 2.9851 6.1987 0 1.5309 6.7075 0 0 6.88 0 -1.5309 6.7075 0 -2.9851 6.1987 0 -4.2896 5.379 0 -5.379 4.2896 0 -6.1987 2.9851 0 -6.7075 1.5309 0 -6.88 0 0" solid="false" creaseAngle="1.2" beginCap="false" endCap="false" /></Shape></Transform>
+    <Transform DEF="BtnRain" translation="-3.9 0.3 8.2">
+      <TouchSensor DEF="TouchRain" description="Click: RAIN" />
+      <Shape><Appearance DEF="BtnRain"><PhysicalMaterial DEF="BtnRainMat" baseColor="0.2 0.4 0.9" emissiveColor="0.2 0.4 0.9"  /></Appearance><Cylinder radius="0.75" height="0.3" /></Shape>
+      <Transform translation="-0.3 0.45 0" rotation="0 0 1 0.2"><Shape USE="DropShape" /></Transform><Transform translation="0 0.45 0" rotation="0 0 1 0.2"><Shape USE="DropShape" /></Transform><Transform translation="0.3 0.45 0" rotation="0 0 1 0.2"><Shape USE="DropShape" /></Transform>
+    </Transform>
+    <Transform DEF="PilotRain" translation="-3.9 0.4 9.3" visible="false"><Shape><Appearance DEF="Pilot"><PhysicalMaterial DEF="PilotMat" baseColor="0.4 1 0.4" emissiveColor="0.3 1 0.3"  /></Appearance><Sphere radius="0.17" /></Shape></Transform>
+    <Transform DEF="BtnSnow" translation="-1.3 0.3 8.2">
+      <TouchSensor DEF="TouchSnow" description="Click: SNOW" />
+      <Shape><Appearance DEF="BtnSnow"><PhysicalMaterial DEF="BtnSnowMat" baseColor="0.85 0.92 1" emissiveColor="0.85 0.92 1"  /></Appearance><Cylinder radius="0.75" height="0.3" /></Shape>
+      <Transform translation="-0.25 0.4 0.1"><Shape USE="FlakeShape" /></Transform><Transform translation="0.25 0.4 0.1"><Shape USE="FlakeShape" /></Transform><Transform translation="0 0.4 -0.2"><Shape USE="FlakeShape" /></Transform>
+    </Transform>
+    <Transform DEF="PilotSnow" translation="-1.3 0.4 9.3" visible="false"><Shape><Appearance USE="Pilot" /><Sphere radius="0.17" /></Shape></Transform>
+    <Transform DEF="BtnStorm" translation="1.3 0.3 8.2">
+      <TouchSensor DEF="TouchStorm" description="Click: STORM" />
+      <Shape><Appearance DEF="BtnStorm"><PhysicalMaterial DEF="BtnStormMat" baseColor="0.35 0.2 0.5" emissiveColor="0.35 0.2 0.5"  /></Appearance><Cylinder radius="0.75" height="0.3" /></Shape>
+      <Transform translation="0 0.5 0" scale="0.15 0.55 0.15" rotation="0 0 1 0.4"><Shape USE="BoltBox" /></Transform>
+    </Transform>
+    <Transform DEF="PilotStorm" translation="1.3 0.4 9.3" visible="false"><Shape><Appearance USE="Pilot" /><Sphere radius="0.17" /></Shape></Transform>
+    <Transform DEF="BtnSun" translation="3.9 0.3 8.2">
+      <TouchSensor DEF="TouchSun" description="Click: SUN" />
+      <Shape><Appearance DEF="BtnSun"><PhysicalMaterial DEF="BtnSunMat" baseColor="1 0.8 0.2" emissiveColor="1 0.8 0.2"  /></Appearance><Cylinder radius="0.75" height="0.3" /></Shape>
+      <Transform translation="0 0.45 0" scale="0.3 0.3 0.3"><Shape><Appearance USE="Sun" /><Sphere radius="1" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="PilotSun" translation="3.9 0.4 9.3" visible="true"><Shape><Appearance USE="Pilot" /><Sphere radius="0.17" /></Shape></Transform>
+    <TimeSensor DEF="RainA" cycleInterval="0.9" loop="true" enabled="false" />
+    <TimeSensor DEF="RainB" cycleInterval="1.1" loop="true" enabled="false" />
+    <TimeSensor DEF="RainC" cycleInterval="1.3" loop="true" enabled="false" />
+    <TimeSensor DEF="SplashClk" cycleInterval="0.8" loop="true" enabled="false" />
+    <PositionInterpolator DEF="FallA0" key="0.0000 0.2500 0.5000 0.7500 1.0000" keyValue="0 8 0 0 6.075 0 0 4.15 0 0 2.225 0 0 0.3 0" />
+    <ROUTE fromNode="RainA" fromField="fraction_changed" toNode="FallA0" toField="set_fraction" />
+    <PositionInterpolator DEF="FallA1" key="0.0000 0.2500 0.5000 0.7480 0.7500 1.0000" keyValue="0 6.075 0 0 4.15 0 0 2.225 0 0 0.3 0 0 8 0 0 6.075 0" />
+    <ROUTE fromNode="RainA" fromField="fraction_changed" toNode="FallA1" toField="set_fraction" />
+    <PositionInterpolator DEF="FallA2" key="0.0000 0.2500 0.4980 0.5000 0.7500 1.0000" keyValue="0 4.15 0 0 2.225 0 0 0.3 0 0 8 0 0 6.075 0 0 4.15 0" />
+    <ROUTE fromNode="RainA" fromField="fraction_changed" toNode="FallA2" toField="set_fraction" />
+    <PositionInterpolator DEF="FallA3" key="0.0000 0.2480 0.2500 0.5000 0.7500 1.0000" keyValue="0 2.225 0 0 0.3 0 0 8 0 0 6.075 0 0 4.15 0 0 2.225 0" />
+    <ROUTE fromNode="RainA" fromField="fraction_changed" toNode="FallA3" toField="set_fraction" />
+    <PositionInterpolator DEF="FallB0" key="0.0000 0.2500 0.5000 0.7500 1.0000" keyValue="0 8 0 0 6.075 0 0 4.15 0 0 2.225 0 0 0.3 0" />
+    <ROUTE fromNode="RainB" fromField="fraction_changed" toNode="FallB0" toField="set_fraction" />
+    <PositionInterpolator DEF="FallB1" key="0.0000 0.2500 0.5000 0.7480 0.7500 1.0000" keyValue="0 6.075 0 0 4.15 0 0 2.225 0 0 0.3 0 0 8 0 0 6.075 0" />
+    <ROUTE fromNode="RainB" fromField="fraction_changed" toNode="FallB1" toField="set_fraction" />
+    <PositionInterpolator DEF="FallB2" key="0.0000 0.2500 0.4980 0.5000 0.7500 1.0000" keyValue="0 4.15 0 0 2.225 0 0 0.3 0 0 8 0 0 6.075 0 0 4.15 0" />
+    <ROUTE fromNode="RainB" fromField="fraction_changed" toNode="FallB2" toField="set_fraction" />
+    <PositionInterpolator DEF="FallB3" key="0.0000 0.2480 0.2500 0.5000 0.7500 1.0000" keyValue="0 2.225 0 0 0.3 0 0 8 0 0 6.075 0 0 4.15 0 0 2.225 0" />
+    <ROUTE fromNode="RainB" fromField="fraction_changed" toNode="FallB3" toField="set_fraction" />
+    <PositionInterpolator DEF="FallC0" key="0.0000 0.2500 0.5000 0.7500 1.0000" keyValue="0 8 0 0 6.075 0 0 4.15 0 0 2.225 0 0 0.3 0" />
+    <ROUTE fromNode="RainC" fromField="fraction_changed" toNode="FallC0" toField="set_fraction" />
+    <PositionInterpolator DEF="FallC1" key="0.0000 0.2500 0.5000 0.7480 0.7500 1.0000" keyValue="0 6.075 0 0 4.15 0 0 2.225 0 0 0.3 0 0 8 0 0 6.075 0" />
+    <ROUTE fromNode="RainC" fromField="fraction_changed" toNode="FallC1" toField="set_fraction" />
+    <PositionInterpolator DEF="FallC2" key="0.0000 0.2500 0.4980 0.5000 0.7500 1.0000" keyValue="0 4.15 0 0 2.225 0 0 0.3 0 0 8 0 0 6.075 0 0 4.15 0" />
+    <ROUTE fromNode="RainC" fromField="fraction_changed" toNode="FallC2" toField="set_fraction" />
+    <PositionInterpolator DEF="FallC3" key="0.0000 0.2480 0.2500 0.5000 0.7500 1.0000" keyValue="0 2.225 0 0 0.3 0 0 8 0 0 6.075 0 0 4.15 0 0 2.225 0" />
+    <ROUTE fromNode="RainC" fromField="fraction_changed" toNode="FallC3" toField="set_fraction" />
+    <ROUTE fromNode="FallA0" fromField="value_changed" toNode="Drop0" toField="translation" />
+    <ROUTE fromNode="FallB0" fromField="value_changed" toNode="Drop1" toField="translation" />
+    <ROUTE fromNode="FallC0" fromField="value_changed" toNode="Drop2" toField="translation" />
+    <ROUTE fromNode="FallA1" fromField="value_changed" toNode="Drop3" toField="translation" />
+    <ROUTE fromNode="FallB1" fromField="value_changed" toNode="Drop4" toField="translation" />
+    <ROUTE fromNode="FallC1" fromField="value_changed" toNode="Drop5" toField="translation" />
+    <ROUTE fromNode="FallA2" fromField="value_changed" toNode="Drop6" toField="translation" />
+    <ROUTE fromNode="FallB2" fromField="value_changed" toNode="Drop7" toField="translation" />
+    <ROUTE fromNode="FallC2" fromField="value_changed" toNode="Drop8" toField="translation" />
+    <ROUTE fromNode="FallA3" fromField="value_changed" toNode="Drop9" toField="translation" />
+    <ROUTE fromNode="FallB3" fromField="value_changed" toNode="Drop10" toField="translation" />
+    <ROUTE fromNode="FallC3" fromField="value_changed" toNode="Drop11" toField="translation" />
+    <ROUTE fromNode="FallA0" fromField="value_changed" toNode="Drop12" toField="translation" />
+    <ROUTE fromNode="FallB0" fromField="value_changed" toNode="Drop13" toField="translation" />
+    <ROUTE fromNode="FallC0" fromField="value_changed" toNode="Drop14" toField="translation" />
+    <ROUTE fromNode="FallA1" fromField="value_changed" toNode="Drop15" toField="translation" />
+    <ROUTE fromNode="FallB1" fromField="value_changed" toNode="Drop16" toField="translation" />
+    <ROUTE fromNode="FallC1" fromField="value_changed" toNode="Drop17" toField="translation" />
+    <ROUTE fromNode="FallA2" fromField="value_changed" toNode="Drop18" toField="translation" />
+    <ROUTE fromNode="FallB2" fromField="value_changed" toNode="Drop19" toField="translation" />
+    <ROUTE fromNode="FallC2" fromField="value_changed" toNode="Drop20" toField="translation" />
+    <ROUTE fromNode="FallA3" fromField="value_changed" toNode="Drop21" toField="translation" />
+    <ROUTE fromNode="FallB3" fromField="value_changed" toNode="Drop22" toField="translation" />
+    <ROUTE fromNode="FallC3" fromField="value_changed" toNode="Drop23" toField="translation" />
+    <ROUTE fromNode="FallA0" fromField="value_changed" toNode="Drop24" toField="translation" />
+    <ROUTE fromNode="FallB0" fromField="value_changed" toNode="Drop25" toField="translation" />
+    <ROUTE fromNode="FallC0" fromField="value_changed" toNode="Drop26" toField="translation" />
+    <ROUTE fromNode="FallA1" fromField="value_changed" toNode="Drop27" toField="translation" />
+    <ROUTE fromNode="FallB1" fromField="value_changed" toNode="Drop28" toField="translation" />
+    <ROUTE fromNode="FallC1" fromField="value_changed" toNode="Drop29" toField="translation" />
+    <ROUTE fromNode="FallA2" fromField="value_changed" toNode="Drop30" toField="translation" />
+    <ROUTE fromNode="FallB2" fromField="value_changed" toNode="Drop31" toField="translation" />
+    <ROUTE fromNode="FallC2" fromField="value_changed" toNode="Drop32" toField="translation" />
+    <ROUTE fromNode="FallA3" fromField="value_changed" toNode="Drop33" toField="translation" />
+    <ROUTE fromNode="FallB3" fromField="value_changed" toNode="Drop34" toField="translation" />
+    <ROUTE fromNode="FallC3" fromField="value_changed" toNode="Drop35" toField="translation" />
+    <ROUTE fromNode="FallA0" fromField="value_changed" toNode="Drop36" toField="translation" />
+    <ROUTE fromNode="FallB0" fromField="value_changed" toNode="Drop37" toField="translation" />
+    <ROUTE fromNode="FallC0" fromField="value_changed" toNode="Drop38" toField="translation" />
+    <ROUTE fromNode="FallA1" fromField="value_changed" toNode="Drop39" toField="translation" />
+    <ROUTE fromNode="FallB1" fromField="value_changed" toNode="Drop40" toField="translation" />
+    <ROUTE fromNode="FallC1" fromField="value_changed" toNode="Drop41" toField="translation" />
+    <ROUTE fromNode="FallA2" fromField="value_changed" toNode="Drop42" toField="translation" />
+    <ROUTE fromNode="FallB2" fromField="value_changed" toNode="Drop43" toField="translation" />
+    <ROUTE fromNode="FallC2" fromField="value_changed" toNode="Drop44" toField="translation" />
+    <ROUTE fromNode="FallA3" fromField="value_changed" toNode="Drop45" toField="translation" />
+    <ROUTE fromNode="FallB3" fromField="value_changed" toNode="Drop46" toField="translation" />
+    <ROUTE fromNode="FallC3" fromField="value_changed" toNode="Drop47" toField="translation" />
+    <ROUTE fromNode="FallA0" fromField="value_changed" toNode="Drop48" toField="translation" />
+    <ROUTE fromNode="FallB0" fromField="value_changed" toNode="Drop49" toField="translation" />
+    <ROUTE fromNode="FallC0" fromField="value_changed" toNode="Drop50" toField="translation" />
+    <ROUTE fromNode="FallA1" fromField="value_changed" toNode="Drop51" toField="translation" />
+    <ROUTE fromNode="FallB1" fromField="value_changed" toNode="Drop52" toField="translation" />
+    <ROUTE fromNode="FallC1" fromField="value_changed" toNode="Drop53" toField="translation" />
+    <ROUTE fromNode="FallA2" fromField="value_changed" toNode="Drop54" toField="translation" />
+    <ROUTE fromNode="FallB2" fromField="value_changed" toNode="Drop55" toField="translation" />
+    <ROUTE fromNode="FallC2" fromField="value_changed" toNode="Drop56" toField="translation" />
+    <ROUTE fromNode="FallA3" fromField="value_changed" toNode="Drop57" toField="translation" />
+    <ROUTE fromNode="FallB3" fromField="value_changed" toNode="Drop58" toField="translation" />
+    <ROUTE fromNode="FallC3" fromField="value_changed" toNode="Drop59" toField="translation" />
+    <PositionInterpolator DEF="Ring0" key="0.0000 0.2500 0.5000 0.7500 1.0000" keyValue="0.15 1 0.15 0.4625 1 0.4625 0.775 1 0.775 1.0875 1 1.0875 1.4 1 1.4" />
+    <ROUTE fromNode="SplashClk" fromField="fraction_changed" toNode="Ring0" toField="set_fraction" />
+    <PositionInterpolator DEF="Ring1" key="0.0000 0.2500 0.5000 0.7480 0.7500 1.0000" keyValue="0.4625 1 0.4625 0.775 1 0.775 1.0875 1 1.0875 1.4 1 1.4 0.15 1 0.15 0.4625 1 0.4625" />
+    <ROUTE fromNode="SplashClk" fromField="fraction_changed" toNode="Ring1" toField="set_fraction" />
+    <PositionInterpolator DEF="Ring2" key="0.0000 0.2500 0.4980 0.5000 0.7500 1.0000" keyValue="0.775 1 0.775 1.0875 1 1.0875 1.4 1 1.4 0.15 1 0.15 0.4625 1 0.4625 0.775 1 0.775" />
+    <ROUTE fromNode="SplashClk" fromField="fraction_changed" toNode="Ring2" toField="set_fraction" />
+    <PositionInterpolator DEF="Ring3" key="0.0000 0.2480 0.2500 0.5000 0.7500 1.0000" keyValue="1.0875 1 1.0875 1.4 1 1.4 0.15 1 0.15 0.4625 1 0.4625 0.775 1 0.775 1.0875 1 1.0875" />
+    <ROUTE fromNode="SplashClk" fromField="fraction_changed" toNode="Ring3" toField="set_fraction" />
+    <ROUTE fromNode="Ring0" fromField="value_changed" toNode="Splash0" toField="scale" />
+    <ROUTE fromNode="Ring1" fromField="value_changed" toNode="Splash1" toField="scale" />
+    <ROUTE fromNode="Ring2" fromField="value_changed" toNode="Splash2" toField="scale" />
+    <ROUTE fromNode="Ring3" fromField="value_changed" toNode="Splash3" toField="scale" />
+    <ROUTE fromNode="Ring0" fromField="value_changed" toNode="Splash4" toField="scale" />
+    <ROUTE fromNode="Ring1" fromField="value_changed" toNode="Splash5" toField="scale" />
+    <ROUTE fromNode="Ring2" fromField="value_changed" toNode="Splash6" toField="scale" />
+    <ROUTE fromNode="Ring3" fromField="value_changed" toNode="Splash7" toField="scale" />
+    <ROUTE fromNode="Ring0" fromField="value_changed" toNode="Splash8" toField="scale" />
+    <ROUTE fromNode="Ring1" fromField="value_changed" toNode="Splash9" toField="scale" />
+    <ROUTE fromNode="Ring2" fromField="value_changed" toNode="Splash10" toField="scale" />
+    <ROUTE fromNode="Ring3" fromField="value_changed" toNode="Splash11" toField="scale" />
+    <ROUTE fromNode="Ring0" fromField="value_changed" toNode="Splash12" toField="scale" />
+    <ROUTE fromNode="Ring1" fromField="value_changed" toNode="Splash13" toField="scale" />
+    <ROUTE fromNode="Ring2" fromField="value_changed" toNode="Splash14" toField="scale" />
+    <ROUTE fromNode="Ring3" fromField="value_changed" toNode="Splash15" toField="scale" />
+    <ROUTE fromNode="Ring0" fromField="value_changed" toNode="Splash16" toField="scale" />
+    <ROUTE fromNode="Ring1" fromField="value_changed" toNode="Splash17" toField="scale" />
+    <TimeSensor DEF="SnowA" cycleInterval="7" loop="true" enabled="false" />
+    <TimeSensor DEF="SnowB" cycleInterval="9" loop="true" enabled="false" />
+    <PositionInterpolator DEF="DriftA0" key="0.0000 0.0625 0.1250 0.1875 0.2500 0.3125 0.3750 0.4375 0.5000 0.5625 0.6250 0.6875 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35" />
+    <ROUTE fromNode="SnowA" fromField="fraction_changed" toNode="DriftA0" toField="set_fraction" />
+    <PositionInterpolator DEF="DriftA1" key="0.0000 0.0625 0.1250 0.1875 0.2500 0.3125 0.3750 0.4375 0.5000 0.5625 0.6250 0.6875 0.7480 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35 0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35" />
+    <ROUTE fromNode="SnowA" fromField="fraction_changed" toNode="DriftA1" toField="set_fraction" />
+    <PositionInterpolator DEF="DriftA2" key="0.0000 0.0625 0.1250 0.1875 0.2500 0.3125 0.3750 0.4375 0.4980 0.5000 0.5625 0.6250 0.6875 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="-0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35 0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35" />
+    <ROUTE fromNode="SnowA" fromField="fraction_changed" toNode="DriftA2" toField="set_fraction" />
+    <PositionInterpolator DEF="DriftA3" key="0.0000 0.0625 0.1250 0.1875 0.2480 0.2500 0.3125 0.3750 0.4375 0.5000 0.5625 0.6250 0.6875 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35 0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35" />
+    <ROUTE fromNode="SnowA" fromField="fraction_changed" toNode="DriftA3" toField="set_fraction" />
+    <PositionInterpolator DEF="DriftB0" key="0.0000 0.0625 0.1250 0.1875 0.2500 0.3125 0.3750 0.4375 0.5000 0.5625 0.6250 0.6875 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35" />
+    <ROUTE fromNode="SnowB" fromField="fraction_changed" toNode="DriftB0" toField="set_fraction" />
+    <PositionInterpolator DEF="DriftB1" key="0.0000 0.0625 0.1250 0.1875 0.2500 0.3125 0.3750 0.4375 0.5000 0.5625 0.6250 0.6875 0.7480 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35 0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35" />
+    <ROUTE fromNode="SnowB" fromField="fraction_changed" toNode="DriftB1" toField="set_fraction" />
+    <PositionInterpolator DEF="DriftB2" key="0.0000 0.0625 0.1250 0.1875 0.2500 0.3125 0.3750 0.4375 0.4980 0.5000 0.5625 0.6250 0.6875 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="-0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35 0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35" />
+    <ROUTE fromNode="SnowB" fromField="fraction_changed" toNode="DriftB2" toField="set_fraction" />
+    <PositionInterpolator DEF="DriftB3" key="0.0000 0.0625 0.1250 0.1875 0.2480 0.2500 0.3125 0.3750 0.4375 0.5000 0.5625 0.6250 0.6875 0.7500 0.8125 0.8750 0.9375 1.0000" keyValue="0 2.225 -0.35 -0.3889 1.7437 -0.2475 -0.55 1.2625 -0 -0.3889 0.7812 0.2475 -0 0.3 0.35 0 8 0.35 0.3889 7.5187 0.2475 0.55 7.0375 0 0.3889 6.5563 -0.2475 0 6.075 -0.35 -0.3889 5.5938 -0.2475 -0.55 5.1125 -0 -0.3889 4.6312 0.2475 -0 4.15 0.35 0.3889 3.6688 0.2475 0.55 3.1875 0 0.3889 2.7062 -0.2475 0 2.225 -0.35" />
+    <ROUTE fromNode="SnowB" fromField="fraction_changed" toNode="DriftB3" toField="set_fraction" />
+    <ROUTE fromNode="DriftA0" fromField="value_changed" toNode="Flake0" toField="translation" />
+    <ROUTE fromNode="DriftB0" fromField="value_changed" toNode="Flake1" toField="translation" />
+    <ROUTE fromNode="DriftA1" fromField="value_changed" toNode="Flake2" toField="translation" />
+    <ROUTE fromNode="DriftB1" fromField="value_changed" toNode="Flake3" toField="translation" />
+    <ROUTE fromNode="DriftA2" fromField="value_changed" toNode="Flake4" toField="translation" />
+    <ROUTE fromNode="DriftB2" fromField="value_changed" toNode="Flake5" toField="translation" />
+    <ROUTE fromNode="DriftA3" fromField="value_changed" toNode="Flake6" toField="translation" />
+    <ROUTE fromNode="DriftB3" fromField="value_changed" toNode="Flake7" toField="translation" />
+    <ROUTE fromNode="DriftA0" fromField="value_changed" toNode="Flake8" toField="translation" />
+    <ROUTE fromNode="DriftB0" fromField="value_changed" toNode="Flake9" toField="translation" />
+    <ROUTE fromNode="DriftA1" fromField="value_changed" toNode="Flake10" toField="translation" />
+    <ROUTE fromNode="DriftB1" fromField="value_changed" toNode="Flake11" toField="translation" />
+    <ROUTE fromNode="DriftA2" fromField="value_changed" toNode="Flake12" toField="translation" />
+    <ROUTE fromNode="DriftB2" fromField="value_changed" toNode="Flake13" toField="translation" />
+    <ROUTE fromNode="DriftA3" fromField="value_changed" toNode="Flake14" toField="translation" />
+    <ROUTE fromNode="DriftB3" fromField="value_changed" toNode="Flake15" toField="translation" />
+    <ROUTE fromNode="DriftA0" fromField="value_changed" toNode="Flake16" toField="translation" />
+    <ROUTE fromNode="DriftB0" fromField="value_changed" toNode="Flake17" toField="translation" />
+    <ROUTE fromNode="DriftA1" fromField="value_changed" toNode="Flake18" toField="translation" />
+    <ROUTE fromNode="DriftB1" fromField="value_changed" toNode="Flake19" toField="translation" />
+    <ROUTE fromNode="DriftA2" fromField="value_changed" toNode="Flake20" toField="translation" />
+    <ROUTE fromNode="DriftB2" fromField="value_changed" toNode="Flake21" toField="translation" />
+    <ROUTE fromNode="DriftA3" fromField="value_changed" toNode="Flake22" toField="translation" />
+    <ROUTE fromNode="DriftB3" fromField="value_changed" toNode="Flake23" toField="translation" />
+    <ROUTE fromNode="DriftA0" fromField="value_changed" toNode="Flake24" toField="translation" />
+    <ROUTE fromNode="DriftB0" fromField="value_changed" toNode="Flake25" toField="translation" />
+    <ROUTE fromNode="DriftA1" fromField="value_changed" toNode="Flake26" toField="translation" />
+    <ROUTE fromNode="DriftB1" fromField="value_changed" toNode="Flake27" toField="translation" />
+    <ROUTE fromNode="DriftA2" fromField="value_changed" toNode="Flake28" toField="translation" />
+    <ROUTE fromNode="DriftB2" fromField="value_changed" toNode="Flake29" toField="translation" />
+    <ROUTE fromNode="DriftA3" fromField="value_changed" toNode="Flake30" toField="translation" />
+    <ROUTE fromNode="DriftB3" fromField="value_changed" toNode="Flake31" toField="translation" />
+    <ROUTE fromNode="DriftA0" fromField="value_changed" toNode="Flake32" toField="translation" />
+    <ROUTE fromNode="DriftB0" fromField="value_changed" toNode="Flake33" toField="translation" />
+    <ROUTE fromNode="DriftA1" fromField="value_changed" toNode="Flake34" toField="translation" />
+    <ROUTE fromNode="DriftB1" fromField="value_changed" toNode="Flake35" toField="translation" />
+    <TimeSensor DEF="StormClk" cycleInterval="8" loop="true" enabled="false" />
+    <TimeSensor DEF="SweepClk" cycleInterval="4" loop="true" enabled="false" />
+    <BooleanSequencer DEF="Flash0" key="0 0.10 0.16 0.20 0.26 1" keyValue="false true false true false false" />
+    <ROUTE fromNode="StormClk" fromField="fraction_changed" toNode="Flash0" toField="set_fraction" />
+    <ROUTE fromNode="Flash0" fromField="value_changed" toNode="FlashBack" toField="visible" />
+    <ROUTE fromNode="Flash0" fromField="value_changed" toNode="BoltLight" toField="on" />
+    <ROUTE fromNode="Flash0" fromField="value_changed" toNode="BoltA" toField="visible" />
+    <BooleanSequencer DEF="Flash1" key="0 0.45 0.50 0.55 0.60 1" keyValue="false true false true false false" />
+    <ROUTE fromNode="StormClk" fromField="fraction_changed" toNode="Flash1" toField="set_fraction" />
+    <ROUTE fromNode="Flash1" fromField="value_changed" toNode="FlashBack" toField="visible" />
+    <ROUTE fromNode="Flash1" fromField="value_changed" toNode="BoltLight" toField="on" />
+    <ROUTE fromNode="Flash1" fromField="value_changed" toNode="BoltB" toField="visible" />
+    <BooleanSequencer DEF="Flash2" key="0 0.80 0.90 1" keyValue="false true false false" />
+    <ROUTE fromNode="StormClk" fromField="fraction_changed" toNode="Flash2" toField="set_fraction" />
+    <ROUTE fromNode="Flash2" fromField="value_changed" toNode="FlashBack" toField="visible" />
+    <ROUTE fromNode="Flash2" fromField="value_changed" toNode="BoltLight" toField="on" />
+    <ROUTE fromNode="Flash2" fromField="value_changed" toNode="BoltC" toField="visible" />
+    <ROUTE fromNode="Flash2" fromField="value_changed" toNode="FlashFront" toField="visible" />
+    <OrientationInterpolator DEF="Sweep" key="0.0000 0.2500 0.5000 0.7500 1.0000" keyValue="0 1 0 0 0 1 0 1.5708 0 1 0 3.1416 0 1 0 4.7124 0 1 0 6.2832" />
+    <ROUTE fromNode="SweepClk" fromField="fraction_changed" toNode="Sweep" toField="set_fraction" />
+    <ROUTE fromNode="Sweep" fromField="value_changed" toNode="BeamArm" toField="rotation" />
+    <TimeSensor DEF="SunSpin" cycleInterval="14" loop="true" enabled="true" />
+    <TimeSensor DEF="BirdClk" cycleInterval="10" loop="true" enabled="true" />
+    <TimeSensor DEF="FlapClk" cycleInterval="0.6" loop="true" enabled="true" />
+    <TimeSensor DEF="Reveal" cycleInterval="6" loop="false" />
+    <OrientationInterpolator DEF="SpinRays" key="0.0000 0.2500 0.5000 0.7500 1.0000" keyValue="0 0 1 0 0 0 1 -1.5708 0 0 1 -3.1416 0 0 1 -4.7124 0 0 1 -6.2832" />
+    <ROUTE fromNode="SunSpin" fromField="fraction_changed" toNode="SpinRays" toField="set_fraction" />
+    <ROUTE fromNode="SpinRays" fromField="value_changed" toNode="SunRays" toField="rotation" />
+    <OrientationInterpolator DEF="FlapL" key="0.0000 0.5000 1.0000" keyValue="0 0 1 -0.55 0 0 1 0.5 0 0 1 -0.55" />
+    <OrientationInterpolator DEF="FlapR" key="0.0000 0.5000 1.0000" keyValue="0 0 1 0.55 0 0 1 -0.5 0 0 1 0.55" />
+    <ROUTE fromNode="FlapClk" fromField="fraction_changed" toNode="FlapL" toField="set_fraction" />
+    <ROUTE fromNode="FlapClk" fromField="fraction_changed" toNode="FlapR" toField="set_fraction" />
+    <PositionInterpolator DEF="Fly0" key="0.0000 0.0833 0.1667 0.2500 0.3333 0.4167 0.5000 0.5833 0.6667 0.7500 0.8333 0.9167 1.0000" keyValue="-12 5.9 -1.5 -10 6.3 -1.5 -8 5.9 -1.5 -6 5.5 -1.5 -4 5.9 -1.5 -2 6.3 -1.5 0 5.9 -1.5 2 5.5 -1.5 4 5.9 -1.5 6 6.3 -1.5 8 5.9 -1.5 10 5.5 -1.5 12 5.9 -1.5" />
+    <ROUTE fromNode="BirdClk" fromField="fraction_changed" toNode="Fly0" toField="set_fraction" />
+    <ROUTE fromNode="Fly0" fromField="value_changed" toNode="Bird0" toField="translation" />
+    <ROUTE fromNode="FlapL" fromField="value_changed" toNode="WingL0" toField="rotation" />
+    <ROUTE fromNode="FlapR" fromField="value_changed" toNode="WingR0" toField="rotation" />
+    <PositionInterpolator DEF="Fly1" key="0.0000 0.0833 0.1667 0.2500 0.3333 0.4167 0.5000 0.5833 0.6667 0.7480 0.7500 0.8333 0.9167 1.0000" keyValue="-6 5.5 -2.2 -4 5.9 -2.2 -2 6.3 -2.2 0 5.9 -2.2 2 5.5 -2.2 4 5.9 -2.2 6 6.3 -2.2 8 5.9 -2.2 10 5.5 -2.2 12 5.9 -2.2 -12 5.9 -2.2 -10 6.3 -2.2 -8 5.9 -2.2 -6 5.5 -2.2" />
+    <ROUTE fromNode="BirdClk" fromField="fraction_changed" toNode="Fly1" toField="set_fraction" />
+    <ROUTE fromNode="Fly1" fromField="value_changed" toNode="Bird1" toField="translation" />
+    <ROUTE fromNode="FlapL" fromField="value_changed" toNode="WingL1" toField="rotation" />
+    <ROUTE fromNode="FlapR" fromField="value_changed" toNode="WingR1" toField="rotation" />
+    <PositionInterpolator DEF="Fly2" key="0.0000 0.0833 0.1667 0.2500 0.3333 0.4167 0.4980 0.5000 0.5833 0.6667 0.7500 0.8333 0.9167 1.0000" keyValue="0 5.9 -2.9 2 5.5 -2.9 4 5.9 -2.9 6 6.3 -2.9 8 5.9 -2.9 10 5.5 -2.9 12 5.9 -2.9 -12 5.9 -2.9 -10 6.3 -2.9 -8 5.9 -2.9 -6 5.5 -2.9 -4 5.9 -2.9 -2 6.3 -2.9 0 5.9 -2.9" />
+    <ROUTE fromNode="BirdClk" fromField="fraction_changed" toNode="Fly2" toField="set_fraction" />
+    <ROUTE fromNode="Fly2" fromField="value_changed" toNode="Bird2" toField="translation" />
+    <ROUTE fromNode="FlapL" fromField="value_changed" toNode="WingL2" toField="rotation" />
+    <ROUTE fromNode="FlapR" fromField="value_changed" toNode="WingR2" toField="rotation" />
+    <PositionInterpolator DEF="Fly3" key="0.0000 0.0833 0.1667 0.2480 0.2500 0.3333 0.4167 0.5000 0.5833 0.6667 0.7500 0.8333 0.9167 1.0000" keyValue="6 6.3 -3.6 8 5.9 -3.6 10 5.5 -3.6 12 5.9 -3.6 -12 5.9 -3.6 -10 6.3 -3.6 -8 5.9 -3.6 -6 5.5 -3.6 -4 5.9 -3.6 -2 6.3 -3.6 0 5.9 -3.6 2 5.5 -3.6 4 5.9 -3.6 6 6.3 -3.6" />
+    <ROUTE fromNode="BirdClk" fromField="fraction_changed" toNode="Fly3" toField="set_fraction" />
+    <ROUTE fromNode="Fly3" fromField="value_changed" toNode="Bird3" toField="translation" />
+    <ROUTE fromNode="FlapL" fromField="value_changed" toNode="WingL3" toField="rotation" />
+    <ROUTE fromNode="FlapR" fromField="value_changed" toNode="WingR3" toField="rotation" />
+    <BooleanSequencer DEF="Show0" key="0 0.080 1" keyValue="false true true" />
+    <ROUTE fromNode="Reveal" fromField="fraction_changed" toNode="Show0" toField="set_fraction" />
+    <ROUTE fromNode="Show0" fromField="value_changed" toNode="Arc0" toField="visible" />
+    <BooleanSequencer DEF="Show1" key="0 0.180 1" keyValue="false true true" />
+    <ROUTE fromNode="Reveal" fromField="fraction_changed" toNode="Show1" toField="set_fraction" />
+    <ROUTE fromNode="Show1" fromField="value_changed" toNode="Arc1" toField="visible" />
+    <BooleanSequencer DEF="Show2" key="0 0.280 1" keyValue="false true true" />
+    <ROUTE fromNode="Reveal" fromField="fraction_changed" toNode="Show2" toField="set_fraction" />
+    <ROUTE fromNode="Show2" fromField="value_changed" toNode="Arc2" toField="visible" />
+    <BooleanSequencer DEF="Show3" key="0 0.380 1" keyValue="false true true" />
+    <ROUTE fromNode="Reveal" fromField="fraction_changed" toNode="Show3" toField="set_fraction" />
+    <ROUTE fromNode="Show3" fromField="value_changed" toNode="Arc3" toField="visible" />
+    <BooleanSequencer DEF="Show4" key="0 0.480 1" keyValue="false true true" />
+    <ROUTE fromNode="Reveal" fromField="fraction_changed" toNode="Show4" toField="set_fraction" />
+    <ROUTE fromNode="Show4" fromField="value_changed" toNode="Arc4" toField="visible" />
+    <BooleanSequencer DEF="Show5" key="0 0.580 1" keyValue="false true true" />
+    <ROUTE fromNode="Reveal" fromField="fraction_changed" toNode="Show5" toField="set_fraction" />
+    <ROUTE fromNode="Show5" fromField="value_changed" toNode="Arc5" toField="visible" />
+    <BooleanSequencer DEF="Show6" key="0 0.680 1" keyValue="false true true" />
+    <ROUTE fromNode="Reveal" fromField="fraction_changed" toNode="Show6" toField="set_fraction" />
+    <ROUTE fromNode="Show6" fromField="value_changed" toNode="Arc6" toField="visible" />
+    <BooleanFilter DEF="PRain" />
+    <BooleanFilter DEF="NRain" />
+    <BooleanFilter DEF="GRain" />
+    <BooleanFilter DEF="HRain" />
+    <TimeTrigger DEF="TrigRain" />
+    <TimeSensor DEF="ToneRain" cycleInterval="0.8" loop="false" enabled="true" />
+    <ScalarInterpolator DEF="SelRain" key="0 1" keyValue="0.000000 0.000000" />
+    <ROUTE fromNode="TouchRain" fromField="isActive" toNode="PRain" toField="set_boolean" />
+    <ROUTE fromNode="PRain" fromField="inputTrue" toNode="NRain" toField="set_boolean" />
+    <ROUTE fromNode="PRain" fromField="inputTrue" toNode="GRain" toField="set_boolean" />
+    <ROUTE fromNode="PRain" fromField="inputTrue" toNode="TrigRain" toField="set_boolean" />
+    <ROUTE fromNode="TrigRain" fromField="triggerTime" toNode="ToneRain" toField="startTime" />
+    <ROUTE fromNode="ToneRain" fromField="fraction_changed" toNode="SelRain" toField="set_fraction" />
+    <ROUTE fromNode="GRain" fromField="inputNegate" toNode="HRain" toField="set_boolean" />
+    <ROUTE fromNode="NRain" fromField="inputNegate" toNode="GSnow" toField="set_boolean" />
+    <ROUTE fromNode="NRain" fromField="inputNegate" toNode="GStorm" toField="set_boolean" />
+    <ROUTE fromNode="NRain" fromField="inputNegate" toNode="GSun" toField="set_boolean" />
+    <ROUTE fromNode="HRain" fromField="inputNegate" toNode="RainGrp" toField="visible" />
+    <ROUTE fromNode="HRain" fromField="inputNegate" toNode="PilotRain" toField="visible" />
+    <BooleanFilter DEF="PSnow" />
+    <BooleanFilter DEF="NSnow" />
+    <BooleanFilter DEF="GSnow" />
+    <BooleanFilter DEF="HSnow" />
+    <TimeTrigger DEF="TrigSnow" />
+    <TimeSensor DEF="ToneSnow" cycleInterval="0.8" loop="false" enabled="true" />
+    <ScalarInterpolator DEF="SelSnow" key="0 1" keyValue="0.333333 0.333333" />
+    <ROUTE fromNode="TouchSnow" fromField="isActive" toNode="PSnow" toField="set_boolean" />
+    <ROUTE fromNode="PSnow" fromField="inputTrue" toNode="NSnow" toField="set_boolean" />
+    <ROUTE fromNode="PSnow" fromField="inputTrue" toNode="GSnow" toField="set_boolean" />
+    <ROUTE fromNode="PSnow" fromField="inputTrue" toNode="TrigSnow" toField="set_boolean" />
+    <ROUTE fromNode="TrigSnow" fromField="triggerTime" toNode="ToneSnow" toField="startTime" />
+    <ROUTE fromNode="ToneSnow" fromField="fraction_changed" toNode="SelSnow" toField="set_fraction" />
+    <ROUTE fromNode="GSnow" fromField="inputNegate" toNode="HSnow" toField="set_boolean" />
+    <ROUTE fromNode="NSnow" fromField="inputNegate" toNode="GRain" toField="set_boolean" />
+    <ROUTE fromNode="NSnow" fromField="inputNegate" toNode="GStorm" toField="set_boolean" />
+    <ROUTE fromNode="NSnow" fromField="inputNegate" toNode="GSun" toField="set_boolean" />
+    <ROUTE fromNode="HSnow" fromField="inputNegate" toNode="SnowGrp" toField="visible" />
+    <ROUTE fromNode="HSnow" fromField="inputNegate" toNode="PilotSnow" toField="visible" />
+    <BooleanFilter DEF="PStorm" />
+    <BooleanFilter DEF="NStorm" />
+    <BooleanFilter DEF="GStorm" />
+    <BooleanFilter DEF="HStorm" />
+    <BooleanFilter DEF="XStorm" />
+    <TimeTrigger DEF="TrigStorm" />
+    <TimeSensor DEF="ToneStorm" cycleInterval="0.8" loop="false" enabled="true" />
+    <ScalarInterpolator DEF="SelStorm" key="0 1" keyValue="0.666667 0.666667" />
+    <ROUTE fromNode="TouchStorm" fromField="isActive" toNode="PStorm" toField="set_boolean" />
+    <ROUTE fromNode="PStorm" fromField="inputTrue" toNode="NStorm" toField="set_boolean" />
+    <ROUTE fromNode="PStorm" fromField="inputTrue" toNode="GStorm" toField="set_boolean" />
+    <ROUTE fromNode="PStorm" fromField="inputTrue" toNode="TrigStorm" toField="set_boolean" />
+    <ROUTE fromNode="TrigStorm" fromField="triggerTime" toNode="ToneStorm" toField="startTime" />
+    <ROUTE fromNode="ToneStorm" fromField="fraction_changed" toNode="SelStorm" toField="set_fraction" />
+    <ROUTE fromNode="GStorm" fromField="inputNegate" toNode="HStorm" toField="set_boolean" />
+    <ROUTE fromNode="NStorm" fromField="inputNegate" toNode="GRain" toField="set_boolean" />
+    <ROUTE fromNode="NStorm" fromField="inputNegate" toNode="GSnow" toField="set_boolean" />
+    <ROUTE fromNode="NStorm" fromField="inputNegate" toNode="GSun" toField="set_boolean" />
+    <ROUTE fromNode="HStorm" fromField="inputNegate" toNode="StormGrp" toField="visible" />
+    <ROUTE fromNode="HStorm" fromField="inputNegate" toNode="PilotStorm" toField="visible" />
+    <ROUTE fromNode="HStorm" fromField="inputNegate" toNode="XStorm" toField="set_boolean" />
+    <BooleanFilter DEF="PSun" />
+    <BooleanFilter DEF="NSun" />
+    <BooleanFilter DEF="GSun" />
+    <BooleanFilter DEF="HSun" />
+    <BooleanFilter DEF="XSun" />
+    <TimeTrigger DEF="TrigSun" />
+    <TimeSensor DEF="ToneSun" cycleInterval="0.8" loop="false" enabled="true" />
+    <ScalarInterpolator DEF="SelSun" key="0 1" keyValue="1.000000 1.000000" />
+    <ROUTE fromNode="TouchSun" fromField="isActive" toNode="PSun" toField="set_boolean" />
+    <ROUTE fromNode="PSun" fromField="inputTrue" toNode="NSun" toField="set_boolean" />
+    <ROUTE fromNode="PSun" fromField="inputTrue" toNode="GSun" toField="set_boolean" />
+    <ROUTE fromNode="PSun" fromField="inputTrue" toNode="TrigSun" toField="set_boolean" />
+    <ROUTE fromNode="TrigSun" fromField="triggerTime" toNode="ToneSun" toField="startTime" />
+    <ROUTE fromNode="TrigSun" fromField="triggerTime" toNode="Reveal" toField="startTime" />
+    <ROUTE fromNode="ToneSun" fromField="fraction_changed" toNode="SelSun" toField="set_fraction" />
+    <ROUTE fromNode="GSun" fromField="inputNegate" toNode="HSun" toField="set_boolean" />
+    <ROUTE fromNode="NSun" fromField="inputNegate" toNode="GRain" toField="set_boolean" />
+    <ROUTE fromNode="NSun" fromField="inputNegate" toNode="GSnow" toField="set_boolean" />
+    <ROUTE fromNode="NSun" fromField="inputNegate" toNode="GStorm" toField="set_boolean" />
+    <ROUTE fromNode="HSun" fromField="inputNegate" toNode="SunGrp" toField="visible" />
+    <ROUTE fromNode="HSun" fromField="inputNegate" toNode="PilotSun" toField="visible" />
+    <ROUTE fromNode="HSun" fromField="inputNegate" toNode="XSun" toField="set_boolean" />
+    <ROUTE fromNode="HRain" fromField="inputNegate" toNode="RainA" toField="enabled" />
+    <ROUTE fromNode="HRain" fromField="inputNegate" toNode="RainB" toField="enabled" />
+    <ROUTE fromNode="HRain" fromField="inputNegate" toNode="RainC" toField="enabled" />
+    <ROUTE fromNode="HRain" fromField="inputNegate" toNode="SplashClk" toField="enabled" />
+    <ROUTE fromNode="HSnow" fromField="inputNegate" toNode="SnowA" toField="enabled" />
+    <ROUTE fromNode="HSnow" fromField="inputNegate" toNode="SnowB" toField="enabled" />
+    <ROUTE fromNode="HStorm" fromField="inputNegate" toNode="StormClk" toField="enabled" />
+    <ROUTE fromNode="HStorm" fromField="inputNegate" toNode="SweepClk" toField="enabled" />
+    <ROUTE fromNode="HSun" fromField="inputNegate" toNode="SunSpin" toField="enabled" />
+    <ROUTE fromNode="HSun" fromField="inputNegate" toNode="BirdClk" toField="enabled" />
+    <ROUTE fromNode="HSun" fromField="inputNegate" toNode="FlapClk" toField="enabled" />
+    <ROUTE fromNode="XStorm" fromField="inputFalse" toNode="FlashBack" toField="visible" />
+    <ROUTE fromNode="XStorm" fromField="inputFalse" toNode="FlashFront" toField="visible" />
+    <ROUTE fromNode="XStorm" fromField="inputFalse" toNode="BoltA" toField="visible" />
+    <ROUTE fromNode="XStorm" fromField="inputFalse" toNode="BoltB" toField="visible" />
+    <ROUTE fromNode="XStorm" fromField="inputFalse" toNode="BoltC" toField="visible" />
+    <ROUTE fromNode="XStorm" fromField="inputFalse" toNode="BoltLight" toField="on" />
+    <ROUTE fromNode="XSun" fromField="inputFalse" toNode="Arc0" toField="visible" />
+    <ROUTE fromNode="XSun" fromField="inputFalse" toNode="Arc1" toField="visible" />
+    <ROUTE fromNode="XSun" fromField="inputFalse" toNode="Arc2" toField="visible" />
+    <ROUTE fromNode="XSun" fromField="inputFalse" toNode="Arc3" toField="visible" />
+    <ROUTE fromNode="XSun" fromField="inputFalse" toNode="Arc4" toField="visible" />
+    <ROUTE fromNode="XSun" fromField="inputFalse" toNode="Arc5" toField="visible" />
+    <ROUTE fromNode="XSun" fromField="inputFalse" toNode="Arc6" toField="visible" />
+    <TimeSensor DEF="Boot" cycleInterval="100000" loop="true" />
+    <BooleanSequencer DEF="BootHide" key="0 1" keyValue="false false" />
+    <ROUTE fromNode="Boot" fromField="fraction_changed" toNode="BootHide" toField="set_fraction" />
+    <ROUTE fromNode="BootHide" fromField="value_changed" toNode="RainGrp" toField="visible" />
+    <ROUTE fromNode="BootHide" fromField="value_changed" toNode="SnowGrp" toField="visible" />
+    <ROUTE fromNode="BootHide" fromField="value_changed" toNode="StormGrp" toField="visible" />
+    <ROUTE fromNode="BootHide" fromField="value_changed" toNode="BoltA" toField="visible" />
+    <ROUTE fromNode="BootHide" fromField="value_changed" toNode="BoltB" toField="visible" />
+    <ROUTE fromNode="BootHide" fromField="value_changed" toNode="BoltC" toField="visible" />
+    <ColorInterpolator DEF="ToneGrass" key="0 0.333333 0.666667 1" keyValue="0.18 0.42 0.2 0.95 0.97 1 0.12 0.28 0.14 0.3 0.65 0.25" />
+    <ColorChaser DEF="ChaseGrass" duration="2.5" initialDestination="0.3 0.65 0.25" initialValue="0.3 0.65 0.25" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneGrass" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneGrass" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneGrass" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneGrass" toField="set_fraction" />
+    <ROUTE fromNode="ToneGrass" fromField="value_changed" toNode="ChaseGrass" toField="set_destination" />
+    <ROUTE fromNode="ChaseGrass" fromField="value_changed" toNode="GrassMat" toField="baseColor" />
+    <ColorInterpolator DEF="ToneRoof" key="0 0.333333 0.666667 1" keyValue="0.4 0.15 0.12 0.96 0.97 1 0.25 0.1 0.1 0.75 0.25 0.18" />
+    <ColorChaser DEF="ChaseRoof" duration="2.5" initialDestination="0.75 0.25 0.18" initialValue="0.75 0.25 0.18" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneRoof" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneRoof" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneRoof" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneRoof" toField="set_fraction" />
+    <ROUTE fromNode="ToneRoof" fromField="value_changed" toNode="ChaseRoof" toField="set_destination" />
+    <ROUTE fromNode="ChaseRoof" fromField="value_changed" toNode="RoofMat" toField="baseColor" />
+    <ColorInterpolator DEF="ToneLeaf" key="0 0.333333 0.666667 1" keyValue="0.12 0.4 0.18 0.8 0.9 0.85 0.08 0.25 0.12 0.2 0.62 0.25" />
+    <ColorChaser DEF="ChaseLeaf" duration="2.5" initialDestination="0.2 0.62 0.25" initialValue="0.2 0.62 0.25" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneLeaf" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneLeaf" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneLeaf" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneLeaf" toField="set_fraction" />
+    <ROUTE fromNode="ToneLeaf" fromField="value_changed" toNode="ChaseLeaf" toField="set_destination" />
+    <ROUTE fromNode="ChaseLeaf" fromField="value_changed" toNode="LeafMat" toField="baseColor" />
+    <ColorInterpolator DEF="ToneSky" key="0 0.333333 0.666667 1" keyValue="0.42 0.5 0.6 0.8 0.84 0.9 0.12 0.1 0.2 0.45 0.7 1" />
+    <ColorChaser DEF="ChaseSky" duration="2.5" initialDestination="0.45 0.7 1" initialValue="0.45 0.7 1" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneSky" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneSky" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneSky" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneSky" toField="set_fraction" />
+    <ROUTE fromNode="ToneSky" fromField="value_changed" toNode="ChaseSky" toField="set_destination" />
+    <ROUTE fromNode="ChaseSky" fromField="value_changed" toNode="SkyMat" toField="baseColor" />
+    <ROUTE fromNode="ChaseSky" fromField="value_changed" toNode="SkyMat" toField="emissiveColor" />
+    <ColorInterpolator DEF="ToneSea" key="0 0.333333 0.666667 1" keyValue="0.15 0.3 0.45 0.45 0.55 0.65 0.05 0.1 0.2 0.15 0.45 0.75" />
+    <ColorChaser DEF="ChaseSea" duration="2.5" initialDestination="0.15 0.45 0.75" initialValue="0.15 0.45 0.75" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneSea" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneSea" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneSea" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneSea" toField="set_fraction" />
+    <ROUTE fromNode="ToneSea" fromField="value_changed" toNode="ChaseSea" toField="set_destination" />
+    <ROUTE fromNode="ChaseSea" fromField="value_changed" toNode="SeaMat" toField="baseColor" />
+    <ColorInterpolator DEF="ToneCloudP" key="0 0.333333 0.666667 1" keyValue="0.55 0.58 0.65 0.9 0.92 0.96 0.2 0.18 0.25 0.97 0.97 1" />
+    <ColorChaser DEF="ChaseCloudP" duration="2.5" initialDestination="0.97 0.97 1" initialValue="0.97 0.97 1" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneCloudP" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneCloudP" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneCloudP" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneCloudP" toField="set_fraction" />
+    <ROUTE fromNode="ToneCloudP" fromField="value_changed" toNode="ChaseCloudP" toField="set_destination" />
+    <ROUTE fromNode="ChaseCloudP" fromField="value_changed" toNode="CloudPMat" toField="baseColor" />
+    <ROUTE fromNode="ChaseCloudP" fromField="value_changed" toNode="CloudPMat" toField="emissiveColor" />
+    <ColorInterpolator DEF="ToneLight" key="0 0.333333 0.666667 1" keyValue="0.6 0.65 0.75 0.85 0.9 1 0.35 0.3 0.5 1 0.95 0.85" />
+    <ColorChaser DEF="ChaseLight" duration="2.5" initialDestination="1 0.95 0.85" initialValue="1 0.95 0.85" />
+    <PositionInterpolator DEF="ToneSize" key="0 0.333333 0.666667 1" keyValue="1.3 1.1 1.3 1.0 0.9 1.0 2.0 1.6 2.0 0.45 0.45 0.45" />
+    <PositionChaser DEF="ChaseSize" duration="2.5" initialDestination="0.45 0.45 0.45" initialValue="0.45 0.45 0.45" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneLight" toField="set_fraction" />
+    <ROUTE fromNode="SelRain" fromField="value_changed" toNode="ToneSize" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneLight" toField="set_fraction" />
+    <ROUTE fromNode="SelSnow" fromField="value_changed" toNode="ToneSize" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneLight" toField="set_fraction" />
+    <ROUTE fromNode="SelStorm" fromField="value_changed" toNode="ToneSize" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneLight" toField="set_fraction" />
+    <ROUTE fromNode="SelSun" fromField="value_changed" toNode="ToneSize" toField="set_fraction" />
+    <ROUTE fromNode="ToneLight" fromField="value_changed" toNode="ChaseLight" toField="set_destination" />
+    <ROUTE fromNode="ChaseLight" fromField="value_changed" toNode="SunLight" toField="color" />
+    <ROUTE fromNode="ToneSize" fromField="value_changed" toNode="ChaseSize" toField="set_destination" />
+    <ROUTE fromNode="ChaseSize" fromField="value_changed" toNode="Cloud0" toField="scale" />
+    <ROUTE fromNode="ChaseSize" fromField="value_changed" toNode="Cloud1" toField="scale" />
+    <ROUTE fromNode="ChaseSize" fromField="value_changed" toNode="Cloud2" toField="scale" />
+    <ROUTE fromNode="ChaseSize" fromField="value_changed" toNode="Cloud3" toField="scale" />
+    <ROUTE fromNode="ChaseSize" fromField="value_changed" toNode="Cloud4" toField="scale" />
+  </Scene>
+</X3D>
