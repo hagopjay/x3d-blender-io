@@ -1,0 +1,716 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 19: step sequencer" />
+    <meta name="description" content="A 4 x 8 pad grid; click pads to light them. Lit pads pulse their row's instrument while a playhead sweeps the columns." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-19-step-sequencer/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.02 0.0 0.05" />
+    <Viewpoint DEF="View" description="Over the pads" position="0 9.5 9.5" orientation="1 0 0 -0.78" />
+    <DirectionalLight direction="0 -1 -0.4" intensity="1.0" />
+    <Transform DEF="Floor" translation="0 -0.25 0"><Shape><Appearance><PhysicalMaterial baseColor="0.06 0.06 0.1" emissiveColor="0.03 0.03 0.06" /></Appearance><Box size="15 0.2 8.5" /></Shape></Transform>
+    <Transform DEF="Glow0" translation="-5.25 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Glow1" translation="-3.75 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Glow2" translation="-2.25 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Glow3" translation="-0.75 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Glow4" translation="0.75 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Glow5" translation="2.25 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Glow6" translation="3.75 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Glow7" translation="5.25 -0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.95 0.6" emissiveColor="1 0.95 0.6" /></Appearance><Box size="1.4 0.08 6.2" /></Shape></Transform>
+    <Transform DEF="Pad0_0" translation="-5.25 0 -2.25">
+      <TouchSensor DEF="Touch0_0" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_0" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_0" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_0" translation="0 0.35 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad0_1" translation="-3.75 0 -2.25">
+      <TouchSensor DEF="Touch0_1" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_1" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_1" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_1" translation="0 0.35 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad0_2" translation="-2.25 0 -2.25">
+      <TouchSensor DEF="Touch0_2" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_2" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_2" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_2" translation="0 0.35 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad0_3" translation="-0.75 0 -2.25">
+      <TouchSensor DEF="Touch0_3" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_3" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_3" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_3" translation="0 0.35 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad0_4" translation="0.75 0 -2.25">
+      <TouchSensor DEF="Touch0_4" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_4" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_4" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_4" translation="0 0.35 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad0_5" translation="2.25 0 -2.25">
+      <TouchSensor DEF="Touch0_5" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_5" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_5" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_5" translation="0 0.35 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad0_6" translation="3.75 0 -2.25">
+      <TouchSensor DEF="Touch0_6" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_6" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_6" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_6" translation="0 0.35 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad0_7" translation="5.25 0 -2.25">
+      <TouchSensor DEF="Touch0_7" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.14 0.19 0.22" emissiveColor="0.14 0.19 0.22" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap0_7" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash0_7" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice0_7" translation="0 0.35 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.2 0.7 1" emissiveColor="0.2 0.7 1" /></Appearance><Sphere radius="0.24" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_0" translation="-5.25 0 -0.75">
+      <TouchSensor DEF="Touch1_0" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_0" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_0" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_0" translation="0 0.45 0" scale="0.25 1 0.25" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_1" translation="-3.75 0 -0.75">
+      <TouchSensor DEF="Touch1_1" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_1" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_1" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_1" translation="0 0.45 0" scale="0.25 1 0.25" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_2" translation="-2.25 0 -0.75">
+      <TouchSensor DEF="Touch1_2" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_2" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_2" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_2" translation="0 0.45 0" scale="0.25 1 0.25" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_3" translation="-0.75 0 -0.75">
+      <TouchSensor DEF="Touch1_3" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_3" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_3" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_3" translation="0 0.45 0" scale="0.25 1 0.25" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_4" translation="0.75 0 -0.75">
+      <TouchSensor DEF="Touch1_4" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_4" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_4" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_4" translation="0 0.45 0" scale="0.25 1 0.25" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_5" translation="2.25 0 -0.75">
+      <TouchSensor DEF="Touch1_5" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_5" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_5" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_5" translation="0 0.45 0" scale="0.25 1 0.25" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_6" translation="3.75 0 -0.75">
+      <TouchSensor DEF="Touch1_6" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_6" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_6" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_6" translation="0 0.45 0" scale="0.25 1 0.25" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad1_7" translation="5.25 0 -0.75">
+      <TouchSensor DEF="Touch1_7" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.155 0.185" emissiveColor="0.22 0.155 0.185" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap1_7" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash1_7" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice1_7" translation="0 0.45 0" scale="0.25 1 0.25" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.35 0.65" emissiveColor="1 0.35 0.65" /></Appearance><Cylinder radius="0.55" height="0.06" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_0" translation="-5.25 0 0.75">
+      <TouchSensor DEF="Touch2_0" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_0" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_0" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_0" translation="0 0.25 0" scale="1 0.1 1" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_1" translation="-3.75 0 0.75">
+      <TouchSensor DEF="Touch2_1" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_1" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_1" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_1" translation="0 0.25 0" scale="1 0.1 1" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_2" translation="-2.25 0 0.75">
+      <TouchSensor DEF="Touch2_2" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_2" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_2" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_2" translation="0 0.25 0" scale="1 0.1 1" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_3" translation="-0.75 0 0.75">
+      <TouchSensor DEF="Touch2_3" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_3" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_3" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_3" translation="0 0.25 0" scale="1 0.1 1" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_4" translation="0.75 0 0.75">
+      <TouchSensor DEF="Touch2_4" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_4" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_4" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_4" translation="0 0.25 0" scale="1 0.1 1" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_5" translation="2.25 0 0.75">
+      <TouchSensor DEF="Touch2_5" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_5" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_5" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_5" translation="0 0.25 0" scale="1 0.1 1" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_6" translation="3.75 0 0.75">
+      <TouchSensor DEF="Touch2_6" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_6" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_6" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_6" translation="0 0.25 0" scale="1 0.1 1" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad2_7" translation="5.25 0 0.75">
+      <TouchSensor DEF="Touch2_7" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.16 0.22 0.16" emissiveColor="0.16 0.22 0.16" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap2_7" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash2_7" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice2_7" translation="0 0.25 0" scale="1 0.1 1" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 1 0.4" emissiveColor="0.4 1 0.4" /></Appearance><Box size="0.45 1 0.45" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_0" translation="-5.25 0 2.25">
+      <TouchSensor DEF="Touch3_0" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_0" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_0" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_0" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="false"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_0" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_1" translation="-3.75 0 2.25">
+      <TouchSensor DEF="Touch3_1" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_1" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_1" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_1" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="false"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_1" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_2" translation="-2.25 0 2.25">
+      <TouchSensor DEF="Touch3_2" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_2" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_2" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_2" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="false"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_2" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_3" translation="-0.75 0 2.25">
+      <TouchSensor DEF="Touch3_3" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_3" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_3" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_3" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="true"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_3" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_4" translation="0.75 0 2.25">
+      <TouchSensor DEF="Touch3_4" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_4" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_4" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_4" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="false"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_4" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_5" translation="2.25 0 2.25">
+      <TouchSensor DEF="Touch3_5" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_5" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_5" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_5" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="false"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_5" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_6" translation="3.75 0 2.25">
+      <TouchSensor DEF="Touch3_6" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_6" translation="0 0.12 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_6" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_6" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="false"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_6" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+    <Transform DEF="Pad3_7" translation="5.25 0 2.25">
+      <TouchSensor DEF="Touch3_7" description="Click: toggle this pad" />
+      <Shape><Appearance><PhysicalMaterial roughness="0.5" baseColor="0.22 0.195 0.135" emissiveColor="0.22 0.195 0.135" /></Appearance><Box size="1.3 0.2 1.3" /></Shape>
+      <Transform DEF="Cap3_7" translation="0 0.12 0" visible="true"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Box size="1.1 0.1 1.1" /></Shape></Transform>
+      <Transform DEF="Flash3_7" translation="0 0.19 0" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Box size="1.32 0.04 1.32" /></Shape></Transform>
+      <Transform DEF="Voice3_7" translation="0 0.5 0" scale="0.4 0.4 0.4" visible="true"><Shape><Appearance><PhysicalMaterial DEF="ConeMat3_7" baseColor="1 0.75 0.15" emissiveColor="1 0.75 0.15" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+    </Transform>
+
+    <PositionInterpolator DEF="Ip0_0" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.35 0 0 0.8313 0 0 1.175 0 0 1.3813 0 0 1.45 0 0 1.3813 0 0 1.175 0 0 0.8313 0 0 0.35 0" />
+    <TimeSensor DEF="Clk0_0" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press0_0" />
+    <BooleanToggle DEF="Lit0_0" toggle="true" />
+    <ROUTE fromNode="Touch0_0" fromField="isActive" toNode="Press0_0" toField="set_boolean" />
+    <ROUTE fromNode="Press0_0" fromField="inputTrue" toNode="Lit0_0" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_0" fromField="toggle_changed" toNode="Cap0_0" toField="visible" />
+    <ROUTE fromNode="Lit0_0" fromField="toggle_changed" toNode="Voice0_0" toField="visible" />
+    <ROUTE fromNode="Lit0_0" fromField="toggle_changed" toNode="Clk0_0" toField="enabled" />
+    <ROUTE fromNode="Clk0_0" fromField="fraction_changed" toNode="Ip0_0" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_0" fromField="value_changed" toNode="Voice0_0" toField="translation" />
+    <PositionInterpolator DEF="Ip0_1" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.8313 0 0 1.175 0 0 1.3813 0 0 1.45 0 0 1.3813 0 0 1.175 0 0 0.8313 0 0 0.35 0 0 0.8313 0" />
+    <TimeSensor DEF="Clk0_1" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press0_1" />
+    <BooleanToggle DEF="Lit0_1" toggle="false" />
+    <ROUTE fromNode="Touch0_1" fromField="isActive" toNode="Press0_1" toField="set_boolean" />
+    <ROUTE fromNode="Press0_1" fromField="inputTrue" toNode="Lit0_1" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_1" fromField="toggle_changed" toNode="Cap0_1" toField="visible" />
+    <ROUTE fromNode="Lit0_1" fromField="toggle_changed" toNode="Voice0_1" toField="visible" />
+    <ROUTE fromNode="Lit0_1" fromField="toggle_changed" toNode="Clk0_1" toField="enabled" />
+    <ROUTE fromNode="Clk0_1" fromField="fraction_changed" toNode="Ip0_1" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_1" fromField="value_changed" toNode="Voice0_1" toField="translation" />
+    <PositionInterpolator DEF="Ip0_2" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 1.175 0 0 1.3813 0 0 1.45 0 0 1.3813 0 0 1.175 0 0 0.8313 0 0 0.35 0 0 0.8313 0 0 1.175 0" />
+    <TimeSensor DEF="Clk0_2" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press0_2" />
+    <BooleanToggle DEF="Lit0_2" toggle="false" />
+    <ROUTE fromNode="Touch0_2" fromField="isActive" toNode="Press0_2" toField="set_boolean" />
+    <ROUTE fromNode="Press0_2" fromField="inputTrue" toNode="Lit0_2" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_2" fromField="toggle_changed" toNode="Cap0_2" toField="visible" />
+    <ROUTE fromNode="Lit0_2" fromField="toggle_changed" toNode="Voice0_2" toField="visible" />
+    <ROUTE fromNode="Lit0_2" fromField="toggle_changed" toNode="Clk0_2" toField="enabled" />
+    <ROUTE fromNode="Clk0_2" fromField="fraction_changed" toNode="Ip0_2" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_2" fromField="value_changed" toNode="Voice0_2" toField="translation" />
+    <PositionInterpolator DEF="Ip0_3" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 1.3813 0 0 1.45 0 0 1.3813 0 0 1.175 0 0 0.8313 0 0 0.35 0 0 0.8313 0 0 1.175 0 0 1.3813 0" />
+    <TimeSensor DEF="Clk0_3" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press0_3" />
+    <BooleanToggle DEF="Lit0_3" toggle="false" />
+    <ROUTE fromNode="Touch0_3" fromField="isActive" toNode="Press0_3" toField="set_boolean" />
+    <ROUTE fromNode="Press0_3" fromField="inputTrue" toNode="Lit0_3" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_3" fromField="toggle_changed" toNode="Cap0_3" toField="visible" />
+    <ROUTE fromNode="Lit0_3" fromField="toggle_changed" toNode="Voice0_3" toField="visible" />
+    <ROUTE fromNode="Lit0_3" fromField="toggle_changed" toNode="Clk0_3" toField="enabled" />
+    <ROUTE fromNode="Clk0_3" fromField="fraction_changed" toNode="Ip0_3" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_3" fromField="value_changed" toNode="Voice0_3" toField="translation" />
+    <PositionInterpolator DEF="Ip0_4" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 1.45 0 0 1.3813 0 0 1.175 0 0 0.8313 0 0 0.35 0 0 0.8313 0 0 1.175 0 0 1.3813 0 0 1.45 0" />
+    <TimeSensor DEF="Clk0_4" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press0_4" />
+    <BooleanToggle DEF="Lit0_4" toggle="true" />
+    <ROUTE fromNode="Touch0_4" fromField="isActive" toNode="Press0_4" toField="set_boolean" />
+    <ROUTE fromNode="Press0_4" fromField="inputTrue" toNode="Lit0_4" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_4" fromField="toggle_changed" toNode="Cap0_4" toField="visible" />
+    <ROUTE fromNode="Lit0_4" fromField="toggle_changed" toNode="Voice0_4" toField="visible" />
+    <ROUTE fromNode="Lit0_4" fromField="toggle_changed" toNode="Clk0_4" toField="enabled" />
+    <ROUTE fromNode="Clk0_4" fromField="fraction_changed" toNode="Ip0_4" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_4" fromField="value_changed" toNode="Voice0_4" toField="translation" />
+    <PositionInterpolator DEF="Ip0_5" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 1.3813 0 0 1.175 0 0 0.8313 0 0 0.35 0 0 0.8313 0 0 1.175 0 0 1.3813 0 0 1.45 0 0 1.3813 0" />
+    <TimeSensor DEF="Clk0_5" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press0_5" />
+    <BooleanToggle DEF="Lit0_5" toggle="false" />
+    <ROUTE fromNode="Touch0_5" fromField="isActive" toNode="Press0_5" toField="set_boolean" />
+    <ROUTE fromNode="Press0_5" fromField="inputTrue" toNode="Lit0_5" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_5" fromField="toggle_changed" toNode="Cap0_5" toField="visible" />
+    <ROUTE fromNode="Lit0_5" fromField="toggle_changed" toNode="Voice0_5" toField="visible" />
+    <ROUTE fromNode="Lit0_5" fromField="toggle_changed" toNode="Clk0_5" toField="enabled" />
+    <ROUTE fromNode="Clk0_5" fromField="fraction_changed" toNode="Ip0_5" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_5" fromField="value_changed" toNode="Voice0_5" toField="translation" />
+    <PositionInterpolator DEF="Ip0_6" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 1.175 0 0 0.8313 0 0 0.35 0 0 0.8313 0 0 1.175 0 0 1.3813 0 0 1.45 0 0 1.3813 0 0 1.175 0" />
+    <TimeSensor DEF="Clk0_6" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press0_6" />
+    <BooleanToggle DEF="Lit0_6" toggle="false" />
+    <ROUTE fromNode="Touch0_6" fromField="isActive" toNode="Press0_6" toField="set_boolean" />
+    <ROUTE fromNode="Press0_6" fromField="inputTrue" toNode="Lit0_6" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_6" fromField="toggle_changed" toNode="Cap0_6" toField="visible" />
+    <ROUTE fromNode="Lit0_6" fromField="toggle_changed" toNode="Voice0_6" toField="visible" />
+    <ROUTE fromNode="Lit0_6" fromField="toggle_changed" toNode="Clk0_6" toField="enabled" />
+    <ROUTE fromNode="Clk0_6" fromField="fraction_changed" toNode="Ip0_6" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_6" fromField="value_changed" toNode="Voice0_6" toField="translation" />
+    <PositionInterpolator DEF="Ip0_7" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.8313 0 0 0.35 0 0 0.8313 0 0 1.175 0 0 1.3813 0 0 1.45 0 0 1.3813 0 0 1.175 0 0 0.8313 0" />
+    <TimeSensor DEF="Clk0_7" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press0_7" />
+    <BooleanToggle DEF="Lit0_7" toggle="true" />
+    <ROUTE fromNode="Touch0_7" fromField="isActive" toNode="Press0_7" toField="set_boolean" />
+    <ROUTE fromNode="Press0_7" fromField="inputTrue" toNode="Lit0_7" toField="set_boolean" />
+    <ROUTE fromNode="Lit0_7" fromField="toggle_changed" toNode="Cap0_7" toField="visible" />
+    <ROUTE fromNode="Lit0_7" fromField="toggle_changed" toNode="Voice0_7" toField="visible" />
+    <ROUTE fromNode="Lit0_7" fromField="toggle_changed" toNode="Clk0_7" toField="enabled" />
+    <ROUTE fromNode="Clk0_7" fromField="fraction_changed" toNode="Ip0_7" toField="set_fraction" />
+    <ROUTE fromNode="Ip0_7" fromField="value_changed" toNode="Voice0_7" toField="translation" />
+    <PositionInterpolator DEF="Ip1_0" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.25 1 0.25 0.5 1 0.5 0.75 1 0.75 1 1 1 1.25 1 1.25 1 1 1 0.75 1 0.75 0.5 1 0.5 0.25 1 0.25" />
+    <TimeSensor DEF="Clk1_0" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press1_0" />
+    <BooleanToggle DEF="Lit1_0" toggle="false" />
+    <ROUTE fromNode="Touch1_0" fromField="isActive" toNode="Press1_0" toField="set_boolean" />
+    <ROUTE fromNode="Press1_0" fromField="inputTrue" toNode="Lit1_0" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_0" fromField="toggle_changed" toNode="Cap1_0" toField="visible" />
+    <ROUTE fromNode="Lit1_0" fromField="toggle_changed" toNode="Voice1_0" toField="visible" />
+    <ROUTE fromNode="Lit1_0" fromField="toggle_changed" toNode="Clk1_0" toField="enabled" />
+    <ROUTE fromNode="Clk1_0" fromField="fraction_changed" toNode="Ip1_0" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_0" fromField="value_changed" toNode="Voice1_0" toField="scale" />
+    <PositionInterpolator DEF="Ip1_1" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.5 1 0.5 0.75 1 0.75 1 1 1 1.25 1 1.25 1 1 1 0.75 1 0.75 0.5 1 0.5 0.25 1 0.25 0.5 1 0.5" />
+    <TimeSensor DEF="Clk1_1" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press1_1" />
+    <BooleanToggle DEF="Lit1_1" toggle="false" />
+    <ROUTE fromNode="Touch1_1" fromField="isActive" toNode="Press1_1" toField="set_boolean" />
+    <ROUTE fromNode="Press1_1" fromField="inputTrue" toNode="Lit1_1" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_1" fromField="toggle_changed" toNode="Cap1_1" toField="visible" />
+    <ROUTE fromNode="Lit1_1" fromField="toggle_changed" toNode="Voice1_1" toField="visible" />
+    <ROUTE fromNode="Lit1_1" fromField="toggle_changed" toNode="Clk1_1" toField="enabled" />
+    <ROUTE fromNode="Clk1_1" fromField="fraction_changed" toNode="Ip1_1" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_1" fromField="value_changed" toNode="Voice1_1" toField="scale" />
+    <PositionInterpolator DEF="Ip1_2" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.75 1 0.75 1 1 1 1.25 1 1.25 1 1 1 0.75 1 0.75 0.5 1 0.5 0.25 1 0.25 0.5 1 0.5 0.75 1 0.75" />
+    <TimeSensor DEF="Clk1_2" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press1_2" />
+    <BooleanToggle DEF="Lit1_2" toggle="true" />
+    <ROUTE fromNode="Touch1_2" fromField="isActive" toNode="Press1_2" toField="set_boolean" />
+    <ROUTE fromNode="Press1_2" fromField="inputTrue" toNode="Lit1_2" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_2" fromField="toggle_changed" toNode="Cap1_2" toField="visible" />
+    <ROUTE fromNode="Lit1_2" fromField="toggle_changed" toNode="Voice1_2" toField="visible" />
+    <ROUTE fromNode="Lit1_2" fromField="toggle_changed" toNode="Clk1_2" toField="enabled" />
+    <ROUTE fromNode="Clk1_2" fromField="fraction_changed" toNode="Ip1_2" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_2" fromField="value_changed" toNode="Voice1_2" toField="scale" />
+    <PositionInterpolator DEF="Ip1_3" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 1 1 1.25 1 1.25 1 1 1 0.75 1 0.75 0.5 1 0.5 0.25 1 0.25 0.5 1 0.5 0.75 1 0.75 1 1 1" />
+    <TimeSensor DEF="Clk1_3" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press1_3" />
+    <BooleanToggle DEF="Lit1_3" toggle="false" />
+    <ROUTE fromNode="Touch1_3" fromField="isActive" toNode="Press1_3" toField="set_boolean" />
+    <ROUTE fromNode="Press1_3" fromField="inputTrue" toNode="Lit1_3" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_3" fromField="toggle_changed" toNode="Cap1_3" toField="visible" />
+    <ROUTE fromNode="Lit1_3" fromField="toggle_changed" toNode="Voice1_3" toField="visible" />
+    <ROUTE fromNode="Lit1_3" fromField="toggle_changed" toNode="Clk1_3" toField="enabled" />
+    <ROUTE fromNode="Clk1_3" fromField="fraction_changed" toNode="Ip1_3" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_3" fromField="value_changed" toNode="Voice1_3" toField="scale" />
+    <PositionInterpolator DEF="Ip1_4" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1.25 1 1.25 1 1 1 0.75 1 0.75 0.5 1 0.5 0.25 1 0.25 0.5 1 0.5 0.75 1 0.75 1 1 1 1.25 1 1.25" />
+    <TimeSensor DEF="Clk1_4" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press1_4" />
+    <BooleanToggle DEF="Lit1_4" toggle="false" />
+    <ROUTE fromNode="Touch1_4" fromField="isActive" toNode="Press1_4" toField="set_boolean" />
+    <ROUTE fromNode="Press1_4" fromField="inputTrue" toNode="Lit1_4" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_4" fromField="toggle_changed" toNode="Cap1_4" toField="visible" />
+    <ROUTE fromNode="Lit1_4" fromField="toggle_changed" toNode="Voice1_4" toField="visible" />
+    <ROUTE fromNode="Lit1_4" fromField="toggle_changed" toNode="Clk1_4" toField="enabled" />
+    <ROUTE fromNode="Clk1_4" fromField="fraction_changed" toNode="Ip1_4" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_4" fromField="value_changed" toNode="Voice1_4" toField="scale" />
+    <PositionInterpolator DEF="Ip1_5" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 1 1 0.75 1 0.75 0.5 1 0.5 0.25 1 0.25 0.5 1 0.5 0.75 1 0.75 1 1 1 1.25 1 1.25 1 1 1" />
+    <TimeSensor DEF="Clk1_5" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press1_5" />
+    <BooleanToggle DEF="Lit1_5" toggle="false" />
+    <ROUTE fromNode="Touch1_5" fromField="isActive" toNode="Press1_5" toField="set_boolean" />
+    <ROUTE fromNode="Press1_5" fromField="inputTrue" toNode="Lit1_5" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_5" fromField="toggle_changed" toNode="Cap1_5" toField="visible" />
+    <ROUTE fromNode="Lit1_5" fromField="toggle_changed" toNode="Voice1_5" toField="visible" />
+    <ROUTE fromNode="Lit1_5" fromField="toggle_changed" toNode="Clk1_5" toField="enabled" />
+    <ROUTE fromNode="Clk1_5" fromField="fraction_changed" toNode="Ip1_5" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_5" fromField="value_changed" toNode="Voice1_5" toField="scale" />
+    <PositionInterpolator DEF="Ip1_6" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.75 1 0.75 0.5 1 0.5 0.25 1 0.25 0.5 1 0.5 0.75 1 0.75 1 1 1 1.25 1 1.25 1 1 1 0.75 1 0.75" />
+    <TimeSensor DEF="Clk1_6" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press1_6" />
+    <BooleanToggle DEF="Lit1_6" toggle="true" />
+    <ROUTE fromNode="Touch1_6" fromField="isActive" toNode="Press1_6" toField="set_boolean" />
+    <ROUTE fromNode="Press1_6" fromField="inputTrue" toNode="Lit1_6" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_6" fromField="toggle_changed" toNode="Cap1_6" toField="visible" />
+    <ROUTE fromNode="Lit1_6" fromField="toggle_changed" toNode="Voice1_6" toField="visible" />
+    <ROUTE fromNode="Lit1_6" fromField="toggle_changed" toNode="Clk1_6" toField="enabled" />
+    <ROUTE fromNode="Clk1_6" fromField="fraction_changed" toNode="Ip1_6" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_6" fromField="value_changed" toNode="Voice1_6" toField="scale" />
+    <PositionInterpolator DEF="Ip1_7" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.5 1 0.5 0.25 1 0.25 0.5 1 0.5 0.75 1 0.75 1 1 1 1.25 1 1.25 1 1 1 0.75 1 0.75 0.5 1 0.5" />
+    <TimeSensor DEF="Clk1_7" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press1_7" />
+    <BooleanToggle DEF="Lit1_7" toggle="false" />
+    <ROUTE fromNode="Touch1_7" fromField="isActive" toNode="Press1_7" toField="set_boolean" />
+    <ROUTE fromNode="Press1_7" fromField="inputTrue" toNode="Lit1_7" toField="set_boolean" />
+    <ROUTE fromNode="Lit1_7" fromField="toggle_changed" toNode="Cap1_7" toField="visible" />
+    <ROUTE fromNode="Lit1_7" fromField="toggle_changed" toNode="Voice1_7" toField="visible" />
+    <ROUTE fromNode="Lit1_7" fromField="toggle_changed" toNode="Clk1_7" toField="enabled" />
+    <ROUTE fromNode="Clk1_7" fromField="fraction_changed" toNode="Ip1_7" toField="set_fraction" />
+    <ROUTE fromNode="Ip1_7" fromField="value_changed" toNode="Voice1_7" toField="scale" />
+    <PositionInterpolator DEF="Tp2_0" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.25 0 0 0.4375 0 0 0.625 0 0 0.8125 0 0 1 0 0 0.8125 0 0 0.625 0 0 0.4375 0 0 0.25 0" />
+    <ROUTE fromNode="Clk2_0" fromField="fraction_changed" toNode="Tp2_0" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_0" fromField="value_changed" toNode="Voice2_0" toField="translation" />
+    <PositionInterpolator DEF="Ip2_0" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 0.1 1 1 0.475 1 1 0.85 1 1 1.225 1 1 1.6 1 1 1.225 1 1 0.85 1 1 0.475 1 1 0.1 1" />
+    <TimeSensor DEF="Clk2_0" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press2_0" />
+    <BooleanToggle DEF="Lit2_0" toggle="true" />
+    <ROUTE fromNode="Touch2_0" fromField="isActive" toNode="Press2_0" toField="set_boolean" />
+    <ROUTE fromNode="Press2_0" fromField="inputTrue" toNode="Lit2_0" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_0" fromField="toggle_changed" toNode="Cap2_0" toField="visible" />
+    <ROUTE fromNode="Lit2_0" fromField="toggle_changed" toNode="Voice2_0" toField="visible" />
+    <ROUTE fromNode="Lit2_0" fromField="toggle_changed" toNode="Clk2_0" toField="enabled" />
+    <ROUTE fromNode="Clk2_0" fromField="fraction_changed" toNode="Ip2_0" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_0" fromField="value_changed" toNode="Voice2_0" toField="scale" />
+    <PositionInterpolator DEF="Tp2_1" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.4375 0 0 0.625 0 0 0.8125 0 0 1 0 0 0.8125 0 0 0.625 0 0 0.4375 0 0 0.25 0 0 0.4375 0" />
+    <ROUTE fromNode="Clk2_1" fromField="fraction_changed" toNode="Tp2_1" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_1" fromField="value_changed" toNode="Voice2_1" toField="translation" />
+    <PositionInterpolator DEF="Ip2_1" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 0.475 1 1 0.85 1 1 1.225 1 1 1.6 1 1 1.225 1 1 0.85 1 1 0.475 1 1 0.1 1 1 0.475 1" />
+    <TimeSensor DEF="Clk2_1" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press2_1" />
+    <BooleanToggle DEF="Lit2_1" toggle="true" />
+    <ROUTE fromNode="Touch2_1" fromField="isActive" toNode="Press2_1" toField="set_boolean" />
+    <ROUTE fromNode="Press2_1" fromField="inputTrue" toNode="Lit2_1" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_1" fromField="toggle_changed" toNode="Cap2_1" toField="visible" />
+    <ROUTE fromNode="Lit2_1" fromField="toggle_changed" toNode="Voice2_1" toField="visible" />
+    <ROUTE fromNode="Lit2_1" fromField="toggle_changed" toNode="Clk2_1" toField="enabled" />
+    <ROUTE fromNode="Clk2_1" fromField="fraction_changed" toNode="Ip2_1" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_1" fromField="value_changed" toNode="Voice2_1" toField="scale" />
+    <PositionInterpolator DEF="Tp2_2" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.625 0 0 0.8125 0 0 1 0 0 0.8125 0 0 0.625 0 0 0.4375 0 0 0.25 0 0 0.4375 0 0 0.625 0" />
+    <ROUTE fromNode="Clk2_2" fromField="fraction_changed" toNode="Tp2_2" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_2" fromField="value_changed" toNode="Voice2_2" toField="translation" />
+    <PositionInterpolator DEF="Ip2_2" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 0.85 1 1 1.225 1 1 1.6 1 1 1.225 1 1 0.85 1 1 0.475 1 1 0.1 1 1 0.475 1 1 0.85 1" />
+    <TimeSensor DEF="Clk2_2" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press2_2" />
+    <BooleanToggle DEF="Lit2_2" toggle="false" />
+    <ROUTE fromNode="Touch2_2" fromField="isActive" toNode="Press2_2" toField="set_boolean" />
+    <ROUTE fromNode="Press2_2" fromField="inputTrue" toNode="Lit2_2" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_2" fromField="toggle_changed" toNode="Cap2_2" toField="visible" />
+    <ROUTE fromNode="Lit2_2" fromField="toggle_changed" toNode="Voice2_2" toField="visible" />
+    <ROUTE fromNode="Lit2_2" fromField="toggle_changed" toNode="Clk2_2" toField="enabled" />
+    <ROUTE fromNode="Clk2_2" fromField="fraction_changed" toNode="Ip2_2" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_2" fromField="value_changed" toNode="Voice2_2" toField="scale" />
+    <PositionInterpolator DEF="Tp2_3" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.8125 0 0 1 0 0 0.8125 0 0 0.625 0 0 0.4375 0 0 0.25 0 0 0.4375 0 0 0.625 0 0 0.8125 0" />
+    <ROUTE fromNode="Clk2_3" fromField="fraction_changed" toNode="Tp2_3" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_3" fromField="value_changed" toNode="Voice2_3" toField="translation" />
+    <PositionInterpolator DEF="Ip2_3" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 1.225 1 1 1.6 1 1 1.225 1 1 0.85 1 1 0.475 1 1 0.1 1 1 0.475 1 1 0.85 1 1 1.225 1" />
+    <TimeSensor DEF="Clk2_3" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press2_3" />
+    <BooleanToggle DEF="Lit2_3" toggle="true" />
+    <ROUTE fromNode="Touch2_3" fromField="isActive" toNode="Press2_3" toField="set_boolean" />
+    <ROUTE fromNode="Press2_3" fromField="inputTrue" toNode="Lit2_3" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_3" fromField="toggle_changed" toNode="Cap2_3" toField="visible" />
+    <ROUTE fromNode="Lit2_3" fromField="toggle_changed" toNode="Voice2_3" toField="visible" />
+    <ROUTE fromNode="Lit2_3" fromField="toggle_changed" toNode="Clk2_3" toField="enabled" />
+    <ROUTE fromNode="Clk2_3" fromField="fraction_changed" toNode="Ip2_3" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_3" fromField="value_changed" toNode="Voice2_3" toField="scale" />
+    <PositionInterpolator DEF="Tp2_4" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 1 0 0 0.8125 0 0 0.625 0 0 0.4375 0 0 0.25 0 0 0.4375 0 0 0.625 0 0 0.8125 0 0 1 0" />
+    <ROUTE fromNode="Clk2_4" fromField="fraction_changed" toNode="Tp2_4" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_4" fromField="value_changed" toNode="Voice2_4" toField="translation" />
+    <PositionInterpolator DEF="Ip2_4" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 1.6 1 1 1.225 1 1 0.85 1 1 0.475 1 1 0.1 1 1 0.475 1 1 0.85 1 1 1.225 1 1 1.6 1" />
+    <TimeSensor DEF="Clk2_4" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press2_4" />
+    <BooleanToggle DEF="Lit2_4" toggle="false" />
+    <ROUTE fromNode="Touch2_4" fromField="isActive" toNode="Press2_4" toField="set_boolean" />
+    <ROUTE fromNode="Press2_4" fromField="inputTrue" toNode="Lit2_4" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_4" fromField="toggle_changed" toNode="Cap2_4" toField="visible" />
+    <ROUTE fromNode="Lit2_4" fromField="toggle_changed" toNode="Voice2_4" toField="visible" />
+    <ROUTE fromNode="Lit2_4" fromField="toggle_changed" toNode="Clk2_4" toField="enabled" />
+    <ROUTE fromNode="Clk2_4" fromField="fraction_changed" toNode="Ip2_4" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_4" fromField="value_changed" toNode="Voice2_4" toField="scale" />
+    <PositionInterpolator DEF="Tp2_5" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.8125 0 0 0.625 0 0 0.4375 0 0 0.25 0 0 0.4375 0 0 0.625 0 0 0.8125 0 0 1 0 0 0.8125 0" />
+    <ROUTE fromNode="Clk2_5" fromField="fraction_changed" toNode="Tp2_5" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_5" fromField="value_changed" toNode="Voice2_5" toField="translation" />
+    <PositionInterpolator DEF="Ip2_5" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 1.225 1 1 0.85 1 1 0.475 1 1 0.1 1 1 0.475 1 1 0.85 1 1 1.225 1 1 1.6 1 1 1.225 1" />
+    <TimeSensor DEF="Clk2_5" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press2_5" />
+    <BooleanToggle DEF="Lit2_5" toggle="true" />
+    <ROUTE fromNode="Touch2_5" fromField="isActive" toNode="Press2_5" toField="set_boolean" />
+    <ROUTE fromNode="Press2_5" fromField="inputTrue" toNode="Lit2_5" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_5" fromField="toggle_changed" toNode="Cap2_5" toField="visible" />
+    <ROUTE fromNode="Lit2_5" fromField="toggle_changed" toNode="Voice2_5" toField="visible" />
+    <ROUTE fromNode="Lit2_5" fromField="toggle_changed" toNode="Clk2_5" toField="enabled" />
+    <ROUTE fromNode="Clk2_5" fromField="fraction_changed" toNode="Ip2_5" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_5" fromField="value_changed" toNode="Voice2_5" toField="scale" />
+    <PositionInterpolator DEF="Tp2_6" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.625 0 0 0.4375 0 0 0.25 0 0 0.4375 0 0 0.625 0 0 0.8125 0 0 1 0 0 0.8125 0 0 0.625 0" />
+    <ROUTE fromNode="Clk2_6" fromField="fraction_changed" toNode="Tp2_6" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_6" fromField="value_changed" toNode="Voice2_6" toField="translation" />
+    <PositionInterpolator DEF="Ip2_6" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 0.85 1 1 0.475 1 1 0.1 1 1 0.475 1 1 0.85 1 1 1.225 1 1 1.6 1 1 1.225 1 1 0.85 1" />
+    <TimeSensor DEF="Clk2_6" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press2_6" />
+    <BooleanToggle DEF="Lit2_6" toggle="false" />
+    <ROUTE fromNode="Touch2_6" fromField="isActive" toNode="Press2_6" toField="set_boolean" />
+    <ROUTE fromNode="Press2_6" fromField="inputTrue" toNode="Lit2_6" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_6" fromField="toggle_changed" toNode="Cap2_6" toField="visible" />
+    <ROUTE fromNode="Lit2_6" fromField="toggle_changed" toNode="Voice2_6" toField="visible" />
+    <ROUTE fromNode="Lit2_6" fromField="toggle_changed" toNode="Clk2_6" toField="enabled" />
+    <ROUTE fromNode="Clk2_6" fromField="fraction_changed" toNode="Ip2_6" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_6" fromField="value_changed" toNode="Voice2_6" toField="scale" />
+    <PositionInterpolator DEF="Tp2_7" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0.4375 0 0 0.25 0 0 0.4375 0 0 0.625 0 0 0.8125 0 0 1 0 0 0.8125 0 0 0.625 0 0 0.4375 0" />
+    <ROUTE fromNode="Clk2_7" fromField="fraction_changed" toNode="Tp2_7" toField="set_fraction" />
+    <ROUTE fromNode="Tp2_7" fromField="value_changed" toNode="Voice2_7" toField="translation" />
+    <PositionInterpolator DEF="Ip2_7" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 0.475 1 1 0.1 1 1 0.475 1 1 0.85 1 1 1.225 1 1 1.6 1 1 1.225 1 1 0.85 1 1 0.475 1" />
+    <TimeSensor DEF="Clk2_7" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press2_7" />
+    <BooleanToggle DEF="Lit2_7" toggle="false" />
+    <ROUTE fromNode="Touch2_7" fromField="isActive" toNode="Press2_7" toField="set_boolean" />
+    <ROUTE fromNode="Press2_7" fromField="inputTrue" toNode="Lit2_7" toField="set_boolean" />
+    <ROUTE fromNode="Lit2_7" fromField="toggle_changed" toNode="Cap2_7" toField="visible" />
+    <ROUTE fromNode="Lit2_7" fromField="toggle_changed" toNode="Voice2_7" toField="visible" />
+    <ROUTE fromNode="Lit2_7" fromField="toggle_changed" toNode="Clk2_7" toField="enabled" />
+    <ROUTE fromNode="Clk2_7" fromField="fraction_changed" toNode="Ip2_7" toField="set_fraction" />
+    <ROUTE fromNode="Ip2_7" fromField="value_changed" toNode="Voice2_7" toField="scale" />
+    <ColorInterpolator DEF="Ci3_0" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.45 0.45 0.45 0.5875 0.5531 0.4706 0.725 0.6562 0.4913 0.8625 0.7594 0.5119 1 0.8625 0.5325 0.8625 0.7594 0.5119 0.725 0.6562 0.4913 0.5875 0.5531 0.4706 0.45 0.45 0.45" />
+    <ROUTE fromNode="Clk3_0" fromField="fraction_changed" toNode="Ci3_0" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_0" fromField="value_changed" toNode="ConeMat3_0" toField="baseColor" />
+    <ROUTE fromNode="Ci3_0" fromField="value_changed" toNode="ConeMat3_0" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_0" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.4 0.4 0.4 0.625 0.625 0.625 0.85 0.85 0.85 1.075 1.075 1.075 1.3 1.3 1.3 1.075 1.075 1.075 0.85 0.85 0.85 0.625 0.625 0.625 0.4 0.4 0.4" />
+    <TimeSensor DEF="Clk3_0" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press3_0" />
+    <BooleanToggle DEF="Lit3_0" toggle="false" />
+    <ROUTE fromNode="Touch3_0" fromField="isActive" toNode="Press3_0" toField="set_boolean" />
+    <ROUTE fromNode="Press3_0" fromField="inputTrue" toNode="Lit3_0" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_0" fromField="toggle_changed" toNode="Cap3_0" toField="visible" />
+    <ROUTE fromNode="Lit3_0" fromField="toggle_changed" toNode="Voice3_0" toField="visible" />
+    <ROUTE fromNode="Lit3_0" fromField="toggle_changed" toNode="Clk3_0" toField="enabled" />
+    <ROUTE fromNode="Clk3_0" fromField="fraction_changed" toNode="Ip3_0" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_0" fromField="value_changed" toNode="Voice3_0" toField="scale" />
+    <ColorInterpolator DEF="Ci3_1" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.5875 0.5531 0.4706 0.725 0.6562 0.4913 0.8625 0.7594 0.5119 1 0.8625 0.5325 0.8625 0.7594 0.5119 0.725 0.6562 0.4913 0.5875 0.5531 0.4706 0.45 0.45 0.45 0.5875 0.5531 0.4706" />
+    <ROUTE fromNode="Clk3_1" fromField="fraction_changed" toNode="Ci3_1" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_1" fromField="value_changed" toNode="ConeMat3_1" toField="baseColor" />
+    <ROUTE fromNode="Ci3_1" fromField="value_changed" toNode="ConeMat3_1" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_1" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.625 0.625 0.625 0.85 0.85 0.85 1.075 1.075 1.075 1.3 1.3 1.3 1.075 1.075 1.075 0.85 0.85 0.85 0.625 0.625 0.625 0.4 0.4 0.4 0.625 0.625 0.625" />
+    <TimeSensor DEF="Clk3_1" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press3_1" />
+    <BooleanToggle DEF="Lit3_1" toggle="false" />
+    <ROUTE fromNode="Touch3_1" fromField="isActive" toNode="Press3_1" toField="set_boolean" />
+    <ROUTE fromNode="Press3_1" fromField="inputTrue" toNode="Lit3_1" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_1" fromField="toggle_changed" toNode="Cap3_1" toField="visible" />
+    <ROUTE fromNode="Lit3_1" fromField="toggle_changed" toNode="Voice3_1" toField="visible" />
+    <ROUTE fromNode="Lit3_1" fromField="toggle_changed" toNode="Clk3_1" toField="enabled" />
+    <ROUTE fromNode="Clk3_1" fromField="fraction_changed" toNode="Ip3_1" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_1" fromField="value_changed" toNode="Voice3_1" toField="scale" />
+    <ColorInterpolator DEF="Ci3_2" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.725 0.6562 0.4913 0.8625 0.7594 0.5119 1 0.8625 0.5325 0.8625 0.7594 0.5119 0.725 0.6562 0.4913 0.5875 0.5531 0.4706 0.45 0.45 0.45 0.5875 0.5531 0.4706 0.725 0.6562 0.4913" />
+    <ROUTE fromNode="Clk3_2" fromField="fraction_changed" toNode="Ci3_2" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_2" fromField="value_changed" toNode="ConeMat3_2" toField="baseColor" />
+    <ROUTE fromNode="Ci3_2" fromField="value_changed" toNode="ConeMat3_2" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_2" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.85 0.85 0.85 1.075 1.075 1.075 1.3 1.3 1.3 1.075 1.075 1.075 0.85 0.85 0.85 0.625 0.625 0.625 0.4 0.4 0.4 0.625 0.625 0.625 0.85 0.85 0.85" />
+    <TimeSensor DEF="Clk3_2" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press3_2" />
+    <BooleanToggle DEF="Lit3_2" toggle="false" />
+    <ROUTE fromNode="Touch3_2" fromField="isActive" toNode="Press3_2" toField="set_boolean" />
+    <ROUTE fromNode="Press3_2" fromField="inputTrue" toNode="Lit3_2" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_2" fromField="toggle_changed" toNode="Cap3_2" toField="visible" />
+    <ROUTE fromNode="Lit3_2" fromField="toggle_changed" toNode="Voice3_2" toField="visible" />
+    <ROUTE fromNode="Lit3_2" fromField="toggle_changed" toNode="Clk3_2" toField="enabled" />
+    <ROUTE fromNode="Clk3_2" fromField="fraction_changed" toNode="Ip3_2" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_2" fromField="value_changed" toNode="Voice3_2" toField="scale" />
+    <ColorInterpolator DEF="Ci3_3" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.8625 0.7594 0.5119 1 0.8625 0.5325 0.8625 0.7594 0.5119 0.725 0.6562 0.4913 0.5875 0.5531 0.4706 0.45 0.45 0.45 0.5875 0.5531 0.4706 0.725 0.6562 0.4913 0.8625 0.7594 0.5119" />
+    <ROUTE fromNode="Clk3_3" fromField="fraction_changed" toNode="Ci3_3" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_3" fromField="value_changed" toNode="ConeMat3_3" toField="baseColor" />
+    <ROUTE fromNode="Ci3_3" fromField="value_changed" toNode="ConeMat3_3" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_3" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1.075 1.075 1.075 1.3 1.3 1.3 1.075 1.075 1.075 0.85 0.85 0.85 0.625 0.625 0.625 0.4 0.4 0.4 0.625 0.625 0.625 0.85 0.85 0.85 1.075 1.075 1.075" />
+    <TimeSensor DEF="Clk3_3" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press3_3" />
+    <BooleanToggle DEF="Lit3_3" toggle="true" />
+    <ROUTE fromNode="Touch3_3" fromField="isActive" toNode="Press3_3" toField="set_boolean" />
+    <ROUTE fromNode="Press3_3" fromField="inputTrue" toNode="Lit3_3" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_3" fromField="toggle_changed" toNode="Cap3_3" toField="visible" />
+    <ROUTE fromNode="Lit3_3" fromField="toggle_changed" toNode="Voice3_3" toField="visible" />
+    <ROUTE fromNode="Lit3_3" fromField="toggle_changed" toNode="Clk3_3" toField="enabled" />
+    <ROUTE fromNode="Clk3_3" fromField="fraction_changed" toNode="Ip3_3" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_3" fromField="value_changed" toNode="Voice3_3" toField="scale" />
+    <ColorInterpolator DEF="Ci3_4" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1 0.8625 0.5325 0.8625 0.7594 0.5119 0.725 0.6562 0.4913 0.5875 0.5531 0.4706 0.45 0.45 0.45 0.5875 0.5531 0.4706 0.725 0.6562 0.4913 0.8625 0.7594 0.5119 1 0.8625 0.5325" />
+    <ROUTE fromNode="Clk3_4" fromField="fraction_changed" toNode="Ci3_4" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_4" fromField="value_changed" toNode="ConeMat3_4" toField="baseColor" />
+    <ROUTE fromNode="Ci3_4" fromField="value_changed" toNode="ConeMat3_4" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_4" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1.3 1.3 1.3 1.075 1.075 1.075 0.85 0.85 0.85 0.625 0.625 0.625 0.4 0.4 0.4 0.625 0.625 0.625 0.85 0.85 0.85 1.075 1.075 1.075 1.3 1.3 1.3" />
+    <TimeSensor DEF="Clk3_4" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press3_4" />
+    <BooleanToggle DEF="Lit3_4" toggle="false" />
+    <ROUTE fromNode="Touch3_4" fromField="isActive" toNode="Press3_4" toField="set_boolean" />
+    <ROUTE fromNode="Press3_4" fromField="inputTrue" toNode="Lit3_4" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_4" fromField="toggle_changed" toNode="Cap3_4" toField="visible" />
+    <ROUTE fromNode="Lit3_4" fromField="toggle_changed" toNode="Voice3_4" toField="visible" />
+    <ROUTE fromNode="Lit3_4" fromField="toggle_changed" toNode="Clk3_4" toField="enabled" />
+    <ROUTE fromNode="Clk3_4" fromField="fraction_changed" toNode="Ip3_4" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_4" fromField="value_changed" toNode="Voice3_4" toField="scale" />
+    <ColorInterpolator DEF="Ci3_5" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.8625 0.7594 0.5119 0.725 0.6562 0.4913 0.5875 0.5531 0.4706 0.45 0.45 0.45 0.5875 0.5531 0.4706 0.725 0.6562 0.4913 0.8625 0.7594 0.5119 1 0.8625 0.5325 0.8625 0.7594 0.5119" />
+    <ROUTE fromNode="Clk3_5" fromField="fraction_changed" toNode="Ci3_5" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_5" fromField="value_changed" toNode="ConeMat3_5" toField="baseColor" />
+    <ROUTE fromNode="Ci3_5" fromField="value_changed" toNode="ConeMat3_5" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_5" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="1.075 1.075 1.075 0.85 0.85 0.85 0.625 0.625 0.625 0.4 0.4 0.4 0.625 0.625 0.625 0.85 0.85 0.85 1.075 1.075 1.075 1.3 1.3 1.3 1.075 1.075 1.075" />
+    <TimeSensor DEF="Clk3_5" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press3_5" />
+    <BooleanToggle DEF="Lit3_5" toggle="false" />
+    <ROUTE fromNode="Touch3_5" fromField="isActive" toNode="Press3_5" toField="set_boolean" />
+    <ROUTE fromNode="Press3_5" fromField="inputTrue" toNode="Lit3_5" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_5" fromField="toggle_changed" toNode="Cap3_5" toField="visible" />
+    <ROUTE fromNode="Lit3_5" fromField="toggle_changed" toNode="Voice3_5" toField="visible" />
+    <ROUTE fromNode="Lit3_5" fromField="toggle_changed" toNode="Clk3_5" toField="enabled" />
+    <ROUTE fromNode="Clk3_5" fromField="fraction_changed" toNode="Ip3_5" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_5" fromField="value_changed" toNode="Voice3_5" toField="scale" />
+    <ColorInterpolator DEF="Ci3_6" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.725 0.6562 0.4913 0.5875 0.5531 0.4706 0.45 0.45 0.45 0.5875 0.5531 0.4706 0.725 0.6562 0.4913 0.8625 0.7594 0.5119 1 0.8625 0.5325 0.8625 0.7594 0.5119 0.725 0.6562 0.4913" />
+    <ROUTE fromNode="Clk3_6" fromField="fraction_changed" toNode="Ci3_6" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_6" fromField="value_changed" toNode="ConeMat3_6" toField="baseColor" />
+    <ROUTE fromNode="Ci3_6" fromField="value_changed" toNode="ConeMat3_6" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_6" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.85 0.85 0.85 0.625 0.625 0.625 0.4 0.4 0.4 0.625 0.625 0.625 0.85 0.85 0.85 1.075 1.075 1.075 1.3 1.3 1.3 1.075 1.075 1.075 0.85 0.85 0.85" />
+    <TimeSensor DEF="Clk3_6" cycleInterval="1.0" loop="true" enabled="false" />
+    <BooleanFilter DEF="Press3_6" />
+    <BooleanToggle DEF="Lit3_6" toggle="false" />
+    <ROUTE fromNode="Touch3_6" fromField="isActive" toNode="Press3_6" toField="set_boolean" />
+    <ROUTE fromNode="Press3_6" fromField="inputTrue" toNode="Lit3_6" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_6" fromField="toggle_changed" toNode="Cap3_6" toField="visible" />
+    <ROUTE fromNode="Lit3_6" fromField="toggle_changed" toNode="Voice3_6" toField="visible" />
+    <ROUTE fromNode="Lit3_6" fromField="toggle_changed" toNode="Clk3_6" toField="enabled" />
+    <ROUTE fromNode="Clk3_6" fromField="fraction_changed" toNode="Ip3_6" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_6" fromField="value_changed" toNode="Voice3_6" toField="scale" />
+    <ColorInterpolator DEF="Ci3_7" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.5875 0.5531 0.4706 0.45 0.45 0.45 0.5875 0.5531 0.4706 0.725 0.6562 0.4913 0.8625 0.7594 0.5119 1 0.8625 0.5325 0.8625 0.7594 0.5119 0.725 0.6562 0.4913 0.5875 0.5531 0.4706" />
+    <ROUTE fromNode="Clk3_7" fromField="fraction_changed" toNode="Ci3_7" toField="set_fraction" />
+    <ROUTE fromNode="Ci3_7" fromField="value_changed" toNode="ConeMat3_7" toField="baseColor" />
+    <ROUTE fromNode="Ci3_7" fromField="value_changed" toNode="ConeMat3_7" toField="emissiveColor" />
+    <PositionInterpolator DEF="Ip3_7" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0.625 0.625 0.625 0.4 0.4 0.4 0.625 0.625 0.625 0.85 0.85 0.85 1.075 1.075 1.075 1.3 1.3 1.3 1.075 1.075 1.075 0.85 0.85 0.85 0.625 0.625 0.625" />
+    <TimeSensor DEF="Clk3_7" cycleInterval="1.0" loop="true" enabled="true" />
+    <BooleanFilter DEF="Press3_7" />
+    <BooleanToggle DEF="Lit3_7" toggle="true" />
+    <ROUTE fromNode="Touch3_7" fromField="isActive" toNode="Press3_7" toField="set_boolean" />
+    <ROUTE fromNode="Press3_7" fromField="inputTrue" toNode="Lit3_7" toField="set_boolean" />
+    <ROUTE fromNode="Lit3_7" fromField="toggle_changed" toNode="Cap3_7" toField="visible" />
+    <ROUTE fromNode="Lit3_7" fromField="toggle_changed" toNode="Voice3_7" toField="visible" />
+    <ROUTE fromNode="Lit3_7" fromField="toggle_changed" toNode="Clk3_7" toField="enabled" />
+    <ROUTE fromNode="Clk3_7" fromField="fraction_changed" toNode="Ip3_7" toField="set_fraction" />
+    <ROUTE fromNode="Ip3_7" fromField="value_changed" toNode="Voice3_7" toField="scale" />
+    <TimeSensor DEF="Playhead" cycleInterval="4.0" loop="true" />
+    <BooleanSequencer DEF="Step0" key="0 0.125 1" keyValue="true false false" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step0" toField="set_fraction" />
+    <ROUTE fromNode="Step0" fromField="value_changed" toNode="Glow0" toField="visible" />
+    <ROUTE fromNode="Step0" fromField="value_changed" toNode="Flash0_0" toField="visible" />
+    <ROUTE fromNode="Step0" fromField="value_changed" toNode="Flash1_0" toField="visible" />
+    <ROUTE fromNode="Step0" fromField="value_changed" toNode="Flash2_0" toField="visible" />
+    <ROUTE fromNode="Step0" fromField="value_changed" toNode="Flash3_0" toField="visible" />
+    <BooleanSequencer DEF="Step1" key="0 0.125 0.25 1" keyValue="false true false false" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step1" toField="set_fraction" />
+    <ROUTE fromNode="Step1" fromField="value_changed" toNode="Glow1" toField="visible" />
+    <ROUTE fromNode="Step1" fromField="value_changed" toNode="Flash0_1" toField="visible" />
+    <ROUTE fromNode="Step1" fromField="value_changed" toNode="Flash1_1" toField="visible" />
+    <ROUTE fromNode="Step1" fromField="value_changed" toNode="Flash2_1" toField="visible" />
+    <ROUTE fromNode="Step1" fromField="value_changed" toNode="Flash3_1" toField="visible" />
+    <BooleanSequencer DEF="Step2" key="0 0.25 0.375 1" keyValue="false true false false" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step2" toField="set_fraction" />
+    <ROUTE fromNode="Step2" fromField="value_changed" toNode="Glow2" toField="visible" />
+    <ROUTE fromNode="Step2" fromField="value_changed" toNode="Flash0_2" toField="visible" />
+    <ROUTE fromNode="Step2" fromField="value_changed" toNode="Flash1_2" toField="visible" />
+    <ROUTE fromNode="Step2" fromField="value_changed" toNode="Flash2_2" toField="visible" />
+    <ROUTE fromNode="Step2" fromField="value_changed" toNode="Flash3_2" toField="visible" />
+    <BooleanSequencer DEF="Step3" key="0 0.375 0.5 1" keyValue="false true false false" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step3" toField="set_fraction" />
+    <ROUTE fromNode="Step3" fromField="value_changed" toNode="Glow3" toField="visible" />
+    <ROUTE fromNode="Step3" fromField="value_changed" toNode="Flash0_3" toField="visible" />
+    <ROUTE fromNode="Step3" fromField="value_changed" toNode="Flash1_3" toField="visible" />
+    <ROUTE fromNode="Step3" fromField="value_changed" toNode="Flash2_3" toField="visible" />
+    <ROUTE fromNode="Step3" fromField="value_changed" toNode="Flash3_3" toField="visible" />
+    <BooleanSequencer DEF="Step4" key="0 0.5 0.625 1" keyValue="false true false false" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step4" toField="set_fraction" />
+    <ROUTE fromNode="Step4" fromField="value_changed" toNode="Glow4" toField="visible" />
+    <ROUTE fromNode="Step4" fromField="value_changed" toNode="Flash0_4" toField="visible" />
+    <ROUTE fromNode="Step4" fromField="value_changed" toNode="Flash1_4" toField="visible" />
+    <ROUTE fromNode="Step4" fromField="value_changed" toNode="Flash2_4" toField="visible" />
+    <ROUTE fromNode="Step4" fromField="value_changed" toNode="Flash3_4" toField="visible" />
+    <BooleanSequencer DEF="Step5" key="0 0.625 0.75 1" keyValue="false true false false" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step5" toField="set_fraction" />
+    <ROUTE fromNode="Step5" fromField="value_changed" toNode="Glow5" toField="visible" />
+    <ROUTE fromNode="Step5" fromField="value_changed" toNode="Flash0_5" toField="visible" />
+    <ROUTE fromNode="Step5" fromField="value_changed" toNode="Flash1_5" toField="visible" />
+    <ROUTE fromNode="Step5" fromField="value_changed" toNode="Flash2_5" toField="visible" />
+    <ROUTE fromNode="Step5" fromField="value_changed" toNode="Flash3_5" toField="visible" />
+    <BooleanSequencer DEF="Step6" key="0 0.75 0.875 1" keyValue="false true false false" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step6" toField="set_fraction" />
+    <ROUTE fromNode="Step6" fromField="value_changed" toNode="Glow6" toField="visible" />
+    <ROUTE fromNode="Step6" fromField="value_changed" toNode="Flash0_6" toField="visible" />
+    <ROUTE fromNode="Step6" fromField="value_changed" toNode="Flash1_6" toField="visible" />
+    <ROUTE fromNode="Step6" fromField="value_changed" toNode="Flash2_6" toField="visible" />
+    <ROUTE fromNode="Step6" fromField="value_changed" toNode="Flash3_6" toField="visible" />
+    <BooleanSequencer DEF="Step7" key="0 0.875 1" keyValue="false true true" />
+    <ROUTE fromNode="Playhead" fromField="fraction_changed" toNode="Step7" toField="set_fraction" />
+    <ROUTE fromNode="Step7" fromField="value_changed" toNode="Glow7" toField="visible" />
+    <ROUTE fromNode="Step7" fromField="value_changed" toNode="Flash0_7" toField="visible" />
+    <ROUTE fromNode="Step7" fromField="value_changed" toNode="Flash1_7" toField="visible" />
+    <ROUTE fromNode="Step7" fromField="value_changed" toNode="Flash2_7" toField="visible" />
+    <ROUTE fromNode="Step7" fromField="value_changed" toNode="Flash3_7" toField="visible" />
+  </Scene>
+</X3D>
