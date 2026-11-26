@@ -242,6 +242,44 @@ Without the graph, nothing changes (the baked keyframes stay).
 Seen and not changed: the sidebar repeats an unlinked input (`key`, `keyValue`) as a bare label after the node's panel
 (Blender draws unlinked inputs there).
 
+## Presets to graph (26 Nov 2026)
+
+The older way to carry behaviour is custom properties on objects (`x3d_trigger`, `x3d_action`, `x3d_target`,
+`x3d_radius`, see the top of `source/interaction.py`), which the exporter turns into sensors and ROUTEs and the node
+editor cannot show. **Presets to graph** (`x3d.behaviour_from_presets`, `source/behaviour_presets.py`) turns them into
+nodes of the scene's behaviour tree, so there is one way. The button is in the X3D Behaviour editor's header and the 3D
+view's sidebar (N, tab X3D), and only while the scene has a preset it could convert; it reports what it left alone.
+From a script: `presets_to_graph(scene)` returns `(presets converted, notes)`.
+
+| Preset | Becomes | Left alone |
+|---|---|---|
+| click or proximity, `animate` | a TouchSensor or ProximitySensor sitting in the object; the target's own TimeSensor (`loop` false, `startTime` 1e+30, the scene's cycle); a Position / Orientation / Position interpolator (translation, rotation, scale) for each channel of the target's sampled animation; the ROUTEs from sensor to timer to interpolators to the target's Transform | a target with no animation or not exported (the exporter drops these too); a target the graph already drives |
+| click, `viewpoint` | a TouchSensor, a BooleanFilter (only the press binds, the release does not unbind), ROUTEs to the camera's Viewpoint `set_bind` | a target that is not an exported camera |
+| proximity, `viewpoint` | a ProximitySensor (`size` is 2 x radius divided by the object's scale), `isActive` routed to `set_bind` | the same |
+| `x3d_action` `tour`, `x3d_tour_order`, `x3d_tour_dwell`, the scene's `x3d_tour_*` | nothing: the tour is a rig the exporter writes (a Transform with a Viewpoint, a timer, two interpolators) and the catalogue has no node for it; each object is named in the notes | everything, untouched, and still exported as before |
+
+The key lists, key values and cycle are the exporter's own: the conversion runs the exporter's extraction with the
+export dialog's defaults (Animation on, every frame, -Z forward, Y up) and writes the numbers with its formatting.
+A scene exported with another frame step or other axes would have sampled differently; the converted keys are the
+default ones. Converted objects lose `x3d_trigger`, `x3d_action`, `x3d_target`, `x3d_radius` (so the exporter does not
+write the behaviour twice); the target's keyframes are kept (they are the person's), and the exporter ignores them for
+an object the graph drives (rule 5), while the timeline still plays them. A second run finds nothing to convert. After
+the conversion a sensor's `size` is a plain field: it no longer follows the object's scale.
+
+Measured (Blender 5.3.0 bpy wheel, Python 3.13, `tests/test_behaviour_presets_bpy.py`, 10 tests): a scene with a click
+and animate preset (a door that moves and turns: 1 TimeSensor, 3 interpolators), a proximity and viewpoint preset on a
+scaled object, and a click and viewpoint preset, exported to X3D 4.0 before and after the conversion and parsed with
+`behaviour_graph.parse_x3d`: the same 8 behaviour nodes with the same field values (the ProximitySensor `size` included)
+and the same 10 ROUTEs. What differs is names only: the exporter calls a scene node `OB_<object>` or `CA_<camera>` when
+the scene alone writes it and the graph's id when the graph holds it, so the test matches a node by its type, set fields
+and the object it sits in, and a scene target by its type and object name (one leading `OB_` / `CA_` or trailing
+`_viewpoint` taken off); it fails when two nodes have one description. A mutated conversion (sensor box 1 x radius) is
+rejected by that test. Played (`behaviour_play.Player`, no window): a click on the converted button leaves the door at
+rest until the click, near its half way pose at half the cycle, and at the animation's last pose (z 2.0, turn 1.0) after
+it, and Stop puts it back; the click preset binds the scene camera, and the proximity preset binds it when the viewer
+moves inside the radius. Not checked: a window (the header and sidebar buttons were not looked at on a real screen), a
+browser (X_ITE was not run on the converted file), Blender 4.5 to 5.2.
+
 ## Limits
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
