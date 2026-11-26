@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import bisect
 import colorsys
+import gc
 import math
 import xml.etree.ElementTree as ET
 from collections import deque
@@ -96,6 +97,8 @@ def _finite(value):
     kind = type(value)
     if kind is float:
         return value - value == 0.0              # NaN and the infinities are the only floats this is false for
+    if kind is _Points:
+        return True
     if kind is list and value and type(value[0]) is tuple:       # a list of vectors (a Coordinate's points): in C, not per number
         try:
             return all(map(math.isfinite, chain.from_iterable(value)))
@@ -114,6 +117,13 @@ def _finite(value):
     if isinstance(value, (tuple, list)):
         return all(_finite(item) for item in value)
     return True
+
+
+class _Points(list):
+    """A list of vectors a list follower made from floats it knows are all finite: ``size`` numbers each. It is a plain list
+    in every other way (equal, printed and sent as one); the two checks every event crosses (finite, fits a field of vectors)
+    take its word instead of looking at every number again."""
+    __slots__ = ("size",)
 
 
 def _fits(value, x3d_type):
@@ -168,6 +178,8 @@ def _fitter(x3d_type):
             size = _SIZES[base]       # a list of vectors (a Coordinate's points) is checked a point at a time, not a number at a time
 
             def found(value, size=size, x3d_type=x3d_type, sizes=frozenset((size,))):
+                if type(value) is _Points:
+                    return value.size == size
                 if type(value) is list and set(map(type, value)) <= _TUPLE and set(map(len, value)) <= sizes \
                         and set(map(type, chain.from_iterable(value))) <= _FLOAT:
                     return True
@@ -1124,9 +1136,17 @@ class _ListMixin:
             raise ValueError("a list of vectors of another size")
         return flat
 
-    def points(self, flat):
-        """A flat list as the list of tuples a node sends."""
-        return list(zip(*[flat[i::self.size] for i in range(self.size)]))
+    def points(self, flat, floats=False):
+        """A flat list as the list of tuples a node sends. ``floats``: the caller knows every number is a float (it came out
+        of a blend); when they are also all finite (one sum says so: an infinity or a NaN makes it one, an overflow of
+        finite numbers only makes it a slow check) the list is a ``_Points``."""
+        size = self.size
+        found = list(zip(flat[0::3], flat[1::3], flat[2::3])) if size == 3 else \
+            list(zip(flat[0::2], flat[1::2])) if size == 2 else list(zip(*[flat[i::size] for i in range(size)]))
+        if floats and math.isfinite(sum(flat)):
+            found = _Points(found)
+            found.size = size
+        return found
 
     def fitted(self, flat, count):
         """``flat`` made ``count`` points long: cut, or padded with zero vectors (what X_ITE does to every buffer when a
@@ -1251,7 +1271,7 @@ class _ListDamper(_ListMixin, _Machine):
             alpha = math.exp(-dt / tau)
             for i in range(last):
                 buffer[i + 1] = _blend(buffer[i], buffer[i + 1], alpha)
-            self.emit("value_changed", self.points(buffer[last]))
+            self.emit("value_changed", self.points(buffer[last], floats=True))
             if not _gap(buffer[last], buffer[0], self.size) < self.tolerance():
                 return
         else:
@@ -2357,6 +2377,19 @@ class Simulation:
 
     def step(self, now):
         """Advance to time ``now``; returns [(target id, field, value)] in the order the values arrived."""
+        # A step allocates tens of thousands of short-lived values (a list follower makes a tuple per point); the collector
+        # scanning them again and again took a fifth of the time of the ``lists`` shape (tools/behaviour_bench.py). The
+        # values have no cycles, so reference counting frees them: the collector is off for the step and back as it was.
+        enabled = gc.isenabled()
+        if enabled:
+            gc.disable()
+        try:
+            return self._advance(now)
+        finally:
+            if enabled:
+                gc.enable()
+
+    def _advance(self, now):
         if self.now is None:
             return self.start(now)
         now = self._time(now)
