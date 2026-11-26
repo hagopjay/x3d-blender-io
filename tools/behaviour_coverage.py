@@ -85,10 +85,12 @@ PLAYED = frozenset({
     "ScalarDamper", "PositionDamper", "PositionDamper2D", "ColorDamper", "OrientationDamper",
     "ScalarChaser", "PositionChaser", "PositionChaser2D", "ColorChaser", "OrientationChaser",
     "TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "KeySensor", "StringSensor",
+    "Script", "CollisionSensor",     # hosted: the Player runs a handler the person enabled, and reads the rigid body world
 })
 NOT_PLAYED = frozenset({"VisibilitySensor"})    # simulated, but the Player has no way to say what the viewer can see
 PLAYER_FEEDS = {"POINTING": "from .behaviour_sim import POINTING", "KEY_SENSORS": 'KEY_SENSORS = ("KeySensor", "StringSensor")',
-                "ProximitySensor": '"ProximitySensor"'}      # strings that must stay in source/behaviour_play.py
+                "ProximitySensor": '"ProximitySensor"', "Script": "behaviour_hosted.build_handler",
+                "CollisionSensor": "def _read_bodies"}      # strings that must stay in source/behaviour_play.py
 
 
 # ---------------------------------------------------------------------------------------------------------------
