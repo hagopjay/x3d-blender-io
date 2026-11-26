@@ -89,7 +89,7 @@ PLAYED = frozenset({
     "Script", "CollisionSensor",     # hosted: the Player runs a handler the person enabled, and reads the rigid body world
     "LoadSensor", "AudioClip", "MovieTexture",     # their clocks and events run; sound, picture and loading are listed as not applied
 })
-NOT_PLAYED = frozenset({"VisibilitySensor"})    # simulated, but the Player has no way to say what the viewer can see
+NOT_PLAYED = frozenset({"VisibilitySensor", "TransformSensor", "Collision"})    # simulated from a World the Player does not fill for them (listed as "not fed")
 PLAYER_FEEDS = {"POINTING": "from .behaviour_sim import POINTING", "KEY_SENSORS": 'KEY_SENSORS = ("KeySensor", "StringSensor")',
                 "ProximitySensor": '"ProximitySensor"', "Script": "behaviour_hosted.build_handler",
                 "CollisionSensor": "def _read_bodies"}      # strings that must stay in source/behaviour_play.py
@@ -195,7 +195,7 @@ def judged_in(worlds):
         for route in graph.routes:
             node = graph.nodes[route.from_id]
             in_place = node.role == bg.TARGET and node.node_type in bg.IN_PLACE      # a clip of the scene sends too
-            if (node.role == bg.BEHAVIOUR or in_place) and node.node_type in bs.SIMULATED:
+            if (node.role == bg.BEHAVIOUR or in_place) and (node.node_type in bs.SIMULATED or node.node_type in bs.SIMULATED_IN_PLACE):
                 found.setdefault(node.node_type, set()).add(label)
     return {name: sorted(labels) for name, labels in found.items()}
 
@@ -213,7 +213,7 @@ def coverage():
         name = entry["name"]
         rows.append({
             "node": name, "component": entry["component"], "class": CLASSES.get(name, "pure"),
-            "wired": wired(name), "simulated": name in bs.SIMULATED,
+            "wired": wired(name), "simulated": name in bs.SIMULATED or name in bs.SIMULATED_IN_PLACE,
             "judged": name in judged, "probes": judged.get(name, []),
             "played": name in PLAYED and name in bs.SIMULATED,
         })

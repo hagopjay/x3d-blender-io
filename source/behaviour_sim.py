@@ -39,9 +39,11 @@ from itertools import chain
 try:
     from . import behaviour_graph as bg
     from .behaviour_resources import Resources
+    from . import behaviour_world as bw
 except ImportError:  # imported as a plain module: tests, tools/
     import behaviour_graph as bg
     from behaviour_resources import Resources
+    import behaviour_world as bw
 
 # ---------------------------------------------------------------------------------------------------------------
 # X3D text <-> Python values
@@ -1546,10 +1548,7 @@ class _ProximitySensor(_Machine):
         self.last = {}
 
     def inside(self, position):
-        size, center = self.f["size"], self.f["center"]
-        if tuple(size) == (-1.0, -1.0, -1.0):
-            return True
-        return all(center[i] - size[i] / 2 <= position[i] <= center[i] + size[i] / 2 for i in range(3))
+        return bw.box_contains(self.f["center"], self.f["size"], position)
 
     def sense(self, position, orientation, center_of_rotation, now, test_position=None):
         if self.f.get("enabled", True) and self.inside(position if test_position is None else test_position):
@@ -1566,6 +1565,137 @@ class _ProximitySensor(_Machine):
             self.active = False
             return [("isActive", False), ("exitTime", now)]
         return []
+
+class _WorldSensor(_Machine):
+    """An environmental sensor that reads the ``World`` once per step, after the step's events have settled. Its inputs
+    are the world and its own fields; with no ``World`` (or no frame for it) it sends nothing and says so in
+    ``Simulation.noted``."""
+    senses = True
+
+    def setup(self):
+        self.active = False
+        self._warned = False
+
+    def enter(self, now):
+        self.active = True
+        self.emit("isActive", True)
+        self.emit("enterTime", now)
+
+    def leave(self, now):
+        self.active = False
+        self.emit("isActive", False)
+        self.emit("exitTime", now)
+
+    def blind(self, why):
+        """Nothing to sense with: leave an active sensor, count the reason once."""
+        if not self._warned:
+            self._warned = True
+            self.sim.noted[why] = self.sim.noted.get(why, 0) + 1
+
+    def update(self, now):
+        pass
+
+    def traverse(self):
+        pass
+
+
+class _TransformSensor(_WorldSensor):
+    """X_ITE's TransformSensor (Components/EnvironmentalSensor/TransformSensor.js). Once per frame, after the events,
+    it takes the target's world matrix relative to the sensor's own coordinates: the target is in when that matrix's
+    origin (the Transform's own position, centre and turn included) is in the box (size -1 -1 -1: always; a size of 0
+    in all three: the sensor is off; no target: off). Entering sends isActive, enterTime, position_changed and
+    orientation_changed; while inside, position_changed and orientation_changed each time they differ (exactly);
+    leaving sends isActive false and exitTime. The orientation is the rotation of the matrix with scale and shear taken
+    out. A disabled sensor is outside."""
+
+    def update(self, now):
+        world = self.sim.world
+        if world is None:
+            return self.blind("no-world")
+        target = world.sensor_target.get(self.id)
+        wanted = self.f.get("enabled", True) and tuple(self.f["size"]) != (0.0, 0.0, 0.0)
+        relative = origin = None
+        if wanted and target is not None and self.id in world.sensors:
+            target_matrix = world.target_matrix(target)
+            inverse = world.sensor_inverse(self.id) if target_matrix is not None else None
+            if inverse is not None:
+                # the target's origin in the sensor's coordinates; the whole matrix is only needed to say how it is turned
+                origin = bw.m_point(inverse, (target_matrix[3], target_matrix[7], target_matrix[11]))
+                relative = (inverse, target_matrix)
+            else:
+                self.blind("singular-frame")
+        elif wanted:
+            self.blind("no-target" if self.id in world.sensors else "no-frame")
+        if relative is not None and bw.box_contains(self.f["center"], self.f["size"], origin):
+            position, orientation = origin, bw.rotation_of(bw.m_mul(*relative))
+            if self.active:
+                for name, value in (("position_changed", position), ("orientation_changed", orientation)):
+                    if self.f.get(name) != value:
+                        self.f[name] = value
+                        self.emit(name, value)
+            else:
+                self.enter(now)
+                self.f["position_changed"], self.f["orientation_changed"] = position, orientation
+                self.emit("position_changed", position)
+                self.emit("orientation_changed", orientation)
+        elif self.active:
+            self.leave(now)
+
+
+class _VisibilitySensor(_WorldSensor):
+    """X_ITE's VisibilitySensor (Components/EnvironmentalSensor/VisibilitySensor.js). A frame draws the scene and notes
+    whether the box meets the view volume (``traverse``); the next frame's sensor events send it (``update``), so the
+    sensor lags the picture by one frame and reports the next frame's time. The box test is X_ITE's separating-axis test
+    against the view frustum, not a visibility test: a box behind another shape, or fully behind the sensor's own parent
+    when that is hidden, is "visible" if the frustum meets it. Size -1 -1 -1 is always visible; a size of 0 0 0 is a point,
+    and X_ITE reports it visible too when the frustum contains it. A disabled sensor is outside, and is not drawn: what
+    the last drawing found stays, so enabling a sensor sends isActive true at once if it was visible when it was
+    switched off, whether or not it is now."""
+
+    def setup(self):
+        super().setup()
+        self.visible = False
+
+    def update(self, now):
+        if not self.f.get("enabled", True):
+            if self.active:
+                self.leave(now)
+            return                       # ``visible`` stays as the last drawing left it: X_ITE enters on it at once
+        if self.visible:
+            if not self.active:
+                self.enter(now)
+            self.visible = False
+        elif self.active:
+            self.leave(now)
+
+    def traverse(self):
+        world = self.sim.world
+        if world is None:
+            return self.blind("no-world")
+        if not self.f.get("enabled", True):
+            return
+        if self.id not in world.sensors:
+            return self.blind("no-frame")
+        self.visible = bool(world.sees_box(self.id, self.f["center"], self.f["size"]))
+
+
+class _CollisionGroup:
+    """A Collision node of the scene (a TARGET in the graph: the node stays where the scene has it). It is active
+    while the viewer is touching one of its shapes (see ``World.collision_hits``); going active sends isActive and
+    collideTime. Its ``enabled`` comes through ``World.apply``."""
+    senses = True
+
+    def __init__(self, sim, node_id):
+        self.sim, self.id, self.active = sim, node_id, False
+
+    def update(self, now, hits):
+        touching = self.id in hits
+        if touching != self.active:
+            self.active = touching
+            self.sim._emit(self.id, "isActive", touching)
+            if touching:
+                self.sim._emit(self.id, "collideTime", now)
+
 
 # KeySensor and StringSensor, from raw keys. X_ITE (Components/KeyDeviceSensor/KeySensor.js, StringSensor.js) reads a
 # browser key event's ``which`` (the key code), ``key`` (the character or name), ``charCode`` and ``keyCode``.
@@ -1989,7 +2119,8 @@ _MACHINES = {
     "CoordinateChaser": _CoordinateChaser, "CoordinateDamper": _CoordinateDamper,
     "TexCoordChaser2D": _TexCoordChaser2D, "TexCoordDamper2D": _TexCoordDamper2D,
     "TouchSensor": _Sensor, "PlaneSensor": _PlaneSensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
-    "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _KeySensor, "StringSensor": _StringSensor,
+    "ProximitySensor": _ProximitySensor, "VisibilitySensor": _VisibilitySensor,
+    "TransformSensor": _TransformSensor, "KeySensor": _KeySensor, "StringSensor": _StringSensor,
     "Script": _Script, "CollisionSensor": _CollisionSensor,
 }
 
@@ -2008,13 +2139,17 @@ except ImportError:  # imported as a plain module: tests, tools/
 _MACHINES.update(_media.MACHINES)
 _SCENE_MACHINES = _media.SCENE_MACHINES
 SIMULATED = tuple(sorted({*_MACHINES, "AudioClip", "MovieTexture"}))
+# Event nodes that are scene content (catalogue IN_PLACE: the graph names them, the scene keeps them) and that the
+# simulation runs anyway, from the World. They are not machines and not in SIMULATED.
+SIMULATED_IN_PLACE = ("Collision",)
 
 
 class Simulation:
     """A behaviour graph, running. See the module text for the short tour."""
 
-    def __init__(self, graph, *, log_size=400, resources=None):
+    def __init__(self, graph, *, log_size=400, resources=None, world=None):
         self.graph = graph
+        self.world = world               # behaviour_world.World, or None: the sensors that need one then send nothing
         # What hostile input cost: ``dropped`` counts values that were never delivered ("non-finite": a NaN or an
         # infinity; "mismatch": a value whose shape does not fit the field it was routed to; "bad-field": field text
         # that is not a value, replaced by the default; "bad-time": a time that is not a number, ignored) and
@@ -2038,6 +2173,11 @@ class Simulation:
             elif node.role != bg.TARGET:
                 self.not_simulated.append(f"{node.node_type} {node.id}")
         self._ticking = [machine for machine in self.machines.values() if machine.ticks]    # fixed once built
+        self._sensing = [machine for machine in self.machines.values() if getattr(machine, "senses", False)]
+        self._collisions = [_CollisionGroup(self, node.id) for node in graph.nodes.values()
+                            if node.role == bg.TARGET and node.node_type == "Collision"
+                            and world is not None and node.id in world.collisions]
+        self._seeing = [machine for machine in self._sensing if isinstance(machine, _VisibilitySensor)]
         self._routes = {}
         for route in graph.routes:
             source = self._canonical(route.from_id, route.from_field, "out")
@@ -2100,8 +2240,8 @@ class Simulation:
 
     def _drain(self):
         now = self.now if self.now is not None else 0.0
-        queue, outputs, log, routes, fired, machines, dropped = \
-            self._queue, self.outputs, self.log, self._routes, self._fired, self.machines, self.dropped
+        queue, outputs, log, routes, fired, machines, dropped, world = \
+            self._queue, self.outputs, self.log, self._routes, self._fired, self.machines, self.dropped, self.world
         while queue:
             node_id, field_name, value = queue.popleft()
             if not _finite(value):               # a NaN or an infinity never leaves a node
@@ -2135,6 +2275,8 @@ class Simulation:
                         self.values[(to_id, to_field)] = value
                         self._changes.append((to_id, to_field, value))
                 elif self.graph.nodes[to_id].role == bg.TARGET:
+                    if world is not None and world.watches(to_id):
+                        world.apply(to_id, to_field, value)
                     self.values[(to_id, to_field)] = value
                     self._changes.append((to_id, to_field, value))
                     queue.append((to_id, to_field, value))      # an inputOutput field sends what it was given
@@ -2142,6 +2284,22 @@ class Simulation:
     def _collect(self):
         changes, self._changes = self._changes, []
         return changes
+
+    def _sense(self, now):
+        """The world is asked once, after a step's events have settled (X_ITE: its sensor events, then the drawing):
+        Collision and the sensors that read the World send, their events travel, then a VisibilitySensor notes what the
+        picture just drawn shows, for the next step to send."""
+        if not (self._sensing or self._collisions):
+            return
+        if self._collisions:
+            hits = self.world.collision_hits()
+            for group in self._collisions:
+                group.update(now, hits)
+        for machine in self._sensing:
+            self._try(machine.id, "sense", machine.update, now)
+        self._drain()
+        for machine in self._seeing:
+            self._try(machine.id, "sense", machine.traverse)
 
     # -- what the caller does -----------------------------------------------------------------------------------
 
@@ -2152,6 +2310,7 @@ class Simulation:
         for machine in self.machines.values():
             self._try(machine.id, "start", machine.start, now)
         self._drain()
+        self._sense(now)
         return self._collect()
 
     def step(self, now):
@@ -2168,6 +2327,7 @@ class Simulation:
             except Exception as error:               # noqa: BLE001 - one bad node must not end the run
                 self._fault(machine.id, "tick", error)
         self._drain()
+        self._sense(now)
         return self._collect()
 
     def post(self, node_id, field_name, value, now=None):
@@ -2239,6 +2399,10 @@ class Simulation:
         machine = self.machines.get(node_id)
         if machine is None or machine.node_type != "ProximitySensor":
             raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a ProximitySensor in this graph")
+        return self._proximity(machine, position, orientation, center_of_rotation, now, test_position)
+
+    def _proximity(self, machine, position, orientation, center_of_rotation, now, test_position):
+        node_id = machine.id
         if not _finite((position, orientation, center_of_rotation, test_position)):
             self.dropped["non-finite"] = self.dropped.get("non-finite", 0) + 1
             return []
@@ -2246,6 +2410,32 @@ class Simulation:
         for field_name, value in self._try(node_id, "sense", machine.sense, position, orientation, center_of_rotation,
                                            now, test_position):
             changes += self.post(node_id, field_name, value, now)
+        return changes
+
+    def view(self, position, orientation, now, center_of_rotation=(0.0, 0.0, 0.0), test_position=None, **frustum):
+        """Where the viewer is in WORLD coordinates (position, orientation as axis and angle, the centre of rotation),
+        for every ProximitySensor at once: the World gives each sensor's own coordinates (``World.viewer_in``) and the
+        sensor then does what ``viewer`` makes it do. The viewer is also the World's viewer for the sensors that look
+        through it (``frustum``: field_of_view, aspect, near, far). ``test_position`` is the world position the box test
+        uses (the camera as it was drawn). A sensor the World has no frame for is named in ``noted["no-frame"]``."""
+        if self.world is None:
+            self.noted["no-world"] = self.noted.get("no-world", 0) + 1
+            return []
+        if not _finite((position, orientation, center_of_rotation, test_position, tuple(frustum.values()))):
+            self.dropped["non-finite"] = self.dropped.get("non-finite", 0) + 1
+            return []
+        self.world.set_viewer(position, orientation, center_of_rotation, **frustum)
+        changes = []
+        for machine in self.machines.values():
+            if machine.node_type != "ProximitySensor":
+                continue
+            if machine.id not in self.world.sensors:
+                self.noted["no-frame"] = self.noted.get("no-frame", 0) + 1
+                continue
+            local = self.world.viewer_in(machine.id)
+            drawn = None if test_position is None else self.world.to_local(machine.id, test_position)
+            if local is not None and (test_position is None or drawn is not None):
+                changes += self._proximity(machine, *local, now, drawn)
         return changes
 
     def key(self, kind, event, now):

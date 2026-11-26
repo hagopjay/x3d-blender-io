@@ -25,7 +25,7 @@ import behaviour_coverage as cov   # noqa: E402
 X3DUOM = Path("/home/user/x3d.chess/vendor/x3d_mcp/src/validation/schemas/X3dUnifiedObjectModel-4.0.xml")
 
 # PINNED. Change these, and the document's table (tools/behaviour_coverage.py --write), together with the code.
-PINNED = {"nodes": 57, "wired": 57, "simulated": 48, "judged": 46, "played": 47}
+PINNED = {"nodes": 57, "wired": 57, "simulated": 50, "judged": 49, "played": 47}
 
 
 class TheFiftySevenTests(unittest.TestCase):
@@ -100,7 +100,7 @@ class TheTableTests(unittest.TestCase):
     def test_the_judged_rule_is_the_one_the_simulator_test_states(self):
         # the seven named worlds and the demos that test uses are among the worlds this tool reads
         labels = {label for label, _graph in cov.recorded_worlds()}
-        for name in ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord"):
+        for name in ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord", "probe-world"):
             self.assertIn(f"{name}.x3d", labels)
         self.assertIn("demos/hello-switch", labels)
 
