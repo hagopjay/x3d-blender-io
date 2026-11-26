@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import behaviour_graph as bg          # noqa: E402
 import behaviour_sim as bs            # noqa: E402
 import behaviour_sim_judge as judge   # noqa: E402
+import behaviour_sim_judge_mf as judge_mf   # noqa: E402
 
 WORLDS = ROOT / "tests" / "behaviour"
 
@@ -242,9 +243,9 @@ class NodeTests(unittest.TestCase):
 
     def test_what_is_not_run_is_named(self):
         g = self.graph()
-        g.add("CoordinateInterpolator", "Mesh")
+        g.add("CoordinateDamper", "Mesh")
         g.add("TimeSensor", "Clock")
-        self.assertEqual(bs.Simulation(g).not_simulated, ["CoordinateInterpolator Mesh"])
+        self.assertEqual(bs.Simulation(g).not_simulated, ["CoordinateDamper Mesh"])
 
     def _drag_world(self, kind, **fields):
         g = self.graph()
@@ -329,11 +330,73 @@ class NodeTests(unittest.TestCase):
         sim.send("Swing", "set_fraction", 0.5, 0.0)
         self.assertLess(bs._rotation_distance(sent(sim, "Swing", "value_changed"), (0, 1, 0, 1.5)), 1e-9)
 
+    def test_a_coordinate_interpolator_mixes_whole_lists_and_clamps(self):
+        g = self.graph()
+        g.add("CoordinateInterpolator", "Morph", key=[0, 0.5, 1],
+              keyValue=[(0, 0, 0), (1, 1, 1), (0, 0, 2), (2, 2, 2), (0, 0, 4), (3, 3, 3)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        for fraction, expected in ((-1.0, [(0, 0, 0), (1, 1, 1)]), (0.25, [(0, 0, 1), (1.5, 1.5, 1.5)]),
+                                   (0.5, [(0, 0, 2), (2, 2, 2)]), (2.0, [(0, 0, 4), (3, 3, 3)])):
+            sim.send("Morph", "set_fraction", fraction, 0.0)
+            self.assertEqual(sent(sim, "Morph", "value_changed"), expected)
+        self.assertEqual(sim.dropped, {})
+
+    def test_a_coordinate_interpolator_with_a_ragged_keyvalue_does_what_x_ite_does(self):
+        # X_ITE 16.8.1 (tests/behaviour/probe-coord.x3d): len(keyValue) // len(key) vectors per key, the rest ignored,
+        # and an empty list when keyValue is shorter than key; the simulator counts it and never raises
+        g = self.graph()
+        g.add("CoordinateInterpolator", "Ragged", key=[0, 1], keyValue=[(0, 0, 0), (1, 1, 1), (2, 2, 2)])
+        g.add("CoordinateInterpolator", "Short", key=[0, 0.5, 1], keyValue=[(0, 0, 0), (1, 1, 1)])
+        g.add("CoordinateInterpolator", "NoKeys", keyValue=[(0, 0, 0)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        for name in ("Ragged", "Short", "NoKeys"):
+            sim.send(name, "set_fraction", 0.5, 0.0)
+        self.assertEqual(sent(sim, "Ragged", "value_changed"), [(0.5, 0.5, 0.5)])
+        self.assertEqual(sent(sim, "Short", "value_changed"), [])
+        self.assertEqual([e for e in sim.log if e[1] == "NoKeys"], [])
+        self.assertEqual(sim.noted, {"bad-count": 2})
+        self.assertEqual(sim.dropped, {})
+        self.assertEqual(sim.faults, [])
+
+    def test_a_coordinate_interpolator_never_sends_a_non_finite_point(self):
+        g = self.graph()
+        g.add("CoordinateInterpolator", "Morph", key=[0, 1], keyValue=[(0, 0, 0), (math.inf, 0, 0)])
+        g.add("CoordinateInterpolator", "Far", key=[0, 1], keyValue=[(0, 0, 0), (1e308, 0, 0)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        sim.send("Morph", "set_fraction", 0.5, 0.0)       # inf in the field text: the field is the default, empty
+        self.assertEqual(sent(sim, "Morph", "value_changed"), [])
+        sim.machines["Far"].f["keyValue"] = [(0, 0, 0), (math.inf, 0, 0)]
+        sim.send("Far", "set_fraction", 0.5, 0.0)          # inf reached at run time: dropped before it leaves the node
+        self.assertEqual(sim.dropped.get("non-finite"), 1)
+        self.assertEqual(sim.faults, [])
+
+    def test_a_normal_interpolator_goes_round_the_unit_sphere(self):
+        g = self.graph()
+        g.add("NormalInterpolator", "Tilt", key=[0, 1], keyValue=[(1, 0, 0), (0, 1, 0)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        sim.send("Tilt", "set_fraction", 0.5, 0.0)
+        (x, y, z), = sent(sim, "Tilt", "value_changed")
+        self.assertAlmostEqual(x, math.sqrt(0.5))
+        self.assertAlmostEqual(y, math.sqrt(0.5))
+        self.assertEqual(z, 0.0)
+
+    def test_a_two_d_coordinate_interpolator_mixes_pairs(self):
+        g = self.graph()
+        g.add("CoordinateInterpolator2D", "Slide", key=[0, 1], keyValue=[(0, 0), (1, 0), (2, 2), (1, 4)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        sim.send("Slide", "set_fraction", 0.5, 0.0)
+        self.assertEqual(sent(sim, "Slide", "value_changed"), [(1.0, 1.0), (1.0, 2.0)])
+
 
 class XiteAgreementTests(unittest.TestCase):
     """The simulator against X_ITE 16.7.1's own event traces (headless Chromium, software GL, real mouse clicks)."""
 
-    def agree(self, name, streams):
+    def agree(self, name, streams, judge=judge):
         trace = json.loads((WORLDS / "x_ite_traces" / f"{name}.json").read_text(encoding="utf-8"))
         self.assertEqual(trace["pageErrors"], [])
         result = judge.judge(WORLDS / f"{name}.x3d", trace)
@@ -376,9 +439,16 @@ class XiteAgreementTests(unittest.TestCase):
         # recorded on X_ITE 16.8.1, the older traces on 16.7.1)
         self.agree("probe-timer", 14)
 
+    def test_coordinate_2d_coordinate_and_normal_interpolators(self):
+        # key 0 0.4 1 over four vectors each, into a Coordinate, a TextureCoordinate and a Normal; two with a keyValue
+        # that is not a whole number of lists (13 vectors for 3 keys: the last is ignored; 2 for 3: empty lists, which
+        # X_ITE sends and the simulator now sends too). Recorded on X_ITE 16.8.1 (tests/behaviour/probe-coord.x3d)
+        # and judged with the MF-aware wrapper: the judge's own reader takes lists of numbers, not lists of vectors.
+        self.agree("probe-coord", 6, judge_mf)
+
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
-        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer")))
+        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord")))
         judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
         used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}

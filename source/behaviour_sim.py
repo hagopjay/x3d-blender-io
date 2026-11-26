@@ -418,6 +418,24 @@ class _OrientationInterpolator(_Interpolator):
     mix = staticmethod(slerp)
 
 
+def _normal_slerp(a, b, t):
+    """X_ITE's NormalInterpolator step: slerp along the great circle between two vectors, never the short way round and
+    the vectors are not normalised first (so a vector that is not a unit vector stays as far from the sphere as the
+    formula leaves it). Equal vectors stay as they are; a pair whose dot product is outside [-1, 1] gives NaN, which the
+    simulation drops as it drops every non-finite value."""
+    dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    if dot >= 1:
+        return a
+    if dot < -1:
+        return (math.nan,) * 3
+    omega = math.acos(dot)
+    sinom = math.sin(omega)
+    if sinom == 0:
+        return (math.nan,) * 3
+    scale0, scale1 = math.sin((1 - t) * omega) / sinom, math.sin(t * omega) / sinom
+    return (a[0] * scale0 + b[0] * scale1, a[1] * scale0 + b[1] * scale1, a[2] * scale0 + b[2] * scale1)
+
+
 # -- EaseInEaseOut, the Spline interpolators and Squad: X_ITE's algorithms, judged against it -----------------------
 
 class _Segmented(_Machine):
@@ -481,6 +499,25 @@ class _EaseInEaseOut(_Segmented):
         else:
             eased = 1 - (t * (1 - weight) ** 2) / ease_in
         return self.emit("modifiedFraction_changed", eased)
+
+
+class _VectorListInterpolator(_Segmented):
+    """CoordinateInterpolator, CoordinateInterpolator2D and NormalInterpolator (X3D 19.4.2, 19.4.3, 19.4.9): ``keyValue``
+    holds ``len(key)`` lists of vectors, one list per key, and ``value_changed`` is the list between two keys. As X_ITE
+    does it, the list length is ``len(keyValue) // len(key)``: a ``keyValue`` that is not a whole number of lists is read
+    as that many whole lists (the rest is ignored), and one shorter than ``key`` gives empty lists. Either is counted in
+    ``sim.noted["bad-count"]`` (not ``dropped``: the node still sends what X_ITE sends). No key: no event. A key list of one: that
+    list. Past the ends: the first or the last list (``_Segmented``)."""
+
+    def interpolate(self, lower, upper, weight):
+        keys, values = self.f.get("key") or [], self.f.get("keyValue") or []
+        if len(values) % len(keys):
+            self.sim.noted["bad-count"] = self.sim.noted.get("bad-count", 0) + 1
+        size = len(values) // len(keys)
+        first = lower * size
+        second = first + (size if len(keys) > 1 else 0)
+        mix = _normal_slerp if self.node_type == "NormalInterpolator" else _lerp
+        self.emit("value_changed", [mix(values[first + i], values[second + i], weight) for i in range(size)])
 
 
 def _scale(a, k):
@@ -1626,6 +1663,8 @@ _MACHINES = {
     "EaseInEaseOut": _EaseInEaseOut, "SplinePositionInterpolator": _SplineInterpolator,
     "SplinePositionInterpolator2D": _SplineInterpolator, "SplineScalarInterpolator": _SplineInterpolator,
     "SquadOrientationInterpolator": _SquadOrientationInterpolator,
+    "CoordinateInterpolator": _VectorListInterpolator, "CoordinateInterpolator2D": _VectorListInterpolator,
+    "NormalInterpolator": _VectorListInterpolator,
     "BooleanSequencer": _Sequencer, "IntegerSequencer": _Sequencer,
     "BooleanFilter": _BooleanFilter, "BooleanToggle": _BooleanToggle, "BooleanTrigger": _BooleanTrigger,
     "IntegerTrigger": _IntegerTrigger, "TimeTrigger": _TimeTrigger,
@@ -1653,6 +1692,7 @@ class Simulation:
         # that is not a value, replaced by the default; "bad-time": a time that is not a number, ignored) and
         # ``faults`` names each node that raised and was left out of that event (none, for a legal graph).
         self.dropped, self.faults = {}, []
+        self.noted = {}                  # oddities that lose nothing: "bad-count" (a keyValue that is not a whole number of lists)
         self.machines, self.not_simulated = {}, []
         for node in graph.nodes.values():
             if node.role == bg.BEHAVIOUR and node.node_type in _MACHINES:

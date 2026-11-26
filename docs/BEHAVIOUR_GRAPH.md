@@ -83,7 +83,7 @@ Nothing is keyframed and nothing is left changed.
 
 | Simulated | Not simulated (named in the sidebar, never silently skipped) |
 |---|---|
-| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer; ProximitySensor from the viewer | Coordinate and Normal interpolators, coordinate and texture-coordinate followers, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
+| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; the Coordinate, Coordinate2D and Normal interpolators; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer; ProximitySensor from the viewer | coordinate and texture-coordinate followers, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
 
 Shown on Blender data: Transform translation, rotation, scale, visible; material baseColor / diffuseColor,
 emissiveColor, transparency, roughness, metallic; light color and on; Viewpoint set_bind (the scene camera). Anything
@@ -131,6 +131,24 @@ all five. **X_ITE 16.7.1 cannot load a world with a vector Spline interpolator (
 `normalizeVelocity` is true** ("e.norm is not a function"); the scalar one loads. The simulator runs that case as X_ITE's
 code intends; it is not judged. Through Blender, `probe-spline.x3d` keeps 19 of 20 ROUTEs: the one into a
 TextureTransform is left out and named (targets are Transform, Viewpoint, lights and materials).
+
+**Coordinate, Coordinate2D and Normal interpolators (26 Nov 2026).** `probe-coord.x3d` (hand written; a TouchSensor starts
+a TimeSensor that drives all five interpolators from the same fraction: 3 keys of 4 points into a Coordinate, a
+TextureCoordinate and a Normal, plus one with 13 points for 3 keys and one with 2 points for 3 keys) recorded on X_ITE
+16.8.1 (headless Chromium, software GL; load average 1.5 at the recording, 79 frames; a first recording at load 4.3 agreed
+too). Judged stream by stream with `tools/behaviour_sim_judge_mf.py`: 6 of 6 agree, worst gap 0.000001 (tolerance
+0.002). The judge's own reader takes lists of numbers; X_ITE writes an MF value as text and the simulator sends a list of
+tuples, so the wrapper flattens both and leaves everything else to the judge. The judge was checked against four wrong
+simulators (Normal as a straight lerp, its weight times 0.98, every weight times 1.02, nothing sent for a bad count): it
+rejects all four. What X_ITE does where the standard leaves room, now in the simulator: the list sent has
+`len(keyValue) // len(key)` points, so a `keyValue` that is not a whole number of lists is read as that many whole lists
+(the rest is ignored) and one shorter than `key` sends an empty list on every event (not "nothing"); both are counted in
+`sim.noted["bad-count"]`, not in `dropped`, because nothing is lost. A Normal interpolator slerps without normalising and
+without taking the short way, so vectors that are not unit vectors can give NaN, which is dropped like every non-finite
+value. Not judged: a change of `keyValue` while a fraction is held (X_ITE re-sends for the Normal interpolator only).
+Through Blender nothing changes: a ROUTE into a Coordinate, TextureCoordinate or Normal has no Blender datablock to bind
+to, so Play shows it as "Not shown: Coordinate.point" as before (no change to `behaviour_play.py`); driving mesh vertices
+is not done.
 
 ### Typed field editors
 
