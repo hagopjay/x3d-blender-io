@@ -286,6 +286,78 @@ def drag_plan():
     return {"view": VIEW, "drags": out}
 
 
+TIMER_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: TimeSensor starts"/>
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0 10"/>
+    <Transform DEF="Pad"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.5"/></Appearance><Box size="12 4 0.2"/></Shape></Transform>
+    <Transform DEF="Ball1" translation="-4 0 0"><Shape><Sphere radius="0.1"/></Shape></Transform>
+    <Transform DEF="Ball2" translation="-2 0 0"><Shape><Sphere radius="0.1"/></Shape></Transform>
+    <Transform DEF="Ball3" translation="0 0 0"><Shape><Sphere radius="0.1"/></Shape></Transform>
+    <Transform DEF="Ball4" translation="2 0 0"><Shape><Sphere radius="0.1"/></Shape></Transform>
+    <Transform DEF="Mark1" translation="-4 -1 0" visible="false"><Shape><Sphere radius="0.1"/></Shape></Transform>
+    <Transform DEF="Mark2" translation="-2 -1 0" visible="false"><Shape><Sphere radius="0.1"/></Shape></Transform>
+    <Transform DEF="Mark4" translation="2 -1 0" visible="false"><Shape><Sphere radius="0.1"/></Shape></Transform>
+  </Scene>
+</X3D>
+"""
+
+
+def build_timer():
+    """probe-timer.x3d: a TimeSensor started with a startTime in the past, which X_ITE counts cycles from (so it starts
+    part way through a cycle and a non-looping one ends when that cycle does). Press and hold the Pad:
+    1. Touch.isActive -> A1.loop, A1.elapsedTime -> B1.startTime (B1 is 3 s, no loop): B1 starts at once with the startTime
+       0 (or a few ms) in the past, and starts again each time it has ended while A1 keeps sending;
+    2. the same with A2.cycleTime -> B2.startTime (one startTime per second, a whole cycle behind the clock);
+    3. Touch.touchTime -> T.startTime: startTime is the moment of the touch, as near "now" as a ROUTE gets;
+    4. Touch.isActive -> TimeTrigger -> S.startTime, Touch.touchTime -> S.stopTime: stopped early by the release (or,
+       after a long hold, already over)."""
+    b = Behaviour()
+    touch = b.add("TouchSensor", "Touch", parent="Pad")
+    ball1, ball2, ball3, ball4 = (b.target("Transform", f"Ball{k}") for k in (1, 2, 3, 4))
+
+    a1 = b.add("TimeSensor", "A1", cycleInterval=1)
+    b1 = b.add("TimeSensor", "B1", cycleInterval=3)
+    p1 = b.add("PositionInterpolator", "P1", key=[0, 1], keyValue=[(-4, 0, 0), (-4, 3, 0)])
+    touch.isActive >> a1.loop
+    a1.elapsedTime >> b1.startTime
+    b1.fraction_changed >> p1.set_fraction
+    p1.value_changed >> ball1.translation
+    b1.isActive >> b.target("Transform", "Mark1").visible
+
+    a2 = b.add("TimeSensor", "A2", cycleInterval=1)
+    b2 = b.add("TimeSensor", "B2", cycleInterval=3)
+    p2 = b.add("PositionInterpolator", "P2", key=[0, 1], keyValue=[(-2, 0, 0), (-2, 3, 0)])
+    touch.isActive >> a2.loop
+    a2.cycleTime >> b2.startTime
+    b2.fraction_changed >> p2.set_fraction
+    p2.value_changed >> ball2.translation
+    b2.isActive >> b.target("Transform", "Mark2").visible
+
+    t = b.add("TimeSensor", "T", cycleInterval=2)
+    p3 = b.add("PositionInterpolator", "P3", key=[0, 1], keyValue=[(0, 0, 0), (0, 3, 0)])
+    touch.touchTime >> t.startTime
+    t.fraction_changed >> p3.set_fraction
+    p3.value_changed >> ball3.translation
+
+    press = b.add("TimeTrigger", "Press")
+    s = b.add("TimeSensor", "S", cycleInterval=3)
+    p4 = b.add("PositionInterpolator", "P4", key=[0, 1], keyValue=[(2, 0, 0), (2, 3, 0)])
+    touch.isActive >> press.set_boolean
+    press.triggerTime >> s.startTime
+    touch.touchTime >> s.stopTime
+    s.fraction_changed >> p4.set_fraction
+    p4.value_changed >> ball4.translation
+    s.isActive >> b.target("Transform", "Mark4").visible
+    return b
+
+
 PROXIMITY_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
 <X3D profile="Immersive" version="4.0">
@@ -379,4 +451,8 @@ if __name__ == "__main__":
     target = ROOT / "tests" / "behaviour" / "probe-drag.x3d"
     target.write_text(graph.weave(DRAG_SCENE), encoding="utf-8")
     (ROOT / "tests" / "behaviour" / "probe-drag.drags.json").write_text(json.dumps(drag_plan(), indent=1) + "\n")
+    print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())
+    graph = build_timer()
+    target = ROOT / "tests" / "behaviour" / "probe-timer.x3d"
+    target.write_text(graph.weave(TIMER_SCENE), encoding="utf-8")
     print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())

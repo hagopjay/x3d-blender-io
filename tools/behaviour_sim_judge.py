@@ -6,12 +6,15 @@
 
     python tools/behaviour_sim_judge.py --sources file.x3d > sources.json     # every ROUTE source of the file
     node   tools/behaviour_sim_judge.cjs <x_ite dir> file.x3d sources.json <clicks> <seconds> > trace.json
+           (--hold=300,4500 --gap=6000: press each click that many ms before releasing; recorded as "holds")
     python tools/behaviour_sim_judge.py file.x3d trace.json                    # replay and compare
 
 The trace is X_ITE's own account: every event at every ROUTE source, with X_ITE's time stamp. The replay gives the
 simulator the same pointer events (whatever the pointing sensors sent) at the same times, steps it at X_ITE's own frame
 times, and compares every other event stream, source by source. Followers use the frame time, so they are compared with
 a looser tolerance than everything else (X_ITE takes its step from the frame rate, the simulator from the clock).
+A held press needs nothing more: the press and the release are two events of the sensor (isActive true, then false) at
+the times X_ITE sent them, so the simulator is held for exactly as long as X_ITE was.
 """
 
 import json
@@ -307,7 +310,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
                         "x_ite_only": unmatched, "simulator_only": extra, "worst_gap": round(worst, 6),
                         "tolerance": tolerance, "agree": ok})
     return {"file": trace["file"], "browser": trace["browser"], "clicks": trace["clicks"],
-            "frames": len(trace["frames"]), "not_simulated": sim.not_simulated,
+            "holds": trace.get("holds", []), "frames": len(trace["frames"]), "not_simulated": sim.not_simulated,
             "streams": streams, "agree": agree}
 
 

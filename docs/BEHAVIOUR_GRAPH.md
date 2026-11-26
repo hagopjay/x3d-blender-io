@@ -183,6 +183,23 @@ Fixed on the way: a sensor or target in a DEF'd Transform whose unnamed child Tr
 child (the importer gives them the parent's DEF and name, and calls the Transform "Name.001"); the binding now takes the
 outermost object that carries the DEF.
 
+**TimeSensor started in the past (26 Nov 2026).** X_ITE counts a TimeSensor's cycles from its `startTime`, looping or
+not: when it starts, `fraction = fract((now - startTime) / cycleInterval)` and the cycle ends when that cycle does. So
+`TimeSensor.startTime` fed by an `elapsedTime` (small, so far in the past) starts the sensor part way through a cycle
+(0.273 in the first recording) and a non-looping one stops after the remainder, not after `cycleInterval`; with
+`startTime` equal to now (a `touchTime`, a `cycleTime`) the fraction starts at 0 and the cycle is whole. A `startTime`
+that arrives in the frame a cycle ran out is ignored, because X_ITE ends the cycle after it has sent that frame's
+`elapsedTime`; the next one, a frame later, starts the sensor again. The simulator did this only when `loop` was true.
+`tools/behaviour_sim_judge.cjs` now takes `--hold=ms,...` (and `--gap=ms`) to hold each press before releasing it; the
+replay needs no change, since the press and the release are recorded events. Judged on `probe-timer.x3d`, recorded on
+X_ITE 16.8.1 (headless Chromium, software GL) with one press held 0.3 s and one 4.5 s: a held press driving a
+`loop` -> `elapsedTime` -> `startTime` chain, the `cycleTime` variant, `touchTime` -> `startTime`, and a sensor stopped
+early by `touchTime` -> `stopTime`. 14 of 14 streams agree (worst gap 0, judge tolerance 0.002); the simulator as it
+was disagreed on 3 of the 14 (the chained sensor's `fraction_changed` and `isActive`, and the interpolator after it).
+All seven older traces still agree (3, 2, 25, 7, 13, 12 and 6 streams). `pauseTime` and `resumeTime` are not simulated
+and so not judged. X_ITE's start fraction looks different from X3D 4.0 clause 8.2.4 and 8.4.1 (a non-looping sensor runs
+one `cycleInterval` from `startTime`); the simulator follows X_ITE (clause text not re-read here).
+
 **Host-eyes witness.** `tools/behaviour_eyetest.py` ends by writing `host-eyes.json`, a `loom.witness/1` record with
 the fields loomkit's own writer writes (`origin` executed, `finished_at` included): the subject is the add-on source
 folder's Loom candidate digest, taken before the add-on loads and again at the end (changed means status error); the
