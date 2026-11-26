@@ -488,7 +488,7 @@ def packet_trail(points, lengths, age, tail=0.12, samples=4):
 # ---------------------------------------------------------------------------------------------------------------
 
 _state = {"handle": None, "player": None, "failed": None, "gpu": None, "index": None, "font": None,
-          "last": None, "classes": None}
+          "last": None, "classes": None, "draws": 0, "debug": False}
 
 
 def last_activity():
@@ -498,6 +498,18 @@ def last_activity():
 
 def handler_active():
     return _state["handle"] is not None
+
+
+def draw_count():
+    """How many times the overlay really drew (all checks passed, something was put on the screen). For tests that
+    have a window: a handler that is registered but never draws is not working."""
+    return _state["draws"]
+
+
+def set_debug(on):
+    """Draw a cross at every socket position the overlay estimates, to calibrate the estimate against the editor's own."""
+    _state["debug"] = bool(on)
+    _redraw()
 
 
 def start_overlay(player):
@@ -655,6 +667,7 @@ def _draw_overlay():
         curving = 5.0
     index, shaders = _link_index(tree), _shaders()
     size = (region.width, region.height)
+    _state["draws"] += 1
     gpu.state.blend_set("ADDITIVE")
 
     # glow on the links that carried an event within the last second, and the packets riding them
@@ -696,6 +709,8 @@ def _draw_overlay():
             shader.uniform_float("size", px * ui)
             batch_for_shader(shader, "POINTS", {"pos": layer[0], "color": layer[1]}).draw(shader)
     gpu.state.blend_set("ALPHA")
+    if _state["debug"]:
+        _draw_debug_sockets(tree, view, ui, size, batch_for_shader, shaders)
 
     fid = _font()
     if getattr(scene, "x3d_activity_badges", True):
@@ -704,6 +719,24 @@ def _draw_overlay():
     _draw_hud(activity, now, size, ui, fid, bool(getattr(scene, "x3d_activity_stream", True)),
               batch_for_shader, shaders)
     gpu.state.blend_set("NONE")
+
+
+def _draw_debug_sockets(tree, view, ui, size, batch_for_shader, shaders):
+    """A cross (magenta: outputs, cyan: inputs) where the overlay thinks each socket is."""
+    pos, col = [], []
+    for node in tree.nodes:
+        box = _node_box(node, ui)
+        for sockets, is_output, colour in ((node.outputs, True, (1.0, 0.0, 1.0, 1.0)), (node.inputs, False, (0.0, 1.0, 1.0, 1.0))):
+            for i in range(len(sockets)):
+                x, y = view.view_to_region(*socket_position(*box, i, len(sockets), is_output), clip=False)
+                for dx, dy in ((-6, 0), (6, 0), (0, -6), (0, 6)):
+                    pos.append((x + dx * ui, y + dy * ui, 0.0))
+                    col.append(colour)
+    if pos:
+        shader = shaders["line"]
+        shader.uniform_float("viewportSize", size)
+        shader.uniform_float("lineWidth", 1.5)
+        batch_for_shader(shader, "LINES", {"pos": pos, "color": col}).draw(shader)
 
 
 def _running_player():

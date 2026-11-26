@@ -45,6 +45,9 @@ def _arg(name, default=None, many=False):
 OUT = Path(_arg("--out", tempfile.mkdtemp(prefix="x3d_eyetest_")))
 WORLDS = _arg("--worlds", ["door", "counter", "snake", "probe", "route-demo"], many=True)
 KEEP_OPEN = "--keep-open" in ARGS
+STRICT = "--strict" in ARGS                          # exit with a failure code when a check or the run failed (CI)
+SLOW = float(_arg("--slow", 1.0))                    # multiply every wait: software GL is slow
+ACTIVITY_DEBUG = "--activity-debug" in ARGS          # one extra shot per world with crosses at the estimated sockets
 ACTIVITY = "--activity" in ARGS                      # also look at the Activity overlay (door, counter, snake)
 SOURCE = Path(_arg("--source", REPO / "source"))      # another checkout's add-on, to compare before and after
 OUT.mkdir(parents=True, exist_ok=True)
@@ -190,12 +193,27 @@ def demo_act(world):
 RIG = None                                        # what a demo act may call; filled in below the helpers it names
 
 
+def act_module():
+    import importlib
+    return importlib.import_module("x3d_blender_io.behaviour_activity")
+
+
+def activity_checks(name):
+    return LOG["worlds"].setdefault(name, {}).setdefault("activity_checks", {})
+
+
+def check(name, key, ok, detail=None):
+    """A pass / fail the script decides itself (not by eye), kept in the JSON."""
+    activity_checks(name)[key] = {"ok": bool(ok), "detail": detail}
+    print(f"[eyetest] {name}: check {key} = {'ok' if ok else 'FAILED'} {detail if detail is not None else ''}")
+
+
 def activity_shots(name, editor, win, player, targets):
     """Mid-play screenshots of the node editor with the Activity overlay, at two zoom levels (``--activity``). The
     pointer clicks what a sensor senses again so events are in flight when the shot is taken; the counts the overlay
     shows are the player's own Activity, written next to the shots so the picture can be checked against numbers."""
     act = player.activity
-    note(name, "activity_attached", act is not None)
+    check(name, "activity_attached", act is not None)
     if act is None:
         return
     region = region_of(editor)
@@ -221,6 +239,57 @@ def activity_shots(name, editor, win, player, targets):
                                         "deliveries": act.deliveries, "packets": len(act.packets(player.sim.now)),
                                         "overlay": __import__("x3d_blender_io.behaviour_activity", fromlist=["x"]).handler_active()})
         yield 0.1
+    if ACTIVITY_DEBUG:
+        mod = act_module()
+        with bpy.context.temp_override(window=win, area=editor, region=region):
+            bpy.ops.node.view_all()
+        mod.set_debug(True)
+        yield 0.4
+        note(name, "activity_debug", shot(f"{name}-activity-debug", editor))
+        mod.set_debug(False)
+        yield 0.2
+    mod = act_module()
+    check(name, "overlay_drew", mod.draw_count() > 0, {"draws": mod.draw_count()})
+    check(name, "events_equal_sim_log", act.events == player.sim.log.appended,
+          {"activity": act.events, "log": player.sim.log.appended})
+    check(name, "has_events", act.events > 0, act.events)
+    report = act.report()
+    check(name, "route_totals_add_up", sum(r["events"] for r in report["routes"]) == act.deliveries)
+
+
+def activity_after_stop(name, editor, win, tree):
+    """After the Esc the run ends with: no handler. Then the copy button, the panel checkboxes, a second Play ended by
+    the Stop operator."""
+    from x3d_blender_io import behaviour_play
+    mod = act_module()
+    check(name, "no_handler_after_esc", not mod.handler_active() and behaviour_play._running["player"] is None)
+    scene = bpy.context.scene
+    check(name, "properties_exist", all(hasattr(scene, p) for p in ("x3d_activity_show", "x3d_activity_stream",
+                                                                    "x3d_activity_badges")))
+    check(name, "panel_registered", hasattr(bpy.types, "X3D_PT_behaviour_play"))
+    bpy.context.window_manager.clipboard = ""
+    with bpy.context.temp_override(window=win, area=editor, region=region_of(editor)):
+        result = bpy.ops.x3d.behaviour_activity_copy()
+    clip = bpy.context.window_manager.clipboard
+    check(name, "copy_fills_clipboard", "FINISHED" in result and "ROUTE" in clip and len(clip) > 40,
+          {"result": sorted(result), "chars": len(clip)})
+    view = areas("VIEW_3D")[0]
+    view.spaces.active.show_region_ui = True
+    try:
+        region_of(view, "UI").active_panel_category = "X3D"
+    except (AttributeError, TypeError):
+        pass
+    yield 0.5
+    note(name, "shot_play_panel", shot(f"{name}-activity-panel", view))
+    with bpy.context.temp_override(window=win, area=editor, region=region_of(editor)):
+        bpy.ops.x3d.behaviour_play("INVOKE_DEFAULT")
+    yield 0.6
+    check(name, "second_play_has_handler", mod.handler_active() and behaviour_play._running["player"] is not None)
+    with bpy.context.temp_override(window=win, area=editor, region=region_of(editor)):
+        bpy.ops.x3d.behaviour_stop()
+    mouse(300, 300)                                   # the modal operator sees the stop on its next event
+    yield 0.8
+    check(name, "no_handler_after_stop", not mod.handler_active() and behaviour_play._running["player"] is None)
 
 
 def world_steps(world, tag=""):
@@ -382,6 +451,12 @@ def world_steps(world, tag=""):
     note(name, "not_restored", {k: [before_full.get(k), v] for k, v in after_full.items() if before_full.get(k) != v})
     note(name, "custom_colour_left", [n.name for n in tree.nodes if n.use_custom_color])
     note(name, "shot_restored", shot(f"{name}-6-restored"))
+    if ACTIVITY and world in ("door", "counter", "snake") and not tag:
+        try:
+            yield from activity_after_stop(name, editor, win, tree)
+        except Exception:
+            LOG["errors"].append(f"{name} activity after stop: {traceback.format_exc()}")
+            note(name, "activity_after_stop_ok", False)
 
 
 RIG = __import__("types").SimpleNamespace(mouse=mouse, key=key, type_key=type_key, shot=shot, note=note, screen_point=screen_point,
@@ -469,6 +544,18 @@ def witness_record(subject_at_start):
     }
 
 
+def failures():
+    """What failed: every error, every activity check that is not ok, and a world that was played but not restored."""
+    found = [f"error: {e.splitlines()[0][:120]}" for e in LOG["errors"]]
+    for world, values in LOG["worlds"].items():
+        found += [f"{world}: {key}" for key, c in values.get("activity_checks", {}).items() if not c["ok"]]
+        found += [f"{world}: {key} is False" for key in ("act_ok", "activity_ok", "activity_after_stop_ok")
+                  if values.get(key) is False]
+        if values.get("playing") and values.get("restored") is not True:
+            found.append(f"{world}: not restored")
+    return found
+
+
 def run():
     global SUBJECT_AT_START
     SUBJECT_AT_START = source_candidate()       # taken before the add-on loads; checked again at the end
@@ -489,6 +576,13 @@ def run():
     (OUT / "eyetest.json").write_text(json.dumps(LOG, indent=1))
     (OUT / "host-eyes.json").write_text(json.dumps(witness_record(SUBJECT_AT_START), sort_keys=True, indent=2) + "\n")
     print(f"[eyetest] done: {OUT}")
+    failed = failures()
+    (OUT / "eyetest-result.json").write_text(json.dumps({"failed": failed, "errors": len(LOG["errors"]),
+                                                         "blender": bpy.app.version_string}, indent=1))
+    if STRICT and failed:
+        print("[eyetest] FAILED:", failed)
+        sys.stdout.flush()
+        os._exit(1)
     if not KEEP_OPEN:
         bpy.ops.wm.quit_blender()
 
@@ -498,13 +592,16 @@ _steps = run()
 
 def _tick():
     try:
-        return next(_steps)
+        return next(_steps) * SLOW
     except StopIteration:
         return None
     except Exception:
         LOG["errors"].append(traceback.format_exc())
         (OUT / "eyetest.json").write_text(json.dumps(LOG, indent=1))
         print(traceback.format_exc())
+        if STRICT:
+            sys.stdout.flush()
+            os._exit(1)
         bpy.ops.wm.quit_blender()
         return None
 
