@@ -441,6 +441,11 @@ class IRScene:
     viewpoints: list[IRViewpoint] = field(default_factory=list)
     navigation_types: list[str] = field(default_factory=list)
     diagnostics: list[str] = field(default_factory=list)
+    # What the export considered and did not write, for the loss receipt (receipt.collect_owners): (name, type) of
+    # objects of a type the X3D 4.0 path does not carry, and (name, "action"/"drivers"/"shape keys") of objects
+    # that move while use_animation is off.
+    skipped_objects: list[tuple[str, str]] = field(default_factory=list)
+    unsampled_animation: list[tuple[str, str]] = field(default_factory=list)
     animations: list[IRAnimation] = field(default_factory=list)
     humanoids: list[IRHumanoid] = field(default_factory=list)
     splats: list[IRGaussianSplats] = field(default_factory=list)

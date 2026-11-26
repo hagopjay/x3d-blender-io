@@ -1461,6 +1461,20 @@ def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, f
     return animations, span / fps
 
 
+def _animated_by(obj) -> str | None:
+    """What moves an object, if anything: its own action, a driver, or its shape keys (keyed or driven)."""
+    animation = getattr(obj, "animation_data", None)
+    if animation is not None and animation.action is not None:
+        return "action"
+    if animation is not None and len(animation.drivers):
+        return "drivers"
+    key = getattr(getattr(obj, "data", None), "shape_keys", None)
+    key_animation = getattr(key, "animation_data", None)
+    if key_animation is not None and (key_animation.action is not None or len(key_animation.drivers)):
+        return "shape keys"
+    return None
+
+
 def _action_fcurves(action):
     """The F-curves of an action: ``fcurves`` before Blender 5, the first layered-action channel bag after."""
     fcurves = getattr(action, "fcurves", None)
@@ -1493,12 +1507,14 @@ def _sample_shape_key_morphs(scene, depsgraph, sources, geometries_by_key, *, fr
     try:
         for geometry_key, obj in sources.items():
             key = obj.data.shape_keys
-            action = key.animation_data.action if key is not None and key.animation_data else None
-            if action is None:
+            animation = key.animation_data if key is not None else None
+            action = animation.action if animation is not None else None
+            driven = animation is not None and len(animation.drivers) > 0
+            if action is None and not driven:
                 continue
             frames = {float(frame_start), float(frame_end)}
-            linear = True
-            for fcurve in _action_fcurves(action):
+            linear = not driven               # a driver can follow anything: sample every frame_step frame
+            for fcurve in (_action_fcurves(action) if action is not None else ()):
                 if not fcurve.data_path.endswith(".value"):
                     continue
                 for point in fcurve.keyframe_points:
@@ -1637,7 +1653,9 @@ def extract_scene(
         # A mesh whose only "modifier" is an animated shape key is written as its Basis plus a CoordinateInterpolator
         # (see _sample_shape_key_morphs) instead of the pose at the current frame.
         key_animation = getattr(getattr(obj.data, "shape_keys", None), "animation_data", None) if obj.type == "MESH" else None
-        shape_key_morph = bool(use_animation and key_animation is not None and key_animation.action is not None and not obj.modifiers)
+        # keyed or driven: a shape key moved only by a driver has no action but is animated all the same (crossing census)
+        shape_key_morph = bool(use_animation and key_animation is not None and not obj.modifiers
+                               and (key_animation.action is not None or len(key_animation.drivers)))
         needs_eval = obj.type != "MESH" or bool(
             use_mesh_modifiers and depsgraph is not None and not shape_key_morph and obj.is_modified(scene, "PREVIEW")
         )
@@ -1906,6 +1924,7 @@ def extract_scene(
             ir_scene.object_names.append(obj.name)
         else:
             skipped_types[obj.type] = skipped_types.get(obj.type, 0) + 1
+            ir_scene.skipped_objects.append((obj.name, obj.type))
             if not use_hierarchy:
                 return None
 
@@ -1956,6 +1975,20 @@ def extract_scene(
         for stop in ir_scene.tour.stops:
             stop.field_of_view = fields.get(stop.name)
     check_interactions(ir_scene, ir_scene.diagnostics)
+
+    if not use_animation:
+        # use_animation stays off by default (a scene built in Blender exports as the current frame), but the export
+        # says so when something it considered moves: the receipt counts it and the diagnostics name it.
+        for obj in exported:
+            moved = _animated_by(obj)
+            if moved:
+                ir_scene.unsampled_animation.append((obj.name, moved))
+        if ir_scene.unsampled_animation:
+            kinds = {}
+            for _, how in ir_scene.unsampled_animation:
+                kinds[how] = kinds.get(how, 0) + 1
+            moving = ", ".join(f"{count} by {how}" for how, count in sorted(kinds.items()))
+            ir_scene.diagnostics.append(f"Animation not exported (the Animation option is off): objects that move: {moving}.")
 
     if use_animation and morph_sources:
         morph_cycle = _sample_shape_key_morphs(scene, depsgraph, morph_sources, geometries_by_key, frame_step=animation_step)
