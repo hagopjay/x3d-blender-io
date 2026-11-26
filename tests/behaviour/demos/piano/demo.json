@@ -1,0 +1,9 @@
+{
+ "title": "Piano: type and it plays",
+ "streams": 24,
+ "clicks": 0,
+ "seconds": 2,
+ "drags": null,
+ "keys": "keys.json",
+ "judges": ["KeySensor", "StringSensor"]
+}
