@@ -345,13 +345,47 @@ class XiteAgreementTests(unittest.TestCase):
 
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
-        used = {graph.nodes[route.from_id].node_type for graph in map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity"))
+        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity")))
+        judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
+        used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one
         self.assertEqual(unjudged, ["ColorChaser", "KeySensor", "PlaneSensor", "PositionChaser2D",
                                     "PositionInterpolator2D", "StringSensor", "VisibilitySensor"])
+
+
+DEMOS = WORLDS / "demos"
+
+
+def recorded_demos():
+    """Demo folders with a contract and an X_ITE trace (docs/BEHAVIOUR_DEMOS.md); each is judged below."""
+    return sorted(d for d in DEMOS.iterdir() if (d / "demo.json").is_file() and (d / "x_ite.json").is_file()) \
+        if DEMOS.is_dir() else []
+
+
+class DemoJudgeTests(unittest.TestCase):
+    """Every demo in tests/behaviour/demos/ that has an X_ITE trace agrees with it, stream for stream, as its demo.json
+    says; a node type a demo claims to judge for the first time must send on a ROUTE in that demo's world."""
+
+    def test_there_is_a_demo(self):
+        self.assertIn("hello-switch", [d.name for d in recorded_demos()])
+
+    def test_every_recorded_demo_agrees_with_x_ite(self):
+        for folder in recorded_demos():
+            with self.subTest(demo=folder.name):
+                contract = json.loads((folder / "demo.json").read_text(encoding="utf-8"))
+                trace = json.loads((folder / "x_ite.json").read_text(encoding="utf-8"))
+                self.assertEqual(trace["pageErrors"], [])
+                result = judge.judge(folder / f"{folder.name}.x3d", trace)
+                self.assertEqual([s["source"] for s in result["streams"] if not s["agree"]], [])
+                self.assertEqual(len(result["streams"]), contract["streams"])
+                self.assertTrue(all(s["x_ite_events"] > 0 for s in result["streams"]),
+                                "a stream X_ITE never sent proves nothing")
+                graph = bg.Behaviour.from_x3d((folder / f"{folder.name}.x3d").read_text(encoding="utf-8"))
+                senders = {graph.nodes[r.from_id].node_type for r in graph.routes}
+                self.assertEqual(sorted(set(contract.get("judges", [])) - senders), [])
 
 
 if __name__ == "__main__":
