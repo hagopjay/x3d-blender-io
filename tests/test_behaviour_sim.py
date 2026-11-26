@@ -598,13 +598,8 @@ class DemoJudgeTests(unittest.TestCase):
                 result = judge.judge(folder / f"{folder.name}.x3d", trace)
                 self.assertEqual([s["source"] for s in result["streams"] if not s["agree"]], [])
                 self.assertEqual(len(result["streams"]), contract["streams"])
-                idle = set(contract.get("idle", []))        # sources the recorded click cannot fire: silent in both
-                self.assertEqual(sorted(idle - {s["source"] for s in result["streams"]}), [])
-                self.assertTrue(all(s["x_ite_events"] > 0 for s in result["streams"] if s["source"] not in idle),
+                self.assertTrue(all(s["x_ite_events"] > 0 for s in result["streams"]),
                                 "a stream X_ITE never sent proves nothing")
-                self.assertTrue(all(s["x_ite_events"] == 0 and s["simulator_events"] == 0
-                                    for s in result["streams"] if s["source"] in idle),
-                                "an idle stream must be silent in X_ITE and in the simulator")
                 graph = bg.Behaviour.from_x3d((folder / f"{folder.name}.x3d").read_text(encoding="utf-8"))
                 senders = {graph.nodes[r.from_id].node_type for r in graph.routes}
                 self.assertEqual(sorted(set(contract.get("judges", [])) - senders), [])
