@@ -298,6 +298,14 @@ def _inverse3(r0, r1, r2):
             ((d * h - e * g) / det, (b * g - a * h) / det, (a * e - b * d) / det))
 
 
+def is_vec3(value):
+    """Three real numbers (a hostile caller can hand over anything)."""
+    try:
+        return len(value) == 3 and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in value)
+    except TypeError:
+        return False
+
+
 class GeoFrame:
     """What every Geo node does with its ``geoSystem`` and its ``geoOrigin``: ``local(geo)`` takes a coordinate in the node's
     geoSystem to the node's local coordinates (geocentric metres less the origin, or in the origin's Y-up frame when the
@@ -332,6 +340,8 @@ class GeoFrame:
 
     def local(self, geo):
         """Local coordinates of a coordinate in the node's geoSystem."""
+        if not is_vec3(geo):
+            return NAN3
         p = to_geocentric(self.system, geo)
         if self.origin_node is not None and self.origin_node.rotate_y_up:
             return self._from_origin_frame(p)
@@ -339,6 +349,8 @@ class GeoFrame:
 
     def geo(self, point):
         """The node's geoSystem coordinate of a point in local coordinates."""
+        if not is_vec3(point):
+            return NAN3
         if self.origin_node is not None and self.origin_node.rotate_y_up:
             return from_geocentric(self.system, self._to_origin_frame(point))
         o = self.origin

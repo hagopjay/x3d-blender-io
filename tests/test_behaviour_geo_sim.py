@@ -313,6 +313,18 @@ class Touch(unittest.TestCase):
         self.assertAlmostEqual(longitude, 2.2, places=6)
         self.assertAlmostEqual(height, 5.0, delta=1e-3)
 
+    def test_a_wrong_shaped_hit_point_posted_by_hand_faults_nothing(self):
+        # found by the fuzzer (seeds 1 and 2, hostile): post() hands the machine whatever the caller gave
+        sim = make(self.BODY)
+        sim.hover("T", True, 1.0)
+        for value in (1, (1.0, 2.0), None, "xyz", (0.0, 0.0, 0.0, 0.0), (True, 0, 0)):
+            sim.post("T", "hitPoint_changed", value, 1.0)
+        self.assertEqual(sim.faults, [])
+        self.assertEqual(sent(sim, "T", "hitGeoCoord_changed"), [])
+        frame = geo.GeoFrame(geo.parse_geo_system(["GD", "WE"]), None)
+        self.assertTrue(all(math.isnan(v) for v in frame.geo((1.0, 2.0))))
+        self.assertTrue(all(math.isnan(v) for v in frame.local(None)))
+
     def test_not_over_or_disabled_it_sends_no_hit(self):
         sim = make(self.BODY)
         self.assertEqual(sim.hit("T", (0.0, 5.0, 0.0), 1.0), [])

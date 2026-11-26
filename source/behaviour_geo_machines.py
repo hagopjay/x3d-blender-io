@@ -181,7 +181,7 @@ class _GeoTouchSensor(_GeoMixin, _Sensor):
         """What follows an event the caller posted (``Simulation.post``): the hit point, while the pointer is over, is also
         sent as a coordinate in the node's geoSystem."""
         if field_name == "hitPoint_changed" and self.over and self.f.get("enabled", True):
-            if self.frame is None:
+            if self.frame is None or not geo.is_vec3(value):
                 return []
             return [("hitGeoCoord_changed", self.frame.geo(value))]
         return []
