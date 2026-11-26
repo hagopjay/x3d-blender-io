@@ -205,7 +205,7 @@ now has both, and S3 and S5 reject them.
    outermost carrier first. Import keeps `EchoLine.line -> LineText.string` and the other two (test in
    `tests/test_behaviour_demo_piano_bpy.py`). **Export still drops them**: `emit_x3d40.py`'s `def_of_target` has no `text`
    branch, so a ROUTE into a Text is written out as "left out because an end is not in the file". That file is not this
-   PR's to edit; the exporter needs a `text` case (and to write the Text's DEF) before a round trip keeps the ROUTE.
+   PR's to edit; the exporter needs a `text` case (and to write the Text's DEF) before a round trip keeps the ROUTE. The same gap exists for TextureTransform (found by the orrery demo). The failing export test is deliberately not in this PR; the exporter's owner gets it.
    Play does not write a Text's string yet (`not_applied` would say so); no simulated node sends an MFString into one.
 9. **`Play` swallows the keyboard while the graph has a KeySensor or StringSensor.** Blender shortcuts do nothing during Play
    (Esc still stops); a graph without key sensors passes everything through, as before.
