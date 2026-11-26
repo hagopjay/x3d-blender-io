@@ -10,7 +10,9 @@
 
 The trace is X_ITE's own account: every event at every ROUTE source, with X_ITE's time stamp. The replay gives the
 simulator the same pointer events (whatever the pointing sensors sent) at the same times, steps it at X_ITE's own frame
-times, and compares every other event stream, source by source. Followers use the frame time, so they are compared with
+times, and compares every other event stream, source by source. Key sensors (KeySensor, StringSensor) are run from the raw keys the trace logged ("keys": X_ITE's time stamp, key, which,
+charCode, keyCode) and judged like any other node; a Script is run by X_ITE only, so its streams are listed under
+"not_simulated_sources" instead of compared. Followers use the frame time, so they are compared with
 a looser tolerance than everything else (X_ITE takes its step from the frame rate, the simulator from the clock).
 """
 
@@ -146,6 +148,13 @@ def _drag_actions(graph, x3d_text, trace, centre=PIXEL_CENTRE):
     return actions
 
 
+def _key_actions(trace):
+    """(time, kind, event) for each key X_ITE saw (the trace's "keys": time, type, key, which, charCode, keyCode). The
+    time is X_ITE's own stamp for the key, so what the sensors send lines up with the trace to the millisecond."""
+    return [(when, kind, {"key": key, "which": which, "charCode": char_code, "keyCode": key_code})
+            for when, kind, key, which, char_code, key_code in trace.get("keys", [])]
+
+
 def sources_of(graph):
     seen = []
     for route in graph.routes:
@@ -168,6 +177,8 @@ def _numbers(value):
 
 
 def _gap(a, b, x3d_type):
+    if x3d_type in ("SFString", "MFString"):
+        return 0.0 if str(a) == str(b) else float("inf")
     a, b = _numbers(a), _numbers(b)
     if x3d_type == "SFRotation" and len(a) == 4 and len(b) == 4:
         return bs._rotation_distance(tuple(a), tuple(b))
@@ -201,7 +212,11 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
             elif field_name in ("position_changed", "orientation_changed", "centerOfRotation_changed"):
                 machine.last[field_name] = _numbers_of(value)
     events = sorted(trace["events"], key=lambda e: e[0])
-    times = sorted(set(trace["frames"]) | {e[0] for e in events} | set(by_action) | set(by_view))
+    keys = _key_actions(trace)          # key sensors: the simulator runs them from the raw keys, and they are judged
+    by_key = {}
+    for key_action in keys:
+        by_key.setdefault(key_action[0], []).append(key_action)
+    times = sorted(set(trace["frames"]) | {e[0] for e in events} | set(by_action) | set(by_view) | set(by_key))
     if not times:
         return {"file": trace["file"], "verdict": "no events recorded", "streams": []}
     # X_ITE had been running for a few seconds before recording began; the simulator is started earlier still, so
@@ -225,6 +240,8 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
     for event in events:
         by_time.setdefault(event[0], []).append(event)
     for when in times:
+        for _when, kind, event in by_key.get(when, ()):
+            sim.key(kind, event, when)
         for _when, sensor, action, args in by_action.get(when, ()):
             sim.now = when
             if action == "press":
@@ -253,9 +270,13 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
             theirs.setdefault((node_id, field_name), []).append((when, value))
     for when, node_id, field_name, value in sim.log:
         ours.setdefault((node_id, field_name), []).append((when, value))
-    streams, agree = [], True
+    streams, agree, not_simulated_sources = [], True, []
     for node_id, field_name in [tuple(pair) for pair in sources_of(graph) if pair[0] not in pointing or pair[0] in driven]:
         node = graph.nodes[node_id]
+        if node.node_type == "Script":          # X_ITE runs a Script; the simulator does not (it is listed, not compared)
+            not_simulated_sources.append({"source": f"{node_id}.{field_name}", "node": node.node_type,
+                                          "x_ite_events": len(theirs.get((node_id, field_name), []))})
+            continue
         canonical, x3d_type = bg.resolve_field(node.node_type, field_name, "out")
         a, b = theirs.get((node_id, field_name), []), ours.get((node_id, canonical), [])
         follower = node.node_type.endswith(("Damper", "Chaser", "Damper2D", "Chaser2D")) or _fed_by_follower(graph, node_id)
@@ -276,7 +297,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
             continue
         index, worst, compared, unmatched = {round(when, 6): value for when, value in b}, 0.0, 0, 0
         a = list({round(when, 6): (when, value) for when, value in a}.values())   # two events in one frame: the last stands
-        discrete = x3d_type in ("SFBool", "SFInt32", "SFTime") or \
+        discrete = x3d_type in ("SFBool", "SFInt32", "SFTime", "SFString") or \
             node.node_type.endswith(("Sequencer", "Trigger", "Toggle", "Filter"))
         held = None
         ordered = sorted(index)
@@ -308,7 +329,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
                         "tolerance": tolerance, "agree": ok})
     return {"file": trace["file"], "browser": trace["browser"], "clicks": trace["clicks"],
             "frames": len(trace["frames"]), "not_simulated": sim.not_simulated,
-            "streams": streams, "agree": agree}
+            "streams": streams, "not_simulated_sources": not_simulated_sources, "agree": agree}
 
 
 def _fed_by_follower(graph, node_id, seen=None):

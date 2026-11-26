@@ -832,6 +832,11 @@ def import_graph(scene, filepath, new_actions=None):
                 if material.get("x3d_def") == def_name:
                     return kind, material.name
             return None
+        if kind == "text":
+            # the importer names a Text's FONT object by its Shape's or Transform's DEF and the curve by the Text's DEF
+            found = [obj for obj in scene.objects if obj.type == "FONT" and getattr(obj.data, "name", None) == def_name]
+            outer = [obj for obj in found if obj.parent is None or obj.parent not in found]
+            return (kind, (outer or found)[0].name) if found else None
         wanted = {"transform": None, "viewpoint": "CAMERA", "light": "LIGHT"}.get(kind, "?")
         if wanted == "?":
             return None
