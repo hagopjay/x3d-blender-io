@@ -222,30 +222,64 @@ def validate(graph: Graph) -> list[dict]:
 # Python values -> X3D lexical values (what the scripting API accepts)
 # ---------------------------------------------------------------------------------------------------------------
 
-def _number(value) -> str:
+def format_float(value: float) -> str:
+    """The shortest text that reads back as exactly ``value`` (Python's ``repr`` digits), in X3D's style: no trailing
+    ".0", "-0" as "0". An exponent appears only where ``repr`` has one (below 1e-4 and from 1e16: "1e-05", "1e+16"),
+    which X3D's float lexical form accepts. ``float(format_float(x)) == x`` for every finite float."""
+    text = repr(float(value))
+    if text.endswith(".0"):
+        text = text[:-2]
+    return "0" if text == "-0" else text
+
+
+def format_float32(value: float) -> str:
+    """The shortest text that reads back as the same 32-bit float, for a value that came from a Blender property
+    (0.30000001192092896 prints as 0.3). A value that is not a float32 is printed in full by ``format_float``."""
+    import struct
+    value = float(value)
+    if value != value or value in (float("inf"), float("-inf")):
+        return format_float(value)
+    try:
+        target = struct.unpack("f", struct.pack("f", value))[0]
+    except OverflowError:
+        return format_float(value)
+    if target != value:
+        return format_float(value)
+    for digits in range(1, 10):
+        candidate = float(f"{value:.{digits}g}")
+        try:
+            if struct.unpack("f", struct.pack("f", candidate))[0] == target:
+                return format_float(candidate)
+        except OverflowError:
+            continue
+    return format_float(value)
+
+
+def _number(value, single=False) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
         return str(value)
-    text = f"{float(value):.6f}".rstrip("0").rstrip(".")
-    return text if text not in ("-0", "") else "0"
+    return format_float32(value) if single else format_float(value)
 
 
-def to_lexical(value, x3d_type: str = "") -> str:
+def to_lexical(value, x3d_type: str = "", single: bool = False) -> str:
     """A Python value as X3D field text: True -> 'true', (0, 1, 0) -> '0 1 0', [(0,0,0), (0,2,0)] -> '0 0 0 0 2 0'.
-    A str is taken as already lexical, except for MFString where a list of str is quoted item by item."""
+    Floats print in full (the shortest text that reads back exactly, ``format_float``); ``single`` is for a value read
+    from a 32-bit Blender property (the shortest text that reads back as that float32). A str is taken as already
+    lexical, except for MFString where a list of str is quoted item by item."""
     if isinstance(value, str):
         return value
     if isinstance(value, (bool, int, float)):
-        return _number(value)
+        return _number(value, single)
     if x3d_type == "MFString":
         return " ".join('"' + str(item).replace("\\", "\\\\").replace('"', '\\"') + '"' for item in value)
     parts = []
     for item in value:
         if isinstance(item, (list, tuple)) or (hasattr(item, "__iter__") and not isinstance(item, str)):
-            parts.extend(_number(component) for component in item)
+            parts.extend(_number(component, single) for component in item)
         else:
-            parts.append(_number(item))
+            parts.append(_number(item, single))
     return " ".join(parts)
 
 
