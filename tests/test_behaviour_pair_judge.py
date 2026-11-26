@@ -167,7 +167,7 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(r["verdict"], "differs")
 
     def test_a_timer_only_world_needs_no_stimulus(self):
-        r = pj.judge_pair(WORLDS / "timer-only.x3d", WORLDS / "timer-only.x3d", None, repeats=2, x_ite=_x_ite())
+        r = pj.judge_pair(WORLDS / "timer-only.x3d", WORLDS / "timer-only.x3d", None, repeats=3, x_ite=_x_ite())
         print("\ntimer-only vs itself:", r["verdict"], "load", r["load"]["max_1min"], r["time_zero"]["a"],
               [(s["stream"], s["a_vs_b"]["fraction"], s["floor"]) for s in r["streams"]])
         self.assertEqual(r["verdict"], "same")
