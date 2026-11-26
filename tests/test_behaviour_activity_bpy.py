@@ -165,6 +165,7 @@ class ActivityInBlender(unittest.TestCase):
         for world in ("door", "counter"):
             with self.subTest(world=world):
                 scene = self.load(world)
+                self.ba.ensure_properties()                   # a factory reset with another copy of the add-on drops them
                 scene.x3d_activity_record = True
                 player, _ = self.run_world(scene, True)
                 activity = player.activity
