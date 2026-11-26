@@ -24,6 +24,7 @@ The rule the module enforces is X3D's own: a ROUTE joins an output to an input o
 
 from __future__ import annotations
 
+import math
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -267,6 +268,67 @@ def validate(graph: Graph) -> list[dict]:
             problems.append({"code": "unbound-target", "where": node.id,
                              "message": f"target {node.id!r} ({node.node_type}) is not bound to a Blender datablock"})
     return problems
+
+
+# Two keys this close to half a turn apart (radians) have no shortest way round: see ``half_turn_keys``.
+HALF_TURN_BAND = 0.001
+ROTATION_KEYED = ("OrientationInterpolator", "SquadOrientationInterpolator")
+
+
+def _unit_quaternion(x, y, z, angle):
+    """A rotation as a unit quaternion (x, y, z, w), or None when the axis has no direction (X3D reads that as no turn)."""
+    length = math.sqrt(x * x + y * y + z * z)
+    if not 0 < length < math.inf or not math.isfinite(angle):
+        return None
+    s = math.sin(angle / 2) / length
+    return (x * s, y * s, z * s, math.cos(angle / 2))
+
+
+def half_turn_keys(values) -> list[int]:
+    """Indices i where the rotations of key i and key i+1 are half a turn apart, within ``HALF_TURN_BAND``.
+
+    The angle between two rotations is 2 acos |q1 . q2| (never more than pi: the short way round). At pi both ways are
+    equally short, so which one an interpolator takes is decided by rounding, and a full turn written with three keys
+    (0, pi, 2 pi) can run either way. ``values`` is a list of (x, y, z, angle). Spellings of the same pair all land on
+    pi: 3.1416 and 3.14159265, -3.1416, a flipped axis, an angle of 3 pi against 2 pi, an axis that is not unit length."""
+    quats = []
+    for value in values:
+        try:
+            quats.append(_unit_quaternion(*value))
+        except (TypeError, ValueError, OverflowError):
+            quats.append(None)
+    found = []
+    for i in range(len(quats) - 1):
+        a, b = quats[i], quats[i + 1]
+        if a is None or b is None:
+            continue
+        dot = abs(sum(p * q for p, q in zip(a, b)))
+        if 2 * math.acos(min(1.0, dot)) >= math.pi - HALF_TURN_BAND:
+            found.append(i)
+    return found
+
+
+def warnings(graph: Graph) -> list[dict]:
+    """What is legal X3D but probably not what the author meant: [{code, message, where}], the shape of ``validate``'s
+    answer. It never blocks a write. Today: ``half-turn`` (see ``half_turn_keys``)."""
+    out = []
+    for node in graph.nodes.values():
+        if node.role != BEHAVIOUR or node.node_type not in ROTATION_KEYED:
+            continue
+        text = node.fields.get("keyValue")
+        if not text:
+            continue
+        try:
+            numbers = [float(token) for token in text.replace(",", " ").split()]
+        except ValueError:
+            continue
+        values = [tuple(numbers[i:i + 4]) for i in range(0, len(numbers) - 3, 4)]
+        for i in half_turn_keys(values):
+            out.append({"code": "half-turn", "where": node.id,
+                        "message": f"{node.node_type} {node.id!r}: keys {i} and {i + 1} are half a turn (pi) apart, so the "
+                                   "direction is decided by rounding and can differ between players. Add a key between "
+                                   "them: a full turn needs four keys (0, 2.0944, 4.1888, 6.2832 about one axis), never three."})
+    return out
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -983,6 +1045,10 @@ class Behaviour(Graph):
 
     def check(self) -> list[dict]:
         return validate(self)
+
+    def warnings(self) -> list[dict]:
+        """Legal but doubtful: see the module function ``warnings``. Never raised, never blocks a write."""
+        return warnings(self)
 
     def explain(self) -> str:
         """The graph as sentences, one per ROUTE: for reading aloud, for a diff, for an AI to check its own work."""
