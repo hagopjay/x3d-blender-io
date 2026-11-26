@@ -524,12 +524,14 @@ def rows_on_node(count, limit):
 
 
 MATERIAL_KINDS = ("material", "texture")      # bindings that name a Blender material rather than an object
+NAMED_KINDS = ("joint", "site")               # bindings that are a name the Player looks for (a bone, a site's object)
 
 
 class _TargetNode(_X3DNodeBase):
     x3d_role = bg.TARGET
     x3d_object: PointerProperty(type=bpy.types.Object, name="Object")
     x3d_material: PointerProperty(type=bpy.types.Material, name="Material")
+    x3d_bone: StringProperty(name="Name")      # an HAnimJoint's bone, an HAnimSite's object: found by name when Play runs
 
     def init(self, context):
         if not _SOCKETS_LATER:
@@ -538,10 +540,15 @@ class _TargetNode(_X3DNodeBase):
         self.use_custom_color, self.color = True, (0.16, 0.24, 0.30)
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, "x3d_material" if bg.BINDING_OF.get(self.x3d_type) in MATERIAL_KINDS else "x3d_object", text="")
+        kind = bg.BINDING_OF.get(self.x3d_type)
+        layout.prop(self, "x3d_bone" if kind in NAMED_KINDS else "x3d_material" if kind in MATERIAL_KINDS else "x3d_object",
+                    text="")
 
     def draw_label(self):
-        data = self.x3d_material if bg.BINDING_OF.get(self.x3d_type) in MATERIAL_KINDS else self.x3d_object
+        kind = bg.BINDING_OF.get(self.x3d_type)
+        if kind in NAMED_KINDS:
+            return f"{self.x3d_type}  {self.x3d_bone}" if self.x3d_bone else f"{self.x3d_type}  (unbound)"
+        data = self.x3d_material if kind in MATERIAL_KINDS else self.x3d_object
         return f"{self.x3d_type}  {data.name}" if data else f"{self.x3d_type}  (unbound)"
 
 
@@ -681,6 +688,8 @@ def _datablock_of(binding):
     kind, name = binding
     if kind in MATERIAL_KINDS:
         return None, bpy.data.materials.get(name)
+    if kind in NAMED_KINDS:
+        return None, None            # held as text (``x3d_bone``): a bone is no object, and a site's object may not exist
     return bpy.data.objects.get(name), None
 
 
@@ -756,6 +765,8 @@ def _fill(graph, scene, tree):
                 continue
             item = tree.nodes.new(TARGET_CLASSES[node.node_type].bl_idname)
             item.x3d_object, item.x3d_material = _datablock_of(node.binding)
+            if node.binding[0] in NAMED_KINDS:
+                item.x3d_bone = node.binding[1]
         else:
             item = tree.nodes.new(X3DBehaviourCarried.bl_idname)
             item.x3d_type, item.x3d_xml, item.x3d_inner = node.node_type, node.xml or "", " ".join(node.inner)
@@ -831,8 +842,11 @@ def read(scene):
         elif role == bg.TARGET:
             kind = bg.BINDING_OF[item.x3d_type]
             data = item.x3d_material if kind in MATERIAL_KINDS else item.x3d_object
-            graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position,
-                                        binding=(kind, data.name) if data else None)
+            if kind in NAMED_KINDS:
+                binding = (kind, item.x3d_bone) if item.x3d_bone else None
+            else:
+                binding = (kind, data.name) if data else None
+            graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position, binding=binding)
         else:
             graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position,
                                         xml=item.x3d_xml, inner=tuple(item.x3d_inner.split()))
@@ -865,6 +879,11 @@ def import_graph(scene, filepath, new_actions=None):
 
     def resolver(def_name, node_type):
         kind = bg.BINDING_OF.get(node_type)
+        if kind in NAMED_KINDS:
+            # kept whether or not Blender has it: Play finds the bone or object by this name, and says "not shown" when
+            # it does not. A joint is the bone the importer named after the joint's ``name`` (else its DEF).
+            wanted = (parsed._candidates.get(def_name) or {}).get("hanim_name") if kind == "joint" else None
+            return kind, wanted or def_name
         if kind in MATERIAL_KINDS:          # a texture target is found through the material it belongs to
             for material in bpy.data.materials:
                 if material.get("x3d_def") == def_name:

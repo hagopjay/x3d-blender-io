@@ -254,6 +254,120 @@ class PlayTests(_Base):
         player.stop()
 
 
+class HAnimPlayTests(_Base):
+    """HAnimJoint, HAnimSite and HAnimSegment as targets (tests/behaviour/probe-hanim.x3d): the importer makes a bone for each
+    joint and no object for a site or a segment."""
+
+    def import_world(self, graph=True):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        bpy.ops.import_scene.x3d(filepath=str(WORLDS / "probe-hanim.x3d"), use_behaviour_graph=graph)
+        return bpy.context.scene
+
+    def poses(self, scene):
+        armature = scene.objects["Body"]
+        return {pb.name: (pb.rotation_mode, tuple(round(v, 5) for v in pb.location),
+                          tuple(round(v, 5) for v in pb.rotation_quaternion), tuple(round(v, 5) for v in pb.scale))
+                for pb in armature.pose.bones}
+
+    def test_the_importer_binds_a_joint_to_the_bone_it_named_after_the_joint(self):
+        scene = self.import_world()
+        graph = self.bn.read(scene)
+        self.assertEqual(graph.nodes["hanim_root"].binding, ("joint", "root"))       # name="root", not the DEF
+        self.assertEqual(graph.nodes["hanim_spine"].binding, ("joint", "spine"))
+        self.assertEqual(graph.nodes["hanim_tip"].binding, ("site", "hanim_tip"))
+        self.assertEqual(graph.nodes["hanim_spine_seg"].binding, ("site", "hanim_spine_seg"))
+        self.assertEqual(len(graph.routes), 24)                        # and no ROUTE was lost to carrying a Humanoid whole
+        self.assertEqual([n.id for n in graph.nodes.values() if n.role == "carried"], [])
+
+    def test_a_joint_turns_its_bone_as_the_importer_turns_it_from_keys_and_stop_puts_it_back(self):
+        scene = self.import_world()
+        rest = self.poses(scene)
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.5)                       # half way through the 3 s cycle: the swing's middle key, 1 radian
+        self.assertAlmostEqual(player.sim.values[("hanim_root", "rotation")][3], 1.0, places=9)
+        applied = self.poses(scene)
+        self.assertNotEqual(applied["root"], rest["root"])
+        self.assertNotEqual(applied["spine"], rest["spine"])                  # translation, scale and center
+        # the importer keys the same joint from the same interpolator (no graph); at a key the two agree (between keys it
+        # blends quaternion components, the Player turns by the angle)
+        baked = self.import_world(graph=False)
+        baked.frame_set(baked.frame_start + round(1.5 * baked.render.fps / baked.render.fps_base))
+        self.assertEqual(tuple(round(v, 3) for v in self.poses(baked)["root"][2]), tuple(round(v, 3) for v in applied["root"][2]))
+        scene = self.import_world()
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.2)
+        player.stop()
+        self.assertEqual(self.poses(scene), rest)
+
+    def test_what_is_not_shown_is_listed_with_why(self):
+        scene = self.import_world()
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.0)
+        self.assertEqual(player.not_applied, [
+            "HAnimSite.translation (no object 'hanim_tip')", "HAnimSite.rotation (no object 'hanim_tip')",
+            "HAnimSegment.centerOfMass (a segment has no placement)", "HAnimSegment.mass (a segment has no placement)",
+            "Transform.center"])
+        player.stop()
+
+    def test_a_site_is_moved_where_some_object_carries_its_def(self):
+        scene = self.import_world()
+        marker = bpy.data.objects.new("Marker", None)
+        scene.collection.objects.link(marker)
+        marker["x3d_def"] = "hanim_tip"
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(3.5)
+        self.assertEqual(self.as_exported(marker), (0.0, 0.5, 0.25))            # Slide's last value, in the file's axes
+        self.assertNotIn("HAnimSite.translation", " ".join(player.not_applied))
+        player.stop()
+        self.assertEqual(tuple(marker.location), (0.0, 0.0, 0.0))
+
+    def test_a_joint_with_no_bone_or_with_two_is_listed_not_guessed(self):
+        scene = self.import_world()
+        graph = self.bn.read(scene)
+        graph.nodes["hanim_root"].binding = ("joint", "no_such_bone")
+        player = self.bp.Player(scene, graph)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.0)
+        self.assertIn("HAnimJoint.rotation (no bone 'no_such_bone')", player.not_applied)
+        player.stop()
+        twin = bpy.data.objects.new("Twin", bpy.data.armatures.new("Twin"))
+        scene.collection.objects.link(twin)
+        bpy.context.view_layer.objects.active = twin
+        bpy.ops.object.mode_set(mode="EDIT")
+        bone = twin.data.edit_bones.new("spine")
+        bone.head, bone.tail = (0, 0, 0), (0, 0.1, 0)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        before = self.poses(scene)
+        player = self.bp.Player(scene, self.bn.read(scene))
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.0)
+        self.assertIn("HAnimJoint.translation (2 armatures have a bone 'spine')", player.not_applied)
+        player.stop()
+        self.assertEqual(self.poses(scene), before)
+
+    def test_the_binding_survives_the_node_tree(self):
+        scene = self.import_world()
+        tree = scene.x3d_behaviour_tree
+        labels = sorted(n.label for n in tree.nodes if n.x3d_role == "target")
+        self.assertIn("HAnimJoint  root", labels)
+        self.assertIn("HAnimSite  hanim_tip", labels)
+        again = self.bn.read(scene)
+        self.assertEqual(again.nodes["hanim_spine"].binding, ("joint", "spine"))
+        self.bn.apply(again, scene)
+        self.assertEqual(self.bn.read(scene).nodes["hanim_spine"].binding, ("joint", "spine"))
+
+
 class FieldEditorTests(_Base):
 
     def test_a_typed_widget_reads_and_writes_the_x3d_text(self):

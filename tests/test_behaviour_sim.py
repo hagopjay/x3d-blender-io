@@ -469,6 +469,44 @@ class XiteAgreementTests(unittest.TestCase):
         self.assertGreater(max(over), 6.0)                      # ... and on, to a full turn by the end
         self.assertGreater(max(safe), 6.1)
 
+    def test_hanim_joint_site_and_segment_receive_and_echo_as_in_x_ite(self):
+        # HAnimJoint rotation, translation, scale and center, HAnimSite rotation and translation, HAnimSegment centerOfMass and
+        # mass, each fed by an interpolator and echoed by its *_changed (tests/behaviour/probe-hanim.x3d, X_ITE 16.8.1): 16
+        # streams, the six echoes among them, all the same event for event.
+        self.agree("probe-hanim", 16)
+
+    def test_a_plane_sensor_pressed_by_a_ray_that_misses_the_plane_has_nothing_to_drag(self):
+        # found by the hostile fuzz once HAnim targets changed which graphs it draws (seed 1, graph 246, minimised): the
+        # press's ray (a direction of 1e308) never met the plane, so no start point was set and the next drag raised
+        # AttributeError out of Simulation
+        b = bg.Behaviour()
+        b.add("PlaneSensor", "Pan", parent="T0", minPosition="0.4067", maxPosition="2 2", offset="")
+        b.target("Transform", "T0")
+        sim = bs.Simulation(b)
+        sim.start(0.0)
+        sim.press("Pan", 0.032, point=(2.06, 2.65, 1.04), ray=((2.67, 2.61, 1.07), (1e308, 0.0, 0.0)),
+                  eye=((-0.95, 2.69, 0.67), (2.65, -2.97, -1.21)))
+        sim.drag("Pan", (-1.9, 1.49, -2.31), 999994.532, ray=((-1.94, -1.0, -2.36), (1.51, -0.52, -2.69)))
+        self.assertEqual(sim.faults, [])
+
+    def test_hanim_targets_hold_the_last_value_that_reached_them(self):
+        graph = world("probe-hanim")
+        sim = bs.Simulation(graph)
+        sim.start(0.0)
+        sim.press("Touch", 0.1)
+        sim.release("Touch", 0.2)
+        sim.step(3.4)
+        self.assertEqual(sim.not_simulated, [])
+        self.assertEqual(sim.values[("hanim_root", "rotation")], (0.0, 0.0, 1.0, 0.0))     # the swing is over: back to rest
+        self.assertEqual(sim.values[("hanim_spine", "translation")], (0.0, 0.5, 0.25))
+        self.assertEqual(sim.values[("hanim_spine", "scale")], (1.5, 2.0, 1.5))
+        self.assertEqual(sim.values[("hanim_spine", "center")], (0.5, 1.5, 0.0))
+        self.assertEqual(sim.values[("hanim_tip", "translation")], (0.0, 0.5, 0.25))
+        self.assertAlmostEqual(sim.values[("hanim_tip", "rotation")][3], 1.2, places=6)
+        self.assertEqual(sim.values[("hanim_spine_seg", "centerOfMass")], (0.0, 2.0, 0.0))
+        self.assertEqual(sim.values[("hanim_spine_seg", "mass")], 20.0)
+        self.assertEqual(sim.values[("MirrorTranslation", "translation")], (0.0, 0.5, 0.25))     # a joint's echo reaches on
+
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
         judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord")))

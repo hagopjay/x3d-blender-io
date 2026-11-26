@@ -5,7 +5,7 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 
 | File | What it is |
 |---|---|
-| `source/behaviour_catalogue.py` | generated from the X3D Unified Object Model 4.0 by `tools/behaviour_catalogue_gen.py` (`--check` fails when stale): 45 behaviour node types with 303 fields, 32 target types |
+| `source/behaviour_catalogue.py` | generated from the X3D Unified Object Model 4.0 by `tools/behaviour_catalogue_gen.py` (`--check` fails when stale): 45 behaviour node types with 303 fields, 34 target types |
 | `source/behaviour_graph.py` | the graph without Blender: parse from X3D, validate, edit, emit, weave into a document, compare, lay out, JSON; and the scripting methods (`Behaviour`, `add`, `target`, `>>`) |
 | `source/behaviour_nodes.py` | the Blender node tree `X3DBehaviourTree`: one node class per X3D node, one socket class per field type; `apply`, `read`, `target`, `import_graph` |
 | `source/behaviour_sim.py` | version 2: the event model in plain Python (`Simulation`): timers, interpolators, sequencers, event utilities, dampers, chasers, pointer events |
@@ -454,12 +454,69 @@ it, and Stop puts it back; the click preset binds the scene camera, and the prox
 moves inside the radius. Not checked: a window (the header and sidebar buttons were not looked at on a real screen), a
 browser (X_ITE was not run on the converted file), Blender 4.5 to 5.2.
 
+## Scene targets beyond Transform (26 Nov 2026)
+
+Of 160 real scenes, 17 were left out of a search experiment because a ROUTE ends at a node type the graph did not treat as
+a target. This section adds them one at a time. A target is a catalogue type (the field names, types and access come from
+X3DUOM 4.0, `tools/behaviour_catalogue_gen.py`), a binding kind that says what Blender holds for it, a way the simulator
+delivers to it (every target is delivered to the same way: the value is kept in `values()` and sent on from the field's
+`*_changed`), and a rule for what `Player` does with it.
+
+### HAnimJoint, HAnimSite, HAnimSegment
+
+Catalogue: HAnimJoint was already a target type; HAnimSegment and HAnimSite are added (34 target types). Fields come from
+X3DUOM 4.0: a joint and a site have `translation`, `rotation`, `scale`, `center` (SFVec3f, SFRotation, SFVec3f, SFVec3f,
+inputOutput), a segment has `centerOfMass` (SFVec3f), `mass` (SFFloat), `momentsOfInertia` (MFFloat) and no placement field at
+all. **A ROUTE to `HAnimSegment.rotation` is refused as `unknown-field`**, because X3D 4.0 gives a segment no such field;
+the one wild scene whose ROUTE ends there is therefore not a legal graph, and the graph does not pretend otherwise (a
+test pins that). Binding kinds: `joint` (a bone, named by the joint's `name` attribute, else its DEF) and `site` (an
+object found by DEF; also used for a segment, which has nothing to place). The importer keeps the binding even where
+Blender has nothing to show, so the ROUTEs are kept (before: the whole HAnimHumanoid was carried as XML, or the ROUTEs
+were dropped).
+
+What `Player` applies. *HAnimJoint*: `rotation`, `translation`, `scale` and `center` turn the pose bone found by name among
+the scene's armatures (it must be in exactly one; zero or two are listed under Not shown with the reason, never
+guessed). The pose is the importer's own formula for a joint's keys, J = T(translation) T(center) R S T(-center) in the
+armature's space and basis = rest^-1 J rest; `center` starts as the bone's head (the importer made the head from the
+joint's center). Stop gives back the pose bone's rotation mode, location, rotations and scale. *HAnimSite*:
+`translation`, `rotation`, `scale` and `visible` move an object whose name is the DEF or that carries `x3d_def` equal to
+it; the importer makes no object for a site, so with an imported file this is listed as not shown. *HAnimSegment*: every
+field is listed as not shown (a segment has no placement; the importer makes nothing for it). Not applied for any of the
+three: `visible` of a joint, `scaleOrientation`, `limitOrientation`, `llimit`, `ulimit`, `stiffness`, `displacers`, skin
+weights, `mass`, `centerOfMass`. Exporting from Blender still drops a ROUTE to a joint (the exporter writes its own joint
+DEFs; the diagnostic says "not in the exported file"): only the graph's own `weave`, which writes into a document that
+already holds the joint, keeps it. The node tree shows the binding as a text field (`x3d_bone`) because a bone is no object.
+
+Judged on X_ITE 16.8.1 (headless Chromium 157, software GL, load average 2.5 to 4.5 during the runs):
+`tests/behaviour/probe-hanim.x3d` drives a joint's rotation, translation, scale and center, a site's rotation and
+translation and a segment's centerOfMass and mass from interpolators, and echoes six of them through their `*_changed`.
+`tools/behaviour_sim_judge.py` finds the simulator agreeing with X_ITE's recorded events at all 16 streams (and the trace
+is a test). The pair judge (`tools/behaviour_pair_judge.py`, 3 repeats, the same click) compares that world, with the
+segment left out, against a copy where each joint and site is a Transform of the same DEF: verdict **same** at all 12
+watched streams (joint and site fields behave as a Transform's in X_ITE); the same copy with the swing's keyValue
+changed from 1 to 2 radians: **differs**, at exactly the two streams that carry it (`hanim_root.rotation` and the
+Transform it echoes into), **same** at the other ten. The judge cannot compare a segment against a Transform (it has no
+such field); the segment is covered by the trace.
+
+Tests: `tests/test_behaviour_graph.py` `HAnimTargetTests` (6), `tests/test_behaviour_sim.py` (the trace, the values, and
+a PlaneSensor press that misses its plane, see the fuzz note), `tests/test_behaviour_play_bpy.py` `HAnimPlayTests` (6,
+bpy 5.3.0: the bone moves and equals the importer's keyed pose at a key, stop restores, not-shown reasons, a site found
+by `x3d_def`, no bone or two, the node tree keeps the binding). Fuzz after the catalogue grew to 34 targets
+(`tools/behaviour_fuzz.py`, Python 3.13.18): `--count 2000 --seed 1` 0 failed (49 854 calls, 6 983 events at targets),
+`--hostile` 0 failed (59 336 calls, 1 123 non-finite and 1 467 wrong shapes dropped, 624 isolated faults), `--blender
+--count 100 --seed 1` 0 failed; seeds 2 and 3 both ways 0 failed. The first hostile run found one failure the new graph
+mix reached (seed 1, graph 246): a PlaneSensor pressed by a ray that never meets its plane left no start point and the
+next drag raised `AttributeError` out of `Simulation`; `plane_press` now clears the start point and `plane_drag` sends
+nothing until a press has one. Not checked: a real Blender window; a humanoid with several armatures sharing bone names
+beyond the two-armature case; a joint whose center is not in the armature's space (the importer's own assumption);
+Blender's exporter for joint ROUTEs.
+
 ## Hardening (26 Nov 2026)
 
 `tools/behaviour_fuzz.py` throws random graphs at the graph, the simulator and the X3D round trip, deterministic from
 `--seed` (graph k of a run comes from `random.Random(seed * 1000003 + k)`); `--blender` adds the node tree and the Player.
 
-**What is generated.** Graph k holds node type k mod 45 and target type k mod 32 of the catalogue (so every behaviour and
+**What is generated.** Graph k holds node type k mod 45 and target type k mod 34 of the catalogue (so every behaviour and
 every target type is in every 45 graphs), plus up to six more nodes, up to four more targets, 2 to 14 ROUTEs and 8 to 50
 calls (`start`, `step`, `click`, `press`, `drag`, `release`, `hover`, `send`, `post`, `viewer`) on random nodes. Normal
 graphs: values of the right type, finite, keys increasing with one `keyValue` each, type-correct ROUTEs (also spelled
@@ -571,7 +628,7 @@ simulation, fan 5000, mixed 5000, chains between 1000 and 5000; the player, fan 
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
 eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
-played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
+played. Targets are Transform, Viewpoint, lights, materials, Text, HAnimJoint, HAnimSite and HAnimSegment (see Scene targets beyond Transform). Names survive only for what the graph touches. The
 importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on, and so do the "X3D import loss" log lines and `X3D_IMPORT_STRICT=1`: the importer holds its ROUTE losses back until the graph is built, then reports only those the graph could not keep. Losses that are not ROUTEs (event nodes, timers, sensor fields) are reported at once, as with the option off.
 
 ### Building the node tree

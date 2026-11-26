@@ -45,6 +45,9 @@ MATERIAL_TYPES = {"PhysicalMaterial", "Material", "UnlitMaterial"}
 BINDING_OF = {**{t: "transform" for t in TRANSFORM_TYPES}, **{t: "viewpoint" for t in VIEWPOINT_TYPES},
               **{t: "light" for t in LIGHT_TYPES}, **{t: "material" for t in MATERIAL_TYPES},
               **{"Text": "text"},
+              # an H-Anim joint is the bone the importer made for it (named by the joint's name, found among the armatures);
+              # a site or a segment is an object found by its DEF, and is "not applied" where the importer made none
+              "HAnimJoint": "joint", "HAnimSite": "site", "HAnimSegment": "site",
               }
 BINDING_OF["TextureTransform"] = "texture"      # bound to the material of the Appearance it sits in
 # Sensors that act on their siblings: where they sit in the scene graph is part of their meaning.
@@ -372,6 +375,7 @@ def parse_x3d(source) -> Graph:
                 "appearance_material": _appearance_material_def(target, parent_of),
                 "texture_transform": {k: v for k, v in target.attrib.items() if k in ("center", "rotation", "scale", "translation")}
                 if _local(target.tag) == "TextureTransform" else None,
+                "hanim_name": target.get("name"),        # what the importer called the bone of an HAnimJoint
             }
         graph.routes.append(Route(*ends))
     # routes are a set in X3D; keep first occurrences in file order

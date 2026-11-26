@@ -1561,6 +1561,7 @@ class _PlaneSensor(_Sensor):
     def setup(self):
         super().setup()
         self.last = None
+        self.start_point = None            # where the press began: None until a press whose ray met the plane or the line
         self.sent = {"trackPoint_changed": (0.0, 0.0, 0.0), "translation_changed": (0.0, 0.0, 0.0)}
 
     def _line_point(self, ray, screen, point, direction):
@@ -1615,6 +1616,7 @@ class _PlaneSensor(_Sensor):
 
     def plane_press(self, ray, hit, screen):
         origin, direction = ray
+        self.start_point = None
         self.hit, self.line = tuple(hit), self._line_direction()
         self.screen = screen
         if self.line is None:
@@ -1632,6 +1634,8 @@ class _PlaneSensor(_Sensor):
         return self._send("trackPoint_changed", track, True) + self._send("translation_changed", self.f["offset"], True)
 
     def plane_drag(self, ray, always=False):
+        if self.start_point is None:       # the press never met the plane (its ray ran along it): nothing to drag from
+            return []
         origin, direction = ray
         if self.line is None:
             end = track = self.plane.meet(origin, direction)

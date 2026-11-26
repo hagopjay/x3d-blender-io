@@ -50,7 +50,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(len(X3DUOM_SHA256), 64)
         self.assertEqual(len(NODES), 45)
         self.assertEqual(sum(len(rows) for _group, rows in NODES.values()), 303)
-        self.assertEqual(len(TARGETS), 32)
+        self.assertEqual(len(TARGETS), 34)       # 32, then HAnimSegment and HAnimSite
 
     def test_events_are_in_the_catalogue(self):
         fields = {row[0]: row for row in NODES["TouchSensor"][1]}
@@ -148,6 +148,95 @@ class ScriptingTests(unittest.TestCase):
         self.assertEqual(bg.signature(again), bg.signature(b))
         with self.assertRaises(bg.BehaviourError):
             bg.from_json({"schema": "other"})
+
+
+HANIM_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><head><component name="HAnim" level="1"/></head><Scene>
+  <HAnimHumanoid DEF="Body" name="Body">
+    <HAnimJoint DEF="hanim_root" name="root" center="0 1 0" containerField="skeleton">
+      <HAnimSegment DEF="Seg" name="seg"/>
+      <HAnimSite DEF="Tip" name="tip" translation="0 1 0"/>
+    </HAnimJoint>
+  </HAnimHumanoid>
+</Scene></X3D>
+"""
+
+
+class HAnimTargetTests(unittest.TestCase):
+
+    def graph(self):
+        b = bg.Behaviour()
+        timer = b.add("TimeSensor", "Timer", cycleInterval=2)
+        turn = b.add("OrientationInterpolator", "Turn", key=[0, 1], keyValue=[(0, 0, 1, 0), (0, 0, 1, 1)])
+        slide = b.add("PositionInterpolator", "Slide", key=[0, 1], keyValue=[(0, 0, 0), (0, 1, 0)])
+        weigh = b.add("ScalarInterpolator", "Weigh", key=[0, 1], keyValue=[1, 2])
+        joint, site, segment = b.target("HAnimJoint", "hanim_root"), b.target("HAnimSite", "Tip"), b.target("HAnimSegment", "Seg")
+        timer.fraction_changed >> turn.set_fraction
+        timer.fraction_changed >> slide.set_fraction
+        timer.fraction_changed >> weigh.set_fraction
+        turn.value_changed >> joint.rotation
+        slide.value_changed >> joint.translation
+        slide.value_changed >> joint.scale
+        slide.value_changed >> joint.center
+        turn.value_changed >> site.rotation
+        slide.value_changed >> site.translation
+        weigh.value_changed >> segment.mass
+        return b
+
+    def test_the_three_types_are_targets_with_the_fields_of_the_object_model(self):
+        for name in ("HAnimJoint", "HAnimSegment", "HAnimSite"):
+            self.assertIn(name, TARGETS)
+        joint = {row[0]: row for row in TARGETS["HAnimJoint"]}
+        for field, kind in (("rotation", "SFRotation"), ("translation", "SFVec3f"), ("scale", "SFVec3f"), ("center", "SFVec3f")):
+            self.assertEqual(joint[field][1:3], (kind, "inputOutput"))
+        self.assertEqual({row[0]: row[1] for row in TARGETS["HAnimSegment"]}["mass"], "SFFloat")
+        self.assertEqual({row[0]: row[1] for row in TARGETS["HAnimSite"]}["translation"], "SFVec3f")
+        self.assertEqual([bg.BINDING_OF[t] for t in ("HAnimJoint", "HAnimSite", "HAnimSegment")], ["joint", "site", "site"])
+
+    def test_a_segment_has_no_rotation_in_the_object_model_so_a_route_to_it_is_refused(self):
+        # X3DUOM 4.0 gives HAnimSegment centerOfMass, mass, momentsOfInertia, coord ...: no rotation or translation.
+        b = bg.Behaviour()
+        turn = b.add("OrientationInterpolator", "Turn")
+        segment = b.target("HAnimSegment", "Seg")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            turn.value_changed >> segment.rotation
+        self.assertEqual(caught.exception.code, "unknown-field")
+
+    def test_the_type_is_checked_like_a_transform_s(self):
+        b = bg.Behaviour()
+        slide = b.add("PositionInterpolator", "Slide")
+        joint = b.target("HAnimJoint", "J")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            slide.value_changed >> joint.rotation
+        self.assertEqual(caught.exception.code, "type-mismatch")
+
+    def test_routes_to_them_read_from_a_file_and_write_back_with_no_difference(self):
+        b = self.graph()
+        self.assertEqual(b.check(), [])
+        text = b.weave(HANIM_SCENE)
+        again = bg.Behaviour.from_x3d(text)
+        self.assertEqual(again.nodes["hanim_root"].node_type, "HAnimJoint")
+        self.assertEqual(again.nodes["hanim_root"].binding, ("joint", "hanim_root"))
+        self.assertEqual(again.nodes["Tip"].binding, ("site", "Tip"))
+        self.assertEqual(bg.difference(b, again),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(bg.difference(again, bg.Behaviour.from_x3d(again.weave(bg.strip(text)))),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(len(again.routes), 10)
+
+    def test_bind_keeps_a_joint_the_resolver_does_not_know_by_name(self):
+        parsed = bg.parse_x3d(self.graph().weave(HANIM_SCENE))
+        self.assertEqual(parsed.nodes["hanim_root"].binding, None)
+        self.assertEqual(parsed._candidates["hanim_root"]["hanim_name"], "root")      # what the importer names the bone
+        bg.bind(parsed, lambda name, node_type: (bg.BINDING_OF[node_type], name) if node_type in bg.BINDING_OF else None)
+        self.assertEqual(parsed.nodes["hanim_root"].binding, ("joint", "hanim_root"))
+        self.assertEqual(len([n for n in parsed.nodes.values() if n.role == bg.CARRIED]), 0)
+        self.assertEqual(len(parsed.routes), 10)
+
+    def test_json_keeps_the_binding(self):
+        again = bg.from_json(bg.to_json(self.graph()))
+        self.assertEqual(again.nodes["Seg"].binding, ("site", "Seg"))
+        self.assertEqual(bg.difference(self.graph(), again)["routes_lost"], [])
 
 
 class DocumentTests(unittest.TestCase):
