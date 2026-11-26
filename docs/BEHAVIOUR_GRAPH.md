@@ -13,6 +13,7 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 | `tools/behaviour_sim_judge.cjs`, `tools/behaviour_sim_judge.py`, `tools/behaviour_probe.py` | record X_ITE's events, replay them through the simulator, compare; build the probe world |
 | `tests/test_behaviour_sim.py`, `tests/test_behaviour_play_bpy.py` | version 2: 20 plain-Python tests (4 replay X_ITE traces) and 15 Blender tests |
 | `tools/behaviour_roundtrip.py` | import a file with its graph, optionally set fields, export, print the graph difference |
+| `source/behaviour_activity.py` | live activity while playing: the counting model (plain Python) and its drawing in the node editor |
 | `tools/behaviour_eyetest.py` | open a real Blender window, import each world with its graph, screenshot the editor, Play it with real (simulated) clicks, check Esc restores everything |
 | `tools/behaviour_replay.cjs` | play the same real mouse clicks on two files in X_ITE and compare what the scene did |
 | `tests/test_behaviour_graph.py`, `tests/test_behaviour_nodes_bpy.py` | 23 plain-Python and 17 Blender tests |
@@ -242,6 +243,52 @@ Without the graph, nothing changes (the baked keyframes stay).
 
 Seen and not changed: the sidebar repeats an unlinked input (`key`, `keyValue`) as a bare label after the node's panel
 (Blender draws unlinked inputs there).
+
+## Activity while playing
+
+While Play runs, the X3D behaviour node editor shows the events the simulation really delivered: dots travelling along
+the links, a glow on a link that just carried something, a count badge at the middle of each link that carried
+anything, "in / out" beside each node, and one HUD block (events, events per second, ROUTEs active, widest cascade, the
+latest event lines). Checkboxes under Activity in the Play panel (N, tab X3D) switch the overlay, the event lines and
+the badges (`Scene.x3d_activity_show`, `x3d_activity_stream`, `x3d_activity_badges`); **Copy activity report** puts the
+last Play's numbers on the clipboard as a table. Off, Play pays for one `if`.
+
+What the numbers mean (`source/behaviour_activity.py`, class `Activity`, no Blender needed):
+
+| Word | Meaning |
+|---|---|
+| event | one line of `Simulation.log`: a node sent a value from an output field |
+| delivery | an event carried over one ROUTE, as the simulation delivered it (one per ROUTE per simulation call, only a value that fits the destination) |
+| ROUTE total | deliveries over that ROUTE; per second is the last second of simulation time |
+| widest cascade | most events sharing one timestamp |
+| active ROUTEs a/b | ROUTEs that carried an event in the last second, of all |
+| packet | a delivery younger than 0.35 s; at most 3 per ROUTE (a 60 per second stream is grouped by age, the count says how many events a dot stands for) and 400 in all |
+
+Nothing is drawn or counted without a delivered event. `Activity` reads the simulation's log (it replaces `sim.log`
+by a `CountingLog`, the same lines in the same order, so a bounded log loses nothing from the totals) and the
+simulation's ROUTE table; it never runs or changes the simulation. `Activity.report()` returns the totals, every
+ROUTE's count and rate, every node's in and out and the last 200 event lines (a stream within 0.25 s updates one line)
+as plain data, `to_json()` as JSON (`x3d.activity/1`), for use outside Blender.
+
+Checked, with the instrument:
+
+- `tests/test_behaviour_activity.py` (plain Python, 28 tests): counts equal the log of the bench worlds and of
+  `door.x3d`; deliveries into Transforms equal the changes the simulation handed back; a bounded log; windows; caps;
+  packets empty without events; determinism; the link curve passes through both sockets; packets lie on the curve at
+  three zoom scales; panel rectangles stay inside the region.
+- `tests/test_behaviour_activity_bpy.py` (bpy 5.3.0 wheel, no window, 7 tests): on the door, counter and snake worlds
+  the totals equal what the simulation logged for the same calls; Activity off or on gives the same `values` and the
+  same log; the benchmark digest is unchanged with Activity attached; the overlay handler is added once and removed
+  (Stop, file load, unregister); the Scene properties come back after being deleted.
+- Cost: `Player.step` on the `fan` benchmark graph, N = 1000, 300 steps, `PYTHONHASHSEED=3`, bpy 5.3.0 wheel, a shared
+  4-core machine, four runs each way alternating: median 4.33 ms per step off, 4.87 ms on (+12.5 %).
+
+Not checked by anyone: the drawing. It needs a Blender window and the machine this was written on had none, so the
+overlay code has never run on a screen. In particular the socket positions (Python cannot read Blender's own, so they
+are computed from the node's size, header and row height and may sit a few pixels off, more on nodes with tall
+bodies), the look of the glow, dots, badges and HUD, the monospaced font, UI scales other than 1, and Blender 4.2 to
+5.2. `tools/behaviour_eyetest.py --activity` plays door, counter and snake and screenshots the editor at two zoom
+levels for a person to look at.
 
 ## Presets to graph (26 Nov 2026)
 

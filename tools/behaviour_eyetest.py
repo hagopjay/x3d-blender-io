@@ -45,6 +45,7 @@ def _arg(name, default=None, many=False):
 OUT = Path(_arg("--out", tempfile.mkdtemp(prefix="x3d_eyetest_")))
 WORLDS = _arg("--worlds", ["door", "counter", "snake", "probe", "route-demo"], many=True)
 KEEP_OPEN = "--keep-open" in ARGS
+ACTIVITY = "--activity" in ARGS                      # also look at the Activity overlay (door, counter, snake)
 SOURCE = Path(_arg("--source", REPO / "source"))      # another checkout's add-on, to compare before and after
 OUT.mkdir(parents=True, exist_ok=True)
 LOG = {"blender": bpy.app.version_string, "source": str(SOURCE), "worlds": {}, "errors": []}
@@ -189,6 +190,39 @@ def demo_act(world):
 RIG = None                                        # what a demo act may call; filled in below the helpers it names
 
 
+def activity_shots(name, editor, win, player, targets):
+    """Mid-play screenshots of the node editor with the Activity overlay, at two zoom levels (``--activity``). The
+    pointer clicks what a sensor senses again so events are in flight when the shot is taken; the counts the overlay
+    shows are the player's own Activity, written next to the shots so the picture can be checked against numbers."""
+    act = player.activity
+    note(name, "activity_attached", act is not None)
+    if act is None:
+        return
+    region = region_of(editor)
+    point = next((p for p in (screen_point(o) for o in targets) if p), None)
+    for zoom in ("fit", "close"):
+        with bpy.context.temp_override(window=win, area=editor, region=region):
+            bpy.ops.node.view_all()
+            if zoom == "close":
+                for _ in range(3):
+                    bpy.ops.view2d.zoom_in()
+        yield 0.3
+        if point is not None:                         # an event stream while the shot is taken
+            mouse(*point)
+            yield 0.1
+            mouse(*point, "LEFTMOUSE", "PRESS")
+            yield 0.05
+            mouse(*point, "LEFTMOUSE", "RELEASE")
+        for key in ("a", "d", "w"):
+            if player.has_keys():
+                type_key(key)
+        yield 0.18
+        note(name, f"activity_{zoom}", {"shot": shot(f"{name}-activity-{zoom}", editor), "events": act.events,
+                                        "deliveries": act.deliveries, "packets": len(act.packets(player.sim.now)),
+                                        "overlay": __import__("x3d_blender_io.behaviour_activity", fromlist=["x"]).handler_active()})
+        yield 0.1
+
+
 def world_steps(world, tag=""):
     from x3d_blender_io import behaviour_nodes, behaviour_play
     path = world_path(world)
@@ -324,6 +358,12 @@ def world_steps(world, tag=""):
         except Exception:
             LOG["errors"].append(f"{name} act: {traceback.format_exc()}")
             note(name, "act_ok", False)
+    if ACTIVITY and world in ("door", "counter", "snake") and not tag:
+        try:
+            yield from activity_shots(name, editor, win, player, targets)
+        except Exception:
+            LOG["errors"].append(f"{name} activity: {traceback.format_exc()}")
+            note(name, "activity_ok", False)
     glowing = [n.name for n in tree.nodes if n.use_custom_color]
     note(name, "glowing_after_click", glowing)
     note(name, "shot_glow", shot(f"{name}-4-play-glow"))

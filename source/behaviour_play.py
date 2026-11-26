@@ -30,6 +30,7 @@ from bpy.props import EnumProperty
 from bpy_extras.io_utils import axis_conversion
 from mathutils import Matrix, Quaternion, Vector
 
+from . import behaviour_activity
 from . import behaviour_graph as bg
 from . import behaviour_nodes
 from . import behaviour_presets
@@ -177,12 +178,13 @@ class _TransformState:
 class Player:
     """A scene's behaviour graph, running on the scene's own objects."""
 
-    def __init__(self, scene, graph=None, *, global_matrix=None, flash=True):
+    def __init__(self, scene, graph=None, *, global_matrix=None, flash=True, activity=False):
         self.scene = scene
         self.graph = graph if graph is not None else behaviour_nodes.read(scene)
         if self.graph is None:
             raise bg.BehaviourError("no-graph", "this scene has no X3D Behaviour node tree to play")
         self.sim = Simulation(self.graph)
+        self.activity = behaviour_activity.Activity.from_simulation(self.sim) if activity else None   # see behaviour_activity
         self.global_matrix = global_matrix if global_matrix is not None else EXPORT_AXES
         self.not_applied = []          # "Type.field" an event reached but the player does not show
         self.now = 0.0
@@ -354,6 +356,8 @@ class Player:
     # -- events onto datablocks -----------------------------------------------------------------------------------
 
     def _apply(self, changes):
+        if self.activity is not None:
+            self.activity.feed_log(self.sim.log, self.sim.now)       # what the simulation just delivered
         touched = {}
         for node_id, field_name, value in changes:
             node = self.graph.nodes[node_id]
@@ -740,13 +744,15 @@ class X3D_OT_behaviour_play(bpy.types.Operator):
         if problem:
             self.report({"WARNING"}, problem)
         try:
-            self.player = Player(scene, global_matrix=matrix)
+            behaviour_activity.ensure_properties()
+            self.player = Player(scene, global_matrix=matrix, activity=scene.x3d_activity_show)
         except bg.BehaviourError as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         self.began, self.dragging = time.perf_counter(), False
         self.player.start(0.0)
         _running["player"] = self.player
+        behaviour_activity.start_overlay(self.player)
         self.overlay = bpy.types.SpaceView3D.draw_handler_add(_draw_typed, (self.player,), "WINDOW", "POST_PIXEL") \
             if self.player.has_keys() else None
         self.timer = context.window_manager.event_timer_add(1 / 60, window=context.window)
@@ -820,6 +826,7 @@ class X3D_OT_behaviour_play(bpy.types.Operator):
             context.workspace.status_text_set("X3D Behaviour is playing. Typing: " + "; ".join(lines) + ". Esc stops.")
 
     def _finish(self, context):
+        behaviour_activity.stop_overlay()
         if getattr(self, "overlay", None) is not None:
             bpy.types.SpaceView3D.draw_handler_remove(self.overlay, "WINDOW")
             self.overlay = None
@@ -886,6 +893,7 @@ class X3D_PT_behaviour_play(bpy.types.Panel):
         box.prop(context.scene, "x3d_play_up")
         if axes_matrix(context.scene.x3d_play_forward, context.scene.x3d_play_up) is None:
             layout.label(text="Forward and Up share an axis: -Z / Y is used", icon="ERROR")
+        behaviour_activity.draw_options(layout, context)
         player = _running["player"]
         if player is not None:
             layout.label(text=f"{len(player.sensed_objects())} object(s) answer the pointer")
@@ -923,6 +931,7 @@ def register():
 
 
 def unregister():
+    behaviour_activity.stop_overlay()
     if _running["player"] is not None:
         _running["player"].stop()
         _running["player"] = None
