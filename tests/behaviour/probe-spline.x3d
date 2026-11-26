@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <component name="Interpolation" level="5" />
+    <meta name="title" content="Behaviour simulator probe: splines and easing" />
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint position="0 0 10" />
+    <Transform DEF="Pad">
+      <Shape>
+        <Appearance>
+          <Material diffuseColor="0.2 0.3 0.5" />
+          <TextureTransform DEF="PadTexture" />
+        </Appearance>
+        <Box size="12 4 0.2" />
+      </Shape>
+      <TouchSensor DEF="Touch" />
+    </Transform>
+    <Transform DEF="A" translation="-3 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="APaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="B" translation="-1.5 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="BPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="C" translation="0 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="CPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="D" translation="1.5 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="DPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Transform DEF="E" translation="3 3 0">
+      <Shape>
+        <Appearance>
+          <Material DEF="EPaint" diffuseColor="0.6 0.6 0.6" />
+        </Appearance>
+        <Box size="0.6 0.6 0.6" />
+      </Shape>
+    </Transform>
+    <Switch DEF="Pick" whichChoice="-1">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Switch>
+    <TimeSensor DEF="Timer" cycleInterval="2" />
+    <EaseInEaseOut DEF="Ease" easeInEaseOut="0 0.6 0.3 0.3 0.7 0" key="0 0.5 1" />
+    <PositionInterpolator DEF="EasedHop" key="0 1" keyValue="-3 3 0 -3 4.5 0" />
+    <EaseInEaseOut DEF="Steep" easeInEaseOut="0.8 0.9 0.9 0.6" key="0 1" />
+    <ScalarInterpolator DEF="Fade" key="0 1" keyValue="0 0.8" />
+    <SplinePositionInterpolator DEF="Path" key="0 0.2 0.7 1" keyValue="-1.5 3 0 -1 4 0.5 -2 4.5 -0.5 -1.5 3 0" />
+    <SplinePositionInterpolator DEF="Loop" closed="true" key="0 0.25 0.5 0.75 1" keyValue="0 3 0 0.6 3.6 0 0 4.2 0 -0.6 3.6 0 0 3 0" />
+    <SplinePositionInterpolator2D DEF="Flat" key="0 0.5 1" keyValue="0 0 1 1 2 0" keyVelocity="2 0 0 2 2 0" />
+    <PositionDamper2D DEF="Soft2D" tau="0.2" />
+    <SplineScalarInterpolator DEF="Wave" key="0 0.3 0.6 1" keyValue="0 0.9 0.2 0.7" keyVelocity="1 -2" normalizeVelocity="true" />
+    <SplineScalarInterpolator DEF="Tide" key="0 0.4 0.5 1" keyValue="0.1 0.6 0.3 0.9" keyVelocity="1 0.5 -1 2" normalizeVelocity="true" />
+    <SquadOrientationInterpolator DEF="Swing" key="0 0.3 0.7 1" keyValue="0 1 0 0 0 1 0 1.5 1 0 0 1.2 0 0 1 2.5" />
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Timer" toField="startTime" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Ease" toField="set_fraction" />
+    <ROUTE fromNode="Ease" fromField="modifiedFraction_changed" toNode="EasedHop" toField="set_fraction" />
+    <ROUTE fromNode="EasedHop" fromField="value_changed" toNode="A" toField="translation" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Steep" toField="set_fraction" />
+    <ROUTE fromNode="Steep" fromField="modifiedFraction_changed" toNode="Fade" toField="set_fraction" />
+    <ROUTE fromNode="Fade" fromField="value_changed" toNode="APaint" toField="transparency" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Path" toField="set_fraction" />
+    <ROUTE fromNode="Path" fromField="value_changed" toNode="B" toField="translation" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Loop" toField="set_fraction" />
+    <ROUTE fromNode="Loop" fromField="value_changed" toNode="C" toField="translation" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Flat" toField="set_fraction" />
+    <ROUTE fromNode="Flat" fromField="value_changed" toNode="Soft2D" toField="set_destination" />
+    <ROUTE fromNode="Soft2D" fromField="value_changed" toNode="PadTexture" toField="translation" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Wave" toField="set_fraction" />
+    <ROUTE fromNode="Wave" fromField="value_changed" toNode="DPaint" toField="transparency" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Tide" toField="set_fraction" />
+    <ROUTE fromNode="Tide" fromField="value_changed" toNode="CPaint" toField="transparency" />
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Swing" toField="set_fraction" />
+    <ROUTE fromNode="Swing" fromField="value_changed" toNode="E" toField="rotation" />
+  </Scene>
+</X3D>

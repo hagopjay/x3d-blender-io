@@ -79,7 +79,7 @@ Nothing is keyframed and nothing is left changed.
 
 | Simulated | Not simulated (named in the sidebar, never silently skipped) |
 |---|---|
-| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor and PlaneSensor from the pointer | Coordinate, Normal, Spline and Squad interpolators, EaseInEaseOut, coordinate and texture-coordinate followers, CylinderSensor and SphereSensor drags, ProximitySensor, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
+| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor and PlaneSensor from the pointer | Coordinate and Normal interpolators, coordinate and texture-coordinate followers, CylinderSensor and SphereSensor drags, ProximitySensor, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
 
 Shown on Blender data: Transform translation, rotation, scale, visible; material baseColor / diffuseColor,
 emissiveColor, transparency, roughness, metallic; light color and on; Viewpoint set_bind (the scene camera). Anything
@@ -103,13 +103,28 @@ in `tests/behaviour/x_ite_traces/` and replayed by `tests/test_behaviour_sim.py`
 | counter.x3d (5 clicks) | 3 | 3 | 0 |
 | snake.x3d (8 s) | 6 | 6 | 0.0048 (followers) |
 | probe.x3d (2 clicks; every simulated kind, built by `tools/behaviour_probe.py`) | 25 | 25 | 0.0645 (followers) |
+| probe-spline.x3d (2 clicks; EaseInEaseOut, the Spline interpolators, Squad, PositionDamper2D; same tool) | 12 | 12 | 0.000001 exact; 0.0202 (follower) |
 
 Tolerances: 0.002 for everything exact, 0.08 for dampers and chasers and what they feed (X_ITE steps them by its frame
 rate, the simulator by the clock). Discrete streams must also have the same number of events. What the comparison
 taught, all now in the simulator: X_ITE's TimeTrigger and IntegerTrigger answer `true` only; a looping TimeSensor
 counts its cycles from `startTime`, not from when the world loaded; a follower chases where its destination was one
 frame ago; colours are mixed through HSV, in dampers too; a chaser's answer to a jump is eased (half a cosine), not a
-straight ramp. Not judged: the 2D followers and ColorChaser (same code as a judged one), and sensors the caller drives.
+straight ramp. Not judged: PositionChaser2D and ColorChaser (same code as a judged one), and sensors the caller drives.
+
+**Splines, easing and Squad (25 Nov 2026).** Written from X_ITE 16.7's own code and judged against X_ITE 16.7.1 on
+`probe-spline.x3d`, recorded the same way. What X_ITE does where the standard leaves room, all now in the simulator:
+EaseInEaseOut sends the eased weight within the current key segment (0 to 1), not a fraction mapped back onto the keys,
+and scales ease in and ease out down when they add up to more than 1; a Spline interpolator's velocities, when there are
+fewer than keys, are padded with zeros (two velocities are not "first and last"); `normalizeVelocity` scales every
+velocity but the last to the path length; an open curve's end tangents are zero and a closed curve's first tangent
+wraps; tangents are weighted by the key spacing on each side; Squad uses Shoemake's inner points, with an open path's
+ends as their own. The judge was checked against five deliberately wrong versions (easing off by 2%, the last velocity
+normalised, two velocities read as first and last, Squad as plain slerp, a closed curve treated as open): it rejects
+all five. **X_ITE 16.7.1 cannot load a world with a vector Spline interpolator (2D or 3D) whose `keyVelocity` is set and
+`normalizeVelocity` is true** ("e.norm is not a function"); the scalar one loads. The simulator runs that case as X_ITE's
+code intends; it is not judged. Through Blender, `probe-spline.x3d` keeps 19 of 20 ROUTEs: the one into a
+TextureTransform is left out and named (targets are Transform, Viewpoint, lights and materials).
 
 ### Typed field editors
 

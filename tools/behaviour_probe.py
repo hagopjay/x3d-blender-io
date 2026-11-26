@@ -126,8 +126,66 @@ def build():
     return b
 
 
+def build_spline():
+    """probe-spline.x3d: EaseInEaseOut, the three Spline interpolators and SquadOrientationInterpolator, each set up
+    to show what X_ITE does where the standard leaves room: uneven keys, a closed curve, velocities that are normalised,
+    fewer velocities than keys, ease-in plus ease-out above 1, and rotations about changing axes."""
+    b = Behaviour()
+    touch = b.add("TouchSensor", "Touch", parent="Pad")
+    a, bb, c, d, e = (b.target("Transform", name) for name in "ABCDE")
+    paint_a, paint_d = b.target("Material", "APaint"), b.target("Material", "DPaint")
+    timer = b.add("TimeSensor", "Timer", cycleInterval=2)
+    touch.touchTime >> timer.startTime
+
+    ease = b.add("EaseInEaseOut", "Ease", key=[0, 0.5, 1], easeInEaseOut=[(0, 0.6), (0.3, 0.3), (0.7, 0)])
+    timer.fraction_changed >> ease.set_fraction
+    eased_hop = b.add("PositionInterpolator", "EasedHop", key=[0, 1], keyValue=[(-3, 3, 0), (-3, 4.5, 0)])
+    ease.modifiedFraction_changed >> eased_hop.set_fraction
+    eased_hop.value_changed >> a.translation
+    steep = b.add("EaseInEaseOut", "Steep", key=[0, 1], easeInEaseOut=[(0.8, 0.9), (0.9, 0.6)])   # 0.9 + 0.9 > 1
+    timer.fraction_changed >> steep.set_fraction
+    fade = b.add("ScalarInterpolator", "Fade", key=[0, 1], keyValue=[0, 0.8])
+    steep.modifiedFraction_changed >> fade.set_fraction
+    fade.value_changed >> paint_a.transparency
+
+    path = b.add("SplinePositionInterpolator", "Path", key=[0, 0.2, 0.7, 1],
+                 keyValue=[(-1.5, 3, 0), (-1, 4, 0.5), (-2, 4.5, -0.5), (-1.5, 3, 0)])
+    timer.fraction_changed >> path.set_fraction
+    path.value_changed >> bb.translation
+    loop = b.add("SplinePositionInterpolator", "Loop", closed=True, key=[0, 0.25, 0.5, 0.75, 1],
+                 keyValue=[(0, 3, 0), (0.6, 3.6, 0), (0, 4.2, 0), (-0.6, 3.6, 0), (0, 3, 0)])
+    timer.fraction_changed >> loop.set_fraction
+    loop.value_changed >> c.translation
+    flat = b.add("SplinePositionInterpolator2D", "Flat", key=[0, 0.5, 1], keyValue=[(0, 0), (1, 1), (2, 0)],
+                 keyVelocity=[(2, 0), (0, 2), (2, 0)])   # normalizeVelocity on a vector spline fails to load in X_ITE 16.7.1
+    timer.fraction_changed >> flat.set_fraction
+    soft = b.add("PositionDamper2D", "Soft2D", tau=0.2)
+    flat.value_changed >> soft.set_destination
+    soft.value_changed >> b.target("TextureTransform", "PadTexture").translation
+    wave = b.add("SplineScalarInterpolator", "Wave", key=[0, 0.3, 0.6, 1], keyValue=[0, 0.9, 0.2, 0.7],
+                 keyVelocity=[1, -2], normalizeVelocity=True)         # fewer velocities than keys, normalised
+    timer.fraction_changed >> wave.set_fraction
+    wave.value_changed >> paint_d.transparency
+    tide = b.add("SplineScalarInterpolator", "Tide", key=[0, 0.4, 0.5, 1], keyValue=[0.1, 0.6, 0.3, 0.9],
+                 keyVelocity=[1, 0.5, -1, 2], normalizeVelocity=True)  # the last velocity is not normalised
+    timer.fraction_changed >> tide.set_fraction
+    tide.value_changed >> b.target("Material", "CPaint").transparency
+    swing = b.add("SquadOrientationInterpolator", "Swing", key=[0, 0.3, 0.7, 1],
+                  keyValue=[(0, 1, 0, 0), (0, 1, 0, 1.5), (1, 0, 0, 1.2), (0, 0, 1, 2.5)])
+    timer.fraction_changed >> swing.set_fraction
+    swing.value_changed >> e.rotation
+    return b
+
+
 if __name__ == "__main__":
-    graph = build()
-    target = ROOT / "tests" / "behaviour" / "probe.x3d"
-    target.write_text(graph.weave(SCENE), encoding="utf-8")
-    print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())
+    for name, graph, title in (("probe.x3d", build(), "Behaviour simulator probe"),
+                               ("probe-spline.x3d", build_spline(), "Behaviour simulator probe: splines and easing")):
+        target = ROOT / "tests" / "behaviour" / name
+        scene = SCENE.replace("Behaviour simulator probe", title)
+        if name != "probe.x3d":      # EaseInEaseOut and the Spline nodes are Interpolation 4, Squad is 5
+            scene = scene.replace('<component name="Followers" level="1"/>',
+                                  '<component name="Followers" level="1"/>\n    <component name="Interpolation" level="5"/>')
+            scene = scene.replace('<Material diffuseColor="0.2 0.3 0.5"/></Appearance>',    # a 2D target
+                                  '<Material diffuseColor="0.2 0.3 0.5"/><TextureTransform DEF="PadTexture"/></Appearance>')
+        target.write_text(graph.weave(scene), encoding="utf-8")
+        print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())

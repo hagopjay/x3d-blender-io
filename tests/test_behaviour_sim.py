@@ -5,7 +5,7 @@
 """The behaviour simulator (source/behaviour_sim.py): plain Python, no Blender, no browser.
 
 Two kinds of test. The first states what each node must do, from ISO/IEC 19775-1:2023. The second replays what X_ITE
-16.7.1 did with four files (tests/behaviour/x_ite_traces/, recorded by tools/behaviour_sim_judge.cjs with real mouse
+16.7.1 did with five files (tests/behaviour/x_ite_traces/, recorded by tools/behaviour_sim_judge.cjs with real mouse
 clicks) and requires the simulator to send the same events::
 
     cd tests && python -m unittest test_behaviour_sim
@@ -28,6 +28,11 @@ import behaviour_sim as bs            # noqa: E402
 import behaviour_sim_judge as judge   # noqa: E402
 
 WORLDS = ROOT / "tests" / "behaviour"
+
+
+def sent(sim, node_id, field_name):
+    """The last value ``node_id`` sent from ``field_name`` (the simulation's log)."""
+    return [event[3] for event in sim.log if event[1] == node_id and event[2] == field_name][-1]
 
 
 def world(name):
@@ -211,9 +216,37 @@ class NodeTests(unittest.TestCase):
 
     def test_what_is_not_run_is_named(self):
         g = self.graph()
-        g.add("SplinePositionInterpolator", "Curve")
+        g.add("CoordinateInterpolator", "Mesh")
         g.add("TimeSensor", "Clock")
-        self.assertEqual(bs.Simulation(g).not_simulated, ["SplinePositionInterpolator Curve"])
+        self.assertEqual(bs.Simulation(g).not_simulated, ["CoordinateInterpolator Mesh"])
+
+    def test_ease_in_ease_out_sends_the_eased_weight_of_the_segment(self):
+        # X_ITE: the output is the eased weight within the segment (0 to 1), not a fraction mapped onto the keys
+        g = self.graph()
+        ease = g.add("EaseInEaseOut", "Ease", key=[0, 0.5, 1], easeInEaseOut=[(0, 0), (0, 0), (0, 0)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        sim.send("Ease", "set_fraction", 0.75, 0.0)
+        self.assertAlmostEqual(sent(sim, "Ease", "modifiedFraction_changed"), 0.5)   # no easing: the weight
+
+    def test_a_spline_passes_through_its_keys(self):
+        g = self.graph()
+        g.add("SplinePositionInterpolator", "Path", key=[0, 0.3, 1], keyValue=[(0, 0, 0), (1, 2, 0), (3, 0, 1)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        for fraction, expected in ((0.0, (0, 0, 0)), (0.3, (1, 2, 0)), (1.0, (3, 0, 1))):
+            sim.send("Path", "set_fraction", fraction, 0.0)
+            for got, want in zip(sent(sim, "Path", "value_changed"), expected):
+                self.assertAlmostEqual(got, want)
+
+    def test_squad_passes_through_its_keys(self):
+        g = self.graph()
+        g.add("SquadOrientationInterpolator", "Swing", key=[0, 0.5, 1],
+              keyValue=[(0, 1, 0, 0), (0, 1, 0, 1.5), (1, 0, 0, 1.2)])
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        sim.send("Swing", "set_fraction", 0.5, 0.0)
+        self.assertLess(bs._rotation_distance(sent(sim, "Swing", "value_changed"), (0, 1, 0, 1.5)), 1e-9)
 
 
 class XiteAgreementTests(unittest.TestCase):
@@ -240,14 +273,19 @@ class XiteAgreementTests(unittest.TestCase):
     def test_probe_of_every_simulated_kind(self):
         self.agree("probe", 25)
 
+    def test_splines_easing_and_squad(self):
+        # EaseInEaseOut, the three Spline interpolators, Squad and PositionDamper2D (tools/behaviour_probe.py)
+        self.agree("probe-spline", 12)
+
     def test_the_probe_covers_what_the_simulator_runs(self):
-        used = {node.node_type for node in world("probe").nodes.values() if node.role == bg.BEHAVIOUR} | \
-               {node.node_type for node in world("snake").nodes.values() if node.role == bg.BEHAVIOUR}
+        # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
+        used = {graph.nodes[route.from_id].node_type for graph in map(world, ("probe", "snake", "probe-spline"))
+                for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one
         self.assertEqual(unjudged, ["ColorChaser", "CylinderSensor", "KeySensor", "PlaneSensor", "PositionChaser2D",
-                                    "PositionDamper2D", "PositionInterpolator2D", "ProximitySensor", "SphereSensor",
+                                    "PositionInterpolator2D", "ProximitySensor", "SphereSensor",
                                     "StringSensor", "VisibilitySensor"])
 
 
