@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <meta name="title" content="Gallery 05: spin the planet" />
+    <meta name="description" content="Drag the planet to spin it; five moons follow through OrientationChasers of different speeds." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-05-spin-the-planet/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.01 0.01 0.04" />
+    <Viewpoint DEF="View" description="Front" position="0 2.6 9.5" orientation="1 0 0 -0.22" />
+    <PointLight DEF="SunLight" location="-9 3 4" color="1 0.9 0.6" intensity="900" radius="40" />
+    <Transform translation="-9 3 4"><Shape><Appearance><PhysicalMaterial DEF="SunPaint" baseColor="1 0.9 0.5" emissiveColor="1 0.8 0.3" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.9" /></Shape></Transform>
+    <TimeSensor DEF="SunClock" cycleInterval="12" loop="true" />
+    <ColorInterpolator DEF="SunHue" key="0 0.25 0.5 0.75 1" keyValue="1 0.9 0.6 1 0.6 0.3 0.9 0.5 0.9 0.6 0.8 1 1 0.9 0.6" />
+    <ROUTE fromNode="SunClock" fromField="fraction_changed" toNode="SunHue" toField="set_fraction" />
+    <ROUTE fromNode="SunHue" fromField="value_changed" toNode="SunLight" toField="color" />
+    <ROUTE fromNode="SunHue" fromField="value_changed" toNode="SunPaint" toField="emissiveColor" />
+    <ROUTE fromNode="SunHue" fromField="value_changed" toNode="SunPaint" toField="baseColor" />
+    <Transform DEF="Planet">
+      <SphereSensor DEF="Spin" description="Drag to spin the planet" autoOffset="true" />
+      <Shape><Appearance><PhysicalMaterial baseColor="0.1 0.35 0.8" roughness="0.3" metallic="0.0" /></Appearance><Sphere radius="1" /></Shape>
+      <Transform translation="0.929 0.518 0.188" rotation="0 1 0 -0.200"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.7 0.3" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.35" /></Shape></Transform><Transform translation="0.073 -0.319 1.029" rotation="0 1 0 -1.500"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.7 0.3" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.4" /></Shape></Transform><Transform translation="-1.064 0.108 0.152" rotation="0 1 0 -3.000"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.7 0.3" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.3" /></Shape></Transform><Transform translation="-0.274 -0.610 -0.848" rotation="0 1 0 -4.400"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.7 0.3" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.35" /></Shape></Transform><Transform translation="0.417 0.775 -0.626" rotation="0 1 0 -5.300"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.7 0.3" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.25" /></Shape></Transform><Transform translation="1.080 0.000 0.000" rotation="0 1 0 -0.000"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.7 0.3" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.25" /></Shape></Transform>
+      <Transform DEF="Ring" scale="1 0.04 1" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.3" emissiveColor="1 0.7 0.2" roughness="0.5" metallic="0.0" /></Appearance><Cylinder radius="1.8" height="1" /></Shape></Transform>
+    </Transform>
+    <ROUTE fromNode="Spin" fromField="rotation_changed" toNode="Planet" toField="rotation" />
+    <ROUTE fromNode="Spin" fromField="isActive" toNode="Ring" toField="visible" />
+    <Transform DEF="Arm0">
+      <Transform translation="2.100 0.0 0.000">
+        <Transform DEF="Tumble0"><Shape><Appearance><PhysicalMaterial DEF="MoonPaint0" baseColor="0.45 0.45 0.55" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.26" /></Shape>
+          <Transform translation="0.28 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.4 0.2" roughness="0.5" metallic="0.0" /></Appearance><Box size="0.12 0.12 0.12" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <OrientationChaser DEF="Swing0" duration="0.4" initialDestination="0 1 0 0" initialValue="0 1 0 0" />
+    <TimeSensor DEF="Roll0" cycleInterval="2" loop="true" />
+    <OrientationInterpolator DEF="Tum0" key="0 0.5 1" keyValue="0 0 1 0 0 0 1 3.1416 0 0 1 6.2832" />
+    <ROUTE fromNode="Planet" fromField="rotation_changed" toNode="Swing0" toField="set_destination" />
+    <ROUTE fromNode="Swing0" fromField="value_changed" toNode="Arm0" toField="rotation" />
+    <ROUTE fromNode="Roll0" fromField="fraction_changed" toNode="Tum0" toField="set_fraction" />
+    <ROUTE fromNode="Tum0" fromField="value_changed" toNode="Tumble0" toField="rotation" />
+    <Transform DEF="Arm1">
+      <Transform translation="-1.932 0.4 2.163">
+        <Transform DEF="Tumble1"><Shape><Appearance><PhysicalMaterial DEF="MoonPaint1" baseColor="0.56 0.56 0.66" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.31" /></Shape>
+          <Transform translation="0.28 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.4 0.2" roughness="0.5" metallic="0.0" /></Appearance><Box size="0.12 0.12 0.12" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <OrientationChaser DEF="Swing1" duration="0.9" initialDestination="0 1 0 0" initialValue="0 1 0 0" />
+    <TimeSensor DEF="Roll1" cycleInterval="3" loop="true" />
+    <OrientationInterpolator DEF="Tum1" key="0 0.5 1" keyValue="0 0 1 0 0 0 1 3.1416 0 0 1 6.2832" />
+    <ROUTE fromNode="Planet" fromField="rotation_changed" toNode="Swing1" toField="set_destination" />
+    <ROUTE fromNode="Swing1" fromField="value_changed" toNode="Arm1" toField="rotation" />
+    <ROUTE fromNode="Roll1" fromField="fraction_changed" toNode="Tum1" toField="set_fraction" />
+    <ROUTE fromNode="Tum1" fromField="value_changed" toNode="Tumble1" toField="rotation" />
+    <Transform DEF="Arm2">
+      <Transform translation="-1.814 -0.5 -3.225">
+        <Transform DEF="Tumble2"><Shape><Appearance><PhysicalMaterial DEF="MoonPaint2" baseColor="0.67 0.67 0.77" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.36" /></Shape>
+          <Transform translation="0.28 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.4 0.2" roughness="0.5" metallic="0.0" /></Appearance><Box size="0.12 0.12 0.12" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <OrientationChaser DEF="Swing2" duration="1.6" initialDestination="0 1 0 0" initialValue="0 1 0 0" />
+    <TimeSensor DEF="Roll2" cycleInterval="4" loop="true" />
+    <OrientationInterpolator DEF="Tum2" key="0 0.5 1" keyValue="0 0 1 0 0 0 1 3.1416 0 0 1 6.2832" />
+    <ROUTE fromNode="Planet" fromField="rotation_changed" toNode="Swing2" toField="set_destination" />
+    <ROUTE fromNode="Swing2" fromField="value_changed" toNode="Arm2" toField="rotation" />
+    <ROUTE fromNode="Roll2" fromField="fraction_changed" toNode="Tum2" toField="set_fraction" />
+    <ROUTE fromNode="Tum2" fromField="value_changed" toNode="Tumble2" toField="rotation" />
+    <Transform DEF="Arm3">
+      <Transform translation="2.041 0.3 4.010">
+        <Transform DEF="Tumble3"><Shape><Appearance><PhysicalMaterial DEF="MoonPaint3" baseColor="0.78 0.78 0.88" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.26" /></Shape>
+          <Transform translation="0.28 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.4 0.2" roughness="0.5" metallic="0.0" /></Appearance><Box size="0.12 0.12 0.12" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <OrientationChaser DEF="Swing3" duration="2.6" initialDestination="0 1 0 0" initialValue="0 1 0 0" />
+    <TimeSensor DEF="Roll3" cycleInterval="5" loop="true" />
+    <OrientationInterpolator DEF="Tum3" key="0 0.5 1" keyValue="0 0 1 0 0 0 1 3.1416 0 0 1 6.2832" />
+    <ROUTE fromNode="Planet" fromField="rotation_changed" toNode="Swing3" toField="set_destination" />
+    <ROUTE fromNode="Swing3" fromField="value_changed" toNode="Arm3" toField="rotation" />
+    <ROUTE fromNode="Roll3" fromField="fraction_changed" toNode="Tum3" toField="set_fraction" />
+    <ROUTE fromNode="Tum3" fromField="value_changed" toNode="Tumble3" toField="rotation" />
+    <Transform DEF="Arm4">
+      <Transform translation="3.364 -0.2 -4.096">
+        <Transform DEF="Tumble4"><Shape><Appearance><PhysicalMaterial DEF="MoonPaint4" baseColor="0.89 0.89 0.99" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.31" /></Shape>
+          <Transform translation="0.28 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.4 0.2" roughness="0.5" metallic="0.0" /></Appearance><Box size="0.12 0.12 0.12" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <OrientationChaser DEF="Swing4" duration="4.0" initialDestination="0 1 0 0" initialValue="0 1 0 0" />
+    <TimeSensor DEF="Roll4" cycleInterval="6" loop="true" />
+    <OrientationInterpolator DEF="Tum4" key="0 0.5 1" keyValue="0 0 1 0 0 0 1 3.1416 0 0 1 6.2832" />
+    <ROUTE fromNode="Planet" fromField="rotation_changed" toNode="Swing4" toField="set_destination" />
+    <ROUTE fromNode="Swing4" fromField="value_changed" toNode="Arm4" toField="rotation" />
+    <ROUTE fromNode="Roll4" fromField="fraction_changed" toNode="Tum4" toField="set_fraction" />
+    <ROUTE fromNode="Tum4" fromField="value_changed" toNode="Tumble4" toField="rotation" />
+    <ROUTE fromNode="Twinkle0" fromField="fraction_changed" toNode="Blink0" toField="set_fraction" />
+    <ROUTE fromNode="Blink0" fromField="value_changed" toNode="Star0" toField="visible" />
+    <ROUTE fromNode="Twinkle1" fromField="fraction_changed" toNode="Blink1" toField="set_fraction" />
+    <ROUTE fromNode="Blink1" fromField="value_changed" toNode="Star1" toField="visible" />
+    <ROUTE fromNode="Twinkle2" fromField="fraction_changed" toNode="Blink2" toField="set_fraction" />
+    <ROUTE fromNode="Blink2" fromField="value_changed" toNode="Star2" toField="visible" />
+    <ROUTE fromNode="Twinkle3" fromField="fraction_changed" toNode="Blink3" toField="set_fraction" />
+    <ROUTE fromNode="Blink3" fromField="value_changed" toNode="Star3" toField="visible" />
+    <ROUTE fromNode="Twinkle4" fromField="fraction_changed" toNode="Blink4" toField="set_fraction" />
+    <ROUTE fromNode="Blink4" fromField="value_changed" toNode="Star4" toField="visible" />
+    <ROUTE fromNode="Twinkle5" fromField="fraction_changed" toNode="Blink5" toField="set_fraction" />
+    <ROUTE fromNode="Blink5" fromField="value_changed" toNode="Star5" toField="visible" />
+    <ROUTE fromNode="Twinkle6" fromField="fraction_changed" toNode="Blink6" toField="set_fraction" />
+    <ROUTE fromNode="Blink6" fromField="value_changed" toNode="Star6" toField="visible" />
+    <ROUTE fromNode="Twinkle7" fromField="fraction_changed" toNode="Blink7" toField="set_fraction" />
+    <ROUTE fromNode="Blink7" fromField="value_changed" toNode="Star7" toField="visible" />
+    <ROUTE fromNode="Twinkle8" fromField="fraction_changed" toNode="Blink8" toField="set_fraction" />
+    <ROUTE fromNode="Blink8" fromField="value_changed" toNode="Star8" toField="visible" />
+    <ROUTE fromNode="Twinkle9" fromField="fraction_changed" toNode="Blink9" toField="set_fraction" />
+    <ROUTE fromNode="Blink9" fromField="value_changed" toNode="Star9" toField="visible" />
+    <ROUTE fromNode="Twinkle10" fromField="fraction_changed" toNode="Blink10" toField="set_fraction" />
+    <ROUTE fromNode="Blink10" fromField="value_changed" toNode="Star10" toField="visible" />
+    <ROUTE fromNode="Twinkle11" fromField="fraction_changed" toNode="Blink11" toField="set_fraction" />
+    <ROUTE fromNode="Blink11" fromField="value_changed" toNode="Star11" toField="visible" />
+    <ROUTE fromNode="Twinkle12" fromField="fraction_changed" toNode="Blink12" toField="set_fraction" />
+    <ROUTE fromNode="Blink12" fromField="value_changed" toNode="Star12" toField="visible" />
+    <ROUTE fromNode="Twinkle13" fromField="fraction_changed" toNode="Blink13" toField="set_fraction" />
+    <ROUTE fromNode="Blink13" fromField="value_changed" toNode="Star13" toField="visible" />
+    <ROUTE fromNode="Twinkle14" fromField="fraction_changed" toNode="Blink14" toField="set_fraction" />
+    <ROUTE fromNode="Blink14" fromField="value_changed" toNode="Star14" toField="visible" />
+    <ROUTE fromNode="Twinkle15" fromField="fraction_changed" toNode="Blink15" toField="set_fraction" />
+    <ROUTE fromNode="Blink15" fromField="value_changed" toNode="Star15" toField="visible" />
+    <Transform DEF="Star0" translation="4.80 1.00 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle0" cycleInterval="1.10" loop="true" />
+    <BooleanSequencer DEF="Blink0" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star1" translation="-5.86 3.38 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle1" cycleInterval="1.47" loop="true" />
+    <BooleanSequencer DEF="Blink1" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star2" translation="0.97 -3.63 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle2" cycleInterval="1.84" loop="true" />
+    <BooleanSequencer DEF="Blink2" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star3" translation="4.29 5.58 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle3" cycleInterval="2.21" loop="true" />
+    <BooleanSequencer DEF="Blink3" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star4" translation="-10.04 0.43 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle4" cycleInterval="2.58" loop="true" />
+    <BooleanSequencer DEF="Blink4" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star5" translation="5.19 -1.38 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle5" cycleInterval="2.95" loop="true" />
+    <BooleanSequencer DEF="Blink5" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star6" translation="-2.41 6.36 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle6" cycleInterval="3.32" loop="true" />
+    <BooleanSequencer DEF="Blink6" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star7" translation="-2.42 -1.73 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle7" cycleInterval="3.69" loop="true" />
+    <BooleanSequencer DEF="Blink7" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star8" translation="7.89 2.44 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle8" cycleInterval="4.06" loop="true" />
+    <BooleanSequencer DEF="Blink8" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star9" translation="-10.68 3.03 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle9" cycleInterval="1.43" loop="true" />
+    <BooleanSequencer DEF="Blink9" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star10" translation="3.18 -1.58 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle10" cycleInterval="1.80" loop="true" />
+    <BooleanSequencer DEF="Blink10" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star11" translation="3.19 4.79 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle11" cycleInterval="2.17" loop="true" />
+    <BooleanSequencer DEF="Blink11" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star12" translation="-5.71 -1.56 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle12" cycleInterval="2.54" loop="true" />
+    <BooleanSequencer DEF="Blink12" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star13" translation="9.52 0.44 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle13" cycleInterval="2.91" loop="true" />
+    <BooleanSequencer DEF="Blink13" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star14" translation="-3.28 4.07 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle14" cycleInterval="3.28" loop="true" />
+    <BooleanSequencer DEF="Blink14" key="0 0.7 0.85 1" keyValue="true false true true" />
+    <Transform DEF="Star15" translation="-1.14 -3.83 -6">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9" roughness="0.5" metallic="0.0" /></Appearance><Sphere radius="0.07" /></Shape></Transform>
+    <TimeSensor DEF="Twinkle15" cycleInterval="3.65" loop="true" />
+    <BooleanSequencer DEF="Blink15" key="0 0.7 0.85 1" keyValue="true false true true" />
+  </Scene>
+</X3D>
