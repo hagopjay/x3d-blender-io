@@ -150,6 +150,60 @@ Through Blender nothing changes: a ROUTE into a Coordinate, TextureCoordinate or
 to, so Play shows it as "Not shown: Coordinate.point" as before (no change to `behaviour_play.py`); driving mesh vertices
 is not done.
 
+### Two files against X_ITE, with their own noise floor
+
+`tools/behaviour_pair_judge.py` (`judge_pair(file_a, file_b, stimulus, repeats=3, x_ite=dist)` and a CLI) replays two
+files in X_ITE, `repeats` times each, interleaved A B A B, under the same stimulus, and judges every field a ROUTE ends at
+in the scene (matched by DEF and field name; what only one file has is listed as unmatched). It exists because a fixed
+1 % threshold failed six unchanged solutions in another repo: on a loaded machine the same file against itself read up to
+5.5 %. Each stream gets the disagreement A-versus-B (fraction of samples outside tolerance, largest absolute difference,
+for every pairing), the same two numbers for A-versus-A and B-versus-B (the floor, measured in the same session), and a
+verdict: "same" (the middle A-versus-B pairing is no worse than the worst repeat-against-repeat pairing), "differs"
+(every A-versus-B pairing above the typical floor by 3 times and by at least 1 % of the samples), else "unclear". The
+result carries the machine load (`os.getloadavg` before and after every run), X_ITE and Chromium versions, the
+tolerances (2 % of each stream's span, samples every 0.05 s from each run's own time zero: the first start of a TimeSensor, else the
+first pointer press, else the first cycle start of a TimeSensor) and every raw per-pairing number. CLI exit codes: 0 same, 1 differs, 2 unclear,
+3 tool error (Node, Playwright, X_ITE or a file missing, or a stimulus call that X_ITE cannot be given). Stimulus: none or
+`{"seconds": 4}` (a timer-only world: load, run, sample), `{"clicks": n, "hold": [ms], "gap": ms}`, `{"click_plan":
+[DEF]}`, `{"drags": ...}`, `{"keys": ...}` (the formats of `tools/behaviour_sim_judge.cjs`), or the recorded list
+`[{time, call, node, args}]`, of which only `start`, `click` and `press` followed by `release` of one sensor can be
+replayed; any other call is a tool error, not skipped. Tests: `tests/test_behaviour_pair_judge.py` (pure parts on
+synthetic series; three browser cases, skipped with a reason when Node, Playwright or an X_ITE dist is missing: door.x3d
+against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
+from the last run are in the commit message of the change that added it.
+
+### Two files against X_ITE, with their own noise floor
+
+`tools/behaviour_pair_judge.py` (`judge_pair(file_a, file_b, stimulus, repeats=3, x_ite=dist)` and a CLI) replays two
+files in X_ITE, `repeats` times each, interleaved A B A B, under the same stimulus, and judges every field a ROUTE ends at
+in the scene (matched by DEF and field name; what only one file has is listed as unmatched). It exists because a fixed
+1 % threshold failed six unchanged solutions in another repo: on a loaded machine the same file against itself read up to
+5.5 %. Each stream gets the disagreement A-versus-B (fraction of samples outside tolerance, largest absolute difference,
+for every pairing), the same two numbers for A-versus-A and B-versus-B (the floor, measured in the same session), and a
+verdict: "same" (the middle A-versus-B pairing is no worse than the worst repeat-against-repeat pairing), "differs"
+(every A-versus-B pairing above the typical floor by 3 times and by at least 1 % of the samples), else "unclear". The
+result carries the machine load (`os.getloadavg` before and after every run), X_ITE and Chromium versions, the
+tolerances (2 % of each stream's span, samples every 0.05 s from each run's own time zero: the first start of a TimeSensor, else the
+first pointer press, else the first cycle start of a TimeSensor) and every raw per-pairing number. CLI exit codes: 0 same, 1 differs, 2 unclear,
+3 tool error (Node, Playwright, X_ITE or a file missing, or a stimulus call that X_ITE cannot be given). Stimulus: none or
+`{"seconds": 4}` (a timer-only world: load, run, sample), `{"clicks": n, "hold": [ms], "gap": ms}`, `{"click_plan":
+[DEF]}`, `{"drags": ...}`, `{"keys": ...}` (the formats of `tools/behaviour_sim_judge.cjs`), or the recorded list
+`[{time, call, node, args}]`, of which only `start`, `click` and `press` followed by `release` of one sensor can be
+replayed; any other call is a tool error, not skipped. Tests: `tests/test_behaviour_pair_judge.py` (pure parts on
+synthetic series; three browser cases, skipped with a reason when Node, Playwright or an X_ITE dist is missing: door.x3d
+against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
+from the last run are in the commit message of the change that added it.
+
+**A turn written as 0, pi, 2 pi (26 Nov 2026).** `probe-turn.x3d`, recorded on X_ITE 16.8.1 (load average 4.8 to 5.7): an
+OrientationInterpolator with key `0 0.5 1` and keyValue about y of 0, 3.14159265, 6.28318531 (a hair under pi and 2 pi)
+rocks in X_ITE: it turns to pi and comes back to 0, because each half is a shortest-path slerp. The same with 3.141593 and
+6.283185 (a hair over) is one continuous full turn, going the other way round first (to about -pi), then on to 2 pi; four
+keys 0, 2.0944, 4.18879, 5.23599, 6.28318 turn normally. The simulator agrees at every one of the 59 samples of each
+stream (distance 0 at the judge's 6-decimal rounding); no simulator change was needed. The judge already compares
+rotations as rotations (the angle between the two quaternions, `behaviour_sim._rotation_distance`, so q and -q and an axis
+flip with a negated angle are the same rotation). To turn a full circle, use more than three keys or write the middle key a
+little over pi.
+
 ### Typed field editors
 
 Each single-value field has a real widget (checkbox, number, seconds, colour swatch, vector, axis and angle). An
