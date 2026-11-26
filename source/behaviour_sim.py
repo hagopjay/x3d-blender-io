@@ -258,16 +258,28 @@ def _rotation_distance(a, b):
     return 2 * math.acos(min(1.0, abs(sum(x * y for x, y in zip(qa, qb)))))
 
 
+def _hsv_of(rgb):
+    """``colorsys.rgb_to_hsv``, but a colour whose largest part is 0 (and so with a negative part) is, as in X_ITE's
+    Color3.getHSV, a grey of that value: colorsys divides by it."""
+    try:
+        return colorsys.rgb_to_hsv(*rgb)
+    except ZeroDivisionError:
+        return (0.0, 0.0, max(rgb))
+
+
 def hsv_lerp(a, b, t):
     """Colour interpolation as X3D asks for it: through HSV, the short way round the hue circle."""
-    ha, sa, va = colorsys.rgb_to_hsv(*a)
-    hb, sb, vb = colorsys.rgb_to_hsv(*b)
+    ha, sa, va = _hsv_of(a)
+    hb, sb, vb = _hsv_of(b)
     if abs(hb - ha) > 0.5:
         if hb > ha:
             ha += 1
         else:
             hb += 1
-    return colorsys.hsv_to_rgb((ha + (hb - ha) * t) % 1.0, sa + (sb - sa) * t, va + (vb - va) * t)
+    try:
+        return colorsys.hsv_to_rgb((ha + (hb - ha) * t) % 1.0, sa + (sb - sa) * t, va + (vb - va) * t)
+    except (ValueError, OverflowError):      # a colour of 1e308 has no hue: not a number, which never leaves a node (dropped, counted)
+        return (math.nan, math.nan, math.nan)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -985,6 +997,13 @@ class _BufferChaser(_Machine):
     def tick(self, now, dt):
         if not self.active:
             return
+        if not (self.f["duration"] > 0 and self.step_time > 0):    # no duration: the scalar chaser arrives at once (its steps are dropped), and so does this one
+            self.buffer, self.previous = [self.destination] * self.SLOTS, self.destination
+            self.emit("value_changed", self.lower(self.destination))
+            self._activate(False)
+            return
+        if not (now - self.buffer_end) / self.step_time < 1e15:       # a clock that jumped, to infinity or NaN: as the list chasers do
+            self.buffer, self.previous, self.buffer_end = [self.destination] * self.SLOTS, self.destination, now
         slots = self.SLOTS
         fraction = self._shift(now)
         output = self.blend(self.previous, self.buffer[slots - 1], self.ramp((slots - 1 + fraction) * self.step_time))
@@ -1294,10 +1313,13 @@ def _v_unit(a):
 
 def _interval(value, low, high):
     """X_ITE's Algorithm.interval: wrap ``value`` into [low, high) (JavaScript's %, which keeps the dividend's sign)."""
-    if value >= high:
-        return math.fmod(value - low, high - low) + low
-    if value < low:
-        return math.fmod(value - high, high - low) + high
+    try:
+        if value >= high:
+            return math.fmod(value - low, high - low) + low
+        if value < low:
+            return math.fmod(value - high, high - low) + high
+    except ValueError:                 # fmod of an infinity: JavaScript's answer is NaN
+        return math.nan
     return value
 
 
@@ -1414,8 +1436,10 @@ class _DragSensor(_Machine):
     def _cylinder_track(self, origin, direction):
         z_point = self.z_plane.meet(origin, direction) or (0.0, 0.0, 0.0)
         axis_point = _v_add(z_point, _perpendicular((0.0, 0.0, 0.0), self.y_axis, z_point))
-        distance = self.sx_plane.distance(z_point) / self.radius
-        section = math.floor((distance + 1) / 2)
+        gap = self.sx_plane.distance(z_point)
+        distance = gap / self.radius if self.radius else math.nan if not gap or gap != gap else math.copysign(math.inf, gap)   # JavaScript's division
+        half = (distance + 1) / 2
+        section = math.floor(half) if math.isfinite(half) else math.nan     # JavaScript's Math.floor: a hit on the axis (radius 0) is NaN
         sinp = _interval(distance, -1, 1)
         phi = math.asin(sinp) if section == 0 else sinp * math.pi / 2
         turn = _Rot.axis_angle(*self.y_axis, phi + section * math.pi)
@@ -2048,7 +2072,12 @@ class _Script(_Machine):
     def _call(self, field, value, now):
         sent = self.handler(field, value, now, self.state)
         sim, collected = self.sim, {}
-        for item in sent or ():
+        try:
+            items = list(sent or ())
+        except TypeError:                          # a handler that answers with something that is not a list of pairs
+            sim.dropped["mismatch"] = sim.dropped.get("mismatch", 0) + 1
+            items = ()
+        for item in items:
             try:
                 name, out = item
             except (TypeError, ValueError):
