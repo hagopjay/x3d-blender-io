@@ -95,9 +95,36 @@ def _tuples(value):
     return value
 
 
-def perform(sim, entry):
+POINTER_CALLS = ("click", "press", "drag", "release", "hover")      # calls a person makes on an object
+NOTE_NO_OBJECT = "the sensor sits at the scene root or in an unnamed group: it has no object name"
+
+
+def sensors_on(graph, object_name, parent_of=None):
+    """The pointing sensors that sense the scene object ``object_name``, as ``Player.sensors_for`` finds them: those of
+    the nearest object above it (``parent_of(name)`` gives an object's parent, None at the top) that has any, else the
+    sensors at the scene root. Without ``parent_of`` only the object itself and the root are looked at."""
+    pointing = [n for n in graph.nodes.values() if n.role == "behaviour" and n.node_type in POINTING_TYPES]
+    name = object_name
+    while name is not None:
+        found = [n.id for n in pointing if n.parent == name]
+        if found:
+            return found
+        name = parent_of(name) if parent_of is not None else None
+    return [n.id for n in pointing if n.parent is None]
+
+
+POINTING_TYPES = ("TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor")
+
+
+def perform(sim, entry, parent_of=None):
     """Do one recorded call (``{"time", "call", "node", "args"}``) on a Simulation; returns its changes. The calls are
-    the Simulation's own: start, step, click, press, drag, release, hover, key, viewer, post."""
+    the Simulation's own: start, step, click, press, drag, release, hover, key, viewer, post. A pointer call that names
+    only an ``"object"`` (no ``"node"``) is done on every sensor of that object (``sensors_on``)."""
+    if entry.get("node") is None and entry.get("object") is not None and entry["call"] in POINTER_CALLS:
+        changes = []
+        for node in sensors_on(sim.graph, entry["object"], parent_of):
+            changes += perform(sim, {**entry, "node": node}, parent_of)
+        return changes
     call, node, now = entry["call"], entry.get("node"), entry["time"]
     args = _tuples(entry.get("args") or {})
     if call == "start":
@@ -126,11 +153,11 @@ def perform(sim, entry):
     raise ValueError(f"unknown call {call!r}")
 
 
-def replay(sim, stimulus, activity=None):
+def replay(sim, stimulus, activity=None, parent_of=None):
     """Run a recorded stimulus on a (fresh) Simulation, feeding ``activity`` after every call when given. The same
     graph and the same stimulus give the same events: that is how a recording is checked."""
     for entry in stimulus:
-        perform(sim, entry)
+        perform(sim, entry, parent_of)
         if activity is not None:
             activity.feed_log(sim.log, sim.now)
 
@@ -170,6 +197,7 @@ class Activity:
         value that says whether the ROUTE carries it. ``types``: {(from, field, to, field): X3D type name}."""
         self.travel = travel
         self.record, self.world = bool(record), world
+        self.graph = None                    # set by from_simulation: lets a pointer call name its object
         self._out = {}
         self._routes = {}
         types = types or {}
@@ -195,6 +223,7 @@ class Activity:
         activity = cls(routes, types, **options)
         if not isinstance(sim.log, CountingLog):
             sim.log = CountingLog(sim.log, maxlen=sim.log.maxlen)
+        activity.graph = sim.graph
         activity._seen = sim.log.appended
         # The simulation lets each ROUTE carry one event per ``post`` (it forgets which ROUTEs fired at the start of every
         # post, and a press or a drag makes several). So what a post delivered is fed as its own batch: the batches are
@@ -305,7 +334,12 @@ class Activity:
         if self.stimulus is None:
             return
         if len(self.stimulus) < TRACE_CAP:
-            self.stimulus.append({"time": now, "call": call, "node": node, "args": plain(args)})
+            entry = {"time": now, "call": call, "node": node, "args": plain(args)}
+            if call in POINTER_CALLS and node is not None and self.graph is not None and node in self.graph.nodes:
+                entry["object"] = self.graph.nodes[node].parent        # what a person pointed at; None: no object name
+                if entry["object"] is None:
+                    entry["note"] = NOTE_NO_OBJECT
+            self.stimulus.append(entry)
         else:
             self.trace_truncated = True
 

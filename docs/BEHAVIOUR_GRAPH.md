@@ -288,6 +288,18 @@ trace" checkbox, default off) keeps every delivery in order and every call the w
      "stimulus": [{"time": 0.0, "call": "start", "node": null, "args": {}},
                   {"time": 0.5, "call": "press", "node": "Click", "args": {}}], "...": "..."}
 
+A pointer call (`press`, `drag`, `release`, `hover`, `click`) also names the scene object the sensor sits on, as
+`"object"` (the sensor's parent: a person points at an object, not at a sensor), next to `"node"`. A sensor at the
+scene root, or in a group the graph has no name for, has `"object": null` and a `"note"` saying so. Replay works from
+`"node"` alone, or from `"object"` alone (`behaviour_activity.sensors_on(graph, object, parent_of)` finds the sensors
+on that object as `Player.sensors_for` does, and `perform` does the call on each).
+
+Sensors with no named parent. The graph keeps only the DEF of the Transform a sensor sits in. A sensor at the scene root
+has `parent` None, and `Player.sensors_for` returns it for every object (X3D: a sensor affects the geometry under its
+parent group, here the whole scene); `Simulation.click/press/hover` work on it by id. A sensor inside a Transform
+without a DEF also has `parent` None (or, nested in a DEF'd one, that DEF), so it answers for more objects than its
+siblings: the importer gives it no name, so its siblings cannot be known and nothing is guessed. A test pins this.
+
 `behaviour_activity.replay(Simulation(graph), report["stimulus"])` sends the same events again; the tests require the
 trace to come out identical. `tools/behaviour_record.py world.x3d --script stimulus.json --seconds 4 --out
 x.activity.json` (plain Python, no Blender) makes a recording from a script of calls; three are committed under

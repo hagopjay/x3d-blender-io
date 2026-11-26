@@ -436,6 +436,75 @@ class Recording(unittest.TestCase):
         self.assertEqual(activity.report()["world"], None)
 
 
+class ObjectsInTheStimulus(unittest.TestCase):
+
+    def test_a_pointer_call_names_the_object_as_well_as_the_sensor(self):
+        for name, sensor, owner in (("door", "Click", "Button"), ("counter", "Press", "Button")):
+            with self.subTest(world=name):
+                graph, calls = stimulus_of(name)
+                _sim, activity, _c = Recording().record(graph, calls)
+                pointer = [e for e in activity.stimulus if e["call"] in ba.POINTER_CALLS]
+                self.assertTrue(pointer)
+                self.assertTrue(all(e["node"] == sensor and e["object"] == owner and "note" not in e for e in pointer))
+                self.assertTrue(all("object" not in e for e in activity.stimulus if e["call"] in ("start", "step")))
+
+    def test_replay_from_the_object_alone_gives_the_same_trace(self):
+        for name in ("door", "counter"):
+            with self.subTest(world=name):
+                graph, calls = stimulus_of(name)
+                _sim, first, _c = Recording().record(graph, calls)
+                only_objects = [{k: v for k, v in e.items() if not (k == "node" and "object" in e)} for e in first.stimulus]
+                self.assertTrue(any("node" not in e for e in only_objects))
+                fresh = bs.Simulation(world_graph(name), log_size=10_000_000)
+                again = ba.Activity.from_simulation(fresh, record=True)
+                ba.replay(fresh, only_objects, again)
+                self.assertEqual(again.trace, first.trace)
+
+    def test_sensors_on_an_object_climbs_to_the_nearest_object_with_sensors(self):
+        graph = world_graph("door")
+        self.assertEqual(ba.sensors_on(graph, "Button"), ["Click"])
+        self.assertEqual(ba.sensors_on(graph, "ButtonCap", {"ButtonCap": "Button"}.get), ["Click"])
+        self.assertEqual(ba.sensors_on(graph, "Door"), [])           # no sensor above it, none at the root
+
+
+ROOT_SENSOR = """<X3D profile="Immersive" version="4.0"><Scene>
+  <TouchSensor DEF="Poke" />
+  <Transform DEF="A"><Shape><Box/></Shape></Transform>
+  <Transform DEF="B" translation="2 0 0"><Shape><Box/></Shape></Transform>
+  <TimeSensor DEF="Clock" cycleInterval="1" />
+  <ROUTE fromNode="Poke" fromField="touchTime" toNode="Clock" toField="startTime" />
+</Scene></X3D>"""
+
+
+class SensorWithNoObject(unittest.TestCase):
+
+    def test_a_sensor_at_the_scene_root_has_no_parent_and_can_still_be_poked_by_id(self):
+        graph = bg.Behaviour.from_x3d(ROOT_SENSOR)
+        self.assertIsNone(graph.nodes["Poke"].parent)
+        sim = bs.Simulation(graph, log_size=1000)
+        activity = ba.Activity.from_simulation(sim, record=True)
+        sim.start(0.0)
+        activity.drive(sim, "hover", "Poke", 0.1, over=True)
+        activity.drive(sim, "press", "Poke", 0.2)
+        activity.drive(sim, "release", "Poke", 0.3)
+        self.assertEqual(sim.outputs[("Poke", "touchTime")], 0.3)
+        pointer = [e for e in activity.stimulus if e["call"] in ba.POINTER_CALLS]
+        self.assertEqual([e["object"] for e in pointer], [None, None, None])
+        self.assertTrue(all(e["note"] == ba.NOTE_NO_OBJECT for e in pointer))
+        self.assertGreater(activity.deliveries, 0)
+
+    def test_by_object_a_root_sensor_answers_for_every_object(self):
+        graph = bg.Behaviour.from_x3d(ROOT_SENSOR)
+        self.assertEqual(ba.sensors_on(graph, "A"), ["Poke"])
+        self.assertEqual(ba.sensors_on(graph, "B"), ["Poke"])
+
+    def test_a_sensor_in_an_unnamed_group_is_a_root_sensor_to_the_graph(self):
+        # pinned limit: the graph keeps only the DEF of the enclosing Transform, so a sensor in an unnamed group at the
+        # root has parent None and answers for every object, not only its siblings (docs/BEHAVIOUR_GRAPH.md)
+        text = ROOT_SENSOR.replace('<TouchSensor DEF="Poke" />', '<Transform><TouchSensor DEF="Poke" /></Transform>')
+        self.assertIsNone(bg.Behaviour.from_x3d(text).nodes["Poke"].parent)
+
+
 RECORDINGS = WORLDS / "activity"
 
 

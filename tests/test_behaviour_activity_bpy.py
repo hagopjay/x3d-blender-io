@@ -183,6 +183,31 @@ class ActivityInBlender(unittest.TestCase):
                 self.assertIsNone(off.activity.trace)
                 off.stop()
 
+    def test_a_sensor_at_the_scene_root_senses_every_object(self):
+        path = Path(tempfile.mkdtemp(prefix="x3d_root_sensor_")) / "root.x3d"
+        path.write_text("""<X3D profile="Immersive" version="4.0"><Scene>
+  <TouchSensor DEF="Poke" />
+  <Transform DEF="A"><Shape><Appearance><Material/></Appearance><Box/></Shape></Transform>
+  <Transform DEF="B" translation="2 0 0"><Shape><Appearance><Material/></Appearance><Box/></Shape></Transform>
+  <TimeSensor DEF="Clock" cycleInterval="1" />
+  <ROUTE fromNode="Poke" fromField="touchTime" toNode="Clock" toField="startTime" />
+</Scene></X3D>""", encoding="utf-8")
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        bpy.ops.import_scene.x3d(filepath=str(path), use_behaviour_graph=True)
+        scene = bpy.context.scene
+        player = self.bp.Player(scene, activity=True)
+        self.assertIsNone(player.graph.nodes["Poke"].parent)
+        objects = [o for o in scene.objects if o.type == "MESH"]
+        self.assertGreaterEqual(len(objects), 2)
+        for obj in objects:
+            self.assertEqual(player.sensors_for(obj), ["Poke"])
+        player.start(0.0)
+        self.assertTrue(player.click(objects[0], 0.5, held=0.1))
+        player.step(0.7)
+        self.assertGreater(player.activity.deliveries, 0)
+        player.stop()
+
     def test_the_copy_text_and_report(self):
         scene = self.load("counter")
         player, _ = self.run_world(scene, True)
