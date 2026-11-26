@@ -223,7 +223,6 @@ Seen and not changed: the sidebar repeats an unlinked input (`key`, `keyValue`) 
 ## Limits
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
-eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the export dialog's default axes (-Z forward, Y up). Sensors that need a
-viewer's position are not simulated. XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
+eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the export dialog's default axes (-Z forward, Y up). Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
 played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
 importer's loss report still prints "ROUTE not imported" for ROUTEs the graph kept.
