@@ -3,7 +3,7 @@
 """Writes orrery.x3d: a brass orrery under a star chart (see README.md). Run: python build.py
 
 Hand-built numbers live here so the world is one readable list: four planets on arms (two with moons), each arm turned
-by an OrientationInterpolator from its own looping clock; a flight to every body (TouchSensor -> TimeTrigger -> 3 s
+by an OrientationInterpolator from its own looping clock; a flight to the sun, Venus and Terra (TouchSensor -> TimeTrigger -> 3 s
 TimeSensor -> PositionInterpolator + OrientationInterpolator into the Viewpoint); a star chart panned by the year clock
 through PositionInterpolator2D -> PositionChaser2D -> TextureTransform; a lever that pauses every clock.
 """
@@ -21,6 +21,7 @@ PLANETS = [
     ("Gale", 5.6, 0.30, "0.55 0.85 0.75", 20.0, ("Pebble", 0.62, 0.09, 9.0)),
 ]
 YEAR = 20.0
+FLIGHTS = ("Venus", "Terra")      # planets with a TouchSensor: demo.json's click_plan clicks each, so every chain is judged
 LANE = 1.2                       # the orrery's plane, above the stage
 HOME = (0.0, 3.6, 10.6)
 HOME_TILT = -0.27               # radians about X (looks down at the lane)
@@ -136,7 +137,8 @@ def build():
         add(f'    <Transform DEF="{name}Arm" translation="0 {LANE} 0">')
         add(f'      <Transform translation="{radius / 2:.3f} 0 0"><Shape><Appearance><PhysicalMaterial {BRASS} /></Appearance><Box size="{radius:.3f} 0.045 0.045" /></Shape></Transform>')
         add(f'      <Transform DEF="{name}" translation="{radius:.3f} 0 0">')
-        add(f'        <TouchSensor DEF="{name}Touch" description="Fly to {name}" />')
+        if name in FLIGHTS:
+            add(f'        <TouchSensor DEF="{name}Touch" description="Fly to {name}" />')
         add(f'        <Shape><Appearance><PhysicalMaterial baseColor="{colour}" roughness="0.5" metallic="0.2" /></Appearance><Sphere radius="{size}" /></Shape>')
         if moon:
             mname, mradius, msize, mperiod = moon
@@ -152,7 +154,7 @@ def build():
 
     add('    <!-- flights: every body has its own TouchSensor -> TimeTrigger -> 3 s clock -> two interpolators -->')
     stops = [("Sun", 0.0, 7.2, 2.7)] + [(name, ang, radius + 3.6, 2.0) for (name, radius, *_), ang in
-                                        zip(PLANETS, (-0.85, -0.30, 0.30, 0.85))]
+                                        zip(PLANETS, (-0.85, -0.30, 0.30, 0.85)) if name in FLIGHTS]
     for name, angle, radius, height in stops:
         position, orientation = view(angle, radius, height)
         middle = tuple((a + b) / 2 for a, b in zip(HOME, position))
@@ -169,7 +171,8 @@ def build():
                   (f"{name}Turn", "value_changed", "View", "orientation")]
 
     add('    <!-- the lever: pause every clock (the toggle starts true, so the first pull sends false) -->')
-    add(f'    <Transform DEF="Lever" translation="-3.9 0.5 4.4"><TouchSensor DEF="LeverTouch" description="Pause or resume the orrery" />'
+    add(f'    <Transform translation="-5 1.4 -3"><Shape><Appearance><PhysicalMaterial {BRASS} /></Appearance><Cylinder radius="0.12" height="2.8" /></Shape></Transform>')
+    add(f'    <Transform DEF="Lever" translation="-5 3.0 -3"><TouchSensor DEF="LeverTouch" description="Pause or resume the orrery" />'
         f'<Shape><Appearance><PhysicalMaterial {BRASS} /></Appearance><Box size="0.7 0.5 0.4" /></Shape>'
         '<Transform translation="0 0.55 0" rotation="0 0 1 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.1 0.1" emissiveColor="0.3 0.02 0.02" /></Appearance><Cylinder radius="0.07" height="0.9" /></Shape></Transform>'
         '<Transform translation="-0.22 1.0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.2 0.2" emissiveColor="0.4 0.05 0.05" /></Appearance><Sphere radius="0.14" /></Shape></Transform></Transform>')

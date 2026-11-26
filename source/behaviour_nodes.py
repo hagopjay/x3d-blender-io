@@ -14,6 +14,7 @@ One node class per catalogue node, one socket class per X3D field type. A socket
 between two types is removed as it is made: the editor cannot hold a ROUTE X3D would reject.
 """
 
+import json
 import bpy
 from bpy.props import (BoolProperty, CollectionProperty, FloatProperty, FloatVectorProperty, IntProperty,
                        PointerProperty, StringProperty)
@@ -847,6 +848,12 @@ def import_graph(scene, filepath, new_actions=None):
         return None
 
     bg.bind(parsed, resolver)
+    for node in parsed.nodes.values():           # the transform the importer baked into the UVs: Play shows only the change from it
+        if node.role == bg.TARGET and node.node_type == "TextureTransform" and node.binding:
+            material = bpy.data.materials.get(node.binding[1])
+            authored = (parsed._candidates.get(node.id) or {}).get("texture_transform")
+            if material is not None and authored is not None:
+                material["x3d_texture_transform"] = json.dumps(authored)
     graph = bg.Behaviour(nodes=parsed.nodes, routes=parsed.routes, diagnostics=parsed.diagnostics)
     for node in graph.nodes.values():            # a placed sensor's parent is a DEF in the file: make it the object's name
         if node.role == bg.BEHAVIOUR and node.parent:

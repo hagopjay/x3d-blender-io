@@ -17,6 +17,7 @@ demo.json, the demo's contract with these tools:
      "clicks": int, "seconds": number,         # what the recorder does: real clicks on the first pointing sensor ...
      "drags": "drags.json" | null,             # ... or real drags from this file (clicks must be 0)
      "keys": "keys.json" | null,               # ... or typed keys from this file (KeySensor / StringSensor demos)
+     "click_plan": ["SensorDEF", ...],         # ... or one real click on each named pointing sensor, in this order (clicks 0)
      "judges": [node types this demo is the first to judge against X_ITE],
      "idle": ["Node.field", ...]}              # optional: ROUTE sources the recorded click cannot fire (see below)
 
@@ -67,6 +68,9 @@ def check(name):
     for key in ("drags", "keys"):
         if data.get(key) and not (here / data[key]).is_file():
             problems.append(f"{key} file {data[key]} is missing")
+    if data.get("click_plan"):
+        names = {n.id for n in graph.nodes.values() if n.node_type in ("TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor")}
+        problems += [f"click_plan names {d}, which is not a pointing sensor of the world" for d in data["click_plan"] if d not in names]
     if data.get("drags") and data["clicks"]:
         problems.append("drags and clicks together: the recorder does one or the other")
     if not (here / "act.py").is_file():
@@ -101,8 +105,16 @@ def record(name):
         args.append(str(here / data["drags"]))
     if data.get("keys"):
         args += ["--keys", str(here / data["keys"])]
+    plan = None
+    if data.get("click_plan"):
+        plan = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(data["click_plan"], plan)
+        plan.close()
+        args += ["--click-plan", plan.name]
     out = subprocess.run(args, capture_output=True, text=True)
     pathlib.Path(sources.name).unlink()
+    if plan is not None:
+        pathlib.Path(plan.name).unlink()
     if out.returncode != 0:
         sys.exit(f"recorder failed ({out.returncode}):\n{out.stderr[-2000:]}")
     trace = json.loads(out.stdout)

@@ -1,32 +1,19 @@
 {
  "title": "Orrery: a clockwork sky",
- "streams": 37,
- "clicks": 2,
- "seconds": 12,
+ "streams": 29,
+ "clicks": 0,
+ "seconds": 20,
  "drags": null,
  "keys": null,
+ "click_plan": [
+  "LeverTouch",
+  "TerraTouch",
+  "VenusTouch",
+  "SunTouch",
+  "LeverTouch"
+ ],
  "judges": [
   "PositionInterpolator2D",
   "PositionChaser2D"
- ],
- "idle": [
-  "EmberGo.triggerTime",
-  "EmberFlight.fraction_changed",
-  "EmberPath.value_changed",
-  "EmberTurn.value_changed",
-  "VenusGo.triggerTime",
-  "VenusFlight.fraction_changed",
-  "VenusPath.value_changed",
-  "VenusTurn.value_changed",
-  "TerraGo.triggerTime",
-  "TerraFlight.fraction_changed",
-  "TerraPath.value_changed",
-  "TerraTurn.value_changed",
-  "GaleGo.triggerTime",
-  "GaleFlight.fraction_changed",
-  "GalePath.value_changed",
-  "GaleTurn.value_changed",
-  "LeverPull.inputTrue",
-  "Running.toggle_changed"
  ]
 }

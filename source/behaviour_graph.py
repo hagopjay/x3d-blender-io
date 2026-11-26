@@ -330,6 +330,8 @@ def parse_x3d(source) -> Graph:
                 "top_inner": tuple(sorted(e.get("DEF") for e in top.iter() if e.get("DEF"))) if top is not None else (),
                 "top_type": _local(top.tag) if top is not None else None,
                 "appearance_material": _appearance_material_def(target, parent_of),
+                "texture_transform": {k: v for k, v in target.attrib.items() if k in ("center", "rotation", "scale", "translation")}
+                if _local(target.tag) == "TextureTransform" else None,
             }
         graph.routes.append(Route(*ends))
     # routes are a set in X3D; keep first occurrences in file order
@@ -371,6 +373,9 @@ def bind(graph: Graph, resolver) -> Graph:
         # a TextureTransform is not a DEF the importer keeps: it is found through the material of its Appearance
         lookup = (graph._candidates.get(name) or {}).get("appearance_material") if node.node_type == "TextureTransform" else name
         binding = resolver(lookup, node.node_type) if lookup else None
+        if node.node_type == "TextureTransform" and not lookup:
+            graph.diagnostics.append(f"TextureTransform {name!r} sits in an Appearance whose material has no DEF, so it cannot "
+                                     "be tied to a Blender material (not guessed); its ROUTEs were left out.")
         if binding is not None:
             node.binding = tuple(binding)
             continue

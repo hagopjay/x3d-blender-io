@@ -18,7 +18,7 @@ import bpy
 from bpy_extras import view3d_utils
 from mathutils import Vector
 
-PLANETS = ("Terra", "Venus", "Gale", "Ember")          # the order the act prefers (nearest the sun's post first)
+PLANETS = ("Terra", "Venus")                       # the planets with a TouchSensor
 ARMS = ("EmberArm", "VenusArm", "TerraArm", "GaleArm", "LunaArm", "PebbleArm")
 
 

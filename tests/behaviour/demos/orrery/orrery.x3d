@@ -33,7 +33,6 @@
     <Transform DEF="EmberArm" translation="0 1.2 0">
       <Transform translation="1.000 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Box size="2.000 0.045 0.045" /></Shape></Transform>
       <Transform DEF="Ember" translation="2.000 0 0">
-        <TouchSensor DEF="EmberTouch" description="Fly to Ember" />
         <Shape><Appearance><PhysicalMaterial baseColor="0.95 0.35 0.15" roughness="0.5" metallic="0.2" /></Appearance><Sphere radius="0.22" /></Shape>
       </Transform>
     </Transform>
@@ -57,7 +56,6 @@
     <Transform DEF="GaleArm" translation="0 1.2 0">
       <Transform translation="2.800 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Box size="5.600 0.045 0.045" /></Shape></Transform>
       <Transform DEF="Gale" translation="5.600 0 0">
-        <TouchSensor DEF="GaleTouch" description="Fly to Gale" />
         <Shape><Appearance><PhysicalMaterial baseColor="0.55 0.85 0.75" roughness="0.5" metallic="0.2" /></Appearance><Sphere radius="0.3" /></Shape>
         <Transform DEF="PebbleArm">
           <Transform translation="0.620 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.85 0.9" roughness="0.7" /></Appearance><Sphere radius="0.09" /></Shape></Transform>
@@ -81,10 +79,6 @@
     <TimeSensor DEF="SunFlight" cycleInterval="3.0" />
     <PositionInterpolator DEF="SunPath" key="0 0.5 1" keyValue="0 3.6 10.6 0 4.9 8.9 0 2.7 7.2" />
     <OrientationInterpolator DEF="SunTurn" key="0 1" keyValue="-1 0 0 0.27 -1 0 0 0.2054" />
-    <TimeTrigger DEF="EmberGo" />
-    <TimeSensor DEF="EmberFlight" cycleInterval="3.0" />
-    <PositionInterpolator DEF="EmberPath" key="0 0.5 1" keyValue="0 3.6 10.6 -2.10359 4.9 7.14795 -4.20717 2 3.69591" />
-    <OrientationInterpolator DEF="EmberTurn" key="0 1" keyValue="-1 0 0 0.27 -0.15475 -0.98547 -0.07004 0.86105" />
     <TimeTrigger DEF="VenusGo" />
     <TimeSensor DEF="VenusFlight" cycleInterval="3.0" />
     <PositionInterpolator DEF="VenusPath" key="0 0.5 1" keyValue="0 3.6 10.6 -0.98999 4.9 8.50038 -1.97999 2 6.40075" />
@@ -93,12 +87,9 @@
     <TimeSensor DEF="TerraFlight" cycleInterval="3.0" />
     <PositionInterpolator DEF="TerraPath" key="0 0.5 1" keyValue="0 3.6 10.6 1.1673 4.9 9.07358 2.33461 2 7.54716" />
     <OrientationInterpolator DEF="TerraTurn" key="0 1" keyValue="-1 0 0 0.27 -0.31657 0.94736 0.04785 0.3164" />
-    <TimeTrigger DEF="GaleGo" />
-    <TimeSensor DEF="GaleFlight" cycleInterval="3.0" />
-    <PositionInterpolator DEF="GalePath" key="0 0.5 1" keyValue="0 3.6 10.6 3.45589 4.9 8.33592 6.91178 2 6.07184" />
-    <OrientationInterpolator DEF="GaleTurn" key="0 1" keyValue="-1 0 0 0.27 -0.09536 0.99451 0.04316 0.85415" />
     <!-- the lever: pause every clock (the toggle starts true, so the first pull sends false) -->
-    <Transform DEF="Lever" translation="-3.9 0.5 4.4"><TouchSensor DEF="LeverTouch" description="Pause or resume the orrery" /><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Box size="0.7 0.5 0.4" /></Shape><Transform translation="0 0.55 0" rotation="0 0 1 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.1 0.1" emissiveColor="0.3 0.02 0.02" /></Appearance><Cylinder radius="0.07" height="0.9" /></Shape></Transform><Transform translation="-0.22 1.0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.2 0.2" emissiveColor="0.4 0.05 0.05" /></Appearance><Sphere radius="0.14" /></Shape></Transform></Transform>
+    <Transform translation="-5 1.4 -3"><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Cylinder radius="0.12" height="2.8" /></Shape></Transform>
+    <Transform DEF="Lever" translation="-5 3.0 -3"><TouchSensor DEF="LeverTouch" description="Pause or resume the orrery" /><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Box size="0.7 0.5 0.4" /></Shape><Transform translation="0 0.55 0" rotation="0 0 1 0.5"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.1 0.1" emissiveColor="0.3 0.02 0.02" /></Appearance><Cylinder radius="0.07" height="0.9" /></Shape></Transform><Transform translation="-0.22 1.0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.2 0.2" emissiveColor="0.4 0.05 0.05" /></Appearance><Sphere radius="0.14" /></Shape></Transform></Transform>
     <BooleanFilter DEF="LeverPull" />
     <BooleanToggle DEF="Running" toggle="true" />
     <ROUTE fromNode="YearClock" fromField="fraction_changed" toNode="ChartPan" toField="set_fraction" />
@@ -122,12 +113,6 @@
     <ROUTE fromNode="SunFlight" fromField="fraction_changed" toNode="SunTurn" toField="set_fraction" />
     <ROUTE fromNode="SunPath" fromField="value_changed" toNode="View" toField="position" />
     <ROUTE fromNode="SunTurn" fromField="value_changed" toNode="View" toField="orientation" />
-    <ROUTE fromNode="EmberTouch" fromField="isActive" toNode="EmberGo" toField="set_boolean" />
-    <ROUTE fromNode="EmberGo" fromField="triggerTime" toNode="EmberFlight" toField="startTime" />
-    <ROUTE fromNode="EmberFlight" fromField="fraction_changed" toNode="EmberPath" toField="set_fraction" />
-    <ROUTE fromNode="EmberFlight" fromField="fraction_changed" toNode="EmberTurn" toField="set_fraction" />
-    <ROUTE fromNode="EmberPath" fromField="value_changed" toNode="View" toField="position" />
-    <ROUTE fromNode="EmberTurn" fromField="value_changed" toNode="View" toField="orientation" />
     <ROUTE fromNode="VenusTouch" fromField="isActive" toNode="VenusGo" toField="set_boolean" />
     <ROUTE fromNode="VenusGo" fromField="triggerTime" toNode="VenusFlight" toField="startTime" />
     <ROUTE fromNode="VenusFlight" fromField="fraction_changed" toNode="VenusPath" toField="set_fraction" />
@@ -140,12 +125,6 @@
     <ROUTE fromNode="TerraFlight" fromField="fraction_changed" toNode="TerraTurn" toField="set_fraction" />
     <ROUTE fromNode="TerraPath" fromField="value_changed" toNode="View" toField="position" />
     <ROUTE fromNode="TerraTurn" fromField="value_changed" toNode="View" toField="orientation" />
-    <ROUTE fromNode="GaleTouch" fromField="isActive" toNode="GaleGo" toField="set_boolean" />
-    <ROUTE fromNode="GaleGo" fromField="triggerTime" toNode="GaleFlight" toField="startTime" />
-    <ROUTE fromNode="GaleFlight" fromField="fraction_changed" toNode="GalePath" toField="set_fraction" />
-    <ROUTE fromNode="GaleFlight" fromField="fraction_changed" toNode="GaleTurn" toField="set_fraction" />
-    <ROUTE fromNode="GalePath" fromField="value_changed" toNode="View" toField="position" />
-    <ROUTE fromNode="GaleTurn" fromField="value_changed" toNode="View" toField="orientation" />
     <ROUTE fromNode="LeverTouch" fromField="isActive" toNode="LeverPull" toField="set_boolean" />
     <ROUTE fromNode="LeverPull" fromField="inputTrue" toNode="Running" toField="set_boolean" />
     <ROUTE fromNode="Running" fromField="toggle_changed" toNode="YearClock" toField="enabled" />
