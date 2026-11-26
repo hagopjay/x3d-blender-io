@@ -417,7 +417,7 @@ change of answer. Median ms per step, budget 16.7:
 | hosted | 0.44 | 0.43 | 4.54 | 4.53 | 26.89 | 25.90 |
 | media | 0.16 | 0.15 | 1.68 | 1.63 | 12.69 | 9.11 |
 | world | 1.84 | 0.83 | 20.39 (15.44 at load 1.0) | **7.83** | 79.67 | 37.52 |
-| lists | 14.04 (12.51 at load 1.0) | 6.42 | 197.76 (181.05 at load 1.0) | **84.37** | not finished (56 of 300 steps in 60 s) | LISTS5000 |
+| lists | 14.04 (12.51 at load 1.0) | 6.42 | 197.76 (181.05 at load 1.0) | **84.37** | not finished: 1110.77 over 56 of 300 steps in 60 s | not finished: 409.35 over 147 of 300 steps in 60 s (the whole suite started during this run) |
 
 `world` at N=1000 is under budget now. `lists` at N=1000 is **not**, and cannot be in pure Python (below). Nothing else is
 over budget at N=1000 (largest: chains, 10.16 ms).
