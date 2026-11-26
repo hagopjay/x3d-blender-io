@@ -20,6 +20,7 @@ A held press needs nothing more: the press and the release are two events of the
 the times X_ITE sent them, so the simulator is held for exactly as long as X_ITE was.
 """
 
+import collections
 import json
 import math
 import pathlib
@@ -397,6 +398,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
             continue
         index, worst, compared, unmatched = {round(when, 6): value for when, value in b}, 0.0, 0, 0
         worst_raw = 0.0
+        raw, stamps_differ = len(a), _stamps_that_differ(a, b)       # what the next line merges: reported, never judged
         a = list({round(when, 6): (when, value) for when, value in a}.values())   # two events in one frame: the last stands
         discrete = x3d_type in ("SFBool", "SFInt32", "SFTime", "SFString") or \
             node.node_type.endswith(("Sequencer", "Trigger", "Toggle", "Filter"))
@@ -431,10 +433,21 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE, handlers=None, world_viewer=Fals
                         "x_ite_events": len(a), "simulator_events": len(b), "compared": compared,
                         "x_ite_only": unmatched, "simulator_only": extra, "worst_gap": round(worst, 6),
                         "tolerance": tolerance, "agree": ok,
-                        **({"worst_raw_gap": round(worst_raw, 6)} if node.node_type in GEO_NODES and x3d_type == "SFVec3f" else {})})
+                        **({"worst_raw_gap": round(worst_raw, 6)} if node.node_type in GEO_NODES and x3d_type == "SFVec3f" else {}),
+                        # events as X_ITE sent them, before ``x_ite_events`` keeps the last of each time stamp (the
+                        # simulator's count is raw), and the time stamps both sent at where they sent another number of events
+                        "x_ite_raw_events": raw, "stamps_with_other_event_count": stamps_differ})
     return {"file": trace["file"], "browser": trace["browser"], "clicks": trace["clicks"],
             "holds": trace.get("holds", []), "frames": len(trace["frames"]), "not_simulated": sim.not_simulated,
             "streams": streams, "not_simulated_sources": not_simulated_sources, "agree": agree}
+
+
+def _stamps_that_differ(theirs, ours):
+    """How many time stamps both sides sent events at, where one sent more events than the other (a follower that sends
+    isActive false and true in one frame is such a stamp when only one side does)."""
+    count_of = lambda events: collections.Counter(round(when, 6) for when, _value in events)
+    a, b = count_of(theirs), count_of(ours)
+    return sum(1 for stamp in a if stamp in b and a[stamp] != b[stamp])
 
 
 def _fed_by_follower(graph, node_id, seen=None):

@@ -21,8 +21,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "source"))
 
+sys.path.insert(0, str(ROOT / "tools"))
+
 import behaviour_graph as bg                     # noqa: E402
 import behaviour_sim as bs                       # noqa: E402
+import behaviour_sim_judge_mf as judge_mf        # noqa: E402
 
 
 def run(kind, destination, steps=12, **fields):
@@ -117,6 +120,38 @@ class HandlerTests(unittest.TestCase):
         sim.send("S", "x", 1.0, 0.0)
         self.assertEqual(sim.faults, [])
         self.assertGreaterEqual(sim.dropped.get("mismatch", 0), 1)
+
+
+class FollowerEventCountTests(unittest.TestCase):
+    """The list followers send isActive false and true in one time stamp, and so does X_ITE 16.8.1. The judge merged X_ITE's
+    events of one stamp (131 to 138 per stream) but counted the simulator's raw (252 to 270): the same behaviour looked like
+    two to one. The judge now reports X_ITE's raw count, and the stamps where the two sent another number of events."""
+
+    def setUp(self):
+        import json
+        trace = json.loads((ROOT / "tests" / "behaviour" / "x_ite_traces" / "probe-list-followers.json").read_text(encoding="utf-8"))
+        result = judge_mf.judge(ROOT / "tests" / "behaviour" / "probe-list-followers.x3d", trace)
+        self.streams = {s["source"]: s for s in result["streams"]}
+        self.trace = trace
+
+    def test_x_ite_sends_the_same_stamp_pairs_and_the_raw_counts_are_close(self):
+        for name in ("Chase3", "Chase2", "Damp3", "Damp2"):
+            with self.subTest(stream=name):
+                s = self.streams[f"{name}.isActive"]
+                self.assertTrue(s["agree"])
+                self.assertLess(s["x_ite_events"], 140)                       # merged: what the judge always compared
+                self.assertGreater(s["x_ite_raw_events"], 250)                # as X_ITE sent them
+                self.assertLessEqual(abs(s["simulator_events"] - s["x_ite_raw_events"]), 8)
+                self.assertLessEqual(s["stamps_with_other_event_count"], 3)   # the start of the recording, one frame of a damper
+
+    def test_x_ite_itself_sends_false_then_true_in_one_time_stamp(self):
+        stamps = [e[0] for e in self.trace["events"] if e[1] == "Chase3" and e[2] == "isActive"]
+        self.assertGreater(len(stamps) - len(set(stamps)), 100)
+
+    def test_a_stream_the_simulator_sends_twice_as_often_is_visible(self):
+        theirs, ours = [(1.0, True), (2.0, False)], [(1.0, True), (1.0, False), (2.0, False), (2.0, False)]
+        self.assertEqual(judge_mf._judge._stamps_that_differ(theirs, ours), 2)
+        self.assertEqual(judge_mf._judge._stamps_that_differ(theirs, theirs), 0)
 
 
 if __name__ == "__main__":
