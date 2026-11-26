@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 06: solar gauntlet" />
+    <meta name="description" content="A camera flight through ten gates toward a flaring sun; ProximitySensors light each gate as you pass." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-06-solar-gauntlet-v2/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.01 0.0 0.03" />
+    <Viewpoint DEF="Pilot" description="Flight" position="-1.4091 2.7026 3.2" orientation="-0.1122 -0.9934 -0.0237 0.419" />
+    <DirectionalLight direction="0 -0.2 1" intensity="0.8" color="1 0.8 0.6" />
+    <PointLight location="0 0 -84.0" color="1 0.6 0.2" intensity="4000" radius="400" />
+    <TimeSensor DEF="Flight" cycleInterval="24.0" loop="true" />
+    <Transform DEF="CamEcho" />
+    <ProximitySensor DEF="Cam" size="-1 -1 -1" />
+    <PositionInterpolator DEF="FlightPos" key="0.00000 0.01667 0.03333 0.05000 0.06667 0.08333 0.10000 0.11667 0.13333 0.15000 0.16667 0.18333 0.20000 0.21667 0.23333 0.25000 0.26667 0.28333 0.30000 0.31667 0.33333 0.35000 0.36667 0.38333 0.40000 0.41667 0.43333 0.45000 0.46667 0.48333 0.50000 0.51667 0.53333 0.55000 0.56667 0.58333 0.60000 0.61667 0.63333 0.65000 0.66667 0.68333 0.70000 0.71667 0.73333 0.75000 0.76667 0.78333 0.80000 0.81667 0.83333 0.85000 0.86667 0.88333 0.90000 0.91667 0.93333 0.95000 0.96667 0.98333 1.00000" keyValue="-1.4091 2.7026 3.2 -0.8104 2.7686 1.8133 -0.1919 2.7983 0.4267 0.4312 2.7912 -0.96 1.0438 2.7475 -2.3467 1.631 2.6678 -3.7333 2.1787 2.5533 -5.12 2.6734 2.4057 -6.5067 3.1032 2.2271 -7.8933 3.4577 2.0201 -9.28 3.7282 1.7879 -10.6667 3.9081 1.5338 -12.0533 3.9931 1.2616 -13.44 3.9811 0.9752 -14.8267 3.8725 0.6789 -16.2133 3.6698 0.377 -17.6 3.3779 0.074 -18.9867 3.004 -0.2257 -20.3733 2.5572 -0.5177 -21.76 2.0483 -0.7976 -23.1467 1.4896 -1.0614 -24.5333 0.8947 -1.3052 -25.92 0.2781 -1.5254 -27.3067 -0.3452 -1.7187 -28.6933 -0.9602 -1.8824 -30.08 -1.5518 -2.0139 -31.4667 -2.1058 -2.1115 -32.8533 -2.6086 -2.1736 -34.24 -3.048 -2.1993 -35.6267 -3.4135 -2.1882 -37.0133 -3.696 -2.1406 -38.4 -3.8888 -2.0571 -39.7867 -3.9871 -1.9389 -41.1733 -3.9886 -1.7879 -42.56 -3.8932 -1.6061 -43.9467 -3.7033 -1.3963 -45.3333 -3.4234 -1.1615 -46.72 -3.0604 -0.9053 -48.1067 -2.623 -0.6313 -49.4933 -2.122 -0.3436 -50.88 -1.5694 -0.0465 -52.2667 -0.9787 0.2557 -53.6533 -0.3642 0.5586 -55.04 0.2591 0.8576 -56.4267 0.8761 1.1485 -57.8133 1.4718 1.4269 -59.2 2.0318 1.6887 -60.5867 2.5425 1.9301 -61.9733 2.9914 2.1475 -63.36 3.3676 2.3378 -64.7467 3.6621 2.4981 -66.1333 3.8676 2.6261 -67.52 3.9792 2.7199 -68.9067 3.9942 2.7781 -70.2933 3.9121 2.7998 -71.68 3.735 2.7848 -73.0667 3.4673 2.7333 -74.4533 3.1153 2.646 -75.84 2.6876 2.5242 -77.2267 2.1947 2.3697 -78.6133 1.6485 2.1848 -80" />
+    <OrientationInterpolator DEF="FlightLook" key="0.00000 0.01667 0.03333 0.05000 0.06667 0.08333 0.10000 0.11667 0.13333 0.15000 0.16667 0.18333 0.20000 0.21667 0.23333 0.25000 0.26667 0.28333 0.30000 0.31667 0.33333 0.35000 0.36667 0.38333 0.40000 0.41667 0.43333 0.45000 0.46667 0.48333 0.50000 0.51667 0.53333 0.55000 0.56667 0.58333 0.60000 0.61667 0.63333 0.65000 0.66667 0.68333 0.70000 0.71667 0.73333 0.75000 0.76667 0.78333 0.80000 0.81667 0.83333 0.85000 0.86667 0.88333 0.90000 0.91667 0.93333 0.95000 0.96667 0.98333 1.00000" keyValue="-0.1122 -0.9934 -0.0237 0.419 -0.1658 -0.9855 -0.0353 0.4256 -0.2222 -0.9739 -0.0466 0.4246 -0.284 -0.9571 -0.0574 0.4165 -0.3542 -0.9327 -0.0673 0.4016 -0.4357 -0.8969 -0.0754 0.381 -0.5313 -0.8434 -0.0806 0.356 -0.6421 -0.7623 -0.0812 0.3287 -0.7642 -0.6407 -0.0746 0.3026 -0.883 -0.4657 -0.0583 0.2817 -0.9708 -0.2377 -0.0314 0.2708 -0.9999 0.0166 0.0023 0.2731 -0.9666 0.2536 0.0356 0.2886 -0.8938 0.4441 0.0628 0.314 -0.8075 0.5841 0.0821 0.3445 -0.724 0.6833 0.0941 0.3759 -0.6497 0.7535 0.1005 0.4051 -0.586 0.8038 0.1028 0.4297 -0.532 0.8406 0.102 0.4485 -0.4863 0.8682 0.099 0.4605 -0.4473 0.8894 0.0942 0.465 -0.4137 0.9062 0.0881 0.4617 -0.3841 0.9197 0.0809 0.4503 -0.3574 0.9311 0.0728 0.4305 -0.3322 0.9411 0.0637 0.4022 -0.307 0.9502 0.0539 0.3654 -0.2797 0.9591 0.0433 0.3202 -0.2465 0.9686 0.0321 0.2672 -0.1993 0.9797 0.0203 0.2071 -0.1151 0.9933 0.0081 0.1418 0.1125 0.9936 -0.0042 0.0747 0.9877 0.1562 -0.0025 0.0325 0.6443 -0.7645 0.0207 0.084 0.4889 -0.8717 0.0322 0.1506 0.4214 -0.906 0.0411 0.2143 0.3819 -0.923 0.0482 0.2719 0.3548 -0.9334 0.0538 0.3219 0.3346 -0.9406 0.0578 0.3634 0.3188 -0.9459 0.0605 0.3959 0.3058 -0.9501 0.0618 0.4193 0.2951 -0.9535 0.0619 0.4334 0.2858 -0.9563 0.0609 0.4382 0.2776 -0.9589 0.0586 0.4337 0.2698 -0.9613 0.0553 0.4199 0.2617 -0.9638 0.0507 0.3967 0.2522 -0.9666 0.0449 0.3644 0.2396 -0.9701 0.0379 0.3229 0.2204 -0.975 0.0295 0.2728 0.1874 -0.9821 0.0199 0.2149 0.1195 -0.9928 0.009 0.1509 -0.0739 -0.9973 -0.0031 0.0839 -0.9071 -0.4209 -0.0067 0.035 -0.7256 0.6878 0.0199 0.0795 -0.563 0.8258 0.0345 0.148 -0.5017 0.8638 0.0468 0.215 -0.4726 0.8794 0.0579 0.2767 -0.458 0.8864 0.0679 0.3315 -0.4518 0.8888 0.0768 0.3782 -0.4514 0.8883 0.0847 0.4164 -0.456 0.8852 0.0915 0.4459 -0.4653 0.8798 0.0973 0.4667" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightPos" toField="set_fraction" />
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="FlightLook" toField="set_fraction" />
+    <ROUTE fromNode="Cam" fromField="position_changed" toNode="CamEcho" toField="translation" />
+    <ROUTE fromNode="Cam" fromField="orientation_changed" toNode="CamEcho" toField="rotation" />
+    <ROUTE fromNode="Cam" fromField="centerOfRotation_changed" toNode="CamEcho" toField="center" />
+    <ROUTE fromNode="FlightPos" fromField="value_changed" toNode="Pilot" toField="position" />
+    <ROUTE fromNode="FlightLook" fromField="value_changed" toNode="Pilot" toField="orientation" />
+    <Transform DEF="Gate0" translation="1.7399 2.3484 -4" rotation="-0.2176 -0.9752 -0.0405 0.377">
+      <Transform DEF="Frame0"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow0" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.35 0.1" emissiveColor="1 0.35 0.1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near0" center="1.7399 2.3484 -4" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop0" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell0" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate1" translation="3.9029 1.2439 -12" rotation="-0.9572 -0.2881 -0.028 0.2025">
+      <Transform DEF="Frame1"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow1" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.7 0.1" emissiveColor="1 0.7 0.1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near1" center="3.9029 1.2439 -12" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop1" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell1" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate2" translation="3.1123 -0.4456 -20" rotation="-0.5464 0.8334 0.0834 0.3623">
+      <Transform DEF="Frame2"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow2" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.4 1 0.3" emissiveColor="0.4 1 0.3" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near2" center="3.1123 -0.4456 -20" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop2" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell2" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate3" translation="-0.0336 -1.9256 -28" rotation="-0.2614 0.9636 0.0558 0.4359">
+      <Transform DEF="Frame3"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow3" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.8 1" emissiveColor="0.2 0.8 1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near3" center="-0.0336 -1.9256 -28" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop3" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell3" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate4" translation="-3.1541 -2.4999 -36" rotation="0.0692 0.9976 -0.0083 0.2393">
+      <Transform DEF="Frame4"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow4" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.4 1" emissiveColor="0.7 0.4 1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near4" center="-3.1541 -2.4999 -36" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop4" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell4" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate5" translation="-3.8876 -1.8985 -44" rotation="0.7231 -0.6888 0.052 0.2081">
+      <Transform DEF="Frame5"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.35 0.1" emissiveColor="1 0.35 0.1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near5" center="-3.8876 -1.8985 -44" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop5" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell5" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate6" translation="-1.6791 -0.4042 -52" rotation="0.4376 -0.8948 0.0888 0.446">
+      <Transform DEF="Frame6"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow6" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.7 0.1" emissiveColor="1 0.7 0.1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near6" center="-1.6791 -0.4042 -52" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop6" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell6" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate7" translation="1.8002 1.2802 -60" rotation="0.4105 -0.9087 0.0757 0.4002">
+      <Transform DEF="Frame7"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.4 1 0.3" emissiveColor="0.4 1 0.3" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near7" center="1.8002 1.2802 -60" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop7" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell7" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate8" translation="3.9171 2.3625 -68" rotation="0.7431 -0.6689 0.019 0.0763">
+      <Transform DEF="Frame8"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow8" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.2 0.8 1" emissiveColor="0.2 0.8 1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near8" center="3.9171 2.3625 -68" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop8" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell8" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform DEF="Gate9" translation="3.0696 2.3337 -76" rotation="-0.2724 0.9612 0.0423 0.3201">
+      <Transform DEF="Frame9"><Transform translation="0 1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="0 -1.85 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="4.0 0.3 0.3" /></Shape></Transform><Transform translation="1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform><Transform translation="-1.85 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.55 0.55 0.6" metallic="1" roughness="0.3" /></Appearance><Box size="0.3 4.0 0.3" /></Shape></Transform></Transform>
+      <Transform DEF="Glow9" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.4 1" emissiveColor="0.7 0.4 1" transparency="0.55" /></Appearance><Box size="3.4 3.4 0.06" /></Shape></Transform>
+    </Transform>
+    <ProximitySensor DEF="Near9" center="3.0696 2.3337 -76" size="4.4 4.4 4.4" />
+    <TimeSensor DEF="Pop9" cycleInterval="0.6" />
+    <PositionInterpolator DEF="Swell9" key="0 0.4 1" keyValue="1 1 1 1.35 1.35 1.35 1 1 1" />
+    <Transform translation="0 0 -104.0">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.6 0.1" emissiveColor="1 0.5 0.05"  /></Appearance><Sphere radius="14" /></Shape>
+    </Transform>
+    <Transform DEF="Prom0" translation="0 0 -104.0">
+      <Transform translation="16 0 0" rotation="0 0 1 0.00"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.3" emissiveColor="1 0.6 0.1"  /></Appearance><Cone bottomRadius="1.4" height="6" /></Shape></Transform>
+    </Transform>
+    <TimeSensor DEF="Flare0" cycleInterval="7.0" loop="true" />
+    <OrientationInterpolator DEF="Arc0" key="0 0.3333 0.6667 1" keyValue="0 0 1 0.000 0 0 1 2.094 0 0 1 4.189 0 0 1 6.283" />
+    <Transform DEF="Prom1" translation="0 0 -104.0">
+      <Transform translation="18 0 0" rotation="0 0 1 0.50"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.3" emissiveColor="1 0.6 0.1"  /></Appearance><Cone bottomRadius="1.4" height="8" /></Shape></Transform>
+    </Transform>
+    <TimeSensor DEF="Flare1" cycleInterval="8.3" loop="true" />
+    <OrientationInterpolator DEF="Arc1" key="0 0.3333 0.6667 1" keyValue="0 0 1 1.050 0 0 1 3.144 0 0 1 5.239 0 0 1 7.333" />
+    <Transform DEF="Prom2" translation="0 0 -104.0">
+      <Transform translation="16 0 0" rotation="0 0 1 1.00"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.3" emissiveColor="1 0.6 0.1"  /></Appearance><Cone bottomRadius="1.4" height="10" /></Shape></Transform>
+    </Transform>
+    <TimeSensor DEF="Flare2" cycleInterval="9.6" loop="true" />
+    <OrientationInterpolator DEF="Arc2" key="0 0.3333 0.6667 1" keyValue="0 0 1 2.100 0 0 1 4.194 0 0 1 6.289 0 0 1 8.383" />
+    <Transform DEF="Prom3" translation="0 0 -104.0">
+      <Transform translation="18 0 0" rotation="0 0 1 1.50"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.3" emissiveColor="1 0.6 0.1"  /></Appearance><Cone bottomRadius="1.4" height="6" /></Shape></Transform>
+    </Transform>
+    <TimeSensor DEF="Flare3" cycleInterval="10.9" loop="true" />
+    <OrientationInterpolator DEF="Arc3" key="0 0.3333 0.6667 1" keyValue="0 0 1 3.150 0 0 1 5.244 0 0 1 7.339 0 0 1 9.433" />
+    <Transform DEF="Prom4" translation="0 0 -104.0">
+      <Transform translation="16 0 0" rotation="0 0 1 2.00"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.3" emissiveColor="1 0.6 0.1"  /></Appearance><Cone bottomRadius="1.4" height="8" /></Shape></Transform>
+    </Transform>
+    <TimeSensor DEF="Flare4" cycleInterval="12.2" loop="true" />
+    <OrientationInterpolator DEF="Arc4" key="0 0.3333 0.6667 1" keyValue="0 0 1 4.200 0 0 1 6.294 0 0 1 8.389 0 0 1 10.483" />
+    <Transform DEF="Prom5" translation="0 0 -104.0">
+      <Transform translation="18 0 0" rotation="0 0 1 2.50"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.3" emissiveColor="1 0.6 0.1"  /></Appearance><Cone bottomRadius="1.4" height="10" /></Shape></Transform>
+    </Transform>
+    <TimeSensor DEF="Flare5" cycleInterval="13.5" loop="true" />
+    <OrientationInterpolator DEF="Arc5" key="0 0.3333 0.6667 1" keyValue="0 0 1 5.250 0 0 1 7.344 0 0 1 9.439 0 0 1 11.533" />
+    <ROUTE fromNode="Near0" fromField="isActive" toNode="Glow0" toField="visible" />
+    <ROUTE fromNode="Near0" fromField="enterTime" toNode="Pop0" toField="startTime" />
+    <ROUTE fromNode="Pop0" fromField="fraction_changed" toNode="Swell0" toField="set_fraction" />
+    <ROUTE fromNode="Swell0" fromField="value_changed" toNode="Frame0" toField="scale" />
+    <ROUTE fromNode="Near1" fromField="isActive" toNode="Glow1" toField="visible" />
+    <ROUTE fromNode="Near1" fromField="enterTime" toNode="Pop1" toField="startTime" />
+    <ROUTE fromNode="Pop1" fromField="fraction_changed" toNode="Swell1" toField="set_fraction" />
+    <ROUTE fromNode="Swell1" fromField="value_changed" toNode="Frame1" toField="scale" />
+    <ROUTE fromNode="Near2" fromField="isActive" toNode="Glow2" toField="visible" />
+    <ROUTE fromNode="Near2" fromField="enterTime" toNode="Pop2" toField="startTime" />
+    <ROUTE fromNode="Pop2" fromField="fraction_changed" toNode="Swell2" toField="set_fraction" />
+    <ROUTE fromNode="Swell2" fromField="value_changed" toNode="Frame2" toField="scale" />
+    <ROUTE fromNode="Near3" fromField="isActive" toNode="Glow3" toField="visible" />
+    <ROUTE fromNode="Near3" fromField="enterTime" toNode="Pop3" toField="startTime" />
+    <ROUTE fromNode="Pop3" fromField="fraction_changed" toNode="Swell3" toField="set_fraction" />
+    <ROUTE fromNode="Swell3" fromField="value_changed" toNode="Frame3" toField="scale" />
+    <ROUTE fromNode="Near4" fromField="isActive" toNode="Glow4" toField="visible" />
+    <ROUTE fromNode="Near4" fromField="enterTime" toNode="Pop4" toField="startTime" />
+    <ROUTE fromNode="Pop4" fromField="fraction_changed" toNode="Swell4" toField="set_fraction" />
+    <ROUTE fromNode="Swell4" fromField="value_changed" toNode="Frame4" toField="scale" />
+    <ROUTE fromNode="Near5" fromField="isActive" toNode="Glow5" toField="visible" />
+    <ROUTE fromNode="Near5" fromField="enterTime" toNode="Pop5" toField="startTime" />
+    <ROUTE fromNode="Pop5" fromField="fraction_changed" toNode="Swell5" toField="set_fraction" />
+    <ROUTE fromNode="Swell5" fromField="value_changed" toNode="Frame5" toField="scale" />
+    <ROUTE fromNode="Near6" fromField="isActive" toNode="Glow6" toField="visible" />
+    <ROUTE fromNode="Near6" fromField="enterTime" toNode="Pop6" toField="startTime" />
+    <ROUTE fromNode="Pop6" fromField="fraction_changed" toNode="Swell6" toField="set_fraction" />
+    <ROUTE fromNode="Swell6" fromField="value_changed" toNode="Frame6" toField="scale" />
+    <ROUTE fromNode="Near7" fromField="isActive" toNode="Glow7" toField="visible" />
+    <ROUTE fromNode="Near7" fromField="enterTime" toNode="Pop7" toField="startTime" />
+    <ROUTE fromNode="Pop7" fromField="fraction_changed" toNode="Swell7" toField="set_fraction" />
+    <ROUTE fromNode="Swell7" fromField="value_changed" toNode="Frame7" toField="scale" />
+    <ROUTE fromNode="Near8" fromField="isActive" toNode="Glow8" toField="visible" />
+    <ROUTE fromNode="Near8" fromField="enterTime" toNode="Pop8" toField="startTime" />
+    <ROUTE fromNode="Pop8" fromField="fraction_changed" toNode="Swell8" toField="set_fraction" />
+    <ROUTE fromNode="Swell8" fromField="value_changed" toNode="Frame8" toField="scale" />
+    <ROUTE fromNode="Near9" fromField="isActive" toNode="Glow9" toField="visible" />
+    <ROUTE fromNode="Near9" fromField="enterTime" toNode="Pop9" toField="startTime" />
+    <ROUTE fromNode="Pop9" fromField="fraction_changed" toNode="Swell9" toField="set_fraction" />
+    <ROUTE fromNode="Swell9" fromField="value_changed" toNode="Frame9" toField="scale" />
+    <ROUTE fromNode="Flare0" fromField="fraction_changed" toNode="Arc0" toField="set_fraction" />
+    <ROUTE fromNode="Arc0" fromField="value_changed" toNode="Prom0" toField="rotation" />
+    <ROUTE fromNode="Flare1" fromField="fraction_changed" toNode="Arc1" toField="set_fraction" />
+    <ROUTE fromNode="Arc1" fromField="value_changed" toNode="Prom1" toField="rotation" />
+    <ROUTE fromNode="Flare2" fromField="fraction_changed" toNode="Arc2" toField="set_fraction" />
+    <ROUTE fromNode="Arc2" fromField="value_changed" toNode="Prom2" toField="rotation" />
+    <ROUTE fromNode="Flare3" fromField="fraction_changed" toNode="Arc3" toField="set_fraction" />
+    <ROUTE fromNode="Arc3" fromField="value_changed" toNode="Prom3" toField="rotation" />
+    <ROUTE fromNode="Flare4" fromField="fraction_changed" toNode="Arc4" toField="set_fraction" />
+    <ROUTE fromNode="Arc4" fromField="value_changed" toNode="Prom4" toField="rotation" />
+    <ROUTE fromNode="Flare5" fromField="fraction_changed" toNode="Arc5" toField="set_fraction" />
+    <ROUTE fromNode="Arc5" fromField="value_changed" toNode="Prom5" toField="rotation" />
+  </Scene>
+</X3D>
