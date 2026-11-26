@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import bisect
 import colorsys
+import gc
 import math
 import xml.etree.ElementTree as ET
 from collections import deque
@@ -96,6 +97,8 @@ def _finite(value):
     kind = type(value)
     if kind is float:
         return value - value == 0.0              # NaN and the infinities are the only floats this is false for
+    if kind is _Points:
+        return True
     if kind is list and value and type(value[0]) is tuple:       # a list of vectors (a Coordinate's points): in C, not per number
         try:
             return all(map(math.isfinite, chain.from_iterable(value)))
@@ -114,6 +117,13 @@ def _finite(value):
     if isinstance(value, (tuple, list)):
         return all(_finite(item) for item in value)
     return True
+
+
+class _Points(list):
+    """A list of vectors a list follower made from floats it knows are all finite: ``size`` numbers each. It is a plain list
+    in every other way (equal, printed and sent as one); the two checks every event crosses (finite, fits a field of vectors)
+    take its word instead of looking at every number again."""
+    __slots__ = ("size",)
 
 
 def _fits(value, x3d_type):
@@ -168,6 +178,8 @@ def _fitter(x3d_type):
             size = _SIZES[base]       # a list of vectors (a Coordinate's points) is checked a point at a time, not a number at a time
 
             def found(value, size=size, x3d_type=x3d_type, sizes=frozenset((size,))):
+                if type(value) is _Points:
+                    return value.size == size
                 if type(value) is list and set(map(type, value)) <= _TUPLE and set(map(len, value)) <= sizes \
                         and set(map(type, chain.from_iterable(value))) <= _FLOAT:
                     return True
@@ -207,9 +219,12 @@ def _lerp(a, b, t):
 
 def _distance(a, b):
     if isinstance(a, tuple):
-        if len(a) == 3 and len(b) == 3:         # sum() of a tuple, not of a generator: the same additions, in order
-            return math.sqrt(sum(((a[0] - b[0]) ** 2, (a[1] - b[1]) ** 2, (a[2] - b[2]) ** 2)))
-        return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+        try:
+            if len(a) == 3 and len(b) == 3:     # sum() of a tuple, not of a generator: the same additions, in order
+                return math.sqrt(sum(((a[0] - b[0]) ** 2, (a[1] - b[1]) ** 2, (a[2] - b[2]) ** 2)))
+            return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+        except OverflowError:                   # a square of a float past 1e154 raises in Python where X_ITE's is infinity
+            return math.hypot(*[x - y for x, y in zip(a, b)])
     return abs(a - b)
 
 
@@ -258,16 +273,28 @@ def _rotation_distance(a, b):
     return 2 * math.acos(min(1.0, abs(sum(x * y for x, y in zip(qa, qb)))))
 
 
+def _hsv_of(rgb):
+    """``colorsys.rgb_to_hsv``, but a colour whose largest part is 0 (and so with a negative part) is, as in X_ITE's
+    Color3.getHSV, a grey of that value: colorsys divides by it."""
+    try:
+        return colorsys.rgb_to_hsv(*rgb)
+    except ZeroDivisionError:
+        return (0.0, 0.0, max(rgb))
+
+
 def hsv_lerp(a, b, t):
     """Colour interpolation as X3D asks for it: through HSV, the short way round the hue circle."""
-    ha, sa, va = colorsys.rgb_to_hsv(*a)
-    hb, sb, vb = colorsys.rgb_to_hsv(*b)
+    ha, sa, va = _hsv_of(a)
+    hb, sb, vb = _hsv_of(b)
     if abs(hb - ha) > 0.5:
         if hb > ha:
             ha += 1
         else:
             hb += 1
-    return colorsys.hsv_to_rgb((ha + (hb - ha) * t) % 1.0, sa + (sb - sa) * t, va + (vb - va) * t)
+    try:
+        return colorsys.hsv_to_rgb((ha + (hb - ha) * t) % 1.0, sa + (sb - sa) * t, va + (vb - va) * t)
+    except (ValueError, OverflowError):      # a colour of 1e308 has no hue: not a number, which never leaves a node (dropped, counted)
+        return (math.nan, math.nan, math.nan)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -985,6 +1012,13 @@ class _BufferChaser(_Machine):
     def tick(self, now, dt):
         if not self.active:
             return
+        if not (self.f["duration"] > 0 and self.step_time > 0):    # no duration: the scalar chaser arrives at once (its steps are dropped), and so does this one
+            self.buffer, self.previous = [self.destination] * self.SLOTS, self.destination
+            self.emit("value_changed", self.lower(self.destination))
+            self._activate(False)
+            return
+        if not (now - self.buffer_end) / self.step_time < 1e15:       # a clock that jumped, to infinity or NaN: as the list chasers do
+            self.buffer, self.previous, self.buffer_end = [self.destination] * self.SLOTS, self.destination, now
         slots = self.SLOTS
         fraction = self._shift(now)
         output = self.blend(self.previous, self.buffer[slots - 1], self.ramp((slots - 1 + fraction) * self.step_time))
@@ -1005,7 +1039,7 @@ class _ColorChaser(_BufferChaser):
 
     @classmethod
     def close(cls, a, b):
-        return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b))) < cls.TOLERANCE
+        return _distance(a, b) < cls.TOLERANCE
 
 
 class _OrientationChaser(_BufferChaser):
@@ -1080,6 +1114,18 @@ def _gap(a, b, size):
     return math.sqrt(max(map(sum, zip(*[squares[i::size] for i in range(size)]))))
 
 
+def _within(a, b, size, tolerance):
+    """``_gap(a, b, size) < tolerance``, but the first point is looked at before the rest: a follower still on its way is
+    usually not within tolerance at its first point, and then no other point needs to be read. The first point alone can only
+    say "no" (its distance is not under the tolerance, or is not a number, which ``_gap`` would also have answered with)."""
+    if len(a) != len(b) or len(a) < size:
+        return _gap(a, b, size) < tolerance
+    head = sum([(x - y) * (x - y) for x, y in zip(a[:size], b[:size])])
+    if not math.sqrt(head) < tolerance:
+        return False
+    return _gap(a, b, size) < tolerance
+
+
 class _ListMixin:
     """What both kinds of list follower share: the size of their vectors, how a list is kept inside, and the cap."""
     size = 3
@@ -1105,9 +1151,17 @@ class _ListMixin:
             raise ValueError("a list of vectors of another size")
         return flat
 
-    def points(self, flat):
-        """A flat list as the list of tuples a node sends."""
-        return list(zip(*[flat[i::self.size] for i in range(self.size)]))
+    def points(self, flat, floats=False):
+        """A flat list as the list of tuples a node sends. ``floats``: the caller knows every number is a float (it came out
+        of a blend); when they are also all finite (one sum says so: an infinity or a NaN makes it one, an overflow of
+        finite numbers only makes it a slow check) the list is a ``_Points``."""
+        size = self.size
+        found = list(zip(flat[0::3], flat[1::3], flat[2::3])) if size == 3 else \
+            list(zip(flat[0::2], flat[1::2])) if size == 2 else list(zip(*[flat[i::size] for i in range(size)]))
+        if floats and math.isfinite(sum(flat)):
+            found = _Points(found)
+            found.size = size
+        return found
 
     def fitted(self, flat, count):
         """``flat`` made ``count`` points long: cut, or padded with zero vectors (what X_ITE does to every buffer when a
@@ -1143,7 +1197,7 @@ class _ListChaser(_ListMixin, _BufferChaser):
         return [o + (a - b) * t for o, a, b in zip(output, value1, value2)]
 
     def close(self, a, b):
-        return _gap(a, b, self.size) < self.TOLERANCE
+        return _within(a, b, self.size, self.TOLERANCE)
 
     def tick(self, now, dt):
         if self.f["duration"] > 0:
@@ -1232,8 +1286,8 @@ class _ListDamper(_ListMixin, _Machine):
             alpha = math.exp(-dt / tau)
             for i in range(last):
                 buffer[i + 1] = _blend(buffer[i], buffer[i + 1], alpha)
-            self.emit("value_changed", self.points(buffer[last]))
-            if not _gap(buffer[last], buffer[0], self.size) < self.tolerance():
+            self.emit("value_changed", self.points(buffer[last], floats=True))
+            if not _within(buffer[last], buffer[0], self.size, self.tolerance()):
                 return
         else:
             self.emit("value_changed", self.points(buffer[0]))
@@ -1294,10 +1348,13 @@ def _v_unit(a):
 
 def _interval(value, low, high):
     """X_ITE's Algorithm.interval: wrap ``value`` into [low, high) (JavaScript's %, which keeps the dividend's sign)."""
-    if value >= high:
-        return math.fmod(value - low, high - low) + low
-    if value < low:
-        return math.fmod(value - high, high - low) + high
+    try:
+        if value >= high:
+            return math.fmod(value - low, high - low) + low
+        if value < low:
+            return math.fmod(value - high, high - low) + high
+    except ValueError:                 # fmod of an infinity: JavaScript's answer is NaN
+        return math.nan
     return value
 
 
@@ -1414,8 +1471,10 @@ class _DragSensor(_Machine):
     def _cylinder_track(self, origin, direction):
         z_point = self.z_plane.meet(origin, direction) or (0.0, 0.0, 0.0)
         axis_point = _v_add(z_point, _perpendicular((0.0, 0.0, 0.0), self.y_axis, z_point))
-        distance = self.sx_plane.distance(z_point) / self.radius
-        section = math.floor((distance + 1) / 2)
+        gap = self.sx_plane.distance(z_point)
+        distance = gap / self.radius if self.radius else math.nan if not gap or gap != gap else math.copysign(math.inf, gap)   # JavaScript's division
+        half = (distance + 1) / 2
+        section = math.floor(half) if math.isfinite(half) else math.nan     # JavaScript's Math.floor: a hit on the axis (radius 0) is NaN
         sinp = _interval(distance, -1, 1)
         phi = math.asin(sinp) if section == 0 else sinp * math.pi / 2
         turn = _Rot.axis_angle(*self.y_axis, phi + section * math.pi)
@@ -2048,7 +2107,12 @@ class _Script(_Machine):
     def _call(self, field, value, now):
         sent = self.handler(field, value, now, self.state)
         sim, collected = self.sim, {}
-        for item in sent or ():
+        try:
+            items = list(sent or ())
+        except TypeError:                          # a handler that answers with something that is not a list of pairs
+            sim.dropped["mismatch"] = sim.dropped.get("mismatch", 0) + 1
+            items = ()
+        for item in items:
             try:
                 name, out = item
             except (TypeError, ValueError):
@@ -2328,6 +2392,19 @@ class Simulation:
 
     def step(self, now):
         """Advance to time ``now``; returns [(target id, field, value)] in the order the values arrived."""
+        # A step allocates tens of thousands of short-lived values (a list follower makes a tuple per point); the collector
+        # scanning them again and again took a fifth of the time of the ``lists`` shape (tools/behaviour_bench.py). The
+        # values have no cycles, so reference counting frees them: the collector is off for the step and back as it was.
+        enabled = gc.isenabled()
+        if enabled:
+            gc.disable()
+        try:
+            return self._advance(now)
+        finally:
+            if enabled:
+                gc.enable()
+
+    def _advance(self, now):
         if self.now is None:
             return self.start(now)
         now = self._time(now)
