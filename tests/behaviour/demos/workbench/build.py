@@ -52,19 +52,21 @@ def shape(geometry, look):
 def box(x, y, z, look, at=(0, 0, 0), name=None, rotation=None):
     label = f' DEF="{name}"' if name else ""
     turn = f' rotation="{n(*rotation)}"' if rotation else ""
-    return f'<Transform{label} translation="{n(*at)}"{turn}>{shape(f"<Box size=\"{n(x, y, z)}\" />", look)}</Transform>'
+    geometry = f'<Box size="{n(x, y, z)}" />'
+    return f'<Transform{label} translation="{n(*at)}"{turn}>{shape(geometry, look)}</Transform>'
 
 
 def cylinder(radius, height, look, at=(0, 0, 0), rotation=None):
     turn = f' rotation="{n(*rotation)}"' if rotation else ""
-    return (f'<Transform translation="{n(*at)}"{turn}>'
-            f'{shape(f"<Cylinder radius=\"{radius:g}\" height=\"{height:g}\" />", look)}</Transform>')
+    geometry = f'<Cylinder radius="{radius:g}" height="{height:g}" />'
+    return f'<Transform translation="{n(*at)}"{turn}>{shape(geometry, look)}</Transform>'
 
 
 def sphere(radius, look, at=(0, 0, 0), scale=None, name=None):
     label = f' DEF="{name}"' if name else ""
     size = f' scale="{n(*scale)}"' if scale else ""
-    return f'<Transform{label} translation="{n(*at)}"{size}>{shape(f"<Sphere radius=\"{radius:g}\" />", look)}</Transform>'
+    geometry = f'<Sphere radius="{radius:g}" />'
+    return f'<Transform{label} translation="{n(*at)}"{size}>{shape(geometry, look)}</Transform>'
 
 
 WOOD, DARK_WOOD = paint((0.46, 0.27, 0.13), roughness=0.75), paint((0.24, 0.14, 0.08), roughness=0.8)
@@ -122,9 +124,10 @@ def globe():
                    ((0.0, 0.0, 1.0), (0.85, 0.3, 0.45), (-0.8, 0.2, 0.55), (0.0, 0.95, 0.3)))
     stand = cylinder(0.5, 0.1, STEEL, (GLOBE_AT[0], 0.05, GLOBE_AT[2])) + \
         cylinder(0.05, GLOBE_AT[1] - 0.6, STEEL, (GLOBE_AT[0], (GLOBE_AT[1] - 0.6) / 2 + 0.1, GLOBE_AT[2]))
+    ocean = shape('<Sphere radius="0.55" />', OCEAN)
     arm = box(1.08, 0.02, 0.02, STEEL, (MOON_AT[0] / 2, MOON_AT[1] / 2, 0), rotation=(0, 0, 1, math.atan2(MOON_AT[1], MOON_AT[0])))
     return (f'{stand}<Transform DEF="GlobeBase" translation="{n(*GLOBE_AT)}">'
-            f'<Transform DEF="GlobeSense"><Transform DEF="Globe">{shape("<Sphere radius=\"0.55\" />", OCEAN)}{land}</Transform></Transform>'
+            f'<Transform DEF="GlobeSense"><Transform DEF="Globe">{ocean}{land}</Transform></Transform>'
             f'<Transform DEF="MoonArm">{arm}{sphere(0.15, MOON, MOON_AT)}</Transform>'
             f'<Transform DEF="GlobeHit" /></Transform>')
 
