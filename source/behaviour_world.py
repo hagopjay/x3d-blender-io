@@ -431,6 +431,7 @@ class World:
         self.avatar_size = _NAVIGATION_DEFAULTS["avatarSize"]
         self.visibility_limit = _NAVIGATION_DEFAULTS["visibilityLimit"]
         self.noted = {}
+        self.pick = None                 # behaviour_pick.PickScene: what the pick sensors pick, read from the document
         self._anonymous = 0
         self.version = 0                 # counts changes of any frame or of the viewer
         self.frames_version = 0          # ... of a frame (or of a Collision's shapes) alone
@@ -472,6 +473,14 @@ class World:
         walker = _Walker(world, by_def)
         walker.walk(scene, None)
         walker.finish()
+        try:
+            from . import behaviour_pick
+        except ImportError:  # imported as a plain module: tests, tools/
+            import behaviour_pick
+        try:
+            world.pick = behaviour_pick.build(scene, by_def, walker.frame_of)
+        except Exception:                # noqa: BLE001 - a document the pick reader cannot follow still gives a World
+            world.note("pick-scene-failed")
         return world
 
     # -- the Transform hierarchy --------------------------------------------------------------------------------
@@ -540,11 +549,14 @@ class World:
             collision["enabled"] = bool(value)
             self.frames_version += 1
             return True
+        if self.pick is not None and self.pick.watches(name):
+            return self.pick.apply(name, field_name, value)
         return False
 
     def watches(self, name):
         """True when a ROUTE into ``name`` matters to the world."""
-        return name in self.frames or name == self.viewpoint or name in self.collisions
+        return name in self.frames or name == self.viewpoint or name in self.collisions or \
+            (self.pick is not None and self.pick.watches(name))
 
     # -- asking -------------------------------------------------------------------------------------------------
 
@@ -771,6 +783,7 @@ class _Walker:
     def __init__(self, world, by_def):
         self.world, self.by_def, self.pending_targets = world, by_def, []
         self.seen_viewpoint = self.seen_navigation = False
+        self.frame_of = {}         # id(Transform element) -> the key of its frame (the pick sensors read the document again)
 
     def walk(self, element, frame, collision=None):
         world = self.world
@@ -792,6 +805,7 @@ class _Walker:
                                 scale=_numbers(child.get("scale"), 3, (1.0, 1.0, 1.0)),
                                 center=_numbers(child.get("center"), 3, (0.0, 0.0, 0.0)),
                                 scale_orientation=_numbers(child.get("scaleOrientation"), 4, (0.0, 0.0, 1.0, 0.0)))
+                self.frame_of[id(child)] = key
                 if name:
                     world.targets[name] = key
                 self.walk(child, key, collision)

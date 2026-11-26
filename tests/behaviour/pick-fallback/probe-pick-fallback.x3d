@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+<head><meta name="title" content="Behaviour simulator probe: the pick sensors (GEOMETRY)"/></head>
+<Scene>
+  <NavigationInfo type='"NONE"'/>
+  <TimeSensor DEF="Clock" cycleInterval="12" loop="true"/>
+  <BooleanToggle DEF="SinkB"/><Group DEF="SinkG"/><Coordinate DEF="SinkC"/>
+  <Transform DEF="L0" translation="0 0 0">
+    <Group DEF="T0">
+      <Transform translation="0 0 0"><Shape><Box DEF="G0_box" size="2 2 2"/></Shape></Transform>
+      <Transform translation="6 0 0"><Shape><Sphere DEF="G0_sphere" radius="1"/></Shape></Transform>
+      <Transform translation="12 0 0" rotation="0.3 0.8 0.5 0.7"><Shape><Box DEF="G0_turned" size="2 1 3"/></Shape></Transform>
+      <Transform translation="18 0 0" scale="2 1 0.6"><Shape><Box DEF="G0_stretched" size="2 2 2"/></Shape></Transform>
+      <Transform translation="24 0 0" scale="1.5 1.5 1.5"><Shape><Sphere DEF="G0_big" radius="1"/></Shape></Transform>
+      <Transform translation="30 0 0" scale="1.5 1 1"><Shape><Sphere DEF="G0_oval" radius="1"/></Shape></Transform>
+      <Transform translation="36 0 0"><Shape><Cone DEF="G0_cone"/></Shape></Transform>
+      <Transform translation="42 0 0"><Shape><Cylinder DEF="G0_cylinder"/></Shape></Transform>
+      <Transform translation="48 0 0"><Shape><IndexedFaceSet DEF="G0_pyramid" coordIndex="0 1 2 -1 0 2 3 -1 0 3 4 -1 0 4 1 -1"><Coordinate point="0 1 0  -1 -1 -1  1 -1 -1  1 -1 1  -1 -1 1"/></IndexedFaceSet></Shape></Transform>
+      <Transform translation="54 0 0" rotation="0 0 1 0.5"><Shape><Box DEF="G0_tilted" size="2 2 2"/></Shape></Transform>
+    </Group>
+    <Transform ><Transform DEF="S0" translation="-3 0 0" scale="1 1 1">
+      <Shape><Appearance><Material diffuseColor="1 0 0"/></Appearance><Box size="0.2 0.2 0.2"/></Shape>
+      <VolumePickSensor DEF="P0" intersectionType="GEOMETRY" sortOrder="ALL"><Box containerField="pickingGeometry" size="1.5 1.5 1.5"/><Group USE="T0" containerField="pickTarget"/></VolumePickSensor>
+    </Transform></Transform>
+    <PositionInterpolator DEF="X0" key="0 1" keyValue="-3 0 0  57 0 0"/><OrientationInterpolator DEF="O0" key="0 0.5 1" keyValue="0 1 0 0  0 1 0 3  0 1 0 6"/>
+  </Transform>
+  <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="X0" toField="set_fraction"/>
+  <ROUTE fromNode="X0" fromField="value_changed" toNode="S0" toField="translation"/><ROUTE fromNode="Clock" fromField="fraction_changed" toNode="O0" toField="set_fraction"/><ROUTE fromNode="O0" fromField="value_changed" toNode="S0" toField="rotation"/><ROUTE fromNode="P0" fromField="isActive" toNode="SinkB" toField="set_boolean"/><ROUTE fromNode="P0" fromField="pickedGeometry" toNode="SinkG" toField="removeChildren"/>
+  <Transform DEF="L1" translation="0 0 15">
+    <Group DEF="T1">
+      <Transform translation="0 0 0"><Shape><Box DEF="G1_box" size="2 2 2"/></Shape></Transform>
+      <Transform translation="6 0 0"><Shape><Sphere DEF="G1_sphere" radius="1"/></Shape></Transform>
+      <Transform translation="12 0 0" rotation="0.3 0.8 0.5 0.7"><Shape><Box DEF="G1_turned" size="2 1 3"/></Shape></Transform>
+      <Transform translation="18 0 0" scale="2 1 0.6"><Shape><Box DEF="G1_stretched" size="2 2 2"/></Shape></Transform>
+      <Transform translation="24 0 0" scale="1.5 1.5 1.5"><Shape><Sphere DEF="G1_big" radius="1"/></Shape></Transform>
+      <Transform translation="30 0 0" scale="1.5 1 1"><Shape><Sphere DEF="G1_oval" radius="1"/></Shape></Transform>
+      <Transform translation="36 0 0"><Shape><Cone DEF="G1_cone"/></Shape></Transform>
+      <Transform translation="42 0 0"><Shape><Cylinder DEF="G1_cylinder"/></Shape></Transform>
+      <Transform translation="48 0 0"><Shape><IndexedFaceSet DEF="G1_pyramid" coordIndex="0 1 2 -1 0 2 3 -1 0 3 4 -1 0 4 1 -1"><Coordinate point="0 1 0  -1 -1 -1  1 -1 -1  1 -1 1  -1 -1 1"/></IndexedFaceSet></Shape></Transform>
+      <Transform translation="54 0 0" rotation="0 0 1 0.5"><Shape><Box DEF="G1_tilted" size="2 2 2"/></Shape></Transform>
+    </Group>
+    <Transform ><Transform DEF="S1" translation="-3 0 0" scale="1.3 1.3 1.3">
+      <Shape><Appearance><Material diffuseColor="1 0 0"/></Appearance><Box size="0.2 0.2 0.2"/></Shape>
+      <PrimitivePickSensor DEF="P1" intersectionType="GEOMETRY" sortOrder="ALL"><Sphere containerField="pickingGeometry" radius="0.8"/><Group USE="T1" containerField="pickTarget"/></PrimitivePickSensor>
+    </Transform></Transform>
+    <PositionInterpolator DEF="X1" key="0 1" keyValue="-3 0 0  57 0 0"/>
+  </Transform>
+  <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="X1" toField="set_fraction"/>
+  <ROUTE fromNode="X1" fromField="value_changed" toNode="S1" toField="translation"/><ROUTE fromNode="P1" fromField="isActive" toNode="SinkB" toField="set_boolean"/><ROUTE fromNode="P1" fromField="pickedGeometry" toNode="SinkG" toField="removeChildren"/>
+  <Transform DEF="L2" translation="0 0 30">
+    <Group DEF="T2">
+      <Transform translation="0 0 0"><Shape><Box DEF="G2_box" size="2 2 2"/></Shape></Transform>
+      <Transform translation="6 0 0"><Shape><Sphere DEF="G2_sphere" radius="1"/></Shape></Transform>
+      <Transform translation="12 0 0" rotation="0.3 0.8 0.5 0.7"><Shape><Box DEF="G2_turned" size="2 1 3"/></Shape></Transform>
+      <Transform translation="18 0 0" scale="2 1 0.6"><Shape><Box DEF="G2_stretched" size="2 2 2"/></Shape></Transform>
+      <Transform translation="24 0 0" scale="1.5 1.5 1.5"><Shape><Sphere DEF="G2_big" radius="1"/></Shape></Transform>
+      <Transform translation="30 0 0" scale="1.5 1 1"><Shape><Sphere DEF="G2_oval" radius="1"/></Shape></Transform>
+      <Transform translation="36 0 0"><Shape><Cone DEF="G2_cone"/></Shape></Transform>
+      <Transform translation="42 0 0"><Shape><Cylinder DEF="G2_cylinder"/></Shape></Transform>
+      <Transform translation="48 0 0"><Shape><IndexedFaceSet DEF="G2_pyramid" coordIndex="0 1 2 -1 0 2 3 -1 0 3 4 -1 0 4 1 -1"><Coordinate point="0 1 0  -1 -1 -1  1 -1 -1  1 -1 1  -1 -1 1"/></IndexedFaceSet></Shape></Transform>
+      <Transform translation="54 0 0" rotation="0 0 1 0.5"><Shape><Box DEF="G2_tilted" size="2 2 2"/></Shape></Transform>
+    </Group>
+    <Transform ><Transform DEF="S2" translation="-3 0 0" scale="1 1 1">
+      <Shape><Appearance><Material diffuseColor="1 0 0"/></Appearance><Box size="0.2 0.2 0.2"/></Shape>
+      <PointPickSensor DEF="P2" intersectionType="GEOMETRY" sortOrder="ALL"><PointSet containerField="pickingGeometry"><Coordinate point="0 0 0  1.2 0 0  0 1.2 0  0.5 0.5 0.5"/></PointSet><Group USE="T2" containerField="pickTarget"/></PointPickSensor>
+    </Transform></Transform>
+    <PositionInterpolator DEF="X2" key="0 1" keyValue="-3 0 0  57 0 0"/>
+  </Transform>
+  <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="X2" toField="set_fraction"/>
+  <ROUTE fromNode="X2" fromField="value_changed" toNode="S2" toField="translation"/><ROUTE fromNode="P2" fromField="isActive" toNode="SinkB" toField="set_boolean"/><ROUTE fromNode="P2" fromField="pickedGeometry" toNode="SinkG" toField="removeChildren"/><ROUTE fromNode="P2" fromField="pickedPoint" toNode="SinkC" toField="point"/>
+  <Transform DEF="L3" translation="0 0 45">
+    <Group DEF="T3">
+      <Transform translation="0 0 0"><Shape><Box DEF="G3_box" size="2 2 2"/></Shape></Transform>
+      <Transform translation="6 0 0"><Shape><Sphere DEF="G3_sphere" radius="1"/></Shape></Transform>
+      <Transform translation="12 0 0" rotation="0.3 0.8 0.5 0.7"><Shape><Box DEF="G3_turned" size="2 1 3"/></Shape></Transform>
+      <Transform translation="18 0 0" scale="2 1 0.6"><Shape><Box DEF="G3_stretched" size="2 2 2"/></Shape></Transform>
+      <Transform translation="24 0 0" scale="1.5 1.5 1.5"><Shape><Sphere DEF="G3_big" radius="1"/></Shape></Transform>
+      <Transform translation="30 0 0" scale="1.5 1 1"><Shape><Sphere DEF="G3_oval" radius="1"/></Shape></Transform>
+      <Transform translation="36 0 0"><Shape><Cone DEF="G3_cone"/></Shape></Transform>
+      <Transform translation="42 0 0"><Shape><Cylinder DEF="G3_cylinder"/></Shape></Transform>
+      <Transform translation="48 0 0"><Shape><IndexedFaceSet DEF="G3_pyramid" coordIndex="0 1 2 -1 0 2 3 -1 0 3 4 -1 0 4 1 -1"><Coordinate point="0 1 0  -1 -1 -1  1 -1 -1  1 -1 1  -1 -1 1"/></IndexedFaceSet></Shape></Transform>
+      <Transform translation="54 0 0" rotation="0 0 1 0.5"><Shape><Box DEF="G3_tilted" size="2 2 2"/></Shape></Transform>
+    </Group>
+    <Transform ><Transform DEF="S3" translation="-3 0 0" scale="1 1 1">
+      <Shape><Appearance><Material diffuseColor="1 0 0"/></Appearance><Box size="0.2 0.2 0.2"/></Shape>
+      <LinePickSensor DEF="P3" intersectionType="GEOMETRY" sortOrder="ALL"><IndexedLineSet containerField="pickingGeometry" coordIndex="0 1 -1 1 2 -1"><Coordinate point="0 -2 0.3  0 2 0.3  1.5 2 -0.2"/></IndexedLineSet><Group USE="T3" containerField="pickTarget"/></LinePickSensor>
+    </Transform></Transform>
+    <PositionInterpolator DEF="X3" key="0 1" keyValue="-3 0 0  57 0 0"/>
+  </Transform>
+  <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="X3" toField="set_fraction"/>
+  <ROUTE fromNode="X3" fromField="value_changed" toNode="S3" toField="translation"/><ROUTE fromNode="P3" fromField="isActive" toNode="SinkB" toField="set_boolean"/><ROUTE fromNode="P3" fromField="pickedGeometry" toNode="SinkG" toField="removeChildren"/><ROUTE fromNode="P3" fromField="pickedTextureCoordinate" toNode="SinkC" toField="point"/><ROUTE fromNode="P3" fromField="pickedNormal" toNode="SinkC" toField="point"/><ROUTE fromNode="P3" fromField="pickedPoint" toNode="SinkC" toField="point"/>
+  <Transform DEF="L4" translation="0 0 60">
+    <Group DEF="T4">
+      <Transform translation="0 0 0"><Shape><Box DEF="G4_box" size="2 2 2"/></Shape></Transform>
+      <Transform translation="6 0 0"><Shape><Sphere DEF="G4_sphere" radius="1"/></Shape></Transform>
+      <Transform translation="12 0 0" rotation="0.3 0.8 0.5 0.7"><Shape><Box DEF="G4_turned" size="2 1 3"/></Shape></Transform>
+      <Transform translation="18 0 0" scale="2 1 0.6"><Shape><Box DEF="G4_stretched" size="2 2 2"/></Shape></Transform>
+      <Transform translation="24 0 0" scale="1.5 1.5 1.5"><Shape><Sphere DEF="G4_big" radius="1"/></Shape></Transform>
+      <Transform translation="30 0 0" scale="1.5 1 1"><Shape><Sphere DEF="G4_oval" radius="1"/></Shape></Transform>
+      <Transform translation="36 0 0"><Shape><Cone DEF="G4_cone"/></Shape></Transform>
+      <Transform translation="42 0 0"><Shape><Cylinder DEF="G4_cylinder"/></Shape></Transform>
+      <Transform translation="48 0 0"><Shape><IndexedFaceSet DEF="G4_pyramid" coordIndex="0 1 2 -1 0 2 3 -1 0 3 4 -1 0 4 1 -1"><Coordinate point="0 1 0  -1 -1 -1  1 -1 -1  1 -1 1  -1 -1 1"/></IndexedFaceSet></Shape></Transform>
+      <Transform translation="54 0 0" rotation="0 0 1 0.5"><Shape><Box DEF="G4_tilted" size="2 2 2"/></Shape></Transform>
+    </Group>
+    <Transform ><Transform DEF="S4" translation="-3 0 0" scale="1 1 1">
+      <Shape><Appearance><Material diffuseColor="1 0 0"/></Appearance><Box size="0.2 0.2 0.2"/></Shape>
+      <VolumePickSensor DEF="P4" intersectionType="GEOMETRY" sortOrder="ALL"><Cone containerField="pickingGeometry" bottomRadius="1" height="2"/><Group USE="T4" containerField="pickTarget"/></VolumePickSensor>
+    </Transform></Transform>
+    <PositionInterpolator DEF="X4" key="0 1" keyValue="-3 0 0  57 0 0"/>
+  </Transform>
+  <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="X4" toField="set_fraction"/>
+  <ROUTE fromNode="X4" fromField="value_changed" toNode="S4" toField="translation"/><ROUTE fromNode="P4" fromField="isActive" toNode="SinkB" toField="set_boolean"/><ROUTE fromNode="P4" fromField="pickedGeometry" toNode="SinkG" toField="removeChildren"/>
+  <Transform DEF="L5" translation="0 0 75">
+    <Group DEF="T5">
+      <Transform translation="0 0 0"><Shape><Box DEF="G5_box" size="2 2 2"/></Shape></Transform>
+      <Transform translation="6 0 0"><Shape><Sphere DEF="G5_sphere" radius="1"/></Shape></Transform>
+      <Transform translation="12 0 0" rotation="0.3 0.8 0.5 0.7"><Shape><Box DEF="G5_turned" size="2 1 3"/></Shape></Transform>
+      <Transform translation="18 0 0" scale="2 1 0.6"><Shape><Box DEF="G5_stretched" size="2 2 2"/></Shape></Transform>
+      <Transform translation="24 0 0" scale="1.5 1.5 1.5"><Shape><Sphere DEF="G5_big" radius="1"/></Shape></Transform>
+      <Transform translation="30 0 0" scale="1.5 1 1"><Shape><Sphere DEF="G5_oval" radius="1"/></Shape></Transform>
+      <Transform translation="36 0 0"><Shape><Cone DEF="G5_cone"/></Shape></Transform>
+      <Transform translation="42 0 0"><Shape><Cylinder DEF="G5_cylinder"/></Shape></Transform>
+      <Transform translation="48 0 0"><Shape><IndexedFaceSet DEF="G5_pyramid" coordIndex="0 1 2 -1 0 2 3 -1 0 3 4 -1 0 4 1 -1"><Coordinate point="0 1 0  -1 -1 -1  1 -1 -1  1 -1 1  -1 -1 1"/></IndexedFaceSet></Shape></Transform>
+      <Transform translation="54 0 0" rotation="0 0 1 0.5"><Shape><Box DEF="G5_tilted" size="2 2 2"/></Shape></Transform>
+    </Group>
+    <Transform rotation="0 0 1 0.4" scale="1 1.8 1"><Transform DEF="S5" translation="-3 0 0" scale="1 1 1">
+      <Shape><Appearance><Material diffuseColor="1 0 0"/></Appearance><Box size="0.2 0.2 0.2"/></Shape>
+      <VolumePickSensor DEF="P5" intersectionType="GEOMETRY" sortOrder="ALL"><Sphere containerField="pickingGeometry" radius="1"/><Group USE="T5" containerField="pickTarget"/></VolumePickSensor>
+    </Transform></Transform>
+    <PositionInterpolator DEF="X5" key="0 1" keyValue="-3 0 0  57 0 0"/>
+  </Transform>
+  <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="X5" toField="set_fraction"/>
+  <ROUTE fromNode="X5" fromField="value_changed" toNode="S5" toField="translation"/><ROUTE fromNode="P5" fromField="isActive" toNode="SinkB" toField="set_boolean"/><ROUTE fromNode="P5" fromField="pickedGeometry" toNode="SinkG" toField="removeChildren"/>
+  <Transform DEF="L6" translation="0 0 90">
+    <Group DEF="T6">
+      <Transform translation="0 0 0"><Shape><Box DEF="G6_box" size="2 2 2"/></Shape></Transform>
+      <Transform translation="6 0 0"><Shape><Sphere DEF="G6_sphere" radius="1"/></Shape></Transform>
+      <Transform translation="12 0 0" rotation="0.3 0.8 0.5 0.7"><Shape><Box DEF="G6_turned" size="2 1 3"/></Shape></Transform>
+      <Transform translation="18 0 0" scale="2 1 0.6"><Shape><Box DEF="G6_stretched" size="2 2 2"/></Shape></Transform>
+      <Transform translation="24 0 0" scale="1.5 1.5 1.5"><Shape><Sphere DEF="G6_big" radius="1"/></Shape></Transform>
+      <Transform translation="30 0 0" scale="1.5 1 1"><Shape><Sphere DEF="G6_oval" radius="1"/></Shape></Transform>
+      <Transform translation="36 0 0"><Shape><Cone DEF="G6_cone"/></Shape></Transform>
+      <Transform translation="42 0 0"><Shape><Cylinder DEF="G6_cylinder"/></Shape></Transform>
+      <Transform translation="48 0 0"><Shape><IndexedFaceSet DEF="G6_pyramid" coordIndex="0 1 2 -1 0 2 3 -1 0 3 4 -1 0 4 1 -1"><Coordinate point="0 1 0  -1 -1 -1  1 -1 -1  1 -1 1  -1 -1 1"/></IndexedFaceSet></Shape></Transform>
+      <Transform translation="54 0 0" rotation="0 0 1 0.5"><Shape><Box DEF="G6_tilted" size="2 2 2"/></Shape></Transform>
+    </Group>
+    <Transform scale="2 1 1"><Transform DEF="S6" translation="-3 0 0" scale="1 1 1">
+      <Shape><Appearance><Material diffuseColor="1 0 0"/></Appearance><Box size="0.2 0.2 0.2"/></Shape>
+      <VolumePickSensor DEF="P6" intersectionType="GEOMETRY" sortOrder="ALL"><Box containerField="pickingGeometry" size="1.5 1.5 1.5"/><Group USE="T6" containerField="pickTarget"/></VolumePickSensor>
+    </Transform></Transform>
+    <PositionInterpolator DEF="X6" key="0 1" keyValue="-3 0 0  57 0 0"/><OrientationInterpolator DEF="O6" key="0 0.5 1" keyValue="0 0 1 0  0 0 1 1  0 0 1 2"/>
+  </Transform>
+  <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="X6" toField="set_fraction"/>
+  <ROUTE fromNode="X6" fromField="value_changed" toNode="S6" toField="translation"/><ROUTE fromNode="Clock" fromField="fraction_changed" toNode="O6" toField="set_fraction"/><ROUTE fromNode="O6" fromField="value_changed" toNode="S6" toField="rotation"/><ROUTE fromNode="P6" fromField="isActive" toNode="SinkB" toField="set_boolean"/><ROUTE fromNode="P6" fromField="pickedGeometry" toNode="SinkG" toField="removeChildren"/>
+</Scene></X3D>

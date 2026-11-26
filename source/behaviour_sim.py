@@ -2137,6 +2137,11 @@ try:
 except ImportError:  # imported as a plain module: tests, tools/
     import behaviour_media as _media
 _MACHINES.update(_media.MACHINES)
+try:
+    from . import behaviour_pick as _pick
+except ImportError:  # imported as a plain module: tests, tools/
+    import behaviour_pick as _pick
+_MACHINES.update(_pick.machines(_Machine, _WorldSensor))
 _SCENE_MACHINES = _media.SCENE_MACHINES
 SIMULATED = tuple(sorted({*_MACHINES, "AudioClip", "MovieTexture"}))
 # Event nodes that are scene content (catalogue IN_PLACE: the graph names them, the scene keeps them) and that the

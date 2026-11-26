@@ -209,7 +209,8 @@ class _JointState:
 
 
 WORLD_SENSORS = ("ProximitySensor",)          # the environmental sensors Play gives a frame (and a viewer) to
-UNFED_SENSORS = ("VisibilitySensor", "TransformSensor")   # simulated from a World, which Play does not fill for them
+UNFED_SENSORS = ("VisibilitySensor", "TransformSensor", "LinePickSensor", "PointPickSensor", "PrimitivePickSensor",
+                 "VolumePickSensor")   # simulated from a World, which Play does not fill for them (the pick sensors need the scene's shapes)
 
 
 def world_from_blender(scene, graph, global_matrix=None):
