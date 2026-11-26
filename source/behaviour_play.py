@@ -60,6 +60,7 @@ def last_export_axes(context):
 
 def scene_axes(context, scene):
     """(global_matrix, problem) for the scene's Play axes. An invalid pair gives the default matrix and a message."""
+    ensure_axes_properties()
     forward, up = scene.x3d_play_forward, scene.x3d_play_up
     matrix = axes_matrix(forward, up)
     if matrix is None:
@@ -482,6 +483,7 @@ class X3D_OT_behaviour_play(bpy.types.Operator):
 
     def invoke(self, context, event):
         scene = context.scene
+        ensure_axes_properties()
         if not scene.is_property_set("x3d_play_forward") and not scene.is_property_set("x3d_play_up"):
             last = last_export_axes(context)        # nothing chosen yet: start from what the export dialog last used
             if last is not None and axes_matrix(*last) is not None:
@@ -635,14 +637,22 @@ class X3D_PT_behaviour_play(bpy.types.Panel):
 classes = (X3D_OT_behaviour_play, X3D_OT_behaviour_stop, X3D_PT_behaviour_play)
 
 
-def register():
+def ensure_axes_properties():
+    """Define ``Scene.x3d_play_forward`` and ``x3d_play_up`` when they are missing; safe to call again. Another copy of
+    the add-on being disabled (a factory reset with the extension installed while a development copy is loaded) deletes
+    them, as it does ``Scene.x3d_behaviour_tree`` (see behaviour_nodes._ensure_scene_property)."""
     if not hasattr(bpy.types.Scene, "x3d_play_forward"):
         bpy.types.Scene.x3d_play_forward = EnumProperty(
             name="Forward", items=_AXIS_ITEMS_FORWARD, default="-Z",
             description="Forward axis the scene is exported with; Play moves objects as a file exported with these axes would")
+    if not hasattr(bpy.types.Scene, "x3d_play_up"):
         bpy.types.Scene.x3d_play_up = EnumProperty(
             name="Up", items=_AXIS_ITEMS_UP, default="Y",
             description="Up axis the scene is exported with; Play moves objects as a file exported with these axes would")
+
+
+def register():
+    ensure_axes_properties()
     for cls in classes:
         if not getattr(cls, "is_registered", False):
             bpy.utils.register_class(cls)

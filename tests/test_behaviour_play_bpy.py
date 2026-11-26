@@ -43,6 +43,7 @@ class _Base(unittest.TestCase):
         self.bn = importlib.import_module("io_scene_x3d.behaviour_nodes")
         self.bp = importlib.import_module("io_scene_x3d.behaviour_play")
         self.bn.ensure_registered()
+        self.bp.ensure_axes_properties()    # the factory reset above can remove them, as it does the tree property
 
     def load(self, name):
         bpy.ops.wm.read_factory_settings(use_empty=True)
