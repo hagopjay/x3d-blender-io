@@ -806,7 +806,7 @@ _PRESET_PROPERTIES = ("x3d_trigger", "x3d_action", "x3d_target", "x3d_radius", "
 _SCENE_PRESET_PROPERTIES = ("x3d_tour_travel", "x3d_tour_autostart", "x3d_tour_loop")
 
 
-def import_graph(scene, filepath):
+def import_graph(scene, filepath, new_actions=None):
     """Build the scene's behaviour node tree from the X3D file just imported; returns the diagnostics.
 
     Every ROUTE end is looked up among the imported objects by the DEF the importer recorded on them (``x3d_def``,
@@ -853,11 +853,39 @@ def import_graph(scene, filepath):
     for key in _SCENE_PRESET_PROPERTIES:
         if key in scene:
             del scene[key]
+    graph.diagnostics.extend(_drop_baked_actions(graph, new_actions))
     tree = apply(graph, scene)
     tree["x3d_diagnostics"] = "\n".join(graph.diagnostics)
     kept = sum(1 for node in graph.nodes.values() if node.role == bg.BEHAVIOUR)
     return [f"Behaviour graph: {kept} nodes and {len(graph.routes)} ROUTEs in node tree {tree.name!r}."] + \
         [f"Behaviour graph: {message}" for message in graph.diagnostics]
+
+
+def _drop_baked_actions(graph, new_actions):
+    """Remove the keyframes this import baked for an object the graph drives, and say so.
+
+    The importer bakes interpolators into an action (``<object>_x3d``); the graph now holds the same behaviour, the
+    exporter already ignores keyframes of a driven object (rule 5), and the timeline would otherwise play a second copy.
+    Only an action in ``new_actions`` (made by this import; None: none are touched), on an object a ROUTE reaches, and
+    used by nothing else, is removed: keyframes the person made are never touched."""
+    if not new_actions:
+        return []
+    driven = {node.binding[1] for node in graph.nodes.values()
+              if node.role == bg.TARGET and node.binding and node.binding[0] != "material"
+              and any(route.to_id == node.id for route in graph.routes)}
+    messages = []
+    for name in sorted(driven):
+        obj = bpy.data.objects.get(name)
+        data = getattr(obj, "animation_data", None)
+        action = getattr(data, "action", None)
+        if action is None or action not in new_actions or action.users > 1:
+            continue
+        baked = action.name                       # read before the action is gone
+        data.action = None
+        bpy.data.actions.remove(action)
+        messages.append(f"removed the keyframes the importer baked for {name!r} (action {baked!r}): the graph drives "
+                        "it, so the timeline no longer plays a second copy.")
+    return messages
 
 
 def _editor_area_for(screen):

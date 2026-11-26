@@ -50,6 +50,7 @@ bn.apply(b, bpy.context.scene)
 3. A target is written under its name in the graph (for an imported file, the DEF it came with).
 4. A ROUTE whose target is not exported is left out and counted in a head `meta` line.
 5. Keyframes of an object the graph drives are not sampled into a second set of interpolators.
+6. On import with the graph, keyframes the same import baked for an object the graph drives are removed (and reported).
 
 ## Measured (22 Nov 2026; Blender 5.3.0 bpy wheel, Python 3.13.18, x3d.py 4.0.65.8, X_ITE 16.7.1 headless)
 
@@ -150,10 +151,16 @@ the editor knows each node's height); an interpolator with 48 keys drew 48 rows 
 the first five and the last, with a line pointing to the sidebar, which shows all); `startTime="1e+30"` (the file's
 "not until an event") was drawn as thirty cut-off digits (it is now its X3D text, labelled "never").
 
-Seen and not changed: the glow paints the whole node, so its text is hard to read while a timer runs; the sidebar repeats
-an unlinked input (`key`, `keyValue`) as a bare label after the node's panel (Blender draws unlinked inputs there); on
-`route-demo.x3d` the importer also bakes the looping interpolators into actions (`Door_x3d`, `Spinner_x3d`), so the
-graph and an action both drive Door and Spinner. Export ignores those keyframes (rule 5); the timeline's Play does not.
+The glow painted a node solid orange for as long as it kept sending, so a running timer's fields could not be read; a
+node now flashes (85% of the way to orange) for the first 0.35 s of a run of events and then holds a steady amber (35%)
+while it keeps sending (`GLOW_FLASH`, `GLOW_BUSY` in `behaviour_play.py`). The importer still bakes interpolators into
+actions (`Door_x3d`, ...) while the graph is built: 7 actions in 4 of the 5 worlds, each on an object the graph drives,
+so the timeline played a second copy. The import now removes an action when this import made it, a ROUTE drives its
+object, and nothing else uses it, and says so in its report; actions that existed before the import are never touched.
+Without the graph, nothing changes (the baked keyframes stay).
+
+Seen and not changed: the sidebar repeats an unlinked input (`key`, `keyValue`) as a bare label after the node's panel
+(Blender draws unlinked inputs there).
 
 ## Limits
 

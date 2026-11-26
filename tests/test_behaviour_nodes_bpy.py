@@ -222,6 +222,22 @@ class BehaviourNodeTests(unittest.TestCase):
         self.assertEqual(tree.nodes["TS_DoorButton"].x3d_parent.name, "DoorButton")
         self.assertNotIn("x3d_trigger", bpy.data.objects["DoorButton"])
 
+    def test_the_graph_takes_over_the_keyframes_the_import_baked(self):
+        # route-demo: the importer bakes Door, Spinner and Beacon into <name>_x3d actions; the graph drives all three
+        keep = self._cube("Keep")
+        keep.animation_data_create()
+        keep.animation_data.action = bpy.data.actions.new("Mine")   # made before the import: never touched
+        bpy.ops.import_scene.x3d(filepath=str(ROUTE_DEMO), use_behaviour_graph=True)
+        self.assertEqual([action.name for action in bpy.data.actions], ["Mine"])
+        for name in ("Door", "Spinner", "Beacon"):
+            self.assertIsNone(bpy.data.objects[name].animation_data.action)
+        self.assertIn("removed the keyframes the importer baked for 'Door'",
+                      self.scene.x3d_behaviour_tree["x3d_diagnostics"])
+
+    def test_without_the_graph_the_baked_keyframes_stay(self):
+        bpy.ops.import_scene.x3d(filepath=str(ROUTE_DEMO))
+        self.assertEqual(sorted(action.name for action in bpy.data.actions), ["Beacon_x3d", "Door_x3d", "Spinner_x3d"])
+
     def test_import_says_where_the_graph_went(self):
         # Backlog 1: with no window (a script, blender -b) nothing can be shown; the line says how to see it
         tree = self._import_demo()
