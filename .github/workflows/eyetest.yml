@@ -32,7 +32,8 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends \
             libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 \
             libgl1 libegl1 libglx-mesa0 xz-utils \
-            xvfb libgl1-mesa-dri mesa-utils libxkbcommon-x11-0 libxcursor1 libxinerama1
+            xvfb libgl1-mesa-dri mesa-utils libxkbcommon-x11-0 libxcursor1 libxinerama1 \
+            imagemagick x11-apps
 
       - name: Cache Blender 5.2.2
         id: cache-blender
@@ -56,8 +57,8 @@ jobs:
         run: |
           mkdir -p eyetest-out
           LIBGL_ALWAYS_SOFTWARE=1 timeout 900 xvfb-run -a -s "-screen 0 1600x1000x24" "$BLENDER_DIR/blender" \
-            --factory-startup --enable-event-simulate --window-geometry 0 0 1600 1000 \
-            --python tools/behaviour_eyetest.py -- --out eyetest-out --activity --activity-debug --strict --slow 3 \
+            --factory-startup --gpu-backend opengl --enable-event-simulate --window-geometry 0 0 1600 1000 \
+            --python tools/behaviour_eyetest.py -- --out eyetest-out --activity --activity-debug --strict --x11-grab --slow 3 \
             --worlds door counter snake
 
       - name: The script's own verdict
