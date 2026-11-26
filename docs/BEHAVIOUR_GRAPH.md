@@ -183,6 +183,23 @@ Fixed on the way: a sensor or target in a DEF'd Transform whose unnamed child Tr
 child (the importer gives them the parent's DEF and name, and calls the Transform "Name.001"); the binding now takes the
 outermost object that carries the DEF.
 
+**TimeSensor started in the past (26 Nov 2026).** X_ITE counts a TimeSensor's cycles from its `startTime`, looping or
+not: when it starts, `fraction = fract((now - startTime) / cycleInterval)` and the cycle ends when that cycle does. So
+`TimeSensor.startTime` fed by an `elapsedTime` (small, so far in the past) starts the sensor part way through a cycle
+(0.273 in the first recording) and a non-looping one stops after the remainder, not after `cycleInterval`; with
+`startTime` equal to now (a `touchTime`, a `cycleTime`) the fraction starts at 0 and the cycle is whole. A `startTime`
+that arrives in the frame a cycle ran out is ignored, because X_ITE ends the cycle after it has sent that frame's
+`elapsedTime`; the next one, a frame later, starts the sensor again. The simulator did this only when `loop` was true.
+`tools/behaviour_sim_judge.cjs` now takes `--hold=ms,...` (and `--gap=ms`) to hold each press before releasing it; the
+replay needs no change, since the press and the release are recorded events. Judged on `probe-timer.x3d`, recorded on
+X_ITE 16.8.1 (headless Chromium, software GL) with one press held 0.3 s and one 4.5 s: a held press driving a
+`loop` -> `elapsedTime` -> `startTime` chain, the `cycleTime` variant, `touchTime` -> `startTime`, and a sensor stopped
+early by `touchTime` -> `stopTime`. 14 of 14 streams agree (worst gap 0, judge tolerance 0.002); the simulator as it
+was disagreed on 3 of the 14 (the chained sensor's `fraction_changed` and `isActive`, and the interpolator after it).
+All seven older traces still agree (3, 2, 25, 7, 13, 12 and 6 streams). `pauseTime` and `resumeTime` are not simulated
+and so not judged. X_ITE's start fraction looks different from X3D 4.0 clause 8.2.4 and 8.4.1 (a non-looping sensor runs
+one `cycleInterval` from `startTime`); the simulator follows X_ITE (clause text not re-read here).
+
 **Host-eyes witness.** `tools/behaviour_eyetest.py` ends by writing `host-eyes.json`, a `loom.witness/1` record with
 the fields loomkit's own writer writes (`origin` executed, `finished_at` included): the subject is the add-on source
 folder's Loom candidate digest, taken before the add-on loads and again at the end (changed means status error); the
@@ -225,9 +242,47 @@ Without the graph, nothing changes (the baked keyframes stay).
 Seen and not changed: the sidebar repeats an unlinked input (`key`, `keyValue`) as a bare label after the node's panel
 (Blender draws unlinked inputs there).
 
+## Presets to graph (26 Nov 2026)
+
+The older way to carry behaviour is custom properties on objects (`x3d_trigger`, `x3d_action`, `x3d_target`,
+`x3d_radius`, see the top of `source/interaction.py`), which the exporter turns into sensors and ROUTEs and the node
+editor cannot show. **Presets to graph** (`x3d.behaviour_from_presets`, `source/behaviour_presets.py`) turns them into
+nodes of the scene's behaviour tree, so there is one way. The button is in the X3D Behaviour editor's header and the 3D
+view's sidebar (N, tab X3D), and only while the scene has a preset it could convert; it reports what it left alone.
+From a script: `presets_to_graph(scene)` returns `(presets converted, notes)`.
+
+| Preset | Becomes | Left alone |
+|---|---|---|
+| click or proximity, `animate` | a TouchSensor or ProximitySensor sitting in the object; the target's own TimeSensor (`loop` false, `startTime` 1e+30, the scene's cycle); a Position / Orientation / Position interpolator (translation, rotation, scale) for each channel of the target's sampled animation; the ROUTEs from sensor to timer to interpolators to the target's Transform | a target with no animation or not exported (the exporter drops these too); a target the graph already drives |
+| click, `viewpoint` | a TouchSensor, a BooleanFilter (only the press binds, the release does not unbind), ROUTEs to the camera's Viewpoint `set_bind` | a target that is not an exported camera |
+| proximity, `viewpoint` | a ProximitySensor (`size` is 2 x radius divided by the object's scale), `isActive` routed to `set_bind` | the same |
+| `x3d_action` `tour`, `x3d_tour_order`, `x3d_tour_dwell`, the scene's `x3d_tour_*` | nothing: the tour is a rig the exporter writes (a Transform with a Viewpoint, a timer, two interpolators) and the catalogue has no node for it; each object is named in the notes | everything, untouched, and still exported as before |
+
+The key lists, key values and cycle are the exporter's own: the conversion runs the exporter's extraction with the
+export dialog's defaults (Animation on, every frame, -Z forward, Y up) and writes the numbers with its formatting.
+A scene exported with another frame step or other axes would have sampled differently; the converted keys are the
+default ones. Converted objects lose `x3d_trigger`, `x3d_action`, `x3d_target`, `x3d_radius` (so the exporter does not
+write the behaviour twice); the target's keyframes are kept (they are the person's), and the exporter ignores them for
+an object the graph drives (rule 5), while the timeline still plays them. A second run finds nothing to convert. After
+the conversion a sensor's `size` is a plain field: it no longer follows the object's scale.
+
+Measured (Blender 5.3.0 bpy wheel, Python 3.13, `tests/test_behaviour_presets_bpy.py`, 10 tests): a scene with a click
+and animate preset (a door that moves and turns: 1 TimeSensor, 3 interpolators), a proximity and viewpoint preset on a
+scaled object, and a click and viewpoint preset, exported to X3D 4.0 before and after the conversion and parsed with
+`behaviour_graph.parse_x3d`: the same 8 behaviour nodes with the same field values (the ProximitySensor `size` included)
+and the same 10 ROUTEs. What differs is names only: the exporter calls a scene node `OB_<object>` or `CA_<camera>` when
+the scene alone writes it and the graph's id when the graph holds it, so the test matches a node by its type, set fields
+and the object it sits in, and a scene target by its type and object name (one leading `OB_` / `CA_` or trailing
+`_viewpoint` taken off); it fails when two nodes have one description. A mutated conversion (sensor box 1 x radius) is
+rejected by that test. Played (`behaviour_play.Player`, no window): a click on the converted button leaves the door at
+rest until the click, near its half way pose at half the cycle, and at the animation's last pose (z 2.0, turn 1.0) after
+it, and Stop puts it back; the click preset binds the scene camera, and the proximity preset binds it when the viewer
+moves inside the radius. Not checked: a window (the header and sidebar buttons were not looked at on a real screen), a
+browser (X_ITE was not run on the converted file), Blender 4.5 to 5.2.
+
 ## Limits
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
-eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the export dialog's default axes (-Z forward, Y up). Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
+eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
 played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
-importer's loss report still prints "ROUTE not imported" for ROUTEs the graph kept.
+importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on; the log lines and `X3D_IMPORT_STRICT=1` are decided before the graph exists and still count them.

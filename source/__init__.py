@@ -6,7 +6,7 @@ bl_info = {
     "name": "X3D Blender I/O",
     "description": "Import-Export X3D, Import VRML2",
     "author": "HagopJay; upstream maintainer: Bujus_Krachus",
-    "version": (2, 7, 4),
+    "version": (2, 7, 5),
     "blender": (4, 2, 0),
     "location": "",
     "warning": "",
@@ -54,6 +54,7 @@ from .prefs import X3D_Preferences
 from . import interaction_ui
 from . import behaviour_nodes
 from . import behaviour_play
+from . import behaviour_presets
 
 blender_version = bpy.app.version
 blender_version_higher_279 = blender_version[0] > 2 or (blender_version[0] == 2 and blender_version[1] >= 79)
@@ -208,6 +209,7 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
             made = set(bpy.data.actions) - actions_before
             for message in behaviour_nodes.import_graph(context.scene, self.filepath, new_actions=made):
                 self.report({'INFO'}, message)
+            _drop_losses_the_graph_kept(context.scene)
             tree = getattr(context.scene, "x3d_behaviour_tree", None)
             if tree is not None:      # say where the graph went: the import used to end with nothing on screen
                 area = behaviour_nodes.show_tree(context, tree)
@@ -265,6 +267,41 @@ def import_ui_mesh(layout, operator):
 
         line = body.row(align=True)
         line.prop(operator, "light_units")
+
+
+def _drop_losses_the_graph_kept(scene):
+    """The importer lists every ROUTE it did not turn into keyframes or triggers as lost, before the behaviour graph
+    exists. A ROUTE that is now a link in the scene's node tree is not lost: take it out of ``x3d_import_losses``.
+    A ROUTE the tree does not hold (an end that was not imported, a field the node has no socket for) stays listed."""
+    import json
+    from . import behaviour_graph as bg
+    raw = scene.get("x3d_import_losses")
+    graph = behaviour_nodes.read(scene) if raw else None
+    if graph is None:
+        return
+    try:
+        losses = json.loads(raw)
+    except ValueError:
+        return
+    held = {bg._canonical_route(graph, route) for route in graph.routes}
+
+    def kept(record):
+        if record.get("kind") != "route" or record.get("detail") != "ROUTE not imported":
+            return False
+        try:
+            source, destination = record["node"].split(" -> ")
+            route = bg.Route(*source.rsplit(".", 1), *destination.rsplit(".", 1))
+        except (KeyError, ValueError, TypeError):
+            return False
+        return bg._canonical_route(graph, route) in held
+
+    left = [record for record in losses if not kept(record)]
+    if len(left) == len(losses):
+        return
+    if left:
+        scene["x3d_import_losses"] = json.dumps(left)
+    else:
+        del scene["x3d_import_losses"]
 
 
 def _scene_imported_animation(scene):
@@ -775,6 +812,7 @@ def register():
 
     behaviour_nodes.register()
     behaviour_play.register()
+    behaviour_presets.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
@@ -783,6 +821,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
+    behaviour_presets.unregister()
     behaviour_play.unregister()
     behaviour_nodes.unregister()
     for cls in classes:

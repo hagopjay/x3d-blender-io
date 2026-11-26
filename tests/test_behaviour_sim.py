@@ -144,6 +144,32 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(sent.count(("Number", "triggerValue")), 1)
         self.assertEqual(sim.values[("Pick", "whichChoice")], 7)
 
+    def test_a_timer_started_with_a_start_time_in_the_past_counts_its_cycles_from_it(self):
+        # X_ITE (setRange): fraction = fract((now - startTime) / cycleInterval) at the start, looping or not, and a
+        # sensor that does not loop ends when that cycle does
+        def run(start_time, now):
+            g = self.graph()
+            timer = g.add("TimeSensor", "Timer", cycleInterval=3)
+            g.add("TouchSensor", "Touch")
+            sim = bs.Simulation(g)
+            sim.start(0.0)
+            sim.send("Timer", "startTime", start_time, now)
+            fractions = [e[3] for e in sim.log if e[1] == "Timer" and e[2] == "fraction_changed"]
+            t = now
+            while t < now + 4 and sim.machines["Timer"].active:
+                t += 1 / 60
+                sim.step(t)
+            return fractions[0], t - now
+        first, ran = run(100.0, 100.0)                     # the ordinary case: now, a whole cycle
+        self.assertEqual(first, 0.0)
+        self.assertAlmostEqual(ran, 3.0, delta=0.02)
+        first, ran = run(100.0 - 1 / 60, 100.0)            # one frame ago
+        self.assertAlmostEqual(first, 1 / 180, places=6)
+        self.assertAlmostEqual(ran, 3.0 - 1 / 60, delta=0.02)
+        first, ran = run(0.0, 4.5)                         # long ago: the rest of the cycle only
+        self.assertAlmostEqual(first, 0.5)
+        self.assertAlmostEqual(ran, 1.5, delta=0.02)
+
     def test_a_sequencer_sends_only_when_its_value_changes(self):
         g = self.graph()
         clock = g.add("TimeSensor", "Clock", cycleInterval=1)
@@ -343,9 +369,16 @@ class XiteAgreementTests(unittest.TestCase):
         # X_ITE's own report of the viewer (a root ProximitySensor of size -1) drives the simulator's other sensors
         self.agree("probe-proximity", 13)
 
+    def test_a_timer_started_in_the_past_from_a_held_press(self):
+        # TouchSensor.isActive -> TimeSensor.loop, its elapsedTime (or cycleTime) -> a second TimeSensor's startTime
+        # (a startTime in the past, so it starts part way through a cycle and stops after the rest of it), a touchTime
+        # -> startTime and a touchTime -> stopTime; pressed for 0.3 s and for 4.5 s (tools/behaviour_probe.py;
+        # recorded on X_ITE 16.8.1, the older traces on 16.7.1)
+        self.agree("probe-timer", 14)
+
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
-        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity")))
+        judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer")))
         judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
         used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}

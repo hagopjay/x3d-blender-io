@@ -204,6 +204,7 @@ class _TimeSensor(_Machine):
 
     def setup(self):
         self.active, self.cycle, self.begun, self.pending = False, 0.0, 0.0, None
+        self.finished_at = None        # when a non-looping cycle last ran out (see receive)
 
     def start(self, now):
         if self.f["loop"] and self.f["enabled"] and self.f["stopTime"] <= self.f["startTime"]:
@@ -216,10 +217,12 @@ class _TimeSensor(_Machine):
             return
         self.active, self.cycle, self.begun, self.pending = True, now, now, None
         interval = self.f["cycleInterval"]
-        if self.f["loop"] and interval > 0 and self.f["startTime"] <= now:
-            # a looping sensor's cycles are counted from startTime (8.4.1), so its phase does not depend on when
-            # the world was loaded
-            self.cycle = self.f["startTime"] + interval * math.floor((now - self.f["startTime"]) / interval)
+        if interval > 0 and self.f["startTime"] <= now:
+            # cycles are counted from startTime (8.4.1), looping or not, so a sensor started with a startTime in the
+            # past starts part way through a cycle (X_ITE's setRange: fraction = fract((now - startTime) / interval))
+            # and a non-looping one ends when that cycle does; a loop's phase does not depend on when the world loaded
+            offset = ((now - self.f["startTime"]) / interval) % 1.0
+            self.cycle = now - offset * interval
         self.emit("isActive", True)
         self.emit("cycleTime", now)
         self._fraction(now)
@@ -237,8 +240,11 @@ class _TimeSensor(_Machine):
         self.emit("time", now)
 
     def receive(self, name, value, now):
-        if self.active and name in ("startTime", "cycleInterval"):
-            return                                     # 8.2.4.4: ignored while the sensor is active
+        if name in ("startTime", "cycleInterval") and (self.active or self.finished_at == now):
+            # 8.2.4.4: ignored while the sensor is active. X_ITE sends elapsedTime in its prepare phase and ends a
+            # finished cycle later in the same frame, so a startTime that arrives in the frame the cycle ran out
+            # still finds the sensor active; the next one (a frame later) starts it again
+            return
         super().receive(name, value, now)
 
     def changed(self, name, now):
@@ -277,6 +283,7 @@ class _TimeSensor(_Machine):
                 self.emit("elapsedTime", now - self.begun)
                 self.emit("time", now)
                 self._end(now)
+                self.finished_at = now
         else:
             self._fraction(now)
 

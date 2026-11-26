@@ -6,6 +6,8 @@
 //   NODE_PATH=$(npm root -g) node tools/behaviour_sim_judge.cjs <x_ite dist dir> <file.x3d> <sources.json> <clicks> <seconds> > trace.json
 //   ... <seconds> --click-plan plan.json > trace.json   plan.json: ["SensorDEF", ...]: each named sensor is hunted (pointer sweep until its isOver) and clicked once, then 3.5 s for its flight (pass 0 clicks)
 //   ... <seconds> [drags.json] > trace.json        with drags: real drags instead of clicks (pass 0 clicks)
+//   ... --hold=300,4000 [--gap=5000]                 anywhere on the line: click k presses, waits hold[k] ms (default 140,
+//                                                    the last value repeats) and releases; --gap is the wait after each (default 1100)
 //   ... <seconds> --keys keys.json > trace.json    with keys: real typing instead of clicks (pass 0 clicks); after the positionals
 // sources.json: [["DEF","field"], ...] every ROUTE source of the file (written by the .py with --sources).
 // drags.json (tools/behaviour_probe.py writes one): {"drags": [{"sensor", "touch", "at": [x, y], "path": [[x, y], ...]}]}.
@@ -23,7 +25,8 @@
 // Every event carries X_ITE's own time stamp (browser.currentTime). Software GL: values and order are claims.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
-const rawArgs = process.argv.slice(2);
+const flags = Object.fromEntries(process.argv.slice(2).filter(a => /^--[a-z]+=/.test(a)).map(a => a.slice(2).split(/=(.*)/s).slice(0, 2)));
+const rawArgs = process.argv.slice(2).filter(a => !/^--[a-z]+=/.test(a));
 // --click-plan FILE (a JSON list of pointing-sensor DEFs): hunt for each named sensor in turn, click it, wait for its flight
 const planAt = rawArgs.indexOf('--click-plan');
 const clickPlan = planAt >= 0 ? JSON.parse(fs.readFileSync(rawArgs.splice(planAt, 2)[1], 'utf8')) : null;
@@ -31,6 +34,7 @@ const keysAt = rawArgs.indexOf('--keys');
 const keysFile = keysAt >= 0 ? rawArgs[keysAt + 1] : null;
 if (keysAt >= 0) rawArgs.splice(keysAt, 2);
 const [xiteDir, file, sourcesFile, clicksArg, secondsArg, dragsFile] = rawArgs;
+const holds = (flags.hold || '140').split(',').map(Number), gap = Number(flags.gap || 1100);
 const plan = dragsFile ? JSON.parse(fs.readFileSync(dragsFile, 'utf8')) : null;
 const keyPlan = keysFile ? JSON.parse(fs.readFileSync(keysFile, 'utf8')) : null;
 const sources = JSON.parse(fs.readFileSync(sourcesFile, 'utf8'));
@@ -86,7 +90,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       if (await p.evaluate(ss => { const s = X3D.getBrowser(document.getElementById('c')).currentScene; return ss.some(d => s.getNamedNode(d).isOver); }, info.sensors)) { hit = { x, y }; break scan; }
     }
     for (let k = 0; hit && k < Number(clicksArg); k++) {
-      await p.mouse.move(hit.x, hit.y); await p.mouse.down(); await sleep(140); await p.mouse.up(); await sleep(1100);
+      await p.mouse.move(hit.x, hit.y); await p.mouse.down(); await sleep(holds[Math.min(k, holds.length - 1)]); await p.mouse.up(); await sleep(gap);
     }
   }
   const planned = [];
@@ -145,6 +149,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(Number(secondsArg) * 1000);
   const out = await p.evaluate(() => ({ events: window.__events, frames: window.__frames, pointer: window.__pointer, keys: window.__keys, initial: window.__initial }));
   await b.close(); srv.close();
-  console.log(JSON.stringify({ file: path.basename(file), browser: `${info.name} ${info.version}`, began: info.began, sensorAt: hit, clickPlan: planned, clicks: Number(clicksArg), missing: info.missing, pageErrors: errors, frames: out.frames, events: out.events, initial: out.initial,
+  console.log(JSON.stringify({ file: path.basename(file), browser: `${info.name} ${info.version}`, began: info.began, sensorAt: hit, clickPlan: planned, clicks: Number(clicksArg), holds: Number(clicksArg) > 0 ? Array.from({ length: Number(clicksArg) }, (_, k) => holds[Math.min(k, holds.length - 1)]) : [], missing: info.missing, pageErrors: errors, frames: out.frames, events: out.events, initial: out.initial,
     ...(plan ? { view: plan.view, drags, pointer: out.pointer } : {}), ...(keyPlan ? { keyPlan, keys: out.keys, spots } : {}) }));
 })();

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: TimeSensor starts" />
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint position="0 0 10" />
+    <Transform DEF="Pad">
+      <Shape>
+        <Appearance>
+          <Material diffuseColor="0.2 0.3 0.5" />
+        </Appearance>
+        <Box size="12 4 0.2" />
+      </Shape>
+      <TouchSensor DEF="Touch" />
+    </Transform>
+    <Transform DEF="Ball1" translation="-4 0 0">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Ball2" translation="-2 0 0">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Ball3" translation="0 0 0">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Ball4" translation="2 0 0">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Mark1" translation="-4 -1 0" visible="false">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Mark2" translation="-2 -1 0" visible="false">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Mark4" translation="2 -1 0" visible="false">
+      <Shape>
+        <Sphere radius="0.1" />
+      </Shape>
+    </Transform>
+    <TimeSensor DEF="A1" cycleInterval="1" />
+    <TimeSensor DEF="B1" cycleInterval="3" />
+    <PositionInterpolator DEF="P1" key="0 1" keyValue="-4 0 0 -4 3 0" />
+    <TimeSensor DEF="A2" cycleInterval="1" />
+    <TimeSensor DEF="B2" cycleInterval="3" />
+    <PositionInterpolator DEF="P2" key="0 1" keyValue="-2 0 0 -2 3 0" />
+    <TimeSensor DEF="T" cycleInterval="2" />
+    <PositionInterpolator DEF="P3" key="0 1" keyValue="0 0 0 0 3 0" />
+    <TimeTrigger DEF="Press" />
+    <TimeSensor DEF="S" cycleInterval="3" />
+    <PositionInterpolator DEF="P4" key="0 1" keyValue="2 0 0 2 3 0" />
+    <ROUTE fromNode="Touch" fromField="isActive" toNode="A1" toField="loop" />
+    <ROUTE fromNode="A1" fromField="elapsedTime" toNode="B1" toField="startTime" />
+    <ROUTE fromNode="B1" fromField="fraction_changed" toNode="P1" toField="set_fraction" />
+    <ROUTE fromNode="P1" fromField="value_changed" toNode="Ball1" toField="translation" />
+    <ROUTE fromNode="B1" fromField="isActive" toNode="Mark1" toField="visible" />
+    <ROUTE fromNode="Touch" fromField="isActive" toNode="A2" toField="loop" />
+    <ROUTE fromNode="A2" fromField="cycleTime" toNode="B2" toField="startTime" />
+    <ROUTE fromNode="B2" fromField="fraction_changed" toNode="P2" toField="set_fraction" />
+    <ROUTE fromNode="P2" fromField="value_changed" toNode="Ball2" toField="translation" />
+    <ROUTE fromNode="B2" fromField="isActive" toNode="Mark2" toField="visible" />
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="T" toField="startTime" />
+    <ROUTE fromNode="T" fromField="fraction_changed" toNode="P3" toField="set_fraction" />
+    <ROUTE fromNode="P3" fromField="value_changed" toNode="Ball3" toField="translation" />
+    <ROUTE fromNode="Touch" fromField="isActive" toNode="Press" toField="set_boolean" />
+    <ROUTE fromNode="Press" fromField="triggerTime" toNode="S" toField="startTime" />
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="S" toField="stopTime" />
+    <ROUTE fromNode="S" fromField="fraction_changed" toNode="P4" toField="set_fraction" />
+    <ROUTE fromNode="P4" fromField="value_changed" toNode="Ball4" toField="translation" />
+    <ROUTE fromNode="S" fromField="isActive" toNode="Mark4" toField="visible" />
+  </Scene>
+</X3D>
