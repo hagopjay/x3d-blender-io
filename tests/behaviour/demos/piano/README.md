@@ -198,10 +198,14 @@ now has both, and S3 and S5 reject them.
 7. **The eye test's standard step clicks the first object a sensor senses.** For this demo that is the sheet, which puts the
    world in typing mode before `act.py` starts; the act reads the mode and the lever and puts both right. A demo whose
    sensors change mode should not rely on the standard click.
-8. **The graph does not bind Text.** The importer makes a FONT object for each Text (named by the Shape's or Transform's DEF,
-   its curve data by the Text's DEF, `body` the string), but `behaviour_graph.BINDING_OF` has no Text kind, so the import says
-   `Text 'LineText' is the end of a ROUTE but is neither a Blender object nor a top-level node that can be carried; its ROUTEs were left out`
-   for each. With finding 1 there is no MFString source to route into one anyway, but a Script-fed Text would need
-   that kind and Script support to show up in Play; not attempted (outside this demo's files).
+8. **The graph did not bind Text; it does now (outside this demo's files, at the lead's request).** The importer makes a FONT
+   object for each Text (named by the Shape's or Transform's DEF, its curve data by the Text's DEF, `body` the string), but
+   `behaviour_graph.BINDING_OF` had no Text kind, so the import dropped every ROUTE into one. `BINDING_OF` now has
+   `"Text": "text"` (its own line) and `behaviour_nodes.import_graph`'s resolver finds the FONT object by the curve's DEF,
+   outermost carrier first. Import keeps `EchoLine.line -> LineText.string` and the other two (test in
+   `tests/test_behaviour_demo_piano_bpy.py`). **Export still drops them**: `emit_x3d40.py`'s `def_of_target` has no `text`
+   branch, so a ROUTE into a Text is written out as "left out because an end is not in the file". That file is not this
+   PR's to edit; the exporter needs a `text` case (and to write the Text's DEF) before a round trip keeps the ROUTE.
+   Play does not write a Text's string yet (`not_applied` would say so); no simulated node sends an MFString into one.
 9. **`Play` swallows the keyboard while the graph has a KeySensor or StringSensor.** Blender shortcuts do nothing during Play
    (Esc still stops); a graph without key sensors passes everything through, as before.

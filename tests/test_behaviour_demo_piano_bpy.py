@@ -48,6 +48,7 @@ class PianoPlayTests(unittest.TestCase):
         self.bn = importlib.import_module("io_scene_x3d.behaviour_nodes")
         self.bp = importlib.import_module("io_scene_x3d.behaviour_play")
         self.bn.ensure_registered()
+        self.bg = importlib.import_module("io_scene_x3d.behaviour_graph")
         bpy.ops.import_scene.x3d(filepath=str(PIANO), use_behaviour_graph=True)
         self.scene = bpy.context.scene
         self.player = self.bp.Player(self.scene)
@@ -209,6 +210,23 @@ class PianoPlayTests(unittest.TestCase):
         self.bn.ensure_registered()
         bpy.ops.import_scene.x3d(filepath=str(PIANO.parents[2] / "door.x3d"), use_behaviour_graph=True)
         self.assertFalse(self.bp.Player(bpy.context.scene).has_keys())
+
+
+    # -- a ROUTE into a Text node's string (the "text" binding kind) --------------------------------------------------
+
+    def test_a_route_into_a_text_is_kept_on_import_and_bound_to_its_font_object(self):
+        graph = self.bn.read(self.scene)
+        texts = {n.id: n for n in graph.nodes.values() if n.node_type == "Text"}
+        self.assertEqual(sorted(texts), ["CaptionText", "LineText", "SheetText"])
+        for node in texts.values():
+            kind, name = node.binding
+            self.assertEqual(kind, "text")
+            self.assertEqual(bpy.data.objects[name].type, "FONT")
+            self.assertEqual(bpy.data.objects[name].data.name, node.id)         # found by the Text's DEF
+        self.assertEqual(bpy.data.objects[texts["SheetText"].binding[1]].parent.name, "Sheet")   # the outermost carrier
+        routes = {(r.from_id, r.from_field, r.to_id, r.to_field) for r in graph.routes}
+        self.assertIn(("EchoLine", "line", "LineText", "string"), routes)
+        self.assertIn(("EchoSheet", "line", "SheetText", "string"), routes)
 
 
 if __name__ == "__main__":
