@@ -62,6 +62,15 @@ def _socket_class(x3d_type, colour):
     })
 
 
+# Every other field type a ROUTE may join gets a socket of its own too (a double, a matrix, an image), so that the editor
+# refuses a ROUTE between two types as it does for the ones above: the colour is a shade of its family's, made from the type.
+for _type in sorted(bg.FIELD_TYPES | bg.NODE_FIELD_TYPES):
+    if _type not in _COLOURS:
+        _near = _COLOURS.get(_type[:2] + {"Double": "Float", "Vec2d": "Vec2f", "Vec3d": "Vec3f", "Vec4d": "Vec3f",
+                                          "Vec4f": "Vec3f"}.get(_type[2:], "Float"), (0.6, 0.6, 0.6, 1))
+        _shade = 0.82 + 0.03 * (sum(map(ord, _type)) % 5)
+        _COLOURS[_type] = (_near[0] * _shade, _near[1] * _shade, _near[2] * _shade, 1)
+
 SOCKET_CLASSES = tuple(_socket_class(name, colour) for name, colour in _COLOURS.items()) + (
     _socket_class("", (0.2, 0.2, 0.2, 1)),)
 
@@ -391,6 +400,9 @@ class X3DBehaviourTree(NodeTree):
 
 class _X3DNodeBase:
     x3d_def: StringProperty(name="DEF", description="The node's name in the X3D file")
+    x3d_content: StringProperty(name="Content", description="What is inside the node's element (a Script's fields and source, "
+                                "a pick sensor's references), as X3D markup; written back unchanged")
+    x3d_declared: StringProperty(name="Declared fields")   # a Script's <field>s, one "name type access" per line
     x3d_fields: CollectionProperty(type=X3DFieldValue)
     x3d_rows: CollectionProperty(type=X3DKeyRow)
     x3d_as_text: BoolProperty(name="As X3D text", default=False,
@@ -421,10 +433,15 @@ class _BehaviourNode(_X3DNodeBase):
             self._make_sockets(NODES[self.x3d_type][1])
         self.width = 240
 
+    def _draw_content(self, layout):
+        if self.x3d_content:
+            layout.label(text=f"{len(self.x3d_content)} characters inside, written back unchanged", icon="LOCKED")
+
     def draw_buttons(self, context, layout):
         layout.prop(self, "x3d_def")
         if self.x3d_type in bg.PLACED_TYPES:
             layout.prop(self, "x3d_parent")
+        self._draw_content(layout)
         if self.x3d_as_text:
             for item in self.x3d_fields:
                 layout.prop(item, "value", text=item.name)
@@ -444,9 +461,11 @@ class _BehaviourNode(_X3DNodeBase):
         if self.x3d_type in bg.PLACED_TYPES:
             layout.prop(self, "x3d_parent")
         layout.prop(self, "x3d_as_text")
+        self._draw_content(layout)
         table = self.x3d_type in KEY_KINDS
         for name, _type, access, _default in NODES[self.x3d_type][1]:
-            if access in ("inputOutput", "initializeOnly") and not (table and name in ("key", "keyValue")):
+            if access in ("inputOutput", "initializeOnly") and not (table and name in ("key", "keyValue")) \
+                    and _type not in bg.NODE_FIELD_TYPES:           # a node-valued field is content, not a value
                 self._draw_field(layout, name)
         if table:
             self._draw_table(layout)
@@ -524,7 +543,7 @@ def rows_on_node(count, limit):
 
 
 MATERIAL_KINDS = ("material", "texture")      # bindings that name a Blender material rather than an object
-NAMED_KINDS = ("joint", "site", "switch", "shader")     # bindings that are a name the Player looks for (a bone, a site's object, a Switch's DEF) or only names (a shader)
+NAMED_KINDS = ("joint", "site", "switch", "shader", "scene")     # bindings that are a name the Player looks for (a bone, a site's object, a Switch's DEF) or only names (a shader; a scene node kept in place: Collision, AudioClip, MovieTexture)
 
 
 class _TargetNode(_X3DNodeBase):
@@ -532,7 +551,6 @@ class _TargetNode(_X3DNodeBase):
     x3d_object: PointerProperty(type=bpy.types.Object, name="Object")
     x3d_material: PointerProperty(type=bpy.types.Material, name="Material")
     x3d_bone: StringProperty(name="Name")      # an HAnimJoint's bone, an HAnimSite's object: found by name when Play runs
-    x3d_declared: StringProperty(name="Declared fields")   # a ComposedShader's <field>s, one "name type access" per line
 
     def init(self, context):
         if not _SOCKETS_LATER:
@@ -766,6 +784,8 @@ def _fill(graph, scene, tree):
                 item.set_field(field_name, value)
             if node.parent:
                 item.x3d_parent = bpy.data.objects.get(node.parent)
+            item.x3d_content = node.content
+            item.x3d_declared = "\n".join(" ".join(row) for row in node.declared)
         elif node.role == bg.TARGET:
             if node.node_type not in TARGET_CLASSES or node.binding is None:
                 continue
@@ -785,7 +805,7 @@ def _fill(graph, scene, tree):
     del _SOCKETS_LATER[:]
     for node_id, item in made.items():
         if item.x3d_role == bg.BEHAVIOUR:
-            item._make_sockets(NODES[item.x3d_type][1])
+            item._make_sockets(NODES[item.x3d_type][1] + _declared_rows(item))
         elif item.x3d_role == bg.TARGET:
             item._make_sockets(TARGETS[item.x3d_type] + _declared_rows(item))
     for route in graph.routes:
@@ -838,7 +858,10 @@ def read(scene):
         if role == bg.BEHAVIOUR:
             graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position,
                                         fields={f.name: f.value for f in item.x3d_fields if f.value != ""},
-                                        parent=item.x3d_parent.name if item.x3d_parent else None)
+                                        parent=item.x3d_parent.name if item.x3d_parent else None,
+                                        content=item.x3d_content,
+                                        declared=tuple(tuple(line.split()) for line in item.x3d_declared.splitlines()
+                                                       if len(line.split()) == 3))
             if item.x3d_parent:
                 # a parent with shapes records its DEF path; an empty parent (a Transform holding only other
                 # Transforms) records only its DEF

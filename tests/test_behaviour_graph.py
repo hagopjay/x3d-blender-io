@@ -48,8 +48,8 @@ class CatalogueTests(unittest.TestCase):
 
     def test_catalogue_is_generated_from_the_object_model(self):
         self.assertEqual(len(X3DUOM_SHA256), 64)
-        self.assertEqual(len(NODES), 45)
-        self.assertEqual(sum(len(rows) for _group, rows in NODES.values()), 303)
+        self.assertEqual(len(NODES), 54)          # 45, then nine more event nodes (docs/BEHAVIOUR_EVENT_NODES.md, P0)
+        self.assertEqual(sum(len(rows) for _group, rows in NODES.values()), 393)
         self.assertEqual(len(TARGETS), 35)       # 32, then HAnimSegment, HAnimSite and ComposedShader
 
     def test_events_are_in_the_catalogue(self):

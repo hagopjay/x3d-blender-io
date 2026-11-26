@@ -27,12 +27,12 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from xml.sax.saxutils import quoteattr
+from xml.sax.saxutils import escape, quoteattr
 
 try:
-    from .behaviour_catalogue import NODES, TARGETS
+    from .behaviour_catalogue import IN_PLACE, NODES, TARGETS
 except ImportError:  # pragma: no cover - standalone test fallback
-    from behaviour_catalogue import NODES, TARGETS
+    from behaviour_catalogue import IN_PLACE, NODES, TARGETS
 
 SCHEMA = "x3d-blender-io.behaviour-graph/v0"
 
@@ -54,8 +54,19 @@ BINDING_OF = {**{t: "transform" for t in TRANSFORM_TYPES}, **{t: "viewpoint" for
               "ComposedShader": "shader",
               }
 BINDING_OF["TextureTransform"] = "texture"      # bound to the material of the Appearance it sits in
+# An event node that is scene content (Collision groups the scene, an AudioClip sits in a Sound, a MovieTexture in an
+# Appearance): the graph keeps its name and its events and leaves the node where the scene has it. Never lifted out and
+# never copied, so its children are neither lost nor written twice.
+BINDING_OF.update({name: "scene" for name in IN_PLACE})
 # Sensors that act on their siblings: where they sit in the scene graph is part of their meaning.
-DECLARING_TYPES = {"ComposedShader"}        # target types whose <field> children declare more fields
+DECLARING_TYPES = {"ComposedShader", "Script"}        # node types whose <field> children declare more fields
+# Behaviour nodes that hold what is inside their element (a Script's <field>s and source, a pick sensor's pickTarget and
+# pickingGeometry, a CollisionSensor's collider, a Geo node's geoOrigin) as ``Node.content``, written back unchanged. The
+# older nodes keep their way: their child elements are named in the diagnostics and not held.
+CONTENT_TYPES = {"GeoPositionInterpolator", "GeoProximitySensor", "GeoTouchSensor", "LinePickSensor", "PointPickSensor",
+                 "PrimitivePickSensor", "VolumePickSensor", "CollisionSensor", "Script"}
+NODE_FIELD_TYPES = {"SFNode", "MFNode"}      # fields that hold nodes: child elements in the file, never an attribute
+SCRIPT_FIELD_TYPES = {"Script"}              # the node types that may declare a field of a node type
 FIELD_TYPES = {"SFBool", "SFColor", "SFColorRGBA", "SFDouble", "SFFloat", "SFImage", "SFInt32", "SFMatrix3d", "SFMatrix3f",
                "SFMatrix4d", "SFMatrix4f", "SFRotation", "SFString", "SFTime", "SFVec2d", "SFVec2f", "SFVec3d", "SFVec3f",
                "SFVec4d", "SFVec4f", "MFBool", "MFColor", "MFColorRGBA", "MFDouble", "MFFloat", "MFImage", "MFInt32",
@@ -63,7 +74,8 @@ FIELD_TYPES = {"SFBool", "SFColor", "SFColorRGBA", "SFDouble", "SFFloat", "SFIma
                "MFVec2f", "MFVec3d", "MFVec3f", "MFVec4d", "MFVec4f"}      # a declared field is one of these (not a node)
 ACCESS_TYPES = ("initializeOnly", "inputOnly", "outputOnly", "inputOutput")
 PLACED_TYPES = {"TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "VisibilitySensor",
-                "TransformSensor"}
+                "TransformSensor", "GeoProximitySensor", "GeoTouchSensor", "LinePickSensor", "PointPickSensor",
+                "PrimitivePickSensor", "VolumePickSensor"}
 _STRUCTURAL = {"DEF", "USE", "containerField", "class", "id", "style"}
 _OUT, _IN = "out", "in"
 _XML_NAME = re.compile(r"^[A-Za-z_][\w.\-]*\Z")       # \Z: "$" would let a name end in a newline
@@ -92,6 +104,13 @@ class Node:
     # target: fields the node declares itself, (name, X3D type, access type), read from the <field> children of a
     # ComposedShader (the only node that has them here); the catalogue's rows come first, these add to them
     declared: tuple[tuple[str, str, str], ...] = ()
+    # behaviour (CONTENT_TYPES only): everything inside the element, as X3D markup, written back as it came; see
+    # ``inner_markup``. A Script's <field> declarations and its source are here, and the declared rows are read from them.
+    content: str = ""
+
+    def __post_init__(self):
+        if self.role == BEHAVIOUR and self.content and not self.inner:
+            self.inner = tuple(sorted(_use_names(self.content)[1]))      # the DEFs it defines: the exporter keeps those names free
 
 
 @dataclass(frozen=True)
@@ -234,6 +253,10 @@ def validate(graph: Graph) -> list[dict]:
                 elif row[2] in ("inputOnly", "outputOnly"):
                     problems.append({"code": "event-has-no-value", "where": node.id,
                                      "message": f"{node.node_type}.{name} is {row[2]}: an event cannot hold a value"})
+                elif row[1] in NODE_FIELD_TYPES:
+                    problems.append({"code": "node-field", "where": node.id,
+                                     "message": f"{node.node_type}.{name} is {row[1]}: nodes are child elements, held in "
+                                                "the node's content, never an attribute"})
                 if _XML_ILLEGAL.search(node.fields[name]):
                     problems.append({"code": "bad-value", "where": node.id,
                                      "message": f"{node.node_type}.{name} holds a character XML cannot hold"})
@@ -365,6 +388,12 @@ def parse_x3d(source) -> Graph:
         if tag not in NODES:
             continue
         fields = {key: value for key, value in element.attrib.items() if key not in _STRUCTURAL}
+        if tag in CONTENT_TYPES:
+            graph.nodes[name] = Node(id=name, node_type=tag, role=BEHAVIOUR, fields=fields,
+                                     parent=enclosing_transform(element) if tag in PLACED_TYPES else None,
+                                     declared=_declared_fields(element, graph.diagnostics, name) if tag in DECLARING_TYPES else (),
+                                     content=inner_markup(element))
+            continue
         if len(element):
             graph.diagnostics.append(f"{tag} {name!r} has child nodes ({', '.join(sorted({_local(c.tag) for c in element}))}); "
                                      "they are not held by the graph.")
@@ -414,14 +443,15 @@ def parse_x3d(source) -> Graph:
 def _declared_rows(node_type, declared):
     """Declared fields as a tuple of (name, type, access) rows that cannot clash with the catalogue's: raises
     BehaviourError('bad-declaration') for a name, a type or an access type that is not legal, or a type that has none."""
-    rows, seen = [], {row[0] for row in TARGETS.get(node_type) or ()}
+    rows, seen = [], {row[0] for row in field_rows(node_type) or ()}
     if declared and node_type not in DECLARING_TYPES:
         raise BehaviourError("bad-declaration", f"{node_type} does not declare fields")
+    legal = FIELD_TYPES | NODE_FIELD_TYPES if node_type in SCRIPT_FIELD_TYPES else FIELD_TYPES
     for name, kind, access in declared:
         if not isinstance(name, str) or not _XML_NAME.match(name) or name in seen:
             raise BehaviourError("bad-declaration", f"{name!r} is not a field name {node_type} can declare "
                                                     "(a legal name, not one of its own, once)")
-        if kind not in FIELD_TYPES or access not in ACCESS_TYPES:
+        if kind not in legal or access not in ACCESS_TYPES:
             raise BehaviourError("bad-declaration", f"field {name!r}: {kind!r} {access!r} is not an X3D field type and access type")
         seen.add(name)
         rows.append((name, kind, access))
@@ -431,7 +461,7 @@ def _declared_rows(node_type, declared):
 def _declared_fields(element, diagnostics, name):
     """The fields a ComposedShader declares with <field name type accessType> children (the node's own: nothing nested, no
     PROTO). One that cannot be a field (an illegal name or type, a name the node has, a repeat) is left out and said."""
-    rows, seen = [], {row[0] for row in TARGETS.get(_local(element.tag)) or ()}
+    rows, seen = [], {row[0] for row in field_rows(_local(element.tag)) or ()}
     for child in element:
         if _local(child.tag) != "field":
             continue
@@ -455,6 +485,47 @@ def _appearance_material_def(element, parent_of):
         if _local(sibling.tag) in MATERIAL_TYPES and sibling.get("DEF"):
             return sibling.get("DEF")
     return None
+
+
+def _markup_text(text: str) -> str:
+    """Text as X3D markup: escaped, or in CDATA when it holds markup characters (a Script's source: ``a < b``), so that the
+    characters read back as they were."""
+    if "<" in text or "&" in text:
+        return "<![CDATA[" + text.replace("]]>", "]]]]><![CDATA[>") + "]]>"
+    return escape(text)
+
+
+def _markup(element: ET.Element) -> str:
+    attributes = "".join(f" {name}={quoteattr(value)}" for name, value in element.attrib.items())
+    inside = inner_markup(element)
+    tag = _local(element.tag)
+    return f"<{tag}{attributes}>{inside}</{tag}>" if inside else f"<{tag}{attributes}/>"
+
+
+def inner_markup(element: ET.Element) -> str:
+    """What is inside an element as X3D markup: its text, then each child (with its own content) and its tail. Text that
+    is only white space is dropped (layout, which a writer's indentation changes); any other text is kept to the
+    character, so reading the markup back gives the same text, children and attributes. This is how ``Node.content``
+    holds a Script's source and a pick sensor's references."""
+    parts = []
+    if element.text and element.text.strip():
+        parts.append(_markup_text(element.text))
+    for child in element:
+        parts.append(_markup(child))
+        if child.tail and child.tail.strip():
+            parts.append(_markup_text(child.tail))
+    return "".join(parts)
+
+
+def _use_names(content: str):
+    """The DEFs a node's content refers to with USE, and the DEFs it defines."""
+    if not content:
+        return set(), set()
+    try:
+        root = ET.fromstring(f"<c>{content}</c>")
+    except ET.ParseError:
+        return set(), set()
+    return ({e.get("USE") for e in root.iter() if e.get("USE")}, {e.get("DEF") for e in root.iter() if e.get("DEF")})
 
 
 def _element_text(element: ET.Element) -> str:
@@ -536,35 +607,88 @@ class Emission:
     dropped_routes: int = 0
 
 
-def node_xml(node: Node, def_name: str | None = None) -> str:
-    """A behaviour node as one self-closing element, fields in catalogue order."""
+def _without_uses(content: str, missing) -> str:
+    """``content`` with every element that refers to a DEF in ``missing`` by USE taken out (and the elements inside it)."""
+    root = ET.fromstring(f"<c>{content}</c>")
+    for parent in list(root.iter()):
+        for child in list(parent):
+            if child.get("USE") in missing:
+                parent.remove(child)
+    return inner_markup(root)
+
+
+def node_xml(node: Node, def_name: str | None = None, missing=()) -> str:
+    """A behaviour node as one self-closing element, fields in catalogue order. ``missing`` names DEFs a USE in its content
+    may not refer to (they are not in the file): the elements that do are left out."""
     rows = field_rows(node.node_type) or ()
     order = [row[0] for row in rows]
     names = [name for name in order if name in node.fields] + sorted(name for name in node.fields if name not in order)
     attributes = "".join(f" {name}={quoteattr(_XML_ILLEGAL.sub('', node.fields[name]))}" for name in names
                          if node.fields[name] != "")
+    inside = _XML_ILLEGAL.sub("", _declaration_markup(node) + (_without_uses(node.content, missing) if missing
+                                                              else node.content))
+    if inside:
+        return f"<{node.node_type} DEF={quoteattr(def_name or node.id)}{attributes}>{inside}</{node.node_type}>"
     return f"<{node.node_type} DEF={quoteattr(def_name or node.id)}{attributes} />"
 
 
-def emit(graph: Graph, *, def_of_node=None, def_of_target=None, object_of_parent=None, indent="    ") -> Emission:
+def effective_content(node: Node) -> str:
+    """The markup inside a node as it is written: the fields it declares that its content lacks, then its content."""
+    return _declaration_markup(node) + node.content
+
+
+def _declaration_markup(node: Node) -> str:
+    """<field> elements for the fields a node declares that its content does not already declare (a Script made by script
+    has its declarations here, one read from a file has them in its content)."""
+    if not node.declared:
+        return ""
+    held = set()
+    if node.content:
+        try:
+            held = {e.get("name") for e in ET.fromstring(f"<c>{node.content}</c>") if _local(e.tag) == "field"}
+        except ET.ParseError:
+            pass
+    return "".join(f"<field name={quoteattr(name)} type={quoteattr(kind)} accessType={quoteattr(access)}/>"
+                   for name, kind, access in node.declared if name not in held)
+
+
+def emit(graph: Graph, *, def_of_node=None, def_of_target=None, object_of_parent=None, indent="    ",
+         known_defs=None) -> Emission:
     """The graph as X3D text.
 
     ``def_of_node(id)`` returns the DEF a behaviour or carried node gets in this file (default: its id).
     ``def_of_target(node)`` returns the DEF of the scene node a target is bound to, or None when it is not in the file.
-    ``object_of_parent(parent)`` returns the exported object a placed sensor sits in, or None (then it goes to the root)."""
+    ``object_of_parent(parent)`` returns the exported object a placed sensor sits in, or None (then it goes to the root).
+    ``known_defs`` are the DEFs the file already has (``weave`` passes the document's): an element in a node's content that
+    refers by USE to a DEF that is neither one of these nor defined by the graph's own nodes is left out and said, so the
+    file never holds a USE of nothing. A caller that cannot know (the exporter writes its own DEFs) passes none."""
     def_of_node = def_of_node or (lambda node_id: node_id)
     def_of_target = def_of_target or (lambda node: node.id)
     object_of_parent = object_of_parent or (lambda parent: None)
     out = Emission()
     names: dict[str, str | None] = {}
+    known = set(known_defs or ())
+    for node in graph.nodes.values():             # what a USE may name: the graph's own nodes and what their content defines
+        if node.role != TARGET:
+            known.add(def_of_node(node.id))
+            known.update(node.inner)
+        elif node.binding is not None:
+            named = def_of_target(node)
+            if named:
+                known.add(named)
     for node in graph.nodes.values():
         if node.role == BEHAVIOUR:
             names[node.id] = def_of_node(node.id)
-            text = node_xml(node, names[node.id])
+            uses = _use_names(node.content)[0] if node.content else set()
+            missing = sorted(uses - known)
+            text = node_xml(node, names[node.id], missing)
             owner = object_of_parent(node.parent) if node.parent else None
             if node.parent and owner is None:
                 out.diagnostics.append(f"{node.node_type} {node.id!r} sat inside {node.parent!r}, which is not exported; "
                                        "written at the scene root, where it senses the whole scene.")
+            if missing:
+                out.diagnostics.append(f"{node.node_type} {node.id!r} referred to {', '.join(repr(u) for u in missing)} by USE, "
+                                       "which is not in the file; those references were left out.")
             if owner is not None:
                 out.children.setdefault(owner, []).append(text)
             else:
@@ -609,7 +733,8 @@ def emit(graph: Graph, *, def_of_node=None, def_of_target=None, object_of_parent
 def signature(graph: Graph) -> dict:
     """What must survive a round trip: every behaviour node with its set fields, and every ROUTE."""
     return {
-        "nodes": {node.id: {"type": node.node_type, "fields": dict(sorted(node.fields.items())), "parent": node.parent}
+        "nodes": {node.id: {"type": node.node_type, "fields": dict(sorted(node.fields.items())), "parent": node.parent,
+                            **({"content": effective_content(node)} if effective_content(node) else {})}
                   for node in graph.nodes.values() if node.role == BEHAVIOUR},
         "carried": sorted(node.id for node in graph.nodes.values() if node.role == CARRIED),
         "routes": sorted(_canonical_route(graph, route) for route in graph.routes),
@@ -641,6 +766,8 @@ def difference(before: Graph, after: Graph) -> dict:
                              if fields_a.get(key) != fields_b.get(key)}
             if a["nodes"][name]["parent"] != b["nodes"][name]["parent"]:
                 changed[name]["(parent)"] = (a["nodes"][name]["parent"], b["nodes"][name]["parent"])
+            if a["nodes"][name].get("content") != b["nodes"][name].get("content"):
+                changed[name]["(content)"] = (a["nodes"][name].get("content"), b["nodes"][name].get("content"))
     return {
         "nodes_lost": sorted(set(a["nodes"]) - set(b["nodes"])),
         "nodes_added": sorted(set(b["nodes"]) - set(a["nodes"])),
@@ -771,6 +898,9 @@ class Handle:
             if row[2] in ("inputOnly", "outputOnly"):
                 raise BehaviourError("event-has-no-value", f"{node.node_type}.{name} is {row[2]}: an event carries values "
                                                            "while the scene runs, it cannot be given one beforehand")
+            if row[1] in NODE_FIELD_TYPES:
+                raise BehaviourError("node-field", f"{node.node_type}.{name} is {row[1]}: nodes are child elements; give "
+                                                   "them as the node's content (add(..., content='<Shape USE=\"A\"/>'))")
             node.fields[name] = to_lexical(value, row[1])
         return self
 
@@ -791,9 +921,12 @@ class Behaviour(Graph):
         slide.value_changed >> door.translation
     """
 
-    def add(self, node_type: str, name: str | None = None, parent: str | None = None, **fields) -> Handle:
+    def add(self, node_type: str, name: str | None = None, parent: str | None = None, *, declared=(), content="",
+            **fields) -> Handle:
         """A new behaviour node. ``name`` becomes its DEF (made up when left out). ``parent`` is the DEF of the Transform a
-        sensor sits in: a TouchSensor senses clicks on its parent's shapes."""
+        sensor sits in: a TouchSensor senses clicks on its parent's shapes. ``declared`` is for a Script: the fields it
+        declares, as (name, X3D type, access type), which become its ports. ``content`` is what is inside the element of a
+        node that holds it (a Script's source, a pick sensor's references), as X3D markup."""
         if node_type not in NODES:
             import difflib
             near = difflib.get_close_matches(node_type, list(NODES), n=2, cutoff=0.8)
@@ -804,7 +937,10 @@ class Behaviour(Graph):
             while f"{node_type}{index}" in self.nodes:
                 index += 1
             name = f"{node_type}{index}"
-        node = Graph.add(self, Node(id=name, node_type=node_type, role=BEHAVIOUR, parent=parent))
+        if content and node_type not in CONTENT_TYPES:
+            raise BehaviourError("no-content", f"{node_type} does not hold content; only {', '.join(sorted(CONTENT_TYPES))} do")
+        node = Graph.add(self, Node(id=name, node_type=node_type, role=BEHAVIOUR, parent=parent,
+                                    declared=_declared_rows(node_type, declared), content=content))
         return Handle(self, node).set(**fields)
 
     def target(self, node_type: str, name: str, binding: tuple[str, str] | None = None, declared=()) -> Handle:
@@ -903,7 +1039,15 @@ def weave(x3d_text: str, graph: Graph) -> str:
             raise BehaviourError("duplicate-def", f"the document already has a node with DEF {node.id!r}")
         if node.role == BEHAVIOUR and node.parent and node.parent not in by_def:
             raise BehaviourError("unknown-def", f"{node.id!r} names parent {node.parent!r}, which is not in the document")
-    emission = emit(graph, object_of_parent=lambda parent: parent, indent="")
+    used, defined = set(), set()
+    for node in graph.nodes.values():
+        if node.role == BEHAVIOUR and node.content:
+            uses, defs = _use_names(node.content)
+            used |= uses
+            defined |= defs
+    for name in sorted(used - defined - set(by_def)):
+        raise BehaviourError("unknown-def", f"a node's content refers to {name!r} by USE, which is not in the document")
+    emission = emit(graph, object_of_parent=lambda parent: parent, indent="", known_defs=set(by_def))
     try:
         for parent, texts in emission.children.items():
             for text in texts:
@@ -917,6 +1061,14 @@ def weave(x3d_text: str, graph: Graph) -> str:
 
 def _document_text(original: str, root: ET.Element) -> str:
     ET.indent(root, space="  ")
+    for element in root.iter():                    # mixed content (a Script's fields and source) is not re-indented:
+        runs = [element.text] + [child.tail for child in element]     # the layout must not become part of the text
+        if any(run and run.strip() for run in runs):
+            if element.text is not None and not element.text.strip():
+                element.text = None
+            for child in element:
+                if child.tail is not None and not child.tail.strip():
+                    child.tail = None
     head = original[:original.find("<X3D")] if "<X3D" in original else '<?xml version="1.0" encoding="UTF-8"?>\n'
     return head + ET.tostring(root, encoding="unicode") + "\n"
 
@@ -928,6 +1080,7 @@ def to_json(graph: Graph) -> dict:
         "nodes": [{"id": n.id, "type": n.node_type, "role": n.role, **({"fields": dict(n.fields)} if n.fields else {}),
                    **({"parent": n.parent} if n.parent else {}), **({"binding": list(n.binding)} if n.binding else {}),
                    **({"declared": [list(row) for row in n.declared]} if n.declared else {}),
+                   **({"content": n.content} if n.content else {}),
                    **({"xml": n.xml, "inner": list(n.inner)} if n.role == CARRIED else {}),
                    **({"position": list(n.position)} if n.position else {})} for n in graph.nodes.values()],
         "routes": [list(route.key()) for route in graph.routes],
@@ -942,7 +1095,7 @@ def from_json(data: dict) -> Behaviour:
         Graph.add(graph, Node(id=item["id"], node_type=item["type"], role=item.get("role", BEHAVIOUR),
                               fields=dict(item.get("fields", {})), parent=item.get("parent"),
                               binding=tuple(item["binding"]) if item.get("binding") else None,
-                              xml=item.get("xml"), inner=tuple(item.get("inner", ())),
+                              xml=item.get("xml"), inner=tuple(item.get("inner", ())), content=item.get("content", ""),
                               declared=_declared_rows(item["type"], [tuple(row) for row in item.get("declared", ())]),
                               position=tuple(item["position"]) if item.get("position") else None))
     for ends in data.get("routes", ()):
