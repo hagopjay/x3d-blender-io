@@ -172,28 +172,6 @@ synthetic series; three browser cases, skipped with a reason when Node, Playwrig
 against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
 from the last run are in the commit message of the change that added it.
 
-### Two files against X_ITE, with their own noise floor
-
-`tools/behaviour_pair_judge.py` (`judge_pair(file_a, file_b, stimulus, repeats=3, x_ite=dist)` and a CLI) replays two
-files in X_ITE, `repeats` times each, interleaved A B A B, under the same stimulus, and judges every field a ROUTE ends at
-in the scene (matched by DEF and field name; what only one file has is listed as unmatched). It exists because a fixed
-1 % threshold failed six unchanged solutions in another repo: on a loaded machine the same file against itself read up to
-5.5 %. Each stream gets the disagreement A-versus-B (fraction of samples outside tolerance, largest absolute difference,
-for every pairing), the same two numbers for A-versus-A and B-versus-B (the floor, measured in the same session), and a
-verdict: "same" (the middle A-versus-B pairing is no worse than the worst repeat-against-repeat pairing), "differs"
-(every A-versus-B pairing above the typical floor by 3 times and by at least 1 % of the samples), else "unclear". The
-result carries the machine load (`os.getloadavg` before and after every run), X_ITE and Chromium versions, the
-tolerances (2 % of each stream's span, samples every 0.05 s from each run's own time zero: the first start of a TimeSensor, else the
-first pointer press, else the first cycle start of a TimeSensor) and every raw per-pairing number. CLI exit codes: 0 same, 1 differs, 2 unclear,
-3 tool error (Node, Playwright, X_ITE or a file missing, or a stimulus call that X_ITE cannot be given). Stimulus: none or
-`{"seconds": 4}` (a timer-only world: load, run, sample), `{"clicks": n, "hold": [ms], "gap": ms}`, `{"click_plan":
-[DEF]}`, `{"drags": ...}`, `{"keys": ...}` (the formats of `tools/behaviour_sim_judge.cjs`), or the recorded list
-`[{time, call, node, args}]`, of which only `start`, `click` and `press` followed by `release` of one sensor can be
-replayed; any other call is a tool error, not skipped. Tests: `tests/test_behaviour_pair_judge.py` (pure parts on
-synthetic series; three browser cases, skipped with a reason when Node, Playwright or an X_ITE dist is missing: door.x3d
-against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
-from the last run are in the commit message of the change that added it.
-
 #### The pair judge on real scenes: blind, simultaneous, rotations (26 Nov 2026)
 
 Its first use on real scenes found three defects, fixed in `tools/behaviour_pair_judge.py`; this subsection replaces what
