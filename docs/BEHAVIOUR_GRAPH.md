@@ -183,10 +183,15 @@ Fixed on the way: a sensor or target in a DEF'd Transform whose unnamed child Tr
 child (the importer gives them the parent's DEF and name, and calls the Transform "Name.001"); the binding now takes the
 outermost object that carries the DEF.
 
-**Host-eyes witness.** `tools/behaviour_eyetest.py` ends by writing `host-eyes.json`, a `loom.witness/1` record: the
-add-on's source hash as the subject, the Blender version, flags and window as the instrument, per world whether it was
-shown, overlaps, played and restored, drags and proximity toggles, every screenshot by sha256 as evidence, and pass only
-when every world shown has no overlapping nodes and every world played was put back.
+**Host-eyes witness.** `tools/behaviour_eyetest.py` ends by writing `host-eyes.json`, a `loom.witness/1` record with
+the fields loomkit's own writer writes (`origin` executed, `finished_at` included): the subject is the add-on source
+folder's Loom candidate digest, taken before the add-on loads and again at the end (changed means status error); the
+instrument is the Blender version, flags and window; per world it records whether it was shown, overlaps, played and
+restored, drags and proximity toggles; every screenshot is evidence by sha256; `development` is true while the source
+has uncommitted changes. Pass only when every world shown has no overlapping nodes and every world played was put
+back. Judged by loomkit itself (x3d.loom main, `accept.judge`): the 8-world run of 26 Nov is accepted (pass, grade C);
+the first draft of the record is refused as stale (its own digest), and a development run, a fail, coverage of 7
+worlds and one screenshot changed by one bit are each refused.
 
 ## Looked at on a real screen (25 Nov 2026)
 
