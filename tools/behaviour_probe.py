@@ -8,6 +8,8 @@
     python tools/behaviour_probe.py
 """
 
+import json
+import math
 import pathlib
 import sys
 
@@ -177,6 +179,113 @@ def build_spline():
     return b
 
 
+DRAG_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: drag sensors"/>
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0.5 10"/>
+    <Transform DEF="CylBase" translation="-3 0.5 0" rotation="1 0 0 0.35">
+      <Transform DEF="Spinner"><Shape><Appearance><Material diffuseColor="0.9 0.5 0.2"/></Appearance><Box size="1.6 0.9 1.6"/></Shape></Transform>
+      <Transform DEF="SpinHit"/>
+      <Transform DEF="SpinDot"><Shape><Appearance><Material diffuseColor="1 1 1" emissiveColor="1 0.9 0.2"/></Appearance><Sphere radius="0.07"/></Shape></Transform>
+    </Transform>
+    <Transform DEF="DiskBase" translation="0 -1.6 0" rotation="1 0 0 1.45">
+      <Transform DEF="Dial"><Shape><Appearance><Material diffuseColor="0.3 0.7 0.9"/></Appearance><Box size="1.8 0.3 1.8"/></Shape></Transform>
+      <Transform DEF="TurnHit"/>
+    </Transform>
+    <Transform DEF="AxleBase" translation="-1.5 2.3 0">
+      <Transform DEF="AxleSpin"><Transform translation="0 0 -1.5"><Shape><Appearance><Material diffuseColor="0.9 0.8 0.3"/></Appearance><Box size="1 0.6 1"/></Shape></Transform></Transform>
+      <Transform DEF="AxleHit"/>
+    </Transform>
+    <Transform DEF="RearBase" translation="1.5 2.3 0">
+      <Transform DEF="RearSpin"><Transform translation="0 0 -1.5"><Shape><Appearance><Material diffuseColor="0.8 0.4 0.9"/></Appearance><Box size="1 0.6 1"/></Shape></Transform></Transform>
+      <Transform DEF="RearHit"/>
+    </Transform>
+    <Transform DEF="BallBase" translation="3 0.5 0">
+      <Transform DEF="Ball"><Shape><Appearance><Material diffuseColor="0.6 0.9 0.4"/></Appearance><Box size="1.3 1.3 1.3"/></Shape></Transform>
+      <Transform DEF="RollHit"/>
+      <Transform DEF="RollDot"><Shape><Appearance><Material diffuseColor="1 1 1" emissiveColor="1 0.9 0.2"/></Appearance><Sphere radius="0.07"/></Shape></Transform>
+    </Transform>
+  </Scene>
+</X3D>
+"""
+
+# (sensor, its TouchSensor, the parent Transform's translation and rotation, the press point on the box in the parent's
+# coordinates, the pointer's path after the press in pixels, right and down)
+DRAGS = [
+    ("Spin", "SpinTouch", (-3, 0.5, 0), (1, 0, 0, 0.35), (0.3, 0.1, 0.8),
+     [(12 * k, 0) for k in range(1, 21)] + [(240 - 15 * k, 4 * k) for k in range(1, 13)]),
+    ("Turn", "TurnTouch", (0, -1.6, 0), (1, 0, 0, 1.45), (0.55, 0.15, 0.25),
+     # an arc about the dial's centre on screen, in radians from the press: inside the limits, past 0.9, back past -0.6
+     ("arc", [0.1 * k for k in range(1, 7)] + [0.6 - 0.1 * k for k in range(1, 15)] + [-0.8 + 0.1 * k for k in range(1, 22)])),
+    ("Roll", "RollTouch", (3, 0.5, 0), (0, 0, 1, 0), (0.2, 0.25, 0.65),
+     [(-9 * k, -6 * k) for k in range(1, 15)] + [(-126 - 20 * k, -84 + 5 * k) for k in range(1, 16)]),
+    ("Spin", "SpinTouch", (-3, 0.5, 0), (1, 0, 0, 0.35), (0.3, 0.1, 0.8),
+     [(-10 * k, 2 * k) for k in range(1, 16)]),
+    # boxes behind their sensor's origin: the press lands on the far side of the virtual cylinder and sphere
+    ("Axle", "AxleTouch", (-1.5, 2.3, 0), (0, 0, 1, 0), (0.2, 0.1, -1.0), [(9 * k, -2 * k) for k in range(1, 16)]),
+    ("Rear", "RearTouch", (1.5, 2.3, 0), (0, 0, 1, 0), (-0.15, 0.1, -1.0), [(-7 * k, 5 * k) for k in range(1, 16)]),
+    ("Roll", "RollTouch", (3, 0.5, 0), (0, 0, 1, 0), (0.2, 0.25, 0.65),
+     [(8 * k, 7 * k) for k in range(1, 12)]),
+]
+VIEW = {"position": (0.0, 0.5, 10.0), "fieldOfView": math.pi / 4, "width": 960, "height": 600}
+
+
+def build_drag():
+    """probe-drag.x3d: two CylinderSensors (one seen side on, one seen down its axis, so X_ITE uses its disk) and a
+    SphereSensor, each with a TouchSensor beside it whose hitPoint_changed says where the press landed."""
+    b = Behaviour()
+    spin = b.add("CylinderSensor", "Spin", parent="CylBase")
+    b.add("TouchSensor", "SpinTouch", parent="CylBase").hitPoint_changed >> b.target("Transform", "SpinHit").translation
+    spin.rotation_changed >> b.target("Transform", "Spinner").rotation
+    spin.trackPoint_changed >> b.target("Transform", "SpinDot").translation
+    turn = b.add("CylinderSensor", "Turn", parent="DiskBase", minAngle=-0.6, maxAngle=0.9)
+    b.add("TouchSensor", "TurnTouch", parent="DiskBase").hitPoint_changed >> b.target("Transform", "TurnHit").translation
+    turn.rotation_changed >> b.target("Transform", "Dial").rotation
+    axle = b.add("CylinderSensor", "Axle", parent="AxleBase", autoOffset=False)
+    b.add("TouchSensor", "AxleTouch", parent="AxleBase").hitPoint_changed >> b.target("Transform", "AxleHit").translation
+    axle.rotation_changed >> b.target("Transform", "AxleSpin").rotation
+    rear = b.add("SphereSensor", "Rear", parent="RearBase")
+    b.add("TouchSensor", "RearTouch", parent="RearBase").hitPoint_changed >> b.target("Transform", "RearHit").translation
+    rear.rotation_changed >> b.target("Transform", "RearSpin").rotation
+    roll = b.add("SphereSensor", "Roll", parent="BallBase", offset=(0, 1, 0, 0.3))
+    b.add("TouchSensor", "RollTouch", parent="BallBase").hitPoint_changed >> b.target("Transform", "RollHit").translation
+    roll.rotation_changed >> b.target("Transform", "Ball").rotation
+    roll.trackPoint_changed >> b.target("Transform", "RollDot").translation
+    return b
+
+
+def drag_plan():
+    """Where to press (window pixels, from the top left as a browser counts them) and where to move, for the recorder."""
+    import sys as _sys
+    _sys.path.insert(0, str(ROOT / "source"))
+    import behaviour_sim as bs
+    out = []
+    for sensor, touch, translation, rotation, local, path in DRAGS:
+        world = bs._v_add(bs._Rot.axis_angle(*rotation).rotate(local), translation)
+        view = bs._v_sub(world, VIEW["position"])
+        f = 1 / math.tan(VIEW["fieldOfView"] / 2)
+        aspect = VIEW["width"] / VIEW["height"]
+        ndc = (view[0] / -view[2] * f / aspect, view[1] / -view[2] * f)
+        x = round((ndc[0] + 1) / 2 * VIEW["width"])
+        y = round((1 - (ndc[1] + 1) / 2) * VIEW["height"])
+        if path and path[0] == "arc":       # turn about the parent's origin as seen on screen
+            centre = bs._v_sub(tuple(float(c) for c in translation), VIEW["position"])
+            cx = ((centre[0] / -centre[2] * f / aspect) + 1) / 2 * VIEW["width"]
+            cy = (1 - ((centre[1] / -centre[2] * f) + 1) / 2) * VIEW["height"]
+            radius, start = math.hypot(x - cx, y - cy), math.atan2(y - cy, x - cx)
+            points = [[round(cx + radius * math.cos(start - a)), round(cy + radius * math.sin(start - a))] for a in path[1]]
+        else:
+            points = [[x + dx, y + dy] for dx, dy in path]
+        out.append({"sensor": sensor, "touch": touch, "at": [x, y], "path": points})
+    return {"view": VIEW, "drags": out}
+
+
 if __name__ == "__main__":
     for name, graph, title in (("probe.x3d", build(), "Behaviour simulator probe"),
                                ("probe-spline.x3d", build_spline(), "Behaviour simulator probe: splines and easing")):
@@ -189,3 +298,8 @@ if __name__ == "__main__":
                                   '<Material diffuseColor="0.2 0.3 0.5"/><TextureTransform DEF="PadTexture"/></Appearance>')
         target.write_text(graph.weave(scene), encoding="utf-8")
         print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())
+    graph = build_drag()
+    target = ROOT / "tests" / "behaviour" / "probe-drag.x3d"
+    target.write_text(graph.weave(DRAG_SCENE), encoding="utf-8")
+    (ROOT / "tests" / "behaviour" / "probe-drag.drags.json").write_text(json.dumps(drag_plan(), indent=1) + "\n")
+    print(target, len(graph.nodes), "nodes", len(graph.routes), "ROUTEs", graph.check())

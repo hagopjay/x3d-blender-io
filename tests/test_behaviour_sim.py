@@ -220,6 +220,47 @@ class NodeTests(unittest.TestCase):
         g.add("TimeSensor", "Clock")
         self.assertEqual(bs.Simulation(g).not_simulated, ["CoordinateInterpolator Mesh"])
 
+    def _drag_world(self, kind, **fields):
+        g = self.graph()
+        g.add(kind, "S", **fields)
+        sim = bs.Simulation(g)
+        sim.start(0.0)
+        return sim
+
+    @staticmethod
+    def _toward(point, eye=(0.0, 0.0, 10.0)):
+        return eye, bs._v_unit(bs._v_sub(point, eye))
+
+    def test_a_sphere_sensor_turns_the_way_the_pointer_goes(self):
+        sim = self._drag_world("SphereSensor")
+        eye = ((0.0, 0.0, 10.0), (0.0, 0.0, 1.0))
+        sim.press("S", 0.0, (0.0, 0.0, 1.0), ray=self._toward((0.0, 0.0, 1.0)), eye=eye)
+        angle = 0.4
+        sim.drag("S", None, 0.1, ray=self._toward((math.sin(angle), 0.0, math.cos(angle))))
+        self.assertLess(bs._rotation_distance(sent(sim, "S", "rotation_changed"), (0, 1, 0, angle)), 1e-6)
+
+    def test_a_sphere_pressed_behind_its_centre_turns_the_other_way(self):
+        sim = self._drag_world("SphereSensor")
+        eye = ((0.0, 0.0, 10.0), (0.0, 0.0, 1.0))
+        hit = (0.0, 0.0, -1.0)                       # geometry behind the sensor's origin
+        sim.press("S", 0.0, hit, ray=self._toward(hit), eye=eye)
+        angle = 0.4
+        target = (math.sin(angle), 0.0, -math.cos(angle))
+        sim.drag("S", None, 0.1, ray=self._toward(target))
+        self.assertLess(bs._rotation_distance(sent(sim, "S", "rotation_changed"), (0, 1, 0, angle)), 1e-6)
+
+    def test_a_cylinder_sensor_turns_about_its_axis_and_stops_at_its_limit(self):
+        free = self._drag_world("CylinderSensor")
+        held = self._drag_world("CylinderSensor", minAngle=-0.2, maxAngle=0.2)
+        eye = ((0.0, 0.0, 10.0), (0.0, 0.0, 1.0))
+        for sim in (free, held):
+            sim.press("S", 0.0, (0.0, 0.0, 1.0), ray=self._toward((0.0, 0.0, 1.0)), eye=eye)
+            sim.drag("S", None, 0.1, ray=self._toward((0.5, 0.0, 1.0)))
+        x, y, z, angle = sent(free, "S", "rotation_changed")
+        self.assertAlmostEqual(abs(y), 1.0, places=6)
+        self.assertAlmostEqual(angle, math.asin(0.5), places=6)
+        self.assertLess(bs._rotation_distance(sent(held, "S", "rotation_changed"), (0, 1, 0, 0.2)), 1e-9)
+
     def test_ease_in_ease_out_sends_the_eased_weight_of_the_segment(self):
         # X_ITE: the output is the eased weight within the segment (0 to 1), not a fraction mapped onto the keys
         g = self.graph()
@@ -277,16 +318,21 @@ class XiteAgreementTests(unittest.TestCase):
         # EaseInEaseOut, the three Spline interpolators, Squad and PositionDamper2D (tools/behaviour_probe.py)
         self.agree("probe-spline", 12)
 
+    def test_drag_sensors_from_the_recorded_pointer(self):
+        # CylinderSensor (side on, seen down its axis as a disk, pressed behind its axis) and SphereSensor (with an
+        # offset, pressed behind its centre, dragged off the sphere), run from X_ITE's recorded pointer and compared
+        # event for event
+        self.agree("probe-drag", 7)
+
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
-        used = {graph.nodes[route.from_id].node_type for graph in map(world, ("probe", "snake", "probe-spline"))
+        used = {graph.nodes[route.from_id].node_type for graph in map(world, ("probe", "snake", "probe-spline", "probe-drag"))
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one
-        self.assertEqual(unjudged, ["ColorChaser", "CylinderSensor", "KeySensor", "PlaneSensor", "PositionChaser2D",
-                                    "PositionInterpolator2D", "ProximitySensor", "SphereSensor",
-                                    "StringSensor", "VisibilitySensor"])
+        self.assertEqual(unjudged, ["ColorChaser", "KeySensor", "PlaneSensor", "PositionChaser2D",
+                                    "PositionInterpolator2D", "ProximitySensor", "StringSensor", "VisibilitySensor"])
 
 
 if __name__ == "__main__":

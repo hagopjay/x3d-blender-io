@@ -784,7 +784,10 @@ def read(scene):
                                         fields={f.name: f.value for f in item.x3d_fields if f.value != ""},
                                         parent=item.x3d_parent.name if item.x3d_parent else None)
             if item.x3d_parent:
-                recorded = str(item.x3d_parent.get("x3d_def_path") or "").split("/")[-1]
+                # a parent with shapes records its DEF path; an empty parent (a Transform holding only other
+                # Transforms) records only its DEF
+                recorded = str(item.x3d_parent.get("x3d_def_path") or "").split("/")[-1] or \
+                    str(item.x3d_parent.get("x3d_def") or "")
                 if recorded:
                     graph.def_hints[item.x3d_parent.name] = recorded
         elif role == bg.TARGET:

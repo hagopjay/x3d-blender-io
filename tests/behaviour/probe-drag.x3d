@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: drag sensors" />
+    <meta name="generator" content="x3d-blender-io tools/behaviour_probe.py" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" />
+    <Viewpoint position="0 0.5 10" />
+    <Transform DEF="CylBase" translation="-3 0.5 0" rotation="1 0 0 0.35">
+      <Transform DEF="Spinner">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="0.9 0.5 0.2" />
+          </Appearance>
+          <Box size="1.6 0.9 1.6" />
+        </Shape>
+      </Transform>
+      <Transform DEF="SpinHit" />
+      <Transform DEF="SpinDot">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="1 1 1" emissiveColor="1 0.9 0.2" />
+          </Appearance>
+          <Sphere radius="0.07" />
+        </Shape>
+      </Transform>
+      <CylinderSensor DEF="Spin" />
+      <TouchSensor DEF="SpinTouch" />
+    </Transform>
+    <Transform DEF="DiskBase" translation="0 -1.6 0" rotation="1 0 0 1.45">
+      <Transform DEF="Dial">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="0.3 0.7 0.9" />
+          </Appearance>
+          <Box size="1.8 0.3 1.8" />
+        </Shape>
+      </Transform>
+      <Transform DEF="TurnHit" />
+      <CylinderSensor DEF="Turn" maxAngle="0.9" minAngle="-0.6" />
+      <TouchSensor DEF="TurnTouch" />
+    </Transform>
+    <Transform DEF="AxleBase" translation="-1.5 2.3 0">
+      <Transform DEF="AxleSpin">
+        <Transform translation="0 0 -1.5">
+          <Shape>
+            <Appearance>
+              <Material diffuseColor="0.9 0.8 0.3" />
+            </Appearance>
+            <Box size="1 0.6 1" />
+          </Shape>
+        </Transform>
+      </Transform>
+      <Transform DEF="AxleHit" />
+      <CylinderSensor DEF="Axle" autoOffset="false" />
+      <TouchSensor DEF="AxleTouch" />
+    </Transform>
+    <Transform DEF="RearBase" translation="1.5 2.3 0">
+      <Transform DEF="RearSpin">
+        <Transform translation="0 0 -1.5">
+          <Shape>
+            <Appearance>
+              <Material diffuseColor="0.8 0.4 0.9" />
+            </Appearance>
+            <Box size="1 0.6 1" />
+          </Shape>
+        </Transform>
+      </Transform>
+      <Transform DEF="RearHit" />
+      <SphereSensor DEF="Rear" />
+      <TouchSensor DEF="RearTouch" />
+    </Transform>
+    <Transform DEF="BallBase" translation="3 0.5 0">
+      <Transform DEF="Ball">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="0.6 0.9 0.4" />
+          </Appearance>
+          <Box size="1.3 1.3 1.3" />
+        </Shape>
+      </Transform>
+      <Transform DEF="RollHit" />
+      <Transform DEF="RollDot">
+        <Shape>
+          <Appearance>
+            <Material diffuseColor="1 1 1" emissiveColor="1 0.9 0.2" />
+          </Appearance>
+          <Sphere radius="0.07" />
+        </Shape>
+      </Transform>
+      <SphereSensor DEF="Roll" offset="0 1 0 0.3" />
+      <TouchSensor DEF="RollTouch" />
+    </Transform>
+    <ROUTE fromNode="SpinTouch" fromField="hitPoint_changed" toNode="SpinHit" toField="translation" />
+    <ROUTE fromNode="Spin" fromField="rotation_changed" toNode="Spinner" toField="rotation" />
+    <ROUTE fromNode="Spin" fromField="trackPoint_changed" toNode="SpinDot" toField="translation" />
+    <ROUTE fromNode="TurnTouch" fromField="hitPoint_changed" toNode="TurnHit" toField="translation" />
+    <ROUTE fromNode="Turn" fromField="rotation_changed" toNode="Dial" toField="rotation" />
+    <ROUTE fromNode="AxleTouch" fromField="hitPoint_changed" toNode="AxleHit" toField="translation" />
+    <ROUTE fromNode="Axle" fromField="rotation_changed" toNode="AxleSpin" toField="rotation" />
+    <ROUTE fromNode="RearTouch" fromField="hitPoint_changed" toNode="RearHit" toField="translation" />
+    <ROUTE fromNode="Rear" fromField="rotation_changed" toNode="RearSpin" toField="rotation" />
+    <ROUTE fromNode="RollTouch" fromField="hitPoint_changed" toNode="RollHit" toField="translation" />
+    <ROUTE fromNode="Roll" fromField="rotation_changed" toNode="Ball" toField="rotation" />
+    <ROUTE fromNode="Roll" fromField="trackPoint_changed" toNode="RollDot" toField="translation" />
+  </Scene>
+</X3D>
