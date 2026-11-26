@@ -27,5 +27,4 @@ Not checked: X_ITE judging (none); mirrored (negative-scale) sectors' normals in
 
 1. **Fan-out ROUTEs make symmetry free:** 24 interpolators drive 96 petals through 384 ROUTEs, in Play, with no spread.
 2. **Negative scale (the mirror) is applied** by Play's `scale` path and the radii still agree.
-3. 224 nodes in one world still loaded and played in about 2 minutes; the ROUTE count (415) matters more than the
-   node count for the editor's layout.
+3. 224 nodes and 415 ROUTEs loaded and played in one live run; I did not measure where the time goes.
