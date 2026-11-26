@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="wired-geo.x3d"/>
+    <meta name="description" content="GeoPositionInterpolator, GeoProximitySensor and GeoTouchSensor, each with a GeoOrigin child; double-precision outputs ROUTEd into a Script."/>
+  </head>
+  <Scene>
+    <GeoOrigin DEF="Origin" geoSystem='"GD" "WE"' geoCoords="48.8 2.3 0"/>
+    <Transform DEF="Marker"><Shape><Sphere radius="0.1"/></Shape></Transform>
+    <Transform DEF="Terrain">
+      <Shape><Box size="10 0.1 10"/></Shape>
+      <GeoTouchSensor DEF="Ground" geoSystem='"GD" "WE"'><GeoOrigin USE="Origin" containerField="geoOrigin"/></GeoTouchSensor>
+      <GeoProximitySensor DEF="Near" geoSystem='"GD" "WE"' size="100 100 100" geoCenter="48.8 2.3 0"><GeoOrigin USE="Origin" containerField="geoOrigin"/></GeoProximitySensor>
+    </Transform>
+    <TimeSensor DEF="Flight" cycleInterval="5"/>
+    <GeoPositionInterpolator DEF="Route" geoSystem='"GD" "WE"' key="0 1" keyValue="48.8 2.3 0 48.9 2.4 100"><GeoOrigin USE="Origin" containerField="geoOrigin"/></GeoPositionInterpolator>
+    <Script DEF="Plotter"><field name="where" type="SFVec3d" accessType="inputOnly"/><field name="hit" type="SFVec3d" accessType="inputOnly"/><field name="close" type="SFBool" accessType="inputOnly"/><![CDATA[ecmascript:
+function where(v) { if (v[0] < 90 && v[1] > -180) { } }
+]]></Script>
+    <ROUTE fromNode="Ground" fromField="touchTime" toNode="Flight" toField="startTime"/>
+    <ROUTE fromNode="Flight" fromField="fraction_changed" toNode="Route" toField="set_fraction"/>
+    <ROUTE fromNode="Route" fromField="value_changed" toNode="Marker" toField="set_translation"/>
+    <ROUTE fromNode="Route" fromField="geovalue_changed" toNode="Plotter" toField="where"/>
+    <ROUTE fromNode="Ground" fromField="hitGeoCoord_changed" toNode="Plotter" toField="hit"/>
+    <ROUTE fromNode="Near" fromField="geoCoord_changed" toNode="Plotter" toField="where"/>
+    <ROUTE fromNode="Near" fromField="isActive" toNode="Plotter" toField="close"/>
+    <ROUTE fromNode="Near" fromField="position_changed" toNode="Marker" toField="set_translation"/>
+  </Scene>
+</X3D>

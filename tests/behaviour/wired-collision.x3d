@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="wired-collision.x3d"/>
+    <meta name="description" content="A Collision grouping node (kept in place, children and proxy intact) whose collideTime and isActive are ROUTEd, and a CollisionSensor with its collider and contacts."/>
+  </head>
+  <Scene>
+    <Collision DEF="Wall" enabled="true">
+      <Transform DEF="Slab"><Shape DEF="SlabShape"><Box size="4 2 0.2"/></Shape></Transform>
+      <Transform DEF="Pillar" translation="3 0 0"><Shape><Cylinder/></Shape></Transform>
+      <Shape containerField="proxy"><Box size="4 2 0.2"/></Shape>
+    </Collision>
+    <Transform DEF="Flash"><Shape><Sphere radius="0.2"/></Shape></Transform>
+    <TimeSensor DEF="HitClock" cycleInterval="1"/>
+    <BooleanToggle DEF="Toggle"/>
+    <CollisionSensor DEF="Contact" enabled="true"><CollisionCollection DEF="World" containerField="collider" bounce="0.5"/></CollisionSensor>
+    <Script DEF="Log"><field name="hits" type="MFNode" accessType="inputOnly"/><field name="touching" type="SFBool" accessType="inputOnly"/><![CDATA[ecmascript:
+function hits(value) { }
+]]></Script>
+    <ROUTE fromNode="Wall" fromField="collideTime" toNode="HitClock" toField="startTime"/>
+    <ROUTE fromNode="Wall" fromField="isActive" toNode="Toggle" toField="set_boolean"/>
+    <ROUTE fromNode="Contact" fromField="isActive" toNode="Log" toField="touching"/>
+    <ROUTE fromNode="Contact" fromField="contacts" toNode="Log" toField="hits"/>
+    <ROUTE fromNode="Toggle" fromField="toggle" toNode="Flash" toField="set_visible"/>
+  </Scene>
+</X3D>
