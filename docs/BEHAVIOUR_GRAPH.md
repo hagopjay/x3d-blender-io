@@ -13,6 +13,7 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 | `tools/behaviour_sim_judge.cjs`, `tools/behaviour_sim_judge.py`, `tools/behaviour_probe.py` | record X_ITE's events, replay them through the simulator, compare; build the probe world |
 | `tests/test_behaviour_sim.py`, `tests/test_behaviour_play_bpy.py` | version 2: 20 plain-Python tests (4 replay X_ITE traces) and 15 Blender tests |
 | `tools/behaviour_roundtrip.py` | import a file with its graph, optionally set fields, export, print the graph difference |
+| `tools/behaviour_eyetest.py` | open a real Blender window, import each world with its graph, screenshot the editor, Play it with real (simulated) clicks, check Esc restores everything |
 | `tools/behaviour_replay.cjs` | play the same real mouse clicks on two files in X_ITE and compare what the scene did |
 | `tests/test_behaviour_graph.py`, `tests/test_behaviour_nodes_bpy.py` | 23 plain-Python and 17 Blender tests |
 | `tests/behaviour/` | `route-demo.x3d`, the three Wire Lab worlds, and `route-cases.json` (55 ROUTE legality cases shared with the browser Wire Lab) |
@@ -20,6 +21,10 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 ## Use
 
 * Import: tick "Behaviour as node graph" (off by default). The scene gets a node tree in `scene.x3d_behaviour_tree`.
+  If a node editor is open, the tree is shown in it (one already showing an X3D Behaviour tree first, else the largest),
+  laid out so no two nodes overlap, and framed. No other editor is changed. The import's last line says where the graph
+  went: "X3D Behaviour: 3 nodes, 3 ROUTEs in node tree 'X3D Behaviour', shown in the node editor." or, with no node
+  editor open, "… To see them, switch any editor's type to X3D Behaviour."
 * Edit: node editor, tree type "X3D Behaviour". A link between two field types is removed as it is made.
 * Export: a scene with a tree writes it. A scene without one exports exactly as before.
 * Script (no window needed):
@@ -124,10 +129,36 @@ The importer now hides the objects made under a node whose `visible` is false (v
 `x3d_visible_false`; the exporter writes `visible="false"` back for an object that is marked and still hidden.
 Unhiding it in Blender is the user's choice and is written as visible.
 
+## Looked at on a real screen (25 Nov 2026)
+
+`tools/behaviour_eyetest.py` opens a Blender window (`--factory-startup --enable-event-simulate`, 1600 x 1000), loads
+the add-on from a checkout, and for each world imports it with the graph, screenshots the window and the editor, presses
+Play, moves the pointer onto what a sensor senses and clicks through Blender's own event queue (so the modal operator,
+the ray cast, the glow and Esc run as they do for a person), then checks the scene against its state before Play.
+Blender 5.3.0, macOS 26 arm64. Same rig, add-on `main` 0eb4809 against this version:
+
+| | main 0eb4809 | this version |
+|---|---|---|
+| Import shows the graph in the open node editor | 0 of 5 worlds | 5 of 5 |
+| Pairs of overlapping nodes (counter, probe, route-demo) | 70 (1, 31, 38) | 0 |
+| Esc puts every object back (`matrix_basis`, hidden flags) | 5 of 5 | 5 of 5 |
+| A real click on the sensed object makes the target move or light | door, counter, probe, route-demo | same |
+
+What the screenshots showed and this version changes: the import opened nothing; nodes overlapped because the layout
+spaces rows evenly and a target node is several rows tall (`unstack` now pushes them apart after the first draw, when
+the editor knows each node's height); an interpolator with 48 keys drew 48 rows on the node (the node now shows six,
+the first five and the last, with a line pointing to the sidebar, which shows all); `startTime="1e+30"` (the file's
+"not until an event") was drawn as thirty cut-off digits (it is now its X3D text, labelled "never").
+
+Seen and not changed: the glow paints the whole node, so its text is hard to read while a timer runs; the sidebar repeats
+an unlinked input (`key`, `keyValue`) as a bare label after the node's panel (Blender draws unlinked inputs there); on
+`route-demo.x3d` the importer also bakes the looping interpolators into actions (`Door_x3d`, `Spinner_x3d`), so the
+graph and an action both drive Door and Spinner. Export ignores those keyframes (rule 5); the timeline's Play does not.
+
 ## Limits
 
-Nobody has looked at the editor or the player on a real screen (all runs headless): the Play button, the pointer and the
-glow are untested by eye. The player uses the export dialog's default axes (-Z forward, Y up). Sensors that need a
+Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
+eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the export dialog's default axes (-Z forward, Y up). Sensors that need a
 viewer's position are not simulated. XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
 played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
 importer's loss report still prints "ROUTE not imported" for ROUTEs the graph kept.

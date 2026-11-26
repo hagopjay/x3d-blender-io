@@ -222,6 +222,31 @@ class BehaviourNodeTests(unittest.TestCase):
         self.assertEqual(tree.nodes["TS_DoorButton"].x3d_parent.name, "DoorButton")
         self.assertNotIn("x3d_trigger", bpy.data.objects["DoorButton"])
 
+    def test_import_says_where_the_graph_went(self):
+        # Backlog 1: with no window (a script, blender -b) nothing can be shown; the line says how to see it
+        tree = self._import_demo()
+        self.assertIsNone(self.bn.show_tree(bpy.context, tree))
+        line = self.bn.import_summary(tree, None)
+        self.assertEqual(line, "X3D Behaviour: 17 nodes, 22 ROUTEs in node tree 'X3D Behaviour'. "
+                               "To see them, switch any editor's type to X3D Behaviour.")
+        self.assertTrue(self.bn.import_summary(tree, object()).endswith(", shown in the node editor."))
+
+    def test_the_graph_goes_to_a_node_editor_never_to_another_editor(self):
+        from types import SimpleNamespace as NS
+
+        def area(kind, size, tree_type=""):
+            return NS(type=kind, width=size, height=size, spaces=NS(active=NS(tree_type=tree_type)))
+        viewport, shader, small_x3d = area("VIEW_3D", 900), area("NODE_EDITOR", 600), area("NODE_EDITOR", 200,
+                                                                                            self.bn.TREE_IDNAME)
+        self.assertIs(self.bn._editor_area_for(NS(areas=[viewport, shader, small_x3d])), small_x3d)
+        self.assertIs(self.bn._editor_area_for(NS(areas=[viewport, shader])), shader)
+        self.assertIsNone(self.bn._editor_area_for(NS(areas=[viewport])))
+
+    def test_a_long_key_table_is_short_on_the_node(self):
+        self.assertEqual(self.bn.rows_on_node(4, 6), [0, 1, 2, 3])
+        self.assertEqual(self.bn.rows_on_node(48, 6), [0, 1, 2, 3, 4, 47])
+        self.assertEqual(self.bn.rows_on_node(48, None), list(range(48)))
+
     def test_round_trip_keeps_every_node_field_and_route(self):
         self._import_demo()
         text, _root = self._export()

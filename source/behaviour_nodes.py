@@ -422,7 +422,7 @@ class _BehaviourNode(_X3DNodeBase):
             if not (table and name in ("key", "keyValue")):
                 self._draw_field(layout, name)
         if table:
-            self._draw_table(layout)
+            self._draw_table(layout, NODE_TABLE_ROWS)
 
     def draw_buttons_ext(self, context, layout):
         """The sidebar: every field that can hold a value, not only the ones the node shows."""
@@ -446,6 +446,10 @@ class _BehaviourNode(_X3DNodeBase):
                 column = layout.column(align=True)
                 column.label(text=name + ("  (Z up)" if shows_blender_axes(self, name) else ""))
                 column.row(align=True).prop(self, f"f_{name}", text="")
+            elif row[1] == "SFTime" and abs(getattr(self, f"f_{name}")) >= NEVER_SECONDS \
+                    and self.x3d_fields.get(name) is not None:
+                # 1e+30 is how a file says "not until an event says so"; as seconds it is thirty digits, cut off
+                layout.prop(self.x3d_fields.get(name), "value", text=f"{name} (never)")
             else:
                 layout.prop(self, f"f_{name}", text=name)
         elif hasattr(self, f"f_{name}_axis"):
@@ -461,11 +465,17 @@ class _BehaviourNode(_X3DNodeBase):
             else:
                 layout.label(text=f"{name}: not set")
 
-    def _draw_table(self, layout):
+    def _draw_table(self, layout, limit=None):
+        """The key table; ``limit`` rows at most (the node body), every row when None (the sidebar)."""
         kind = KEY_KINDS[self.x3d_type]
         box = layout.column(align=True)
         box.label(text="key  /  value" + ("  (Z up)" if shows_blender_axes(self, "keyValue") else ""))
+        shown = rows_on_node(len(self.x3d_rows), limit)
         for index, row in enumerate(self.x3d_rows):
+            if index not in shown:
+                if index == shown[-2] + 1:                       # one line where the hidden rows are
+                    box.label(text=f"… {len(self.x3d_rows) - len(shown)} more keys: sidebar (N)")
+                continue
             line = box.row(align=True)
             split = line.split(factor=0.22, align=True)
             split.prop(row, "key", text="")
@@ -485,6 +495,18 @@ class _BehaviourNode(_X3DNodeBase):
         item.name, item.value = name, value
         if name in ("key", "keyValue"):
             sync_rows(self)
+
+
+NEVER_SECONDS = 1e20      # an SFTime this far off is "never" (files write 1e+30), shown as text, not as seconds
+NODE_TABLE_ROWS = 6       # key rows drawn on a node's body; the sidebar draws them all
+
+
+def rows_on_node(count, limit):
+    """Which of ``count`` key rows a node's body shows, at most ``limit`` (None: all). The first rows and the last
+    one: where the animation starts, how it goes on, and where it ends (the last key is usually 1)."""
+    if limit is None or count <= limit:
+        return list(range(count))
+    return list(range(limit - 1)) + [count - 1]
 
 
 class _TargetNode(_X3DNodeBase):
@@ -836,6 +858,80 @@ def import_graph(scene, filepath):
     kept = sum(1 for node in graph.nodes.values() if node.role == bg.BEHAVIOUR)
     return [f"Behaviour graph: {kept} nodes and {len(graph.routes)} ROUTEs in node tree {tree.name!r}."] + \
         [f"Behaviour graph: {message}" for message in graph.diagnostics]
+
+
+def _editor_area_for(screen):
+    """The node editor an imported graph is shown in: one already showing an X3D Behaviour tree, else the largest open
+    node editor. None when the screen has no node editor: the layout is the person's, so no other editor is turned
+    into one."""
+    editors = [area for area in screen.areas if area.type == "NODE_EDITOR"]
+    for area in editors:
+        if area.spaces.active.tree_type == TREE_IDNAME:
+            return area
+    return max(editors, key=lambda area: area.width * area.height, default=None)
+
+
+def unstack(tree, gap=40.0):
+    """Push apart nodes that overlap in a column (see ``bg.unstack_columns``); only meaningful after the editor has
+    drawn the tree, since a node has no size before. Returns how many nodes moved."""
+    scale = bpy.context.preferences.system.ui_scale or 1.0       # dimensions are in pixels, locations are not
+    moved = bg.unstack_columns([(node.name, node.location.x, node.location.y, node.dimensions.y / scale)
+                                for node in tree.nodes], gap=gap)
+    for name, y in moved.items():
+        tree.nodes[name].location.y = y
+    return len(moved)
+
+
+def show_tree(context, tree):
+    """Put ``tree`` in front of the person after an import; returns the area it is shown in, or None (no window, as in
+    a script or ``blender -b``, or no node editor open)."""
+    window = getattr(context, "window", None)
+    screen = getattr(window, "screen", None)
+    if screen is None or tree is None:
+        return None
+    area = _editor_area_for(screen)
+    if area is None:
+        return None
+    space = area.spaces.active
+    space.tree_type = TREE_IDNAME
+    space.node_tree = tree
+
+    wait = {"tries": 40, "unstacked": False}
+
+    def frame_all():
+        # A node has no size until the editor has drawn it once; unstack and view_all both need sizes. So: wait for
+        # the first draw, unstack, wait for the draw with the new places, frame. Gives up waiting after two seconds.
+        try:
+            region = next((r for r in area.regions if r.type == "WINDOW"), None)
+            drawn = region is not None and region.width > 1 and all(node.dimensions.x > 0 for node in tree.nodes)
+            wait["tries"] -= 1
+            if not drawn and wait["tries"] > 0:
+                area.tag_redraw()
+                return 0.05
+            if drawn and not wait["unstacked"]:
+                wait["unstacked"] = True
+                if unstack(tree):
+                    area.tag_redraw()
+                    return 0.25                  # view_all frames the places of the last draw: let one happen
+            with bpy.context.temp_override(window=window, area=area, region=region):
+                bpy.ops.node.view_all()
+        except (RuntimeError, ReferenceError):   # the area or window was closed in between
+            pass
+        return None
+
+    bpy.app.timers.register(frame_all, first_interval=0.05)
+    area.tag_redraw()
+    return area
+
+
+def import_summary(tree, area):
+    """The line the import reports last (the one the status bar keeps), so the person knows where the graph went."""
+    kinds = {cls.bl_idname for cls in BEHAVIOUR_CLASSES.values()}
+    count = sum(1 for node in tree.nodes if node.bl_idname in kinds)
+    head = f"X3D Behaviour: {count} nodes, {len(tree.links)} ROUTEs in node tree {tree.name!r}"
+    if area is not None:
+        return head + ", shown in the node editor."
+    return head + ". To see them, switch any editor's type to X3D Behaviour."
 
 
 classes = (X3DKeyRow, X3DFieldValue, X3D_OT_behaviour_key_add, X3D_OT_behaviour_key_remove, *SOCKET_CLASSES,
