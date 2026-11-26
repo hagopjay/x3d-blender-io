@@ -194,6 +194,41 @@ synthetic series; three browser cases, skipped with a reason when Node, Playwrig
 against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
 from the last run are in the commit message of the change that added it.
 
+#### The pair judge on real scenes: blind, simultaneous, rotations (26 Nov 2026)
+
+Its first use on real scenes found three defects, fixed in `tools/behaviour_pair_judge.py`; this subsection replaces what
+the text above says about interleaving and raw numbers where they differ.
+
+- **Blind.** In X_ITE a looping TimeSensor with startTime 0 has the wall clock's phase (a cycle starts at every whole
+  multiple of `cycleInterval` since 1970). With a watch shorter than the loop no cycle start falls in it, time zero falls back to the
+  moment recording began, and a file disagrees with itself on up to all of its samples. The judge used to say "same" then,
+  for everything, planted differences included. Now a stream whose median floor pairing (A against A and B against B) has
+  0.5 or more of its samples outside tolerance (`blind=0.5`) is "unclear" with `reason: "blind"` (and a `detail` with the
+  number), whatever A-versus-B reads; the overall result carries `reason: "blind"` too, and the exit code is 2. "Same" is
+  impossible when blind. Measured, `loop-20s.x3d` against itself, sequential, 4 s watch: floor 1.0, unclear, blind.
+- **Simultaneous mode** (`mode="simultaneous"`, the default for a world nobody touches; CLI `--mode`). One time zero per run
+  was wrong for a scene with several loops (3, 5, 7 s): lined up on one timer, another stream read "differs" though identical.
+  Now A and B run at the same moment in two browsers started together and are compared at the same X_ITE time stamps (its
+  clock is the wall clock, shared by both), so equal loops are in equal phase with no alignment step. Each repeat runs
+  three pairs, A with B, A with A, B with B; the floor is the A with A and B with B pairs. The runs watch `seconds` plus
+  2 s and the compared window is the overlap of the two recordings, cut to `seconds`; less than 1 s of overlap is a tool
+  error. `mode="sequential"` is the old A B A B layout from each run's own time zero: use it when the world starts on a
+  click or a key (the default, `auto`, picks it for any pointer, key or drag stimulus; pointer stimuli cannot be made at the
+  same moment in two browsers, so asking for both is a tool error), or for a timer started by an event. Simultaneous mode
+  needs a shared wall clock: two browsers on one machine.
+- **Rotations as rotations.** An SFRotation or MFRotation stream is compared by the angle between the two rotations (the
+  maths of `behaviour_sim._rotation_distance`: `0 1 0 6.17` and `0 -1 0 0.11` are 0.003 rad apart, not 6 apart), the span
+  is the widest angle swept from the first value, and the tolerance (2 % of that span) is in radians; each stream says
+  `tolerance_unit: "rad"`. A stream whose values are nodes (SFNode, MFNode: `addChildren`, a rigid body's `set_contacts`)
+  has nothing to compare: it is listed under `skipped` with the reason, from the catalogue's field type, or, for a node type
+  the catalogue does not have, from the values ("Shape { }").
+
+Tests (`tests/test_behaviour_pair_judge.py`): pure ones for a blind floor never giving "same" (nor "differs"), the blind
+limit, equal rotations spelled two ways, and node values; browser ones (skipped with a reason when Chromium, Node or X_ITE
+is missing) for `loop-20s.x3d` against itself watched 4 s (not blind, same) and against a copy with a changed keyValue
+(differs), the same sequentially (blind), `loops-3-5-7.x3d` against itself (same on all three streams), and
+`turntable.x3d` with key 3.14159265 against a copy with 3.141593 (differs by about 3.1 rad).
+
 **A turn written as 0, pi, 2 pi (26 Nov 2026).** `probe-turn.x3d`, recorded on X_ITE 16.8.1 (load average 5.4 to 6.2): an
 OrientationInterpolator with key `0 0.5 1` and keyValue about y of 0, 3.14159265, 6.28318531 (a hair under pi and 2 pi)
 rocks in X_ITE: it turns to pi and comes back to 0, because each half is a shortest-path slerp. The same with 3.141593 and
