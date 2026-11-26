@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 03: Rube Goldberg machine" />
+    <meta name="description" content="Press the red button: ten timed stages cascade, and the camera rides along." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-03-rube-goldberg/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.03 0.04 0.08" />
+    <Viewpoint DEF="Cam" description="Tour" position="-10.4 2 7" orientation="1 0 0 -0.22" />
+    <DirectionalLight direction="-0.3 -1 -0.5" intensity="0.9" />
+    <PointLight location="0 6 6" intensity="60" radius="30" />
+    <TimeSensor DEF="Stage0" cycleInterval="1.0" />
+    <BooleanFilter DEF="Done0" />
+    <TimeTrigger DEF="Go0" />
+    <ROUTE fromNode="Stage0" fromField="isActive" toNode="Done0" toField="set_boolean" />
+    <ROUTE fromNode="Done0" fromField="inputNegate" toNode="Go1" toField="set_boolean" />
+    <ROUTE fromNode="Go0" fromField="triggerTime" toNode="Stage0" toField="startTime" />
+    <TimeSensor DEF="Stage1" cycleInterval="1.6" />
+    <BooleanFilter DEF="Done1" />
+    <TimeTrigger DEF="Go1" />
+    <ROUTE fromNode="Stage1" fromField="isActive" toNode="Done1" toField="set_boolean" />
+    <ROUTE fromNode="Done1" fromField="inputNegate" toNode="Go2" toField="set_boolean" />
+    <ROUTE fromNode="Go1" fromField="triggerTime" toNode="Stage1" toField="startTime" />
+    <TimeSensor DEF="Stage2" cycleInterval="1.2" />
+    <BooleanFilter DEF="Done2" />
+    <TimeTrigger DEF="Go2" />
+    <ROUTE fromNode="Stage2" fromField="isActive" toNode="Done2" toField="set_boolean" />
+    <ROUTE fromNode="Done2" fromField="inputNegate" toNode="Go3" toField="set_boolean" />
+    <ROUTE fromNode="Go2" fromField="triggerTime" toNode="Stage2" toField="startTime" />
+    <TimeSensor DEF="Stage3" cycleInterval="1.0" />
+    <BooleanFilter DEF="Done3" />
+    <TimeTrigger DEF="Go3" />
+    <ROUTE fromNode="Stage3" fromField="isActive" toNode="Done3" toField="set_boolean" />
+    <ROUTE fromNode="Done3" fromField="inputNegate" toNode="Go4" toField="set_boolean" />
+    <ROUTE fromNode="Go3" fromField="triggerTime" toNode="Stage3" toField="startTime" />
+    <TimeSensor DEF="Stage4" cycleInterval="1.0" />
+    <BooleanFilter DEF="Done4" />
+    <TimeTrigger DEF="Go4" />
+    <ROUTE fromNode="Stage4" fromField="isActive" toNode="Done4" toField="set_boolean" />
+    <ROUTE fromNode="Done4" fromField="inputNegate" toNode="Go5" toField="set_boolean" />
+    <ROUTE fromNode="Go4" fromField="triggerTime" toNode="Stage4" toField="startTime" />
+    <TimeSensor DEF="Stage5" cycleInterval="1.6" />
+    <BooleanFilter DEF="Done5" />
+    <TimeTrigger DEF="Go5" />
+    <ROUTE fromNode="Stage5" fromField="isActive" toNode="Done5" toField="set_boolean" />
+    <ROUTE fromNode="Done5" fromField="inputNegate" toNode="Go6" toField="set_boolean" />
+    <ROUTE fromNode="Go5" fromField="triggerTime" toNode="Stage5" toField="startTime" />
+    <TimeSensor DEF="Stage6" cycleInterval="1.2" />
+    <BooleanFilter DEF="Done6" />
+    <TimeTrigger DEF="Go6" />
+    <ROUTE fromNode="Stage6" fromField="isActive" toNode="Done6" toField="set_boolean" />
+    <ROUTE fromNode="Done6" fromField="inputNegate" toNode="Go7" toField="set_boolean" />
+    <ROUTE fromNode="Go6" fromField="triggerTime" toNode="Stage6" toField="startTime" />
+    <TimeSensor DEF="Stage7" cycleInterval="1.6" />
+    <BooleanFilter DEF="Done7" />
+    <TimeTrigger DEF="Go7" />
+    <ROUTE fromNode="Stage7" fromField="isActive" toNode="Done7" toField="set_boolean" />
+    <ROUTE fromNode="Done7" fromField="inputNegate" toNode="Go8" toField="set_boolean" />
+    <ROUTE fromNode="Go7" fromField="triggerTime" toNode="Stage7" toField="startTime" />
+    <TimeSensor DEF="Stage8" cycleInterval="1.4" />
+    <BooleanFilter DEF="Done8" />
+    <TimeTrigger DEF="Go8" />
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Done8" toField="set_boolean" />
+    <ROUTE fromNode="Done8" fromField="inputNegate" toNode="Go9" toField="set_boolean" />
+    <ROUTE fromNode="Go8" fromField="triggerTime" toNode="Stage8" toField="startTime" />
+    <TimeSensor DEF="Stage9" cycleInterval="1.2" />
+    <BooleanFilter DEF="Done9" />
+    <TimeTrigger DEF="Go9" />
+    <ROUTE fromNode="Stage9" fromField="isActive" toNode="Done9" toField="set_boolean" />
+    <ROUTE fromNode="Go9" fromField="triggerTime" toNode="Stage9" toField="startTime" />
+    <TimeSensor DEF="Tour" cycleInterval="12.80" />
+    <ROUTE fromNode="Go0" fromField="triggerTime" toNode="Tour" toField="startTime" />
+    <Transform translation="0 -0.15 0"><Shape><Appearance><PhysicalMaterial baseColor="0.16 0.12 0.1" metallic="0.0" roughness="0.8" /></Appearance><Box size="30 0.3 3" /></Shape></Transform>
+    <Transform translation="-10.0 0.2 0.3">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.3 0.3 0.34" metallic="1.0" roughness="0.4" /></Appearance><Cylinder radius="0.5" height="0.4" /></Shape>
+      <Transform DEF="Btn" translation="0 0.3 0">
+        <TouchSensor DEF="StartTouch" description="Click: start the machine" />
+        <Shape><Appearance><PhysicalMaterial baseColor="0.9 0.1 0.1" emissiveColor="0.4 0.02 0.02" metallic="0.0" roughness="0.5" /></Appearance><Cylinder radius="0.36" height="0.3" /></Shape>
+      </Transform>
+    </Transform>
+    <ROUTE fromNode="StartTouch" fromField="isActive" toNode="Press" toField="set_boolean" />
+    <BooleanFilter DEF="Press" />
+    <ROUTE fromNode="Press" fromField="inputTrue" toNode="Go0" toField="set_boolean" />
+    <PositionInterpolator DEF="BtnDip" key="0 0.4 1" keyValue="0 0.3 0 0 0.05 0 0 0.3 0" />
+    <ROUTE fromNode="Stage0" fromField="fraction_changed" toNode="BtnDip" toField="set_fraction" />
+    <ROUTE fromNode="BtnDip" fromField="value_changed" toNode="Btn" toField="translation" />
+    <Transform DEF="Domino0" translation="-8.800 0 0">
+      <Transform translation="0 0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.16 1 0.5" /></Shape></Transform>
+    </Transform>
+    <OrientationInterpolator DEF="Tip0" key="0 0 0.35 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 -1.45 0 0 1 -1.45" />
+    <ROUTE fromNode="Stage1" fromField="fraction_changed" toNode="Tip0" toField="set_fraction" />
+    <ROUTE fromNode="Tip0" fromField="value_changed" toNode="Domino0" toField="rotation" />
+    <Transform DEF="Domino1" translation="-8.350 0 0">
+      <Transform translation="0 0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.16 1 0.5" /></Shape></Transform>
+    </Transform>
+    <OrientationInterpolator DEF="Tip1" key="0 0.11 0.46 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 -1.45 0 0 1 -1.45" />
+    <ROUTE fromNode="Stage1" fromField="fraction_changed" toNode="Tip1" toField="set_fraction" />
+    <ROUTE fromNode="Tip1" fromField="value_changed" toNode="Domino1" toField="rotation" />
+    <Transform DEF="Domino2" translation="-7.900 0 0">
+      <Transform translation="0 0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.16 1 0.5" /></Shape></Transform>
+    </Transform>
+    <OrientationInterpolator DEF="Tip2" key="0 0.22 0.57 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 -1.45 0 0 1 -1.45" />
+    <ROUTE fromNode="Stage1" fromField="fraction_changed" toNode="Tip2" toField="set_fraction" />
+    <ROUTE fromNode="Tip2" fromField="value_changed" toNode="Domino2" toField="rotation" />
+    <Transform DEF="Domino3" translation="-7.450 0 0">
+      <Transform translation="0 0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.16 1 0.5" /></Shape></Transform>
+    </Transform>
+    <OrientationInterpolator DEF="Tip3" key="0 0.33 0.68 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 -1.45 0 0 1 -1.45" />
+    <ROUTE fromNode="Stage1" fromField="fraction_changed" toNode="Tip3" toField="set_fraction" />
+    <ROUTE fromNode="Tip3" fromField="value_changed" toNode="Domino3" toField="rotation" />
+    <Transform DEF="Domino4" translation="-7.000 0 0">
+      <Transform translation="0 0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.16 1 0.5" /></Shape></Transform>
+    </Transform>
+    <OrientationInterpolator DEF="Tip4" key="0 0.44 0.79 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 -1.45 0 0 1 -1.45" />
+    <ROUTE fromNode="Stage1" fromField="fraction_changed" toNode="Tip4" toField="set_fraction" />
+    <ROUTE fromNode="Tip4" fromField="value_changed" toNode="Domino4" toField="rotation" />
+    <Transform DEF="Domino5" translation="-6.550 0 0">
+      <Transform translation="0 0.5 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.9" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.16 1 0.5" /></Shape></Transform>
+    </Transform>
+    <OrientationInterpolator DEF="Tip5" key="0 0.55 0.9 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 -1.45 0 0 1 -1.45" />
+    <ROUTE fromNode="Stage1" fromField="fraction_changed" toNode="Tip5" toField="set_fraction" />
+    <ROUTE fromNode="Tip5" fromField="value_changed" toNode="Domino5" toField="rotation" />
+    <Transform translation="-5.6 0.55 0" rotation="0 0 1 -0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.35 0.35 0.4" metallic="0.0" roughness="0.5" /></Appearance><Box size="3 0.12 1" /></Shape></Transform>
+    <Transform DEF="Ball" translation="-6.8999999999999995 1.4 0"><Shape><Appearance><PhysicalMaterial DEF="BallPaint" baseColor="0.2 0.6 1" emissiveColor="0.02 0.08 0.2" metallic="0.8" roughness="0.2" /></Appearance><Sphere radius="0.28" /></Shape></Transform>
+    <PositionInterpolator DEF="Roll" key="0 0.3 1" keyValue="-6.9 1.4 0 -6.9 1.4 0 -4 0.4 0" />
+    <ROUTE fromNode="Stage2" fromField="fraction_changed" toNode="Roll" toField="set_fraction" />
+    <ROUTE fromNode="Roll" fromField="value_changed" toNode="Ball" toField="translation" />
+    <Transform translation="-3.3999999999999995 0.3 0"><Shape><Appearance><PhysicalMaterial baseColor="0.5 0.4 0.2" metallic="0.0" roughness="0.5" /></Appearance><Cone bottomRadius="0.3" height="0.6" /></Shape>
+      <Transform DEF="Plank" translation="0 0.35 0" rotation="0 0 1 0.35"><Shape><Appearance><PhysicalMaterial baseColor="0.8 0.55 0.25" metallic="0.0" roughness="0.5" /></Appearance><Box size="2.4 0.1 0.8" /></Shape></Transform></Transform>
+    <Transform DEF="Pebble" translation="-2.4999999999999996 0.85 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.8 0.1" emissiveColor="0.4 0.3 0.0" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.18" /></Shape></Transform>
+    <OrientationInterpolator DEF="Flip" key="0 0.25 1" keyValue="0 0 1 0.35 0 0 1 -0.35 0 0 1 -0.35" />
+    <ROUTE fromNode="Stage3" fromField="fraction_changed" toNode="Flip" toField="set_fraction" />
+    <ROUTE fromNode="Flip" fromField="value_changed" toNode="Plank" toField="rotation" />
+    <PositionInterpolator DEF="Fly" key="0 0.25 0.4 0.55 0.7 0.85 1" keyValue="-2.5 0.85 0 -2.5 0.85 0 -2.26 2.1431 0 -2.02 2.9423 0 -1.78 2.9423 0 -1.54 2.1431 0 -1.3 0.85 0" />
+    <ROUTE fromNode="Stage3" fromField="fraction_changed" toNode="Fly" toField="set_fraction" />
+    <ROUTE fromNode="Fly" fromField="value_changed" toNode="Pebble" toField="translation" />
+    <Transform DEF="Lever" translation="-1.7999999999999994 0.3 0">
+      <Transform translation="0.6 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1.0" roughness="0.3" /></Appearance><Box size="1.2 0.1 0.2" /></Shape></Transform></Transform>
+    <Transform translation="-0.49999999999999933 0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.7" metallic="0.0" roughness="0.5" /></Appearance><Cylinder radius="0.03" height="2.4" /></Shape>
+      <Transform DEF="Flag" translation="0.3 0.35 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.2 0.5" emissiveColor="0.3 0.02 0.12" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.55 0.35 0.03" /></Shape></Transform></Transform>
+    <OrientationInterpolator DEF="Pry" key="0 1" keyValue="0 0 1 0 0 0 1 0.5" />
+    <ROUTE fromNode="Stage4" fromField="fraction_changed" toNode="Pry" toField="set_fraction" />
+    <ROUTE fromNode="Pry" fromField="value_changed" toNode="Lever" toField="rotation" />
+    <PositionInterpolator DEF="Raise" key="0 0.2 1" keyValue="0.3 0.35 0 0.3 0.35 0 0.3 2 0" />
+    <ROUTE fromNode="Stage4" fromField="fraction_changed" toNode="Raise" toField="set_fraction" />
+    <ROUTE fromNode="Raise" fromField="value_changed" toNode="Flag" toField="translation" />
+    <Transform translation="1.0 2.4 0"><Shape><Appearance><PhysicalMaterial baseColor="0.4 0.4 0.4" metallic="0.0" roughness="0.5" /></Appearance><Box size="0.1 0.1 0.1" /></Shape>
+      <Transform DEF="Bell" translation="0 0 0">
+        <Transform translation="0 -0.5 0"><Shape><Appearance><PhysicalMaterial DEF="BellPaint" baseColor="0.8 0.6 0.1" emissiveColor="0.0 0.0 0.0" metallic="1.0" roughness="0.25" /></Appearance><Cone bottomRadius="0.4" height="0.8" /></Shape></Transform>
+      </Transform></Transform>
+    <OrientationInterpolator DEF="Ring" key="0 0.15 0.3 0.45 0.6 0.75 0.9 1" keyValue="0 0 1 0 0 0 1 0.5 0 0 1 -0.4 0 0 1 0.3 0 0 1 -0.2 0 0 1 0.12 0 0 1 -0.05 0 0 1 0" />
+    <ROUTE fromNode="Stage5" fromField="fraction_changed" toNode="Ring" toField="set_fraction" />
+    <ROUTE fromNode="Ring" fromField="value_changed" toNode="Bell" toField="rotation" />
+    <ColorInterpolator DEF="Flash" key="0 0.15 1" keyValue="0 0 0 1 0.8 0.2 0 0 0" />
+    <ROUTE fromNode="Stage5" fromField="fraction_changed" toNode="Flash" toField="set_fraction" />
+    <ROUTE fromNode="Flash" fromField="value_changed" toNode="BellPaint" toField="emissiveColor" />
+    <Transform translation="3.200000000000001 0.9 0"><Shape><Appearance><PhysicalMaterial baseColor="0.3 0.3 0.3" metallic="0.0" roughness="0.5" /></Appearance><Cylinder radius="0.05" height="1.8" /></Shape>
+      <Transform translation="0 1.0 0"><Shape><Appearance><PhysicalMaterial DEF="BulbPaint" baseColor="0.3 0.25 0.1" emissiveColor="0.05 0.04 0.0" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.32" /></Shape></Transform></Transform>
+    <PointLight DEF="Lamp" location="3.200000000000001 2.1 0.5" color="1 0.85 0.5" intensity="60" radius="12" on="false" />
+    <ROUTE fromNode="Stage6" fromField="isActive" toNode="Lamp" toField="on" />
+    <ColorInterpolator DEF="Glow" key="0 0.2 1" keyValue="0.05 0.04 0 1 0.85 0.3 1 0.85 0.3" />
+    <ROUTE fromNode="Stage6" fromField="fraction_changed" toNode="Glow" toField="set_fraction" />
+    <ROUTE fromNode="Glow" fromField="value_changed" toNode="BulbPaint" toField="emissiveColor" />
+    <Transform DEF="Rocket" translation="5.400000000000002 0.6 0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.9 0.9 0.95" metallic="0.6" roughness="0.3" /></Appearance><Cylinder radius="0.22" height="1.0" /></Shape>
+      <Transform translation="0 0.7 0"><Shape><Appearance><PhysicalMaterial baseColor="0.9 0.2 0.1" metallic="0.0" roughness="0.5" /></Appearance><Cone bottomRadius="0.22" height="0.4" /></Shape></Transform>
+    </Transform>
+    <PositionInterpolator DEF="Climb" key="0 0.25 0.7 1" keyValue="5.4 0.6 0 5.4 0.7 0 5.4 3.4 0 5.4 5.2 0" />
+    <ROUTE fromNode="Stage7" fromField="fraction_changed" toNode="Climb" toField="set_fraction" />
+    <ROUTE fromNode="Climb" fromField="value_changed" toNode="Rocket" toField="translation" />
+    <Transform DEF="Spark0" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.2 0.2" emissiveColor="1 0.2 0.2" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark0" toField="visible" />
+    <PositionInterpolator DEF="Burst0" key="0 1" keyValue="5.4 3.6 0 7.1 3.6 0" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst0" toField="set_fraction" />
+    <ROUTE fromNode="Burst0" fromField="value_changed" toNode="Spark0" toField="translation" />
+    <Transform DEF="Spark1" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.7 0.1" emissiveColor="1 0.7 0.1" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark1" toField="visible" />
+    <PositionInterpolator DEF="Burst1" key="0 1" keyValue="5.4 3.6 0 6.8722 4.45 0.4" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst1" toField="set_fraction" />
+    <ROUTE fromNode="Burst1" fromField="value_changed" toNode="Spark1" toField="translation" />
+    <Transform DEF="Spark2" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.3 1 0.3" emissiveColor="0.3 1 0.3" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark2" toField="visible" />
+    <PositionInterpolator DEF="Burst2" key="0 1" keyValue="5.4 3.6 0 6.25 5.0722 0" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst2" toField="set_fraction" />
+    <ROUTE fromNode="Burst2" fromField="value_changed" toNode="Spark2" toField="translation" />
+    <Transform DEF="Spark3" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.2 0.6 1" emissiveColor="0.2 0.6 1" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark3" toField="visible" />
+    <PositionInterpolator DEF="Burst3" key="0 1" keyValue="5.4 3.6 0 5.4 5.3 -0.4" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst3" toField="set_fraction" />
+    <ROUTE fromNode="Burst3" fromField="value_changed" toNode="Spark3" toField="translation" />
+    <Transform DEF="Spark4" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.8 0.3 1" emissiveColor="0.8 0.3 1" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark4" toField="visible" />
+    <PositionInterpolator DEF="Burst4" key="0 1" keyValue="5.4 3.6 0 4.55 5.0722 -0" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst4" toField="set_fraction" />
+    <ROUTE fromNode="Burst4" fromField="value_changed" toNode="Spark4" toField="translation" />
+    <Transform DEF="Spark5" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.3 0.7" emissiveColor="1 0.3 0.7" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark5" toField="visible" />
+    <PositionInterpolator DEF="Burst5" key="0 1" keyValue="5.4 3.6 0 3.9278 4.45 0.4" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst5" toField="set_fraction" />
+    <ROUTE fromNode="Burst5" fromField="value_changed" toNode="Spark5" toField="translation" />
+    <Transform DEF="Spark6" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.2 0.2" emissiveColor="1 0.2 0.2" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark6" toField="visible" />
+    <PositionInterpolator DEF="Burst6" key="0 1" keyValue="5.4 3.6 0 3.7 3.6 0" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst6" toField="set_fraction" />
+    <ROUTE fromNode="Burst6" fromField="value_changed" toNode="Spark6" toField="translation" />
+    <Transform DEF="Spark7" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.7 0.1" emissiveColor="1 0.7 0.1" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark7" toField="visible" />
+    <PositionInterpolator DEF="Burst7" key="0 1" keyValue="5.4 3.6 0 3.9278 2.75 -0.4" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst7" toField="set_fraction" />
+    <ROUTE fromNode="Burst7" fromField="value_changed" toNode="Spark7" toField="translation" />
+    <Transform DEF="Spark8" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.3 1 0.3" emissiveColor="0.3 1 0.3" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark8" toField="visible" />
+    <PositionInterpolator DEF="Burst8" key="0 1" keyValue="5.4 3.6 0 4.55 2.1278 -0" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst8" toField="set_fraction" />
+    <ROUTE fromNode="Burst8" fromField="value_changed" toNode="Spark8" toField="translation" />
+    <Transform DEF="Spark9" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.2 0.6 1" emissiveColor="0.2 0.6 1" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark9" toField="visible" />
+    <PositionInterpolator DEF="Burst9" key="0 1" keyValue="5.4 3.6 0 5.4 1.9 0.4" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst9" toField="set_fraction" />
+    <ROUTE fromNode="Burst9" fromField="value_changed" toNode="Spark9" toField="translation" />
+    <Transform DEF="Spark10" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.8 0.3 1" emissiveColor="0.8 0.3 1" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark10" toField="visible" />
+    <PositionInterpolator DEF="Burst10" key="0 1" keyValue="5.4 3.6 0 6.25 2.1278 0" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst10" toField="set_fraction" />
+    <ROUTE fromNode="Burst10" fromField="value_changed" toNode="Spark10" toField="translation" />
+    <Transform DEF="Spark11" translation="5.400000000000002 3.6 0" visible="false">
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.3 0.7" emissiveColor="1 0.3 0.7" metallic="0.0" roughness="0.5" /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <ROUTE fromNode="Stage8" fromField="isActive" toNode="Spark11" toField="visible" />
+    <PositionInterpolator DEF="Burst11" key="0 1" keyValue="5.4 3.6 0 6.8722 2.75 -0.4" />
+    <ROUTE fromNode="Stage8" fromField="fraction_changed" toNode="Burst11" toField="set_fraction" />
+    <ROUTE fromNode="Burst11" fromField="value_changed" toNode="Spark11" toField="translation" />
+    <Transform DEF="Banner" translation="9.8 0.3 -0.2">
+      <Shape><Appearance><PhysicalMaterial DEF="BannerPaint" baseColor="0.1 0.7 0.3" emissiveColor="0.02 0.3 0.08" metallic="0.0" roughness="0.5" /></Appearance><Box size="2.2 0.9 0.06" /></Shape></Transform>
+    <PositionInterpolator DEF="Hoist" key="0 1" keyValue="9.8 0.3 -0.2 9.8 2.2 -0.2" />
+    <ROUTE fromNode="Stage9" fromField="fraction_changed" toNode="Hoist" toField="set_fraction" />
+    <ROUTE fromNode="Hoist" fromField="value_changed" toNode="Banner" toField="translation" />
+    <ColorInterpolator DEF="Party" key="0 0.33 0.66 1" keyValue="0.02 0.3 0.08 0.9 0.2 0.2 0.2 0.3 0.9 0.95 0.8 0.1" />
+    <ROUTE fromNode="Stage9" fromField="fraction_changed" toNode="Party" toField="set_fraction" />
+    <ROUTE fromNode="Party" fromField="value_changed" toNode="BannerPaint" toField="emissiveColor" />
+    <PositionInterpolator DEF="TourPos" key="0 0.0781 0.2031 0.2969 0.375 0.4531 0.5781 0.6719 0.7969 0.9062 1" keyValue="-10.4 2 7 -8.2 2 7 -6 2 7 -3.8 2 7 -1.6 2 7 0.6 2 7 2.8 2 7 5 2 7 7.2 2 7 9.4 2 7 0 4 17" />
+    <ROUTE fromNode="Tour" fromField="fraction_changed" toNode="TourPos" toField="set_fraction" />
+    <ROUTE fromNode="TourPos" fromField="value_changed" toNode="Cam" toField="position" />
+    <OrientationInterpolator DEF="TourLook" key="0 0.0781 0.2031 0.2969 0.375 0.4531 0.5781 0.6719 0.7969 0.9062 1" keyValue="1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.22 1 0 0 -0.2" />
+    <ROUTE fromNode="Tour" fromField="fraction_changed" toNode="TourLook" toField="set_fraction" />
+    <ROUTE fromNode="TourLook" fromField="value_changed" toNode="Cam" toField="orientation" />
+  </Scene>
+</X3D>
