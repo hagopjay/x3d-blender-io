@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 11: day-night village" />
+    <meta name="description" content="A 24 second day: sun, moon, dusk windows, stars and a train with a headlight." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-11-day-night-village/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.3 0.5 0.8" />
+    <Viewpoint DEF="View" description="Front" position="0 6.5 15" orientation="1 0 0 -0.3" />
+    <DirectionalLight DEF="SunLight" direction="-0.3 -1 -0.4" intensity="1.0" color="1 0.95 0.85" />
+    <Transform translation="0 -0.1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.25 0.5 0.25" roughness="0.95" /></Appearance><Box size="24 0.2 16" /></Shape></Transform>
+    <Transform translation="0 0 -7">
+      <Transform DEF="SkyArm">
+        <Transform translation="0 9 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.9 0.4" emissiveColor="1 0.8 0.2"  /></Appearance><Sphere radius="0.9" /></Shape></Transform>
+        <Transform translation="0 -9 0"><Shape><Appearance><PhysicalMaterial baseColor="0.85 0.88 0.95" emissiveColor="0.5 0.55 0.7"  /></Appearance><Sphere radius="0.6" /></Shape></Transform>
+      </Transform>
+    </Transform>
+<Transform DEF="Star0" translation="8.24 8.39 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star1" translation="7.38 6.88 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star2" translation="-7.69 7.52 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star3" translation="-7.43 6.33 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star4" translation="-6.88 5.99 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star5" translation="5.35 5.71 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star6" translation="-5.57 7.93 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star7" translation="-6.90 6.68 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star8" translation="8.48 8.21 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star9" translation="-5.21 6.58 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star10" translation="-7.19 8.96 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star11" translation="4.91 6.32 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star12" translation="-7.38 7.33 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star13" translation="-2.31 6.81 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star14" translation="1.34 8.47 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star15" translation="7.35 8.27 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star16" translation="4.31 8.76 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star17" translation="6.88 7.41 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star18" translation="-8.30 8.85 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform><Transform DEF="Star19" translation="-4.37 8.29 -9.5" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 0.9" emissiveColor="1 1 0.9"  /></Appearance><Sphere radius="0.08" /></Shape></Transform>
+
+    <Transform translation="-5.5 0.6 -2.5">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.85 0.75 0.6" roughness="0.8" /></Appearance><Box size="1.5 1.2 1.4" /></Shape>
+      <Transform translation="0 0.95 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win0" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win1" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="-3.2 0.85 -3.4">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.5 0.45" roughness="0.8" /></Appearance><Box size="1.5 1.7 1.4" /></Shape>
+      <Transform translation="0 1.2 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win2" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win3" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="-0.8 1.1 -3.0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.6 0.65 0.75" roughness="0.8" /></Appearance><Box size="1.5 2.2 1.4" /></Shape>
+      <Transform translation="0 1.4500000000000002 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win4" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win5" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="1.6 0.6 -3.5">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.85 0.75 0.6" roughness="0.8" /></Appearance><Box size="1.5 1.2 1.4" /></Shape>
+      <Transform translation="0 0.95 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win6" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win7" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="4.0 0.85 -2.8">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.5 0.45" roughness="0.8" /></Appearance><Box size="1.5 1.7 1.4" /></Shape>
+      <Transform translation="0 1.2 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win8" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win9" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="6.2 1.1 -3.2">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.6 0.65 0.75" roughness="0.8" /></Appearance><Box size="1.5 2.2 1.4" /></Shape>
+      <Transform translation="0 1.4500000000000002 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win10" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win11" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="-6.0 0.6 1.2">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.85 0.75 0.6" roughness="0.8" /></Appearance><Box size="1.5 1.2 1.4" /></Shape>
+      <Transform translation="0 0.95 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win12" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win13" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="-3.4 0.85 2.0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.5 0.45" roughness="0.8" /></Appearance><Box size="1.5 1.7 1.4" /></Shape>
+      <Transform translation="0 1.2 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win14" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win15" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="-0.9 1.1 1.4">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.6 0.65 0.75" roughness="0.8" /></Appearance><Box size="1.5 2.2 1.4" /></Shape>
+      <Transform translation="0 1.4500000000000002 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win16" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win17" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="1.5 0.6 2.2">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.85 0.75 0.6" roughness="0.8" /></Appearance><Box size="1.5 1.2 1.4" /></Shape>
+      <Transform translation="0 0.95 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win18" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win19" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="4.0 0.85 1.6">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.5 0.45" roughness="0.8" /></Appearance><Box size="1.5 1.7 1.4" /></Shape>
+      <Transform translation="0 1.2 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win20" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win21" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+    <Transform translation="6.4 1.1 2.0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.6 0.65 0.75" roughness="0.8" /></Appearance><Box size="1.5 2.2 1.4" /></Shape>
+      <Transform translation="0 1.4500000000000002 0" rotation="0 0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.45 0.2 0.15"  /></Appearance><Cone bottomRadius="1.15" height="0.8" /></Shape></Transform><Transform DEF="Win22" translation="-0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform><Transform DEF="Win23" translation="0.4 0.1 0.72" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.4" emissiveColor="1 0.8 0.3"  /></Appearance><Box size="0.3 0.35 0.04" /></Shape></Transform>
+    </Transform>
+
+    <Transform DEF="Car0" translation="8.2 0.3 0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.8 0.15 0.15" metallic="0.3" roughness="0.5" /></Appearance><Box size="1.5 0.5 0.6" /></Shape>
+      <PointLight DEF="Headlight" location="0 0.2 0" color="1 0.95 0.7" intensity="40" radius="8" on="false" />
+    </Transform>
+    <Transform DEF="Car1" translation="8.2 0.3 0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.2 0.4 0.8" metallic="0.3" roughness="0.5" /></Appearance><Box size="1.5 0.5 0.6" /></Shape>
+      
+    </Transform>
+    <Transform DEF="Car2" translation="8.2 0.3 0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.2 0.6 0.3" metallic="0.3" roughness="0.5" /></Appearance><Box size="1.5 0.5 0.6" /></Shape>
+      
+    </Transform>
+    <TimeSensor DEF="Day" cycleInterval="24.0" loop="true" />
+    <OrientationInterpolator DEF="Sky" key="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1" keyValue="0 0 1 -0 0 0 1 -0.7854 0 0 1 -1.5708 0 0 1 -2.3562 0 0 1 -3.1416 0 0 1 -3.927 0 0 1 -4.7124 0 0 1 -5.4978 0 0 1 -6.2832" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Sky" toField="set_fraction" />
+    <ROUTE fromNode="Sky" fromField="value_changed" toNode="SkyArm" toField="rotation" />
+    <ColorInterpolator DEF="SunTint" key="0 0.125 0.25 0.3 0.5 0.7 0.75 0.875 1" keyValue="1 0.95 0.85 1 0.85 0.6 1 0.5 0.2 0.35 0.25 0.35 0.08 0.1 0.25 0.35 0.25 0.35 1 0.5 0.25 1 0.85 0.6 1 0.95 0.85" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="SunTint" toField="set_fraction" />
+    <ROUTE fromNode="SunTint" fromField="value_changed" toNode="SunLight" toField="color" />
+    <BooleanSequencer DEF="Lamp0" key="0 0.318 0.687 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp0" toField="set_fraction" />
+    <ROUTE fromNode="Lamp0" fromField="value_changed" toNode="Win0" toField="visible" />
+    <BooleanSequencer DEF="Lamp1" key="0 0.389 0.676 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp1" toField="set_fraction" />
+    <ROUTE fromNode="Lamp1" fromField="value_changed" toNode="Win1" toField="visible" />
+    <BooleanSequencer DEF="Lamp2" key="0 0.326 0.690 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp2" toField="set_fraction" />
+    <ROUTE fromNode="Lamp2" fromField="value_changed" toNode="Win2" toField="visible" />
+    <BooleanSequencer DEF="Lamp3" key="0 0.278 0.681 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp3" toField="set_fraction" />
+    <ROUTE fromNode="Lamp3" fromField="value_changed" toNode="Win3" toField="visible" />
+    <BooleanSequencer DEF="Lamp4" key="0 0.344 0.715 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp4" toField="set_fraction" />
+    <ROUTE fromNode="Lamp4" fromField="value_changed" toNode="Win4" toField="visible" />
+    <BooleanSequencer DEF="Lamp5" key="0 0.264 0.656 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp5" toField="set_fraction" />
+    <ROUTE fromNode="Lamp5" fromField="value_changed" toNode="Win5" toField="visible" />
+    <BooleanSequencer DEF="Lamp6" key="0 0.264 0.717 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp6" toField="set_fraction" />
+    <ROUTE fromNode="Lamp6" fromField="value_changed" toNode="Win6" toField="visible" />
+    <BooleanSequencer DEF="Lamp7" key="0 0.354 0.625 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp7" toField="set_fraction" />
+    <ROUTE fromNode="Lamp7" fromField="value_changed" toNode="Win7" toField="visible" />
+    <BooleanSequencer DEF="Lamp8" key="0 0.397 0.736 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp8" toField="set_fraction" />
+    <ROUTE fromNode="Lamp8" fromField="value_changed" toNode="Win8" toField="visible" />
+    <BooleanSequencer DEF="Lamp9" key="0 0.348 0.694 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp9" toField="set_fraction" />
+    <ROUTE fromNode="Lamp9" fromField="value_changed" toNode="Win9" toField="visible" />
+    <BooleanSequencer DEF="Lamp10" key="0 0.274 0.622 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp10" toField="set_fraction" />
+    <ROUTE fromNode="Lamp10" fromField="value_changed" toNode="Win10" toField="visible" />
+    <BooleanSequencer DEF="Lamp11" key="0 0.329 0.627 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp11" toField="set_fraction" />
+    <ROUTE fromNode="Lamp11" fromField="value_changed" toNode="Win11" toField="visible" />
+    <BooleanSequencer DEF="Lamp12" key="0 0.279 0.649 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp12" toField="set_fraction" />
+    <ROUTE fromNode="Lamp12" fromField="value_changed" toNode="Win12" toField="visible" />
+    <BooleanSequencer DEF="Lamp13" key="0 0.255 0.676 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp13" toField="set_fraction" />
+    <ROUTE fromNode="Lamp13" fromField="value_changed" toNode="Win13" toField="visible" />
+    <BooleanSequencer DEF="Lamp14" key="0 0.316 0.721 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp14" toField="set_fraction" />
+    <ROUTE fromNode="Lamp14" fromField="value_changed" toNode="Win14" toField="visible" />
+    <BooleanSequencer DEF="Lamp15" key="0 0.328 0.697 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp15" toField="set_fraction" />
+    <ROUTE fromNode="Lamp15" fromField="value_changed" toNode="Win15" toField="visible" />
+    <BooleanSequencer DEF="Lamp16" key="0 0.325 0.699 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp16" toField="set_fraction" />
+    <ROUTE fromNode="Lamp16" fromField="value_changed" toNode="Win16" toField="visible" />
+    <BooleanSequencer DEF="Lamp17" key="0 0.319 0.653 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp17" toField="set_fraction" />
+    <ROUTE fromNode="Lamp17" fromField="value_changed" toNode="Win17" toField="visible" />
+    <BooleanSequencer DEF="Lamp18" key="0 0.400 0.739 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp18" toField="set_fraction" />
+    <ROUTE fromNode="Lamp18" fromField="value_changed" toNode="Win18" toField="visible" />
+    <BooleanSequencer DEF="Lamp19" key="0 0.376 0.705 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp19" toField="set_fraction" />
+    <ROUTE fromNode="Lamp19" fromField="value_changed" toNode="Win19" toField="visible" />
+    <BooleanSequencer DEF="Lamp20" key="0 0.297 0.648 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp20" toField="set_fraction" />
+    <ROUTE fromNode="Lamp20" fromField="value_changed" toNode="Win20" toField="visible" />
+    <BooleanSequencer DEF="Lamp21" key="0 0.293 0.628 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp21" toField="set_fraction" />
+    <ROUTE fromNode="Lamp21" fromField="value_changed" toNode="Win21" toField="visible" />
+    <BooleanSequencer DEF="Lamp22" key="0 0.365 0.668 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp22" toField="set_fraction" />
+    <ROUTE fromNode="Lamp22" fromField="value_changed" toNode="Win22" toField="visible" />
+    <BooleanSequencer DEF="Lamp23" key="0 0.377 0.666 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Lamp23" toField="set_fraction" />
+    <ROUTE fromNode="Lamp23" fromField="value_changed" toNode="Win23" toField="visible" />
+    <BooleanSequencer DEF="Twinkle0" key="0 0.270 0.667 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle0" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle0" fromField="value_changed" toNode="Star0" toField="visible" />
+    <BooleanSequencer DEF="Twinkle1" key="0 0.348 0.682 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle1" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle1" fromField="value_changed" toNode="Star1" toField="visible" />
+    <BooleanSequencer DEF="Twinkle2" key="0 0.332 0.672 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle2" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle2" fromField="value_changed" toNode="Star2" toField="visible" />
+    <BooleanSequencer DEF="Twinkle3" key="0 0.347 0.711 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle3" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle3" fromField="value_changed" toNode="Star3" toField="visible" />
+    <BooleanSequencer DEF="Twinkle4" key="0 0.278 0.655 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle4" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle4" fromField="value_changed" toNode="Star4" toField="visible" />
+    <BooleanSequencer DEF="Twinkle5" key="0 0.315 0.686 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle5" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle5" fromField="value_changed" toNode="Star5" toField="visible" />
+    <BooleanSequencer DEF="Twinkle6" key="0 0.280 0.701 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle6" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle6" fromField="value_changed" toNode="Star6" toField="visible" />
+    <BooleanSequencer DEF="Twinkle7" key="0 0.287 0.672 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle7" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle7" fromField="value_changed" toNode="Star7" toField="visible" />
+    <BooleanSequencer DEF="Twinkle8" key="0 0.294 0.721 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle8" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle8" fromField="value_changed" toNode="Star8" toField="visible" />
+    <BooleanSequencer DEF="Twinkle9" key="0 0.338 0.701 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle9" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle9" fromField="value_changed" toNode="Star9" toField="visible" />
+    <BooleanSequencer DEF="Twinkle10" key="0 0.287 0.671 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle10" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle10" fromField="value_changed" toNode="Star10" toField="visible" />
+    <BooleanSequencer DEF="Twinkle11" key="0 0.294 0.656 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle11" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle11" fromField="value_changed" toNode="Star11" toField="visible" />
+    <BooleanSequencer DEF="Twinkle12" key="0 0.289 0.698 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle12" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle12" fromField="value_changed" toNode="Star12" toField="visible" />
+    <BooleanSequencer DEF="Twinkle13" key="0 0.347 0.689 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle13" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle13" fromField="value_changed" toNode="Star13" toField="visible" />
+    <BooleanSequencer DEF="Twinkle14" key="0 0.285 0.662 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle14" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle14" fromField="value_changed" toNode="Star14" toField="visible" />
+    <BooleanSequencer DEF="Twinkle15" key="0 0.290 0.665 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle15" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle15" fromField="value_changed" toNode="Star15" toField="visible" />
+    <BooleanSequencer DEF="Twinkle16" key="0 0.286 0.726 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle16" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle16" fromField="value_changed" toNode="Star16" toField="visible" />
+    <BooleanSequencer DEF="Twinkle17" key="0 0.304 0.658 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle17" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle17" fromField="value_changed" toNode="Star17" toField="visible" />
+    <BooleanSequencer DEF="Twinkle18" key="0 0.289 0.706 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle18" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle18" fromField="value_changed" toNode="Star18" toField="visible" />
+    <BooleanSequencer DEF="Twinkle19" key="0 0.318 0.673 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Twinkle19" toField="set_fraction" />
+    <ROUTE fromNode="Twinkle19" fromField="value_changed" toNode="Star19" toField="visible" />
+    <PositionInterpolator DEF="Rail0" key="0.00000 0.02083 0.04167 0.06250 0.08333 0.10417 0.12500 0.14583 0.16667 0.18750 0.20833 0.22917 0.25000 0.27083 0.29167 0.31250 0.33333 0.35417 0.37500 0.39583 0.41667 0.43750 0.45833 0.47917 0.50000 0.52083 0.54167 0.56250 0.58333 0.60417 0.62500 0.64583 0.66667 0.68750 0.70833 0.72917 0.75000 0.77083 0.79167 0.81250 0.83333 0.85417 0.87500 0.89583 0.91667 0.93750 0.95833 0.97917 1.00000" keyValue="8.2 0.3 0 8.1298 0.3 0.6787 7.9206 0.3 1.3459 7.5758 0.3 1.99 7.1014 0.3 2.6 6.5055 0.3 3.1656 5.7983 0.3 3.677 4.9918 0.3 4.1254 4.1 0.3 4.5033 3.138 0.3 4.8042 2.1223 0.3 5.0228 1.0703 0.3 5.1555 0 0.3 5.2 -1.0703 0.3 5.1555 -2.1223 0.3 5.0228 -3.138 0.3 4.8042 -4.1 0.3 4.5033 -4.9918 0.3 4.1254 -5.7983 0.3 3.677 -6.5055 0.3 3.1656 -7.1014 0.3 2.6 -7.5758 0.3 1.99 -7.9206 0.3 1.3459 -8.1298 0.3 0.6787 -8.2 0.3 0 -8.1298 0.3 -0.6787 -7.9206 0.3 -1.3459 -7.5758 0.3 -1.99 -7.1014 0.3 -2.6 -6.5055 0.3 -3.1656 -5.7983 0.3 -3.677 -4.9918 0.3 -4.1254 -4.1 0.3 -4.5033 -3.138 0.3 -4.8042 -2.1223 0.3 -5.0228 -1.0703 0.3 -5.1555 -0 0.3 -5.2 1.0703 0.3 -5.1555 2.1223 0.3 -5.0228 3.138 0.3 -4.8042 4.1 0.3 -4.5033 4.9918 0.3 -4.1254 5.7983 0.3 -3.677 6.5055 0.3 -3.1656 7.1014 0.3 -2.6 7.5758 0.3 -1.99 7.9206 0.3 -1.3459 8.1298 0.3 -0.6787 8.2 0.3 -0" />
+    <OrientationInterpolator DEF="Heading0" key="0.00000 0.02083 0.04167 0.06250 0.08333 0.10417 0.12500 0.14583 0.16667 0.18750 0.20833 0.22917 0.25000 0.27083 0.29167 0.31250 0.33333 0.35417 0.37500 0.39583 0.41667 0.43750 0.45833 0.47917 0.50000 0.52083 0.54167 0.56250 0.58333 0.60417 0.62500 0.64583 0.66667 0.68750 0.70833 0.72917 0.75000 0.77083 0.79167 0.81250 0.83333 0.85417 0.87500 0.89583 0.91667 0.93750 0.95833 0.97917 1.00000" keyValue="0 1 0 -1.5708 0 1 0 -1.7755 0 1 0 -1.9706 0 1 0 -2.1494 0 1 0 -2.3093 0 1 0 -2.4509 0 1 0 -2.5764 0 1 0 -2.6887 0 1 0 -2.7906 0 1 0 -2.8847 0 1 0 -2.9733 0 1 0 -3.0583 0 1 0 -3.1416 0 1 0 3.0583 0 1 0 2.9733 0 1 0 2.8847 0 1 0 2.7906 0 1 0 2.6887 0 1 0 2.5764 0 1 0 2.4509 0 1 0 2.3093 0 1 0 2.1494 0 1 0 1.9706 0 1 0 1.7755 0 1 0 1.5708 0 1 0 1.3661 0 1 0 1.171 0 1 0 0.9922 0 1 0 0.8322 0 1 0 0.6907 0 1 0 0.5651 0 1 0 0.4529 0 1 0 0.351 0 1 0 0.2569 0 1 0 0.1683 0 1 0 0.0833 0 1 0 0 0 1 0 -0.0833 0 1 0 -0.1683 0 1 0 -0.2569 0 1 0 -0.351 0 1 0 -0.4529 0 1 0 -0.5651 0 1 0 -0.6907 0 1 0 -0.8322 0 1 0 -0.9922 0 1 0 -1.171 0 1 0 -1.3661 0 1 0 -1.5708" />
+    <ROUTE fromNode="Lap" fromField="fraction_changed" toNode="Rail0" toField="set_fraction" />
+    <ROUTE fromNode="Lap" fromField="fraction_changed" toNode="Heading0" toField="set_fraction" />
+    <ROUTE fromNode="Rail0" fromField="value_changed" toNode="Car0" toField="translation" />
+    <ROUTE fromNode="Heading0" fromField="value_changed" toNode="Car0" toField="rotation" />
+    <PositionInterpolator DEF="Rail1" key="0.00000 0.02083 0.04167 0.06250 0.08333 0.10417 0.12500 0.14583 0.16667 0.18750 0.20833 0.22917 0.25000 0.27083 0.29167 0.31250 0.33333 0.35417 0.37500 0.39583 0.41667 0.43750 0.45833 0.47917 0.50000 0.52083 0.54167 0.56250 0.58333 0.60417 0.62500 0.64583 0.66667 0.68750 0.70833 0.72917 0.75000 0.77083 0.79167 0.81250 0.83333 0.85417 0.87500 0.89583 0.91667 0.93750 0.95833 0.97917 1.00000" keyValue="8.0025 0.3 -1.1343 8.1675 0.3 -0.4623 8.1928 0.3 0.2178 8.0779 0.3 0.894 7.8248 0.3 1.555 7.4378 0.3 2.1894 6.9235 0.3 2.7863 6.2908 0.3 3.3355 5.5504 0.3 3.8277 4.715 0.3 4.2544 3.799 0.3 4.6083 2.818 0.3 4.8833 1.7888 0.3 5.0748 0.7289 0.3 5.1794 -0.3434 0.3 5.1954 -1.4098 0.3 5.1226 -2.4521 0.3 4.962 -3.4525 0.3 4.7166 -4.3938 0.3 4.3905 -5.2599 0.3 3.9893 -6.036 0.3 3.5198 -6.7088 0.3 2.99 -7.2669 0.3 2.4091 -7.7006 0.3 1.787 -8.0025 0.3 1.1343 -8.1675 0.3 0.4623 -8.1928 0.3 -0.2178 -8.0779 0.3 -0.894 -7.8248 0.3 -1.555 -7.4378 0.3 -2.1894 -6.9235 0.3 -2.7863 -6.2908 0.3 -3.3355 -5.5504 0.3 -3.8277 -4.715 0.3 -4.2544 -3.799 0.3 -4.6083 -2.818 0.3 -4.8833 -1.7888 0.3 -5.0748 -0.7289 0.3 -5.1794 0.3434 0.3 -5.1954 1.4098 0.3 -5.1226 2.4521 0.3 -4.962 3.4525 0.3 -4.7166 4.3938 0.3 -4.3905 5.2599 0.3 -3.9893 6.036 0.3 -3.5198 6.7088 0.3 -2.99 7.2669 0.3 -2.4091 7.7006 0.3 -1.787 8.0025 0.3 -1.1343" />
+    <OrientationInterpolator DEF="Heading1" key="0.00000 0.02083 0.04167 0.06250 0.08333 0.10417 0.12500 0.14583 0.16667 0.18750 0.20833 0.22917 0.25000 0.27083 0.29167 0.31250 0.33333 0.35417 0.37500 0.39583 0.41667 0.43750 0.45833 0.47917 0.50000 0.52083 0.54167 0.56250 0.58333 0.60417 0.62500 0.64583 0.66667 0.68750 0.70833 0.72917 0.75000 0.77083 0.79167 0.81250 0.83333 0.85417 0.87500 0.89583 0.91667 0.93750 0.95833 0.97917 1.00000" keyValue="0 1 0 -1.2319 0 1 0 -1.431 0 1 0 -1.6368 0 1 0 -1.8394 0 1 0 -2.0298 0 1 0 -2.2027 0 1 0 -2.3566 0 1 0 -2.4927 0 1 0 -2.6137 0 1 0 -2.7223 0 1 0 -2.8215 0 1 0 -2.9136 0 1 0 -3.0008 0 1 0 -3.0851 0 1 0 3.115 0 1 0 3.0314 0 1 0 2.9454 0 1 0 2.8553 0 1 0 2.759 0 1 0 2.6541 0 1 0 2.5379 0 1 0 2.4075 0 1 0 2.2602 0 1 0 2.0942 0 1 0 1.9097 0 1 0 1.7106 0 1 0 1.5048 0 1 0 1.3022 0 1 0 1.1118 0 1 0 0.9389 0 1 0 0.785 0 1 0 0.6489 0 1 0 0.5279 0 1 0 0.4193 0 1 0 0.3201 0 1 0 0.228 0 1 0 0.1408 0 1 0 0.0565 0 1 0 -0.0266 0 1 0 -0.1102 0 1 0 -0.1962 0 1 0 -0.2863 0 1 0 -0.3826 0 1 0 -0.4875 0 1 0 -0.6037 0 1 0 -0.7341 0 1 0 -0.8814 0 1 0 -1.0474 0 1 0 -1.2319" />
+    <ROUTE fromNode="Lap" fromField="fraction_changed" toNode="Rail1" toField="set_fraction" />
+    <ROUTE fromNode="Lap" fromField="fraction_changed" toNode="Heading1" toField="set_fraction" />
+    <ROUTE fromNode="Rail1" fromField="value_changed" toNode="Car1" toField="translation" />
+    <ROUTE fromNode="Heading1" fromField="value_changed" toNode="Car1" toField="rotation" />
+    <PositionInterpolator DEF="Rail2" key="0.00000 0.02083 0.04167 0.06250 0.08333 0.10417 0.12500 0.14583 0.16667 0.18750 0.20833 0.22917 0.25000 0.27083 0.29167 0.31250 0.33333 0.35417 0.37500 0.39583 0.41667 0.43750 0.45833 0.47917 0.50000 0.52083 0.54167 0.56250 0.58333 0.60417 0.62500 0.64583 0.66667 0.68750 0.70833 0.72917 0.75000 0.77083 0.79167 0.81250 0.83333 0.85417 0.87500 0.89583 0.91667 0.93750 0.95833 0.97917 1.00000" keyValue="7.4196 0.3 -2.2141 7.8118 0.3 -1.581 8.0704 0.3 -0.9208 8.1909 0.3 -0.245 8.1712 0.3 0.4351 8.0118 0.3 1.1078 7.7152 0.3 1.7614 7.2867 0.3 2.385 6.7334 0.3 2.9677 6.065 0.3 3.4997 5.2928 0.3 3.9717 4.43 0.3 4.3759 3.4914 0.3 4.7051 2.4931 0.3 4.9538 1.4521 0.3 5.1178 0.3863 0.3 5.1942 -0.6862 0.3 5.1818 -1.7468 0.3 5.0806 -2.7777 0.3 4.8926 -3.7609 0.3 4.6208 -4.6799 0.3 4.27 -5.5187 0.3 3.8461 -6.2631 0.3 3.3564 -6.9004 0.3 2.8092 -7.4196 0.3 2.2141 -7.8118 0.3 1.581 -8.0704 0.3 0.9208 -8.1909 0.3 0.245 -8.1712 0.3 -0.4351 -8.0118 0.3 -1.1078 -7.7152 0.3 -1.7614 -7.2867 0.3 -2.385 -6.7334 0.3 -2.9677 -6.065 0.3 -3.4997 -5.2928 0.3 -3.9717 -4.43 0.3 -4.3759 -3.4914 0.3 -4.7051 -2.4931 0.3 -4.9538 -1.4521 0.3 -5.1178 -0.3863 0.3 -5.1942 0.6862 0.3 -5.1818 1.7468 0.3 -5.0806 2.7777 0.3 -4.8926 3.7609 0.3 -4.6208 4.6799 0.3 -4.27 5.5187 0.3 -3.8461 6.2631 0.3 -3.3564 6.9004 0.3 -2.8092 7.4196 0.3 -2.2141" />
+    <OrientationInterpolator DEF="Heading2" key="0.00000 0.02083 0.04167 0.06250 0.08333 0.10417 0.12500 0.14583 0.16667 0.18750 0.20833 0.22917 0.25000 0.27083 0.29167 0.31250 0.33333 0.35417 0.37500 0.39583 0.41667 0.43750 0.45833 0.47917 0.50000 0.52083 0.54167 0.56250 0.58333 0.60417 0.62500 0.64583 0.66667 0.68750 0.70833 0.72917 0.75000 0.77083 0.79167 0.81250 0.83333 0.85417 0.87500 0.89583 0.91667 0.93750 0.95833 0.97917 1.00000" keyValue="0 1 0 -0.9324 0 1 0 -1.1045 0 1 0 -1.2943 0 1 0 -1.4966 0 1 0 -1.7024 0 1 0 -1.902 0 1 0 -2.0871 0 1 0 -2.254 0 1 0 -2.402 0 1 0 -2.5329 0 1 0 -2.6496 0 1 0 -2.755 0 1 0 -2.8516 0 1 0 -2.9419 0 1 0 -3.028 0 1 0 -3.1117 0 1 0 3.0884 0 1 0 3.0042 0 1 0 2.9171 0 1 0 2.8253 0 1 0 2.7265 0 1 0 2.6182 0 1 0 2.4978 0 1 0 2.3623 0 1 0 2.2092 0 1 0 2.037 0 1 0 1.8473 0 1 0 1.645 0 1 0 1.4391 0 1 0 1.2396 0 1 0 1.0544 0 1 0 0.8876 0 1 0 0.7396 0 1 0 0.6087 0 1 0 0.4919 0 1 0 0.3866 0 1 0 0.29 0 1 0 0.1997 0 1 0 0.1136 0 1 0 0.0299 0 1 0 -0.0532 0 1 0 -0.1374 0 1 0 -0.2245 0 1 0 -0.3163 0 1 0 -0.4151 0 1 0 -0.5234 0 1 0 -0.6438 0 1 0 -0.7793 0 1 0 -0.9324" />
+    <ROUTE fromNode="Lap" fromField="fraction_changed" toNode="Rail2" toField="set_fraction" />
+    <ROUTE fromNode="Lap" fromField="fraction_changed" toNode="Heading2" toField="set_fraction" />
+    <ROUTE fromNode="Rail2" fromField="value_changed" toNode="Car2" toField="translation" />
+    <ROUTE fromNode="Heading2" fromField="value_changed" toNode="Car2" toField="rotation" />
+    <TimeSensor DEF="Lap" cycleInterval="12" loop="true" />
+    <BooleanSequencer DEF="Beam" key="0 0.27 0.73 1" keyValue="false true false false" />
+    <ROUTE fromNode="Day" fromField="fraction_changed" toNode="Beam" toField="set_fraction" />
+    <ROUTE fromNode="Beam" fromField="value_changed" toNode="Headlight" toField="on" />
+  </Scene>
+</X3D>
