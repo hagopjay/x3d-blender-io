@@ -50,9 +50,18 @@ BINDING_OF = {**{t: "transform" for t in TRANSFORM_TYPES}, **{t: "viewpoint" for
               "HAnimJoint": "joint", "HAnimSite": "site", "HAnimSegment": "site",
               # a Switch is the objects the importer made under its branches, found by the Switch's DEF (``x3d_switch``)
               "Switch": "switch",
+              # a ComposedShader is a name only: its user-defined fields are typed by the <field> declarations it carries
+              "ComposedShader": "shader",
               }
 BINDING_OF["TextureTransform"] = "texture"      # bound to the material of the Appearance it sits in
 # Sensors that act on their siblings: where they sit in the scene graph is part of their meaning.
+DECLARING_TYPES = {"ComposedShader"}        # target types whose <field> children declare more fields
+FIELD_TYPES = {"SFBool", "SFColor", "SFColorRGBA", "SFDouble", "SFFloat", "SFImage", "SFInt32", "SFMatrix3d", "SFMatrix3f",
+               "SFMatrix4d", "SFMatrix4f", "SFRotation", "SFString", "SFTime", "SFVec2d", "SFVec2f", "SFVec3d", "SFVec3f",
+               "SFVec4d", "SFVec4f", "MFBool", "MFColor", "MFColorRGBA", "MFDouble", "MFFloat", "MFImage", "MFInt32",
+               "MFMatrix3d", "MFMatrix3f", "MFMatrix4d", "MFMatrix4f", "MFRotation", "MFString", "MFTime", "MFVec2d",
+               "MFVec2f", "MFVec3d", "MFVec3f", "MFVec4d", "MFVec4f"}      # a declared field is one of these (not a node)
+ACCESS_TYPES = ("initializeOnly", "inputOnly", "outputOnly", "inputOutput")
 PLACED_TYPES = {"TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "VisibilitySensor",
                 "TransformSensor"}
 _STRUCTURAL = {"DEF", "USE", "containerField", "class", "id", "style"}
@@ -80,6 +89,9 @@ class Node:
     xml: str | None = None                   # carried: the element as text
     inner: tuple[str, ...] = ()              # carried: DEFs inside it that ROUTEs may name
     position: tuple[float, float] | None = None
+    # target: fields the node declares itself, (name, X3D type, access type), read from the <field> children of a
+    # ComposedShader (the only node that has them here); the catalogue's rows come first, these add to them
+    declared: tuple[tuple[str, str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -139,14 +151,22 @@ def field_rows(node_type: str):
     return TARGETS.get(node_type)
 
 
-def resolve_field(node_type: str, name: str, direction: str):
+def node_rows(node):
+    """The field rows of a node of the graph: its type's rows from the catalogue, then the fields it declares."""
+    return tuple(field_rows(node.node_type) or ()) + tuple((name, kind, access, None) for name, kind, access in node.declared)
+
+
+def resolve_field(node_type: str, name: str, direction: str, declared=()):
     """(canonical field name, X3D field type) of ``name`` used as a ROUTE source ('out') or destination ('in').
 
     X3D lets an inputOutput field ``x`` be named ``x``, ``set_x`` (as a destination) or ``x_changed`` (as a source).
+    ``declared`` is a node's own (name, type, access) rows, tried after the catalogue's.
     Raises BehaviourError('unknown-field' | 'wrong-direction')."""
     rows = field_rows(node_type)
     if rows is None:
         raise BehaviourError("unknown-node", f"{node_type!r} is not in the catalogue")
+    if declared:
+        rows = tuple(rows) + tuple((n, k, a, None) for n, k, a in declared if n not in {row[0] for row in rows})
     table = {row[0]: row for row in rows}
     candidates = [name]
     if direction == _IN and name.startswith("set_"):
@@ -175,7 +195,7 @@ def _endpoint_type(graph: Graph, node_id: str, field_name: str, direction: str):
         raise BehaviourError("unknown-def", f"no node with DEF {node_id!r} in the graph")
     if node.role == CARRIED:
         return None
-    return resolve_field(node.node_type, field_name, direction)[1]
+    return resolve_field(node.node_type, field_name, direction, node.declared)[1]
 
 
 def route_problem(graph: Graph, route: Route):
@@ -368,7 +388,8 @@ def parse_x3d(source) -> Graph:
                 continue
             target = by_def[name]
             top = root_ancestor(target)
-            graph.nodes[name] = Node(id=name, node_type=_local(target.tag), role=TARGET)
+            declared = _declared_fields(target, graph.diagnostics, name) if _local(target.tag) in DECLARING_TYPES else ()
+            graph.nodes[name] = Node(id=name, node_type=_local(target.tag), role=TARGET, declared=declared)
             graph._candidates[name] = {
                 "top_def": top.get("DEF") if top is not None else None,
                 "top_xml": _element_text(top) if top is not None else None,
@@ -388,6 +409,43 @@ def parse_x3d(source) -> Graph:
             unique.append(route)
     graph.routes = unique
     return graph
+
+
+def _declared_rows(node_type, declared):
+    """Declared fields as a tuple of (name, type, access) rows that cannot clash with the catalogue's: raises
+    BehaviourError('bad-declaration') for a name, a type or an access type that is not legal, or a type that has none."""
+    rows, seen = [], {row[0] for row in TARGETS.get(node_type) or ()}
+    if declared and node_type not in DECLARING_TYPES:
+        raise BehaviourError("bad-declaration", f"{node_type} does not declare fields")
+    for name, kind, access in declared:
+        if not isinstance(name, str) or not _XML_NAME.match(name) or name in seen:
+            raise BehaviourError("bad-declaration", f"{name!r} is not a field name {node_type} can declare "
+                                                    "(a legal name, not one of its own, once)")
+        if kind not in FIELD_TYPES or access not in ACCESS_TYPES:
+            raise BehaviourError("bad-declaration", f"field {name!r}: {kind!r} {access!r} is not an X3D field type and access type")
+        seen.add(name)
+        rows.append((name, kind, access))
+    return tuple(rows)
+
+
+def _declared_fields(element, diagnostics, name):
+    """The fields a ComposedShader declares with <field name type accessType> children (the node's own: nothing nested, no
+    PROTO). One that cannot be a field (an illegal name or type, a name the node has, a repeat) is left out and said."""
+    rows, seen = [], {row[0] for row in TARGETS.get(_local(element.tag)) or ()}
+    for child in element:
+        if _local(child.tag) != "field":
+            continue
+        entry = (child.get("name") or "", child.get("type") or "", child.get("accessType") or "")
+        if entry[0] in seen:
+            diagnostics.append(f"{_local(element.tag)} {name!r}: <field name={entry[0]!r}> repeats a name and was left out.")
+            continue
+        try:
+            rows.extend(_declared_rows(_local(element.tag), [entry]))
+        except BehaviourError as error:
+            diagnostics.append(f"{_local(element.tag)} {name!r}: a <field> was left out: {error}")
+            continue
+        seen.add(entry[0])
+    return tuple(rows)
 
 
 def _appearance_material_def(element, parent_of):
@@ -537,7 +595,7 @@ def emit(graph: Graph, *, def_of_node=None, def_of_target=None, object_of_parent
         destination = graph.nodes.get(route.to_id)
         if destination is not None and destination.role == TARGET and destination.binding is not None:
             try:
-                canonical = resolve_field(destination.node_type, route.to_field, _IN)[0]
+                canonical = resolve_field(destination.node_type, route.to_field, _IN, destination.declared)[0]
             except BehaviourError:
                 canonical = route.to_field
             out.driven.add((destination.binding[1], canonical))
@@ -565,7 +623,7 @@ def _canonical_route(graph: Graph, route: Route):
         node = graph.nodes.get(node_id)
         if node is not None and node.role != CARRIED:
             try:
-                field_name = resolve_field(node.node_type, field_name, direction)[0]
+                field_name = resolve_field(node.node_type, field_name, direction, node.declared)[0]
             except BehaviourError:
                 pass
         names.append(field_name)
@@ -689,7 +747,7 @@ class Handle:
             raise AttributeError(name)
         node = self.node
         if node.role != CARRIED:
-            rows = {row[0] for row in field_rows(node.node_type) or ()}
+            rows = {row[0] for row in node_rows(node)}
             bare = name[4:] if name.startswith("set_") else name[:-8] if name.endswith("_changed") else name
             if name not in rows and bare not in rows:
                 raise BehaviourError("unknown-field", f"{node.node_type} has no field {name!r}; it has: "
@@ -749,14 +807,17 @@ class Behaviour(Graph):
         node = Graph.add(self, Node(id=name, node_type=node_type, role=BEHAVIOUR, parent=parent))
         return Handle(self, node).set(**fields)
 
-    def target(self, node_type: str, name: str, binding: tuple[str, str] | None = None) -> Handle:
-        """A piece of the scene a ROUTE may start or end at, named by the DEF it has (or will have) in the file."""
+    def target(self, node_type: str, name: str, binding: tuple[str, str] | None = None, declared=()) -> Handle:
+        """A piece of the scene a ROUTE may start or end at, named by the DEF it has (or will have) in the file.
+        ``declared`` is for a ComposedShader: its user-defined fields as (name, X3D type, access type), the ones its
+        <field> elements declare, e.g. ``declared=[("uTime", "SFFloat", "inputOutput")]``."""
         if node_type not in TARGETS and node_type not in NODES:
             raise BehaviourError("unknown-node", f"{node_type!r} is not a target type of the catalogue")
         if name in self.nodes:
             return Handle(self, self.nodes[name])
         node = Graph.add(self, Node(id=name, node_type=node_type, role=TARGET,
-                                    binding=binding or (BINDING_OF.get(node_type, "def"), name)))
+                                    binding=binding or (BINDING_OF.get(node_type, "def"), name),
+                                    declared=_declared_rows(node_type, declared)))
         return Handle(self, node)
 
     def get(self, name: str) -> Handle:
@@ -866,6 +927,7 @@ def to_json(graph: Graph) -> dict:
         "schema": SCHEMA,
         "nodes": [{"id": n.id, "type": n.node_type, "role": n.role, **({"fields": dict(n.fields)} if n.fields else {}),
                    **({"parent": n.parent} if n.parent else {}), **({"binding": list(n.binding)} if n.binding else {}),
+                   **({"declared": [list(row) for row in n.declared]} if n.declared else {}),
                    **({"xml": n.xml, "inner": list(n.inner)} if n.role == CARRIED else {}),
                    **({"position": list(n.position)} if n.position else {})} for n in graph.nodes.values()],
         "routes": [list(route.key()) for route in graph.routes],
@@ -881,6 +943,7 @@ def from_json(data: dict) -> Behaviour:
                               fields=dict(item.get("fields", {})), parent=item.get("parent"),
                               binding=tuple(item["binding"]) if item.get("binding") else None,
                               xml=item.get("xml"), inner=tuple(item.get("inner", ())),
+                              declared=_declared_rows(item["type"], [tuple(row) for row in item.get("declared", ())]),
                               position=tuple(item["position"]) if item.get("position") else None))
     for ends in data.get("routes", ()):
         graph.route(*ends, check=False)

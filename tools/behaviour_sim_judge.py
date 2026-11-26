@@ -285,7 +285,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
             sim.viewer(sensor, position, orientation, when, center_of_rotation=center, test_position=drawn)
         for _when, node_id, field_name, value in by_time.get(when, ()):
             if node_id in pointing and node_id not in driven:
-                x3d_type = bg.resolve_field(graph.nodes[node_id].node_type, field_name, "out")[1]
+                x3d_type = bg.resolve_field(graph.nodes[node_id].node_type, field_name, "out", graph.nodes[node_id].declared)[1]
                 sim.now = when
                 machine = sim.machines[node_id]
                 if field_name == "isOver":
@@ -307,7 +307,7 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
             not_simulated_sources.append({"source": f"{node_id}.{field_name}", "node": node.node_type,
                                           "x_ite_events": len(theirs.get((node_id, field_name), []))})
             continue
-        canonical, x3d_type = bg.resolve_field(node.node_type, field_name, "out")
+        canonical, x3d_type = bg.resolve_field(node.node_type, field_name, "out", node.declared)
         a, b = theirs.get((node_id, field_name), []), ours.get((node_id, canonical), [])
         follower = node.node_type.endswith(("Damper", "Chaser", "Damper2D", "Chaser2D")) or _fed_by_follower(graph, node_id)
         time_like = x3d_type == "SFTime"

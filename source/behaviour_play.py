@@ -433,6 +433,9 @@ class Player:
                 if state is not None:
                     touched_joints[name] = state
                 continue
+            if kind == "shader":
+                self._skip(node, field_name, "a shader's fields are not set in Blender")
+                continue
             if kind == "switch":
                 self._switch(node, name, field_name, value)
                 continue

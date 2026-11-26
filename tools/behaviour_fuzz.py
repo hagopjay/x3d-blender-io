@@ -215,6 +215,13 @@ def generate(rng, index, hostile):
     rng.shuffle(target_types)
     for i, target_type in enumerate(target_types):
         graph.target(target_type, f"T{i}")
+    for node in graph.nodes.values():             # a ComposedShader declares some fields of its own, of random types and access
+        if node.node_type in bg.DECLARING_TYPES:
+            names = rng.sample(["uTime", "uTint", "uSteps", "uFlag", "uOffset", "uAxis", "uMatrix", "uName", "uTimes", "uPoints"],
+                               rng.randint(1, 5))
+            kinds = rng.sample(sorted(bg.FIELD_TYPES), len(names))
+            node.declared = tuple((n, k, rng.choice(["inputOutput", "inputOutput", "inputOnly", "outputOnly", "initializeOnly"]))
+                                  for n, k in zip(names, kinds))
     transforms = [n.id for n in graph.nodes.values() if n.node_type == "Transform"]
     for i, node_type in enumerate(types):
         name = f"N{i}" if not hostile or rng.random() < 0.8 else rng.choice(["a-b.c", "_x", "N.1", "Z" * 40, "é", "x y", "x\n", "1x", "a\"b"]) + (str(i) if rng.random() < 0.8 else "")
@@ -237,7 +244,7 @@ def generate(rng, index, hostile):
     # ROUTEs: legal ones by type; hostile adds wrong ones
     sources, sinks = [], []
     for node in graph.nodes.values():
-        rows = cat.NODES[node.node_type][1] if node.role == bg.BEHAVIOUR else cat.TARGETS[node.node_type]
+        rows = cat.NODES[node.node_type][1] if node.role == bg.BEHAVIOUR else bg.node_rows(node)
         sources += [(node, row) for row in _ends(rows, True)]
         sinks += [(node, row) for row in _ends(rows, False)]
     routes = rng.randint(2, 14)
@@ -437,10 +444,10 @@ def field_type(graph, node_id, field_name):
     if node is None or node.role == bg.CARRIED:
         return None
     try:
-        return bg.resolve_field(node.node_type, field_name, "in")[1]
+        return bg.resolve_field(node.node_type, field_name, "in", node.declared)[1]
     except bg.BehaviourError:
         try:
-            return bg.resolve_field(node.node_type, field_name, "out")[1]
+            return bg.resolve_field(node.node_type, field_name, "out", node.declared)[1]
         except bg.BehaviourError:
             return None
 
@@ -556,7 +563,13 @@ def _check_value(findings, graph, hostile, target_id, field_name, value):
 
 def to_x3d(graph):
     """A small X3D document holding the graph: every target as an element of its type, then ``weave``."""
-    scene = "".join(f'  <{node.node_type} DEF="{node.id}"/>\n' for node in graph.nodes.values() if node.role == bg.TARGET)
+    def element(node):
+        if not node.declared:
+            return f'  <{node.node_type} DEF="{node.id}"/>\n'
+        fields = "".join(f'<field name="{n}" type="{k}" accessType="{a}"/>' for n, k, a in node.declared)
+        return f'  <{node.node_type} DEF="{node.id}">{fields}</{node.node_type}>\n'
+
+    scene = "".join(element(node) for node in graph.nodes.values() if node.role == bg.TARGET)
     document = f'<?xml version="1.0" encoding="UTF-8"?>\n<X3D profile="Interchange" version="4.0"><Scene>\n{scene}</Scene></X3D>\n'
     return bg.weave(document, graph)
 

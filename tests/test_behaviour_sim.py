@@ -494,6 +494,43 @@ class XiteAgreementTests(unittest.TestCase):
         # they are), echoed from whichChoice_changed (tests/behaviour/probe-switch.x3d, X_ITE 16.8.1): 3 streams
         self.agree("probe-switch", 3)
 
+    def test_a_composed_shader_s_declared_fields_receive_and_echo_as_in_x_ite(self):
+        # uTime SFFloat, uTint SFColor, uSteps SFInt32, uFlag SFBool and uOffset SFVec3f, all inputOutput, each fed by an
+        # interpolator or sequencer and echoed from its *_changed (tests/behaviour/probe-shader.x3d, X_ITE 16.8.1): 12
+        # streams, the five echoes among them, all the same event for event. uScale (SFVec2f, inputOnly) cannot be heard.
+        self.agree("probe-shader", 12)
+
+    def test_a_composed_shader_s_fields_are_kept_in_values_and_typed_from_the_declaration(self):
+        graph = world("probe-shader")
+        sim = bs.Simulation(graph)
+        self.assertEqual(sim.not_simulated, [])
+        sim.start(0.0)
+        sim.click("Touch", 0.1, held=0.0)
+        for now in (0.2, 1.0, 2.0, 3.2):
+            sim.step(now)
+        self.assertEqual(sim.values[("Glow", "uTime")], 7.5)
+        self.assertEqual(sim.values[("Glow", "uTint")], (0.0, 0.0, 1.0))
+        self.assertEqual(sim.values[("Glow", "uSteps")], 0)
+        self.assertIs(sim.values[("Glow", "uFlag")], True)
+        self.assertEqual(sim.values[("Glow", "uOffset")], (1.0, -2.0, 0.5))
+        self.assertEqual(sim.values[("Glow", "uScale")], (3.0, 0.5))
+        self.assertEqual(sim.values[("Echoed", "diffuseColor")], (0.0, 0.0, 1.0))                # an echo reaches on
+        self.assertEqual(sim.dropped, {})
+
+    def test_a_shader_field_of_the_wrong_shape_is_dropped_not_delivered(self):
+        # a ROUTE the graph's own check refuses (a float into a declared SFVec3f), written past it: judged by the declaration
+        b = bg.Behaviour()
+        shader = b.target("ComposedShader", "Glow", declared=[("uTime", "SFFloat", "inputOutput"), ("uOffset", "SFVec3f", "inputOutput")])
+        timer = b.add("TimeSensor", "Timer", cycleInterval=1, loop=True)
+        timer.fraction_changed >> shader.uTime
+        b.route("Timer", "fraction_changed", "Glow", "uOffset", check=False)
+        sim = bs.Simulation(b)
+        sim.start(0.0)
+        sim.step(0.5)
+        self.assertEqual(sim.values[("Glow", "uTime")], 0.5)
+        self.assertNotIn(("Glow", "uOffset"), sim.values)
+        self.assertGreater(sim.dropped["mismatch"], 0)
+
     def test_switch_whichChoice_is_kept_in_values(self):
         sim = bs.Simulation(world("probe-switch"))
         sim.start(0.0)

@@ -43,7 +43,7 @@ TARGETS = ["Transform", "Group", "Switch", "Billboard", "LOD", "Collision", "Anc
            "PhysicalMaterial", "Material", "UnlitMaterial", "ImageTexture", "MovieTexture", "TextureTransform",
            "PointLight", "DirectionalLight", "SpotLight",
            "Coordinate", "Color", "ColorRGBA", "Normal", "TextureCoordinate", "Text", "Sound", "AudioClip",
-           "HAnimHumanoid", "HAnimJoint", "HAnimSegment", "HAnimSite"]
+           "HAnimHumanoid", "HAnimJoint", "HAnimSegment", "HAnimSite", "ComposedShader"]
 SKIP_FIELDS = {"DEF", "USE", "IS", "metadata", "class", "id", "style"}
 
 

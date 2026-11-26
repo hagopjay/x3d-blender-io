@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Full" version="4.0">
+  <head>
+    <component name="Shaders" level="1"/>
+    <component name="EventUtilities" level="1"/>
+    <meta name="title" content="Behaviour simulator probe: a ComposedShader's own fields as ROUTE ends"/>
+    <meta name="generator" content="hand written for tests/test_behaviour_sim.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0 6"/>
+    <Transform DEF="Pad" translation="0 -2 0"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.5"/></Appearance><Box size="8 0.2 4"/></Shape>
+      <TouchSensor DEF="Touch"/>
+    </Transform>
+    <Shape>
+      <Appearance>
+        <Material DEF="Echoed" diffuseColor="0.5 0.5 0.5"/>
+        <ComposedShader DEF="Glow" language="GLSL">
+          <field name="uTime" type="SFFloat" accessType="inputOutput" value="0"/>
+          <field name="uTint" type="SFColor" accessType="inputOutput" value="1 1 1"/>
+          <field name="uSteps" type="SFInt32" accessType="inputOutput" value="0"/>
+          <field name="uFlag" type="SFBool" accessType="inputOutput" value="false"/>
+          <field name="uOffset" type="SFVec3f" accessType="inputOutput" value="0 0 0"/>
+          <field name="uScale" type="SFVec2f" accessType="inputOnly"/>
+          <ShaderPart type="VERTEX" url='"data:x-shader/x-vertex,%23version%20300%20es%0Ain%20vec4%20x3d_Vertex%3Buniform%20mat4%20x3d_ModelViewProjectionMatrix%3Bvoid%20main%28%29%7Bgl_Position%3Dx3d_ModelViewProjectionMatrix*x3d_Vertex%3B%7D"'/>
+          <ShaderPart type="FRAGMENT" url='"data:x-shader/x-fragment,%23version%20300%20es%0Aprecision%20highp%20float%3Buniform%20float%20uTime%3Bout%20vec4%20c%3Bvoid%20main%28%29%7Bc%3Dvec4%28uTime%29%3B%7D"'/>
+        </ComposedShader>
+      </Appearance>
+      <Box size="1 1 1"/>
+    </Shape>
+    <Transform DEF="Shifted" translation="3 1 0"><Shape><Appearance><Material diffuseColor="0.8 0.8 0.2"/></Appearance><Sphere radius="0.3"/></Shape></Transform>
+    <Switch DEF="StepsSink" whichChoice="-1"><Shape><Sphere radius="0.1"/></Shape></Switch>
+    <TimeTrigger DEF="FlagSink"/>
+    <ScalarInterpolator DEF="Sink" key="0 1" keyValue="0 1"/>
+    <TimeSensor DEF="Timer" cycleInterval="3"/>
+    <ScalarInterpolator DEF="Clock" key="0 1" keyValue="0 7.5"/>
+    <ColorInterpolator DEF="Tint" key="0 0.5 1" keyValue="1 0 0, 0 1 0, 0 0 1"/>
+    <IntegerSequencer DEF="Steps" key="0 0.25 0.5 0.75" keyValue="4 -2 9 0"/>
+    <BooleanSequencer DEF="Blink" key="0 0.4 0.8" keyValue="true false true"/>
+    <PositionInterpolator DEF="Drift" key="0 1" keyValue="0 0 0, 1 -2 0.5"/>
+    <PositionInterpolator2D DEF="Zoom" key="0 1" keyValue="1 1, 3 0.5"/>
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Timer" toField="startTime"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Clock" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Tint" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Steps" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Blink" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Drift" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Zoom" toField="set_fraction"/>
+    <ROUTE fromNode="Clock" fromField="value_changed" toNode="Glow" toField="uTime"/>
+    <ROUTE fromNode="Tint" fromField="value_changed" toNode="Glow" toField="uTint"/>
+    <ROUTE fromNode="Steps" fromField="value_changed" toNode="Glow" toField="uSteps"/>
+    <ROUTE fromNode="Blink" fromField="value_changed" toNode="Glow" toField="uFlag"/>
+    <ROUTE fromNode="Drift" fromField="value_changed" toNode="Glow" toField="uOffset"/>
+    <ROUTE fromNode="Zoom" fromField="value_changed" toNode="Glow" toField="uScale"/>
+    <ROUTE fromNode="Glow" fromField="uTime_changed" toNode="Sink" toField="set_fraction"/>
+    <ROUTE fromNode="Glow" fromField="uTint_changed" toNode="Echoed" toField="diffuseColor"/>
+    <ROUTE fromNode="Glow" fromField="uSteps_changed" toNode="StepsSink" toField="whichChoice"/>
+    <ROUTE fromNode="Glow" fromField="uFlag_changed" toNode="FlagSink" toField="set_boolean"/>
+    <ROUTE fromNode="Glow" fromField="uOffset_changed" toNode="Shifted" toField="translation"/>
+  </Scene>
+</X3D>

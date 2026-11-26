@@ -5,7 +5,7 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 
 | File | What it is |
 |---|---|
-| `source/behaviour_catalogue.py` | generated from the X3D Unified Object Model 4.0 by `tools/behaviour_catalogue_gen.py` (`--check` fails when stale): 45 behaviour node types with 303 fields, 34 target types |
+| `source/behaviour_catalogue.py` | generated from the X3D Unified Object Model 4.0 by `tools/behaviour_catalogue_gen.py` (`--check` fails when stale): 45 behaviour node types with 303 fields, 35 target types |
 | `source/behaviour_graph.py` | the graph without Blender: parse from X3D, validate, edit, emit, weave into a document, compare, lay out, JSON; and the scripting methods (`Behaviour`, `add`, `target`, `>>`) |
 | `source/behaviour_nodes.py` | the Blender node tree `X3DBehaviourTree`: one node class per X3D node, one socket class per field type; `apply`, `read`, `target`, `import_graph` |
 | `source/behaviour_sim.py` | version 2: the event model in plain Python (`Simulation`): timers, interpolators, sequencers, event utilities, dampers, chasers, pointer events |
@@ -464,7 +464,7 @@ delivers to it (every target is delivered to the same way: the value is kept in 
 
 ### HAnimJoint, HAnimSite, HAnimSegment
 
-Catalogue: HAnimJoint was already a target type; HAnimSegment and HAnimSite are added (34 target types). Fields come from
+Catalogue: HAnimJoint was already a target type; HAnimSegment and HAnimSite are added (34 target types; ComposedShader makes 35, below). Fields come from
 X3DUOM 4.0: a joint and a site have `translation`, `rotation`, `scale`, `center` (SFVec3f, SFRotation, SFVec3f, SFVec3f,
 inputOutput), a segment has `centerOfMass` (SFVec3f), `mass` (SFFloat), `momentsOfInertia` (MFFloat) and no placement field at
 all. **A ROUTE to `HAnimSegment.rotation` is refused as `unknown-field`**, because X3D 4.0 gives a segment no such field;
@@ -541,12 +541,56 @@ generated graphs are unchanged: Switch was already a target type). One pinned va
 Switch `Pick` was a carried node and is now a target node). Not checked: nested Switches (the code takes every Switch above an object into account; no
 test builds one), a Switch inside an Inline, X_ITE drawing.
 
+### ComposedShader user-defined fields
+
+A ComposedShader's own fields, the ones its `<field name type accessType value>` children declare, are targets (and sources, for
+the output ones). `ComposedShader` joins the catalogue's target types (35 now; its own fields are `activate`, `isSelected`,
+`isValid`, `language`, `parts`, `field`) and has the binding kind `shader`, a name only. The graph reads the declarations
+from the file inside the target's own node and nowhere else: a `Node` has `declared`, a tuple of `(name, type, access)`;
+`resolve_field(type, name, direction, declared)` tries the catalogue's rows and then these, so `x`, `set_x` and `x_changed`
+spell a declared inputOutput field as they spell any other; `node_rows(node)` is the node's whole table. There is no PROTO
+handling and no declaration is read from anywhere but a ComposedShader's `<field>` children. A declaration that cannot be a
+field (an illegal name, a type that is not one of the 40 field types, an unknown access type, a name the node has or has
+already declared) is left out of the graph and named in `diagnostics`; the same checks refuse a script's
+`target("ComposedShader", "Glow", declared=[...])` with `bad-declaration`. A ROUTE is then checked against the declaration:
+a float into a declared `SFColor` is `type-mismatch`; into an outputOnly or initializeOnly field it is `wrong-direction`.
+The declarations survive `to_json` / `from_json` (an `x3d_declared` property of the node in the node tree: one "name type
+access" per line, with a socket for each).
+
+What `Player` applies: nothing. The simulator delivers and echoes, `values()` holds the last value of each field, and Play
+lists each such field under Not shown as `ComposedShader.<field> (a shader's fields are not set in Blender)`. Blender's
+exporter writes no ComposedShader, so a ROUTE to one is dropped on export with the usual "not in the exported file" line. The
+importer keeps these ROUTEs (before: the whole top-level node that held the Appearance was carried as XML, duplicating the
+geometry). A `ShaderPart`, PackagedShader and ProgramShader are not targets.
+
+Judged on X_ITE 16.8.1 (headless Chromium 157, software GL; load average 0.5 to 4.7 during the runs): the judge can watch
+these fields, inputOutput and inputOnly alike. `tests/behaviour/probe-shader.x3d` has a shader (with vertex and fragment
+parts) whose `uTime` (SFFloat), `uTint` (SFColor), `uSteps` (SFInt32), `uFlag` (SFBool) and `uOffset` (SFVec3f) are fed by an
+interpolator or sequencer each and echoed from `*_changed`, and an inputOnly `uScale` (SFVec2f); X_ITE loads it with no page
+error and the simulator agrees at all 12 streams recorded (the inputOnly field has no output, so the trace cannot hold it).
+The pair judge (3 repeats, one click) finds a copy with only its title changed **same** at all 9 watched streams (the six
+shader fields, among them the inputOnly `uScale`, and three they echo into), and a copy with `uTime`'s key value 7.5 changed
+to 3 **differs** at `Glow.uTime` and **same** at the other eight. The GLSL in the probe was never inspected for what it
+draws: nothing here looks at the picture.
+
+Tests: `ShaderTargetTests` (9) in `tests/test_behaviour_graph.py`, three in `tests/test_behaviour_sim.py` (the trace, the
+values and the declared types, a wrong shape dropped), `ShaderPlayTests` (3, bpy 5.3.0: import keeps the shader, its six
+declarations and all 18 ROUTEs, the node tree has the sockets and survives apply and read, Play simulates and lists). The fuzz
+(`tools/behaviour_fuzz.py`) now gives every ComposedShader of a graph 1 to 5 declared fields of random type and access (110
+shaders in the 2000 normal graphs of seed 1, 37 ROUTEs into declared fields and 33 out of them), writes the declarations into
+the document of its round-trip check, and types a ROUTE from the declaration. Python 3.13.18, bpy 5.3.0: seeds 1, 2 and 3,
+2000 normal and 2000 hostile graphs each, 0 failed (seed 1: 49 713 calls and 7 000 events at targets normal, 58 923 calls
+hostile with 1 424 wrong shapes and 1 077 non-finite values dropped and 549 isolated faults); `--blender --count 100 --seed
+1` 0 failed. The two normal graphs of seeds 2 and 3 that drop a non-finite value (3 and 1 values) do so on the code before this
+change as well. Not checked: a shader with a `ProtoInstance` field, a field type X_ITE does not accept (`SFNode`, rejected
+here), what Blender's exporter would write for a shader, the GLSL.
+
 ## Hardening (26 Nov 2026)
 
 `tools/behaviour_fuzz.py` throws random graphs at the graph, the simulator and the X3D round trip, deterministic from
 `--seed` (graph k of a run comes from `random.Random(seed * 1000003 + k)`); `--blender` adds the node tree and the Player.
 
-**What is generated.** Graph k holds node type k mod 45 and target type k mod 34 of the catalogue (so every behaviour and
+**What is generated.** Graph k holds node type k mod 45 and target type k mod 35 of the catalogue (so every behaviour and
 every target type is in every 45 graphs), plus up to six more nodes, up to four more targets, 2 to 14 ROUTEs and 8 to 50
 calls (`start`, `step`, `click`, `press`, `drag`, `release`, `hover`, `send`, `post`, `viewer`) on random nodes. Normal
 graphs: values of the right type, finite, keys increasing with one `keyValue` each, type-correct ROUTEs (also spelled
@@ -658,7 +702,7 @@ simulation, fan 5000, mixed 5000, chains between 1000 and 5000; the player, fan 
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
 eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
-played. Targets are Transform, Viewpoint, lights, materials, Text, Switch, HAnimJoint, HAnimSite and HAnimSegment (see Scene targets beyond Transform). Names survive only for what the graph touches. The
+played. Targets are Transform, Viewpoint, lights, materials, Text, Switch, HAnimJoint, HAnimSite, HAnimSegment and a ComposedShader's declared fields (see Scene targets beyond Transform). Names survive only for what the graph touches. The
 importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on, and so do the "X3D import loss" log lines and `X3D_IMPORT_STRICT=1`: the importer holds its ROUTE losses back until the graph is built, then reports only those the graph could not keep. Losses that are not ROUTEs (event nodes, timers, sensor fields) are reported at once, as with the option off.
 
 ### Building the node tree

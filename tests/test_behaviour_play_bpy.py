@@ -425,6 +425,60 @@ class SwitchPlayTests(_Base):
         player.stop()
 
 
+class ShaderPlayTests(_Base):
+    """A ComposedShader's own fields as targets (tests/behaviour/probe-shader.x3d): kept in the graph and the node tree,
+    simulated, and not applied in Blender."""
+
+    def import_world(self):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        bpy.ops.import_scene.x3d(filepath=str(WORLDS / "probe-shader.x3d"), use_behaviour_graph=True)
+        return bpy.context.scene
+
+    def test_the_importer_keeps_the_shader_and_its_declared_fields_and_every_route(self):
+        scene = self.import_world()
+        graph = self.bn.read(scene)
+        glow = graph.nodes["Glow"]
+        self.assertEqual((glow.role, glow.binding), ("target", ("shader", "Glow")))
+        self.assertEqual([row[:2] for row in glow.declared],
+                         [("uTime", "SFFloat"), ("uTint", "SFColor"), ("uSteps", "SFInt32"), ("uFlag", "SFBool"),
+                          ("uOffset", "SFVec3f"), ("uScale", "SFVec2f")])
+        self.assertEqual(len(graph.routes), 18)
+        self.assertEqual(graph.check(), [])
+        self.assertEqual([n.id for n in graph.nodes.values() if n.role == "carried"], [])
+
+    def test_the_node_tree_has_a_socket_for_each_declared_field_and_survives_apply_and_read(self):
+        scene = self.import_world()
+        node = next(n for n in scene.x3d_behaviour_tree.nodes if n.name == "Glow")
+        self.assertEqual(node.label, "ComposedShader  Glow")
+        self.assertIn("uTime", node.inputs)
+        self.assertIn("uTime", node.outputs)                  # inputOutput: both
+        self.assertIn("uScale", node.inputs)
+        self.assertNotIn("uScale", node.outputs)              # inputOnly
+        self.assertEqual(node.inputs["uOffset"].bl_idname, "X3DSocketSFVec3f")
+        graph = self.bn.read(scene)
+        self.bn.apply(graph, scene)
+        again = self.bn.read(scene)
+        self.assertEqual(again.nodes["Glow"].declared, graph.nodes["Glow"].declared)
+        self.assertEqual(len(again.routes), 18)
+        self.assertEqual(self.bg_module().difference(graph, again)["routes_lost"], [])
+
+    def bg_module(self):
+        return importlib.import_module("io_scene_x3d.behaviour_graph")
+
+    def test_play_runs_the_fields_and_says_it_does_not_show_them(self):
+        scene = self.import_world()
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.5)
+        self.assertEqual(player.sim.values[("Glow", "uTime")], 3.75)                  # half of 7.5
+        self.assertEqual(player.not_applied, [f"ComposedShader.{field} (a shader's fields are not set in Blender)"
+                                              for field in ("uTime", "uTint", "uSteps", "uFlag", "uOffset", "uScale")])
+        self.assertEqual(player.sim.not_simulated, [])
+        player.stop()
+
+
 class FieldEditorTests(_Base):
 
     def test_a_typed_widget_reads_and_writes_the_x3d_text(self):

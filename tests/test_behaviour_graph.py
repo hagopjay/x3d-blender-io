@@ -50,7 +50,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(len(X3DUOM_SHA256), 64)
         self.assertEqual(len(NODES), 45)
         self.assertEqual(sum(len(rows) for _group, rows in NODES.values()), 303)
-        self.assertEqual(len(TARGETS), 34)       # 32, then HAnimSegment and HAnimSite
+        self.assertEqual(len(TARGETS), 35)       # 32, then HAnimSegment, HAnimSite and ComposedShader
 
     def test_events_are_in_the_catalogue(self):
         fields = {row[0]: row for row in NODES["TouchSensor"][1]}
@@ -275,6 +275,114 @@ class SwitchTargetTests(unittest.TestCase):
         self.assertEqual(bg.difference(b, again),
                          {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
         self.assertEqual(len(again.routes), 2)
+
+
+SHADER_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0"><Scene>
+  <Shape><Appearance>
+    <ComposedShader DEF="Glow" language="GLSL">
+      <field name="uTime" type="SFFloat" accessType="inputOutput" value="0"/>
+      <field name="uTint" type="SFColor" accessType="inputOutput"/>
+      <field name="uScale" type="SFVec2f" accessType="inputOnly"/>
+      <field name="uDone" type="SFBool" accessType="outputOnly"/>
+      <field name="uSeed" type="SFInt32" accessType="initializeOnly" value="3"/>
+    </ComposedShader>
+  </Appearance><Box/></Shape>
+</Scene></X3D>
+"""
+
+
+class ShaderTargetTests(unittest.TestCase):
+
+    DECLARED = (("uTime", "SFFloat", "inputOutput"), ("uTint", "SFColor", "inputOutput"), ("uScale", "SFVec2f", "inputOnly"),
+                ("uDone", "SFBool", "outputOnly"), ("uSeed", "SFInt32", "initializeOnly"))
+
+    def graph(self):
+        b = bg.Behaviour()
+        shader = b.target("ComposedShader", "Glow", declared=list(self.DECLARED))
+        timer = b.add("TimeSensor", "Timer", cycleInterval=2)
+        clock = b.add("ScalarInterpolator", "Clock", key=[0, 1], keyValue=[0, 5])
+        tint = b.add("ColorInterpolator", "Tint", key=[0, 1], keyValue=[(1, 0, 0), (0, 0, 1)])
+        zoom = b.add("PositionInterpolator2D", "Zoom", key=[0, 1], keyValue=[(1, 1), (2, 2)])
+        for node in (clock, tint, zoom):
+            timer.fraction_changed >> node.set_fraction
+        clock.value_changed >> shader.uTime
+        tint.value_changed >> shader.uTint
+        zoom.value_changed >> shader.uScale
+        return b
+
+    def test_the_catalogue_has_the_node_and_the_binding_is_a_name(self):
+        self.assertIn("ComposedShader", TARGETS)
+        self.assertEqual(bg.BINDING_OF["ComposedShader"], "shader")
+        self.assertEqual(self.graph().nodes["Glow"].binding, ("shader", "Glow"))
+
+    def test_a_declared_field_is_typed_from_its_declaration(self):
+        b = self.graph()
+        self.assertEqual(b.check(), [])
+        self.assertEqual(bg.resolve_field("ComposedShader", "uTime", "in", b.nodes["Glow"].declared), ("uTime", "SFFloat"))
+        self.assertEqual(bg.resolve_field("ComposedShader", "set_uTime", "in", b.nodes["Glow"].declared), ("uTime", "SFFloat"))
+        self.assertEqual(bg.resolve_field("ComposedShader", "uTint_changed", "out", b.nodes["Glow"].declared), ("uTint", "SFColor"))
+        self.assertEqual(bg.route_verdict("ComposedShader", "uTime", "ComposedShader", "uTime"), "unknown-field")   # by type alone: none
+
+    def test_the_declared_type_and_direction_are_enforced(self):
+        b = self.graph()
+        shader = b.get("Glow")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.get("Clock").value_changed >> shader.uTint                                 # a float into a colour
+        self.assertEqual(caught.exception.code, "type-mismatch")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.get("Clock").value_changed >> shader.uDone                                 # outputOnly is no destination
+        self.assertEqual(caught.exception.code, "wrong-direction")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.get("Clock").value_changed >> shader.uSeed                                 # initializeOnly takes no events
+        self.assertEqual(caught.exception.code, "wrong-direction")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            _ = shader.uMissing
+        self.assertEqual(caught.exception.code, "unknown-field")
+
+    def test_declarations_that_cannot_be_fields_are_refused(self):
+        b = bg.Behaviour()
+        for declared in ([("1bad", "SFFloat", "inputOutput")], [("x", "SFNode", "inputOutput")], [("x", "SFFloat", "sideways")],
+                         [("language", "SFFloat", "inputOutput")], [("x", "SFFloat", "inputOutput")] * 2):
+            with self.subTest(declared=declared), self.assertRaises(bg.BehaviourError) as caught:
+                b.target("ComposedShader", "S" + str(len(b.nodes)), declared=declared)
+            self.assertEqual(caught.exception.code, "bad-declaration")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.target("Transform", "T", declared=[("x", "SFFloat", "inputOutput")])        # only a shader declares fields
+        self.assertEqual(caught.exception.code, "bad-declaration")
+
+    def test_the_declarations_are_read_from_the_file_s_field_elements(self):
+        parsed = bg.parse_x3d(self.graph().weave(SHADER_SCENE))
+        self.assertEqual(sorted(parsed.nodes["Glow"].declared), sorted(self.DECLARED))
+        self.assertEqual(parsed.diagnostics, [])
+        self.assertEqual(len(parsed.routes), 6)
+
+    def test_a_file_s_bad_field_element_is_left_out_and_said(self):
+        text = SHADER_SCENE.replace('<field name="uSeed"', '<field name="uBad" type="SFNode" accessType="inputOutput"/>'
+                                    '<field name="uTime" type="SFFloat" accessType="inputOnly"/><field name="uSeed"')
+        graph = bg.parse_x3d(text.replace("</Scene>", '<TimeSensor DEF="T"/><ROUTE fromNode="T" fromField="cycleTime" '
+                                                       'toNode="Glow" toField="uTime"/></Scene>'))
+        self.assertEqual([row[0] for row in graph.nodes["Glow"].declared], ["uTime", "uTint", "uScale", "uDone", "uSeed"])
+        self.assertEqual(len(graph.diagnostics), 2)
+        self.assertIn("uBad", graph.diagnostics[0])
+        self.assertIn("repeats", graph.diagnostics[1])
+
+    def test_routes_to_a_shader_write_back_and_read_again_with_no_difference(self):
+        b = self.graph()
+        text = b.weave(SHADER_SCENE)
+        again = bg.Behaviour.from_x3d(text)
+        self.assertEqual(again.nodes["Glow"].binding, ("shader", "Glow"))
+        self.assertEqual(again.check(), [])
+        self.assertEqual(bg.difference(b, again),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(len(again.routes), 6)
+
+    def test_json_keeps_the_declarations(self):
+        b = self.graph()
+        again = bg.from_json(json.loads(json.dumps(bg.to_json(b))))
+        self.assertEqual(again.nodes["Glow"].declared, self.DECLARED)
+        self.assertEqual(again.check(), [])
+        self.assertEqual(len(again.routes), 6)
 
 
 class DocumentTests(unittest.TestCase):

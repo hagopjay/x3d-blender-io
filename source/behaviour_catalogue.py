@@ -849,4 +849,12 @@ TARGETS = {
         ('translation', 'SFVec3f', 'inputOutput', '0 0 0'),
         ('visible', 'SFBool', 'inputOutput', 'true'),
     ),
+    "ComposedShader": (
+        ('activate', 'SFBool', 'inputOnly', None),
+        ('field', 'MFNode', 'inputOutput', None),
+        ('isSelected', 'SFBool', 'outputOnly', None),
+        ('isValid', 'SFBool', 'outputOnly', None),
+        ('language', 'SFString', 'initializeOnly', None),
+        ('parts', 'MFNode', 'inputOutput', None),
+    ),
 }

@@ -524,7 +524,7 @@ def rows_on_node(count, limit):
 
 
 MATERIAL_KINDS = ("material", "texture")      # bindings that name a Blender material rather than an object
-NAMED_KINDS = ("joint", "site", "switch")     # bindings that are a name the Player looks for (a bone, a site's object, a Switch's DEF)
+NAMED_KINDS = ("joint", "site", "switch", "shader")     # bindings that are a name the Player looks for (a bone, a site's object, a Switch's DEF) or only names (a shader)
 
 
 class _TargetNode(_X3DNodeBase):
@@ -532,10 +532,11 @@ class _TargetNode(_X3DNodeBase):
     x3d_object: PointerProperty(type=bpy.types.Object, name="Object")
     x3d_material: PointerProperty(type=bpy.types.Material, name="Material")
     x3d_bone: StringProperty(name="Name")      # an HAnimJoint's bone, an HAnimSite's object: found by name when Play runs
+    x3d_declared: StringProperty(name="Declared fields")   # a ComposedShader's <field>s, one "name type access" per line
 
     def init(self, context):
         if not _SOCKETS_LATER:
-            self._make_sockets(TARGETS[self.x3d_type])
+            self._make_sockets(TARGETS[self.x3d_type] + _declared_rows(self))
         self.width = 220
         self.use_custom_color, self.color = True, (0.16, 0.24, 0.30)
 
@@ -684,6 +685,11 @@ def _add_menu(self, context):
 # graph <-> tree
 # ---------------------------------------------------------------------------------------------------------------
 
+def _declared_rows(item):
+    """A target node's declared fields as catalogue rows: (name, type, access, None)."""
+    return tuple((*line.split(), None) for line in item.x3d_declared.splitlines() if len(line.split()) == 3)
+
+
 def _datablock_of(binding):
     kind, name = binding
     if kind in MATERIAL_KINDS:
@@ -767,6 +773,7 @@ def _fill(graph, scene, tree):
             item.x3d_object, item.x3d_material = _datablock_of(node.binding)
             if node.binding[0] in NAMED_KINDS:
                 item.x3d_bone = node.binding[1]
+            item.x3d_declared = "\n".join(" ".join(row) for row in node.declared)
         else:
             item = tree.nodes.new(X3DBehaviourCarried.bl_idname)
             item.x3d_type, item.x3d_xml, item.x3d_inner = node.node_type, node.xml or "", " ".join(node.inner)
@@ -780,7 +787,7 @@ def _fill(graph, scene, tree):
         if item.x3d_role == bg.BEHAVIOUR:
             item._make_sockets(NODES[item.x3d_type][1])
         elif item.x3d_role == bg.TARGET:
-            item._make_sockets(TARGETS[item.x3d_type])
+            item._make_sockets(TARGETS[item.x3d_type] + _declared_rows(item))
     for route in graph.routes:
         a, b = made.get(route.from_id), made.get(route.to_id)
         if a is None or b is None:
@@ -800,7 +807,7 @@ def _socket(item, node, field_name, direction):
             found.link_limit = 4095
         return found
     try:
-        canonical = bg.resolve_field(node.node_type, field_name, direction)[0]
+        canonical = bg.resolve_field(node.node_type, field_name, direction, node.declared)[0]
     except bg.BehaviourError:
         return None
     return sockets.get(canonical)
@@ -846,7 +853,9 @@ def read(scene):
                 binding = (kind, item.x3d_bone) if item.x3d_bone else None
             else:
                 binding = (kind, data.name) if data else None
-            graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position, binding=binding)
+            graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position, binding=binding,
+                                        declared=tuple(tuple(line.split()) for line in item.x3d_declared.splitlines()
+                                                       if len(line.split()) == 3))
         else:
             graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position,
                                         xml=item.x3d_xml, inner=tuple(item.x3d_inner.split()))

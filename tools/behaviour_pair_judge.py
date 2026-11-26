@@ -365,7 +365,7 @@ def watched(graph):
         if node is None or node.role != bg.TARGET:
             continue
         try:
-            field = bg.resolve_field(node.node_type, route.to_field, "in")[0]
+            field = bg.resolve_field(node.node_type, route.to_field, "in", node.declared)[0]
         except bg.BehaviourError:
             field = route.to_field
         found[(route.to_id, field)] = field

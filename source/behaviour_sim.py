@@ -1729,7 +1729,7 @@ class Simulation:
         if node.role == bg.CARRIED:
             return (node_id, field_name)
         try:
-            return (node_id, bg.resolve_field(node.node_type, field_name, direction)[0])
+            return (node_id, bg.resolve_field(node.node_type, field_name, direction, node.declared)[0])
         except bg.BehaviourError:
             return None
 
@@ -1741,7 +1741,7 @@ class Simulation:
         node = self.graph.nodes[node_id]
         if node.role == bg.CARRIED:
             return None
-        return bg.resolve_field(node.node_type, field_name, "in")[1]
+        return bg.resolve_field(node.node_type, field_name, "in", node.declared)[1]
 
     def _fault(self, node_id, where, error):
         self.faults.append(f"{node_id}.{where}: {type(error).__name__}: {error}")
