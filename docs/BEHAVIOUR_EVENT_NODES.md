@@ -132,6 +132,93 @@ fed": the Player has no frustum to give a VisibilitySensor and the TransformSens
 a non-root Transform under a moving camera for VisibilitySensor; frustum motion faster than one step; `avatarSize` other
 than the default for Collision; GEOMETRY-precise Collision (it is a box-and-depth test as X_ITE's).
 
+### P3 results: GeoPositionInterpolator, GeoProximitySensor, GeoTouchSensor (class C)
+
+`source/behaviour_geo.py` (pure, no bpy): geoSystem parsing (`GD` with an ellipsoid code, `UTM` with zone, `S`, `Zn`,
+`easting_first`, `GC`, `longitude_first`), conversion to and from geocentric, the GeoOrigin frame (with `rotateYUp`) and the
+geocentric slerp, all as X_ITE 16.8.1 does them. `source/behaviour_geo_machines.py` holds the three machines; the pure
+functions are in their own module so tests can read them without the simulator. Every function answers NaN for a value it
+cannot convert and never raises.
+
+Instruments: conversions, 754 answers of X_ITE 16.8.1's own Geospatial code (`tools/behaviour_geo_probe.cjs`, headless
+Chromium, software GL; WGS 84 and nine other ellipsoids, both hemispheres, UTM zones either side of the equator, GeoOrigin
+frames, the slerp); the simulator agrees with them to under 4e-9 (angles in degrees, metres). Streams: `tools/behaviour_sim_judge.py`
+replaying `tests/behaviour/x_ite_traces/probe-geo.json` (599 frames of 1/60 s, world `probe-geo.x3d`) and
+`probe-geo-touch.json` (2,203 frames, world `probe-geo-touch.x3d`, pointer events replayed from the trace). Each world was
+recorded three times on X_ITE 16.8.1; the three agreed event for event (after the fixes listed below), and the committed trace is one of them.
+
+| node (stream) | probes | streams | events compared | worst gap |
+|---|---|---:|---:|---:|
+| GeoPositionInterpolator `geovalue_changed` (SFVec3d) | 16 | 16 | 9,584 | 1.6e-05 |
+| GeoPositionInterpolator `value_changed` (SFVec3f) | 16 | 16 | 9,584 | 3e-06 (half a unit of the 7th digit) |
+| GeoProximitySensor `isActive`, `enterTime`, `exitTime` | 8 | 24 | 118 | 0 |
+| GeoProximitySensor `position_changed`, `geoCoord_changed` | 8 | 16 | 3,756 | 1e-06 |
+| GeoProximitySensor `orientation_changed`, `centerOfRotation_changed` | 8 | 16 | 737 | 0 |
+| GeoProximitySensor `center_changed`, `geoCenter_changed` (set by a route) | 1 | 2 | 1,198 | 0 |
+| GeoTouchSensor `hitGeoCoord_changed` | 6 | 6 | 261 | 5e-06 |
+| the drivers in the same worlds (TimeSensor, PositionInterpolator, OrientationInterpolator, BooleanSequencer) | | 6 | 3,002 | 4e-06 |
+
+102 of 102 streams agree (96 in `probe-geo`, 6 in `probe-geo-touch`), at the judge's tolerance of 2e-3; a stream of
+single-precision values is also compared in units of the last digit X_ITE prints (7 significant digits for SFVec3f and
+SFRotation, 15 for the double fields), which is what "worst gap" means above where a unit is named. The simulator sent 2 events
+more than X_ITE on `position_changed` and `geoCoord_changed` and 3 more on `orientation_changed` over all eight sensors (the
+judge counts them as `simulator_only` and the streams still agree; I did not look into where they fall). One planted fault
+is tested (`test_a_changed_machine_is_caught`): the slerp replaced by a straight line between the two points fails the judge
+on `GpiFar.geovalue_changed`. The other parts (the rotateYUp frame, the UTM series, single precision) are not planted.
+
+What X_ITE 16.8.1 does, found by reading its dist and then by the recording (the simulator follows it):
+
+- **GeoPositionInterpolator** converts each keyValue to local coordinates (the geocentric point, minus the GeoOrigin's
+  geocentric point and turned into its frame when `rotateYUp`), interpolates between the two keys with X_ITE's
+  `Geocentric.slerp` (the direction by spherical interpolation, the length linearly), then converts back to the node's geoSystem for
+  `geovalue_changed`. `value_changed` is the local coordinate rounded to 32 bits (a float); `geovalue_changed` is a double.
+  It is not interpolated in geodetic space.
+- **Geodetic from geocentric** is a 30-iteration loop that stops when the height changes by less than 1 mm; a point on the
+  pole gives latitude pi (the standard's 90 degrees), so a round trip on a flattened planet is good to 1e-4 degrees and 2 mm.
+- **UTM** uses a series with a `tan^8` term; `easting_first` and `S` swap and sign as the standard says.
+- **A key exactly at a `rotateYUp` GeoOrigin** gives a local vector that is rounding noise, so the slerp direction is chaotic
+  (the simulator and X_ITE were about 1,772 m apart). Not reproducible: the probe origins sit away from the
+  key points. Listed under "not checked".
+- **GeoProximitySensor** sends `geoCoord_changed` after `position_changed`, in the node's geoSystem. A `geoCenter` in the file
+  is not read (X_ITE copies it into `center` only when an event arrives, and then `center_changed` is sent); `enabled` is obeyed in
+  the same frame: it leaves at once and, enabled again, enters with that frame's viewer.
+- **GeoTouchSensor** sends `hitGeoCoord_changed` with `hitPoint_changed`, only while the pointer is over and the sensor is enabled.
+- **X_ITE processes a changed `geoSystem` or `geoOrigin` at its next event pass**, so a probe that sets one and reads the
+  answer at once gets the old system's answer (this misled the first capture of the UTM cases; the probe now runs
+  `set_geoSystem__()` and `set_geoOrigin__()` itself, origin first).
+- An SFVec3f cannot be routed to an SFVec3d field in X_ITE (the ROUTE is refused), so `geoCenter` is driven from a double
+  source in the probe.
+
+GeoOrigin is handled: a GeoOrigin in the node's own content, or a `USE` of one that the World read (`World.geo_origins`,
+filled by `World.from_x3d`), or of one among the graph's contents. A `USE` that names nothing the simulation can read is
+refused by name: the node sends nothing that depends on the origin, and `Simulation.noted["geo-origin-unresolved"]` counts
+it. The Player reads no GeoOrigin DEF from a Blender scene, so an origin given by `USE` is refused there and an inline one
+works.
+
+Fuzz (`tools/behaviour_fuzz.py`, Python 3.13.18, geoSystem tokens, GeoOrigin content, a `USE` that names nothing, markup that is
+not XML, wrong-shaped values, and a new `hit` call): 2,000 normal and 2,000 hostile graphs on seeds 1, 2 and 3: 0 failed;
+`--blender --count 100` on seeds 1, 2 and 3 (bpy 5.3.0): 0 failed. Two finds, fixed: a wrong-shaped hit point posted by hand
+raised inside the GeoTouchSensor (seeds 1 and 2; the node was left out of that event and named, now it is not reached), and my
+own generator wrote a GeoOrigin in a quote style the round trip rewrites (a generator fault, not the add-on's).
+
+Cost, `tools/behaviour_bench.py --shapes geo` (`PYTHONHASHSEED=3`, simulator only, median of 300 steps of 1/60 s, Python 3.13.18,
+shared 4-core Xeon, load average 1.6 at the start): 0.10 ms per step at N=10, 1.50 at N=100, 10.10 at N=1000 (1,504 nodes,
+2,012 events per step; p95 11.79 ms), 68.9 at N=5000. N is the number of GeoPositionInterpolators; N/4 GeoProximitySensors and N/4
+GeoTouchSensors ride along. N=1000 is under 16.7 ms, so no profile was needed; the cost is about 5 microseconds an event, linear.
+
+Play: the viewport camera feeds a GeoProximitySensor as it does a ProximitySensor (`GeoProximitySensor` is in
+`WORLD_SENSORS`); a GeoTouchSensor is a pointing sensor, and `press` with a location also calls `Simulation.hit`, so
+`hitGeoCoord_changed` follows. Listed as not applied, per sensor: a hover gives no hit point, so there is no
+`hitGeoCoord_changed` without a press. `geovalue_changed` and the other double outputs matter only to a Script or a ROUTE;
+`value_changed` reaches a target as any interpolator's does. An origin named by `USE` is refused (above).
+
+Not checked: a GeoOrigin that is a key point under `rotateYUp` (chaotic in X_ITE); the standard's other geoSystems
+(`GDC`, `GCC`, `UTM` of other ellipsoids than the ten probed); a real Blender window; the viewer under a GeoLocation or a
+GeoTransform; GeoLOD, GeoMetadata, GeoElevationGrid, GeoViewpoint and the rest of the component (not in the 57); drag
+(a GeoTouchSensor's hit point follows no drag); Safari or Firefox. Grades: Confirmed for the 102 streams and the 754
+conversions on X_ITE 16.8.1; Likely for other origins, zones and ellipsoids; Suspected for a viewer moving faster than one
+frame per step.
+
 ### P4 results: LinePickSensor, PointPickSensor, PrimitivePickSensor, VolumePickSensor
 
 `source/behaviour_pick.py` (no bpy): the document is read once (`World.from_x3d` calls `behaviour_pick.build`; `World.pick` is a
@@ -344,14 +431,14 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 ## Coverage
 
 <!-- coverage:begin (generated by tools/behaviour_coverage.py; do not edit by hand) -->
-57 event nodes: **57 wired, 54 simulated, 53 judged, 47 played**. Instrument: `tools/behaviour_coverage.py` over `tools/behaviour_event_nodes.json` (X3DUOM 4.0, sha256 `7e426a238656`), `source/behaviour_catalogue.py`, `source/behaviour_sim.py` (`SIMULATED`) and the traces in `tests/behaviour/x_ite_traces/` and `tests/behaviour/demos/*/x_ite.json`. Judged means the node sends on a ROUTE in a world recorded on X_ITE and the simulator agrees stream for stream; the probes column names where (first two). Played is hand-kept in the tool (see its comment); the test pins it.
+57 event nodes: **57 wired, 57 simulated, 56 judged, 50 played**. Instrument: `tools/behaviour_coverage.py` over `tools/behaviour_event_nodes.json` (X3DUOM 4.0, sha256 `7e426a238656`), `source/behaviour_catalogue.py`, `source/behaviour_sim.py` (`SIMULATED`) and the traces in `tests/behaviour/x_ite_traces/` and `tests/behaviour/demos/*/x_ite.json`. Judged means the node sends on a ROUTE in a world recorded on X_ITE and the simulator agrees stream for stream; the probes column names where (first two). Played is hand-kept in the tool (see its comment); the test pins it.
 
 | component | nodes | wired | simulated | judged | played |
 |---|---:|---:|---:|---:|---:|
 | EnvironmentalSensor | 3 | 3 | 3 | 3 | 1 |
 | EventUtilities | 7 | 7 | 7 | 7 | 7 |
 | Followers | 14 | 14 | 14 | 14 | 14 |
-| Geospatial | 3 | 3 | 0 | 0 | 0 |
+| Geospatial | 3 | 3 | 3 | 3 | 3 |
 | Interpolation | 13 | 13 | 13 | 13 | 13 |
 | KeyDeviceSensor | 2 | 2 | 2 | 2 | 2 |
 | Navigation | 1 | 1 | 1 | 1 | 0 |
@@ -366,11 +453,11 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 
 | node | component | class | wired | simulated | judged | played | probes |
 |---|---|---|:-:|:-:|:-:|:-:|---|
-| ProximitySensor | EnvironmentalSensor | pure | yes | yes | yes | yes | `probe-proximity.x3d`, `probe-world.x3d` |
+| ProximitySensor | EnvironmentalSensor | pure | yes | yes | yes | yes | `probe-geo.x3d`, `probe-proximity.x3d` and 1 more |
 | TransformSensor | EnvironmentalSensor | B | yes | yes | yes | - | `probe-world.x3d` |
 | VisibilitySensor | EnvironmentalSensor | B | yes | yes | yes | - | `probe-world.x3d` |
 | BooleanFilter | EventUtilities | pure | yes | yes | yes | yes | `counter.x3d`, `demos/hello-switch` and 7 more |
-| BooleanSequencer | EventUtilities | pure | yes | yes | yes | yes | `probe-pick.x3d`, `probe-shader.x3d` and 2 more |
+| BooleanSequencer | EventUtilities | pure | yes | yes | yes | yes | `probe-geo.x3d`, `probe-pick.x3d` and 3 more |
 | BooleanToggle | EventUtilities | pure | yes | yes | yes | yes | `counter.x3d`, `demos/hello-switch` and 3 more |
 | BooleanTrigger | EventUtilities | pure | yes | yes | yes | yes | `probe-loadlive.x3d`, `probe.x3d` |
 | IntegerSequencer | EventUtilities | pure | yes | yes | yes | yes | `probe-shader.x3d`, `probe-switch.x3d` and 1 more |
@@ -390,16 +477,16 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | ScalarDamper | Followers | pure | yes | yes | yes | yes | `probe.x3d` |
 | TexCoordChaser2D | Followers | A | yes | yes | yes | yes | `probe-list-followers.x3d` |
 | TexCoordDamper2D | Followers | A | yes | yes | yes | yes | `probe-list-followers.x3d` |
-| GeoPositionInterpolator | Geospatial | C | yes | - | - | - | - |
-| GeoProximitySensor | Geospatial | B+C | yes | - | - | - | - |
-| GeoTouchSensor | Geospatial | B+C | yes | - | - | - | - |
+| GeoPositionInterpolator | Geospatial | C | yes | yes | yes | yes | `probe-geo.x3d` |
+| GeoProximitySensor | Geospatial | B+C | yes | yes | yes | yes | `probe-geo.x3d` |
+| GeoTouchSensor | Geospatial | B+C | yes | yes | yes | yes | `probe-geo-touch.x3d` |
 | ColorInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/workbench`, `probe-shader.x3d` and 1 more |
 | CoordinateInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-coord.x3d`, `probe-list-followers.x3d` |
 | CoordinateInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `probe-coord.x3d`, `probe-list-followers.x3d` |
 | EaseInEaseOut | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
 | NormalInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-coord.x3d` |
-| OrientationInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-hanim.x3d` and 7 more |
-| PositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 12 more |
+| OrientationInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-geo.x3d` and 8 more |
+| PositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 13 more |
 | PositionInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-shader.x3d` |
 | ScalarInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/piano`, `probe-hanim.x3d` and 5 more |
 | SplinePositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
@@ -422,5 +509,5 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | Script | Scripting | E | yes | yes | yes | yes | `demos/piano`, `probe-script.x3d` |
 | AudioClip | Sound | D | yes | yes | yes | yes | `probe-audio.x3d`, `probe-loadlive.x3d` |
 | MovieTexture | Texturing | D | yes | yes | yes | yes | `probe-movie.x3d` |
-| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 20 more |
+| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 21 more |
 <!-- coverage:end -->
