@@ -43,7 +43,9 @@ VIEWPOINT_TYPES = {"Viewpoint", "OrthoViewpoint"}
 LIGHT_TYPES = {"PointLight", "DirectionalLight", "SpotLight"}
 MATERIAL_TYPES = {"PhysicalMaterial", "Material", "UnlitMaterial"}
 BINDING_OF = {**{t: "transform" for t in TRANSFORM_TYPES}, **{t: "viewpoint" for t in VIEWPOINT_TYPES},
-              **{t: "light" for t in LIGHT_TYPES}, **{t: "material" for t in MATERIAL_TYPES}}
+              **{t: "light" for t in LIGHT_TYPES}, **{t: "material" for t in MATERIAL_TYPES},
+              **{"Text": "text"},
+              }
 # Sensors that act on their siblings: where they sit in the scene graph is part of their meaning.
 PLACED_TYPES = {"TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "VisibilitySensor",
                 "TransformSensor"}
