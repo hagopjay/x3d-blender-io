@@ -1,0 +1,9 @@
+{
+ "title": "Hello switch: press the button, the lamp toggles",
+ "streams": 2,
+ "clicks": 3,
+ "seconds": 4,
+ "drags": null,
+ "keys": null,
+ "judges": []
+}

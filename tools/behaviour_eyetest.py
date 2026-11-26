@@ -102,6 +102,19 @@ def key(kind):
     window().event_simulate(type=kind, value="RELEASE")
 
 
+_DIGITS = ("ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE")
+
+
+def type_key(char):
+    """One typed character through the event queue, with its text, as a keyboard would send it (letters, digits,
+    space, return; anything else raises, so a demo never types what it did not mean)."""
+    kind = (char.upper() if char.isascii() and char.isalpha() else _DIGITS[int(char)] if char.isdigit()
+            else {" ": "SPACE", "\n": "RET"}[char])
+    shift = char.isalpha() and char.isupper()
+    window().event_simulate(type=kind, value="PRESS", unicode=char if char != "\n" else "", shift=shift)
+    window().event_simulate(type=kind, value="RELEASE", shift=shift)
+
+
 def screen_point(obj):
     """Window coordinates of ``obj``'s middle in the 3D viewport, or None when it is off screen."""
     from bpy_extras import view3d_utils
@@ -152,9 +165,33 @@ def node_editor_beside_viewport():
     return editor
 
 
+DEMOS = REPO / "tests" / "behaviour" / "demos"
+
+
+def world_path(world):
+    """A test world (tests/behaviour/NAME.x3d) or a demo (tests/behaviour/demos/NAME/NAME.x3d)."""
+    demo = DEMOS / world / f"{world}.x3d"
+    return demo if demo.is_file() else REPO / "tests" / "behaviour" / f"{world}.x3d"
+
+
+def demo_act(world):
+    """A demo's own live-window act (demos/NAME/act.py, a generator act(rig, ctx)), or None."""
+    import importlib.util
+    act_file = DEMOS / world / "act.py"
+    if not act_file.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location(f"behaviour_demo_act_{world.replace('-', '_')}", act_file)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.act
+
+
+RIG = None                                        # what a demo act may call; filled in below the helpers it names
+
+
 def world_steps(world, tag=""):
     from x3d_blender_io import behaviour_nodes, behaviour_play
-    path = REPO / "tests" / "behaviour" / f"{world}.x3d"
+    path = world_path(world)
     scene = fresh_scene(f"eyetest_{world}{tag}")
     name = f"{world}{tag}"
     win = window()
@@ -279,6 +316,14 @@ def world_steps(world, tag=""):
         camera_now = scene.camera.matrix_world.translation if scene.camera else None
         note(name, "camera_moved", camera_now is not None and
              tuple(round(v, 3) for v in camera_now) != before_full.get(scene.camera.name, ((None,),))[0])
+    act = demo_act(world)
+    if act is not None:                           # the demo's own act: its interactions, screenshots and checks
+        try:
+            yield from act(RIG, {"name": name, "scene": scene, "player": player, "editor": editor, "view": view,
+                                 "window": win})
+        except Exception:
+            LOG["errors"].append(f"{name} act: {traceback.format_exc()}")
+            note(name, "act_ok", False)
     glowing = [n.name for n in tree.nodes if n.use_custom_color]
     note(name, "glowing_after_click", glowing)
     note(name, "shot_glow", shot(f"{name}-4-play-glow"))
@@ -297,6 +342,10 @@ def world_steps(world, tag=""):
     note(name, "not_restored", {k: [before_full.get(k), v] for k, v in after_full.items() if before_full.get(k) != v})
     note(name, "custom_colour_left", [n.name for n in tree.nodes if n.use_custom_color])
     note(name, "shot_restored", shot(f"{name}-6-restored"))
+
+
+RIG = __import__("types").SimpleNamespace(mouse=mouse, key=key, type_key=type_key, shot=shot, note=note, screen_point=screen_point,
+                                         areas=areas, region_of=region_of, window=window)
 
 
 def _sha256(path):
@@ -344,9 +393,10 @@ def witness_record(subject_at_start):
     checks = {name: {"shown": v.get("shown_in_editor") is True, "overlaps": len(v.get("overlaps") or []),
                      "played": v.get("playing") is True, "restored": v.get("restored"),
                      "not_simulated": v.get("not_simulated"), "drags": len(v.get("drags") or []),
-                     "proximity_toggled": v.get("proximity_toggled")} for name, v in worlds.items()}
+                     "proximity_toggled": v.get("proximity_toggled"), "act_ok": v.get("act_ok")}
+              for name, v in worlds.items()}
     failed = [name for name, c in checks.items()
-              if not c["shown"] or c["overlaps"] or (c["played"] and c["restored"] is not True)]
+              if not c["shown"] or c["overlaps"] or (c["played"] and c["restored"] is not True) or c["act_ok"] is False]
     played = [name for name, c in checks.items() if c["played"]]
     if subject != subject_at_start:
         status, reason = "error", "the add-on source changed while the run watched it"
