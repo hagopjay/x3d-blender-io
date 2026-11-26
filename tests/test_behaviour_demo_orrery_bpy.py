@@ -79,9 +79,9 @@ class OrreryChartTests(unittest.TestCase):
         player = self.bp.Player(scene, flash=False)
         player.start(0.0)
         seen = []
-        for step in range(1, 301):                              # 15 s: the year clock ticks the chart at 2, 6, 10 and 14 s
+        for step in range(1, 301):                              # 15 s: the year clock ticks the chart at 1, 4, 7 and 10 s
             player.step(step * 0.05)
-            if step < 40:
+            if step < 19:
                 for mapping in _mappings(chart):                # X_ITE's chaser repeats a value at rest: nothing has moved yet
                     self.assertEqual(tuple(mapping.inputs["Location"].default_value), (0.0, 0.0, 0.0))
                     self.assertEqual(tuple(mapping.inputs["Scale"].default_value), (1.0, 1.0, 1.0))

@@ -20,7 +20,7 @@ PLANETS = [
     ("Terra", 4.3, 0.40, "0.20 0.55 0.90", 12.0, ("Luna", 0.80, 0.12, 5.0)),
     ("Gale", 5.6, 0.30, "0.55 0.85 0.75", 20.0, ("Pebble", 0.62, 0.09, 9.0)),
 ]
-YEAR = 20.0
+YEAR = 12.0
 FLIGHTS = ("Venus", "Terra")      # planets with a TouchSensor: demo.json's click_plan clicks each, so every chain is judged
 LANE = 1.2                       # the orrery's plane, above the stage
 HOME = (0.0, 3.6, 10.6)
@@ -119,8 +119,8 @@ def build():
 
     add('    <!-- the year clock ticks the chart along like a ratchet: PositionInterpolator2D -> PositionChaser2D (glides each tick) -> TextureTransform -->')
     add(f'    <TimeSensor DEF="YearClock" cycleInterval="{YEAR}" loop="true" />')
-    add('    <PositionInterpolator2D DEF="ChartPan" key="0 0.1 0.12 0.3 0.32 0.5 0.52 0.7 0.72 1" '
-        'keyValue="0 0  0 0  0.6 0  0.6 0  1.2 0.3  1.2 0.3  0.6 0.3  0.6 0.3  0 0  0 0" />')   # ticks of 0.6 of the chart
+    add('    <PositionInterpolator2D DEF="ChartPan" key="0 0.08 0.12 0.33 0.37 0.58 0.62 0.83 0.87 1" '
+        'keyValue="0 0  0 0  1.4 0  1.4 0  2.8 0.7  2.8 0.7  1.4 0.7  1.4 0.7  0 0  0 0" />')   # ticks of 1.4 chart widths: the judge needs big steps to see a chaser's shape
     add('    <PositionChaser2D DEF="ChartSmooth" duration="1.5" initialDestination="0 0" initialValue="0 0" />')
     clocks.append("YearClock")
     route += [("YearClock", "fraction_changed", "ChartPan", "set_fraction"),
