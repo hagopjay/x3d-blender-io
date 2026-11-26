@@ -55,10 +55,12 @@ import behaviour_graph as bg           # noqa: E402
 import behaviour_sim as bs             # noqa: E402
 import behaviour_pick as bp            # noqa: E402
 import behaviour_world as bw           # noqa: E402
+import behaviour_geo as geo            # noqa: E402
 
 NODE_TYPES = sorted(cat.NODES)
 TARGET_TYPES = sorted(cat.TARGETS)
 LIST_FOLLOWERS = ("CoordinateChaser", "CoordinateDamper", "TexCoordChaser2D", "TexCoordDamper2D")   # lists whose lengths need not agree
+GEO_NODES = ("GeoPositionInterpolator", "GeoProximitySensor", "GeoTouchSensor")
 PROPERTIES = ("a-no-exception", "b-bounded", "c-values", "d-round-trip", "e-deterministic")
 POINTER_OPS = ("press", "drag", "release", "hover", "click")
 
@@ -222,6 +224,73 @@ def _content(rng, node, index, hostile):
     return "".join(parts)
 
 
+GEO_SYSTEMS = ['"GD" "WE"', '"GD" "BR" "longitude_first"', '"UTM" "Z31"', '"UTM" "Z56" "S"', '"UTM" "Z33" "easting_first"', '"GC"',
+               '"GD" "MARS"', '"GDC" "WD"', '"UTM" "Z31" "IN" "S"', '"GD"']
+GEO_HOSTILE_SYSTEMS = ['', '"WM"', '"UTM" "Z99999999999999999999"', '"UTM" "Z0"', '"GD" "URANUS"', '"bogus"', '"GD" "SUN"',
+                       '"GC" "UTM" "GD"', '"UTM" "Z-5"', "junk no quotes", '"UTM" "Z60" "S" "easting_first"']
+
+
+def _geo_point(rng, system, hostile):
+    """A coordinate in a geoSystem as text: latitude, longitude and height; northing, easting and height; metres."""
+    kind = geo.parse_geo_system(geo.strings(system)).kind
+    if hostile and rng.random() < 0.25:
+        return " ".join(rng.choice(_HOSTILE_NUMBERS + ["91", "-91", "400", "1e30", "6.4e6"]) for _ in range(rng.choice([3, 3, 3, 2, 4])))
+    if kind == "UTM":
+        return f"{rng.uniform(0, 9e6):.3f} {rng.uniform(1e5, 9e5):.3f} {rng.uniform(-100, 3000):.2f}"
+    if kind == "GC":
+        return " ".join(f"{rng.uniform(-7e6, 7e6):.2f}" for _ in range(3))
+    return f"{rng.uniform(-89.9, 89.9):.6f} {rng.uniform(-180, 180):.6f} {rng.uniform(-100, 3000):.2f}"
+
+
+def _geo_node(rng, node, k, hostile):
+    """The Geo fields (own random generator, so the graphs the fuzzer made before the Geo nodes were run stay as they were): a
+    geoSystem, values in it, a GeoOrigin in the node's content (inline, or a reference that names nothing, or markup that is
+    not XML when hostile)."""
+    system = rng.choice(GEO_HOSTILE_SYSTEMS if hostile and rng.random() < 0.4 else GEO_SYSTEMS)
+    node.fields["geoSystem"] = system
+    if node.node_type == "GeoPositionInterpolator":
+        count = len(node.fields.get("key", "").split())
+        count = max(0, count + rng.choice([0, 0, 0, 1, -1]) if hostile else count)
+        node.fields["keyValue"] = " ".join(_geo_point(rng, system, hostile) for _ in range(count))
+    elif node.node_type == "GeoProximitySensor":
+        for name in ("center", "geoCenter"):
+            if rng.random() < 0.6:
+                node.fields[name] = " ".join(f"{rng.uniform(-3, 3):.3f}" for _ in range(3))
+        if rng.random() < 0.7:
+            node.fields["size"] = rng.choice(["-1 -1 -1", "10 10 10", "4 4 4", "0 1 1", "100 100 100"])
+    roll = rng.random()
+    origin_system = rng.choice(GEO_SYSTEMS)
+    if roll < 0.55:
+        # written as the exporter writes it (double quotes, single where the value holds a double quote), so the round trip is exact
+        node.content = (f'<GeoOrigin DEF="GO{k}" containerField="geoOrigin" geoSystem=\'{origin_system}\' '
+                        f'geoCoords="{_geo_point(rng, origin_system, hostile)}" rotateYUp="{rng.choice(["true", "false"])}"/>')
+    elif hostile and roll < 0.7:
+        node.content = rng.choice(['<GeoOrigin USE="Missing" containerField="geoOrigin"/>', '<GeoOrigin geoCoords="a b c" rotateYUp="x"/>',
+                                   "<unclosed", '<GeoOrigin geoSystem="" geoCoords="90 0 0" rotateYUp="true"/>',
+                                   '<GeoOrigin geoCoords="-90 0 0" rotateYUp="true"/>'])
+    else:
+        node.content = ""
+    node.inner = tuple(sorted(bg._use_names(node.content)[1])) if node.content else ()
+
+
+def _geo_hits(rng, graph, calls, hostile):
+    """After a pointer call at a GeoTouchSensor, usually say where on it the pointer is (``hit``)."""
+    touch = {n.id for n in graph.nodes.values() if n.node_type == "GeoTouchSensor"}
+    if not touch:
+        return
+    at = 0
+    while at < len(calls):
+        call = calls[at]
+        at += 1
+        if call[0] in ("hover", "press", "click") and call[1] in touch and rng.random() < 0.8:
+            point = [rng.uniform(-3, 3) for _ in range(3)]
+            if hostile and rng.random() < 0.3:
+                point = rng.choice([[math.nan, 0.0, 0.0], [1.0, 2.0], [1e308, 1e308, 1e308], "xyz", None, [0.0, 0.0, 0.0, 0.0]])
+            when = next((c for c in reversed(call) if isinstance(c, float)), 0.0) if call[0] != "hover" else call[3]
+            calls.insert(at, ["hit", call[1], point, when])
+            at += 1
+
+
 def _ends(rows, outgoing):
     keep = ("outputOnly", "inputOutput") if outgoing else ("inputOnly", "inputOutput")
     return [row for row in rows if row[2] in keep]
@@ -331,8 +400,11 @@ def generate(rng, index, hostile):
             if node.node_type in ("AudioClip", "MovieTexture") and extra.random() < 0.6:
                 node.fields["loop"] = extra.choice(["true", "false"])
                 node.fields["startTime"] = _f(extra.uniform(0, 3))
+    for k, node in enumerate(n for n in graph.nodes.values() if n.node_type in GEO_NODES):
+        _geo_node(extra, node, k, hostile)
     calls = schedule(rng, graph, hostile)
     calls.insert(0, ["resources", _resources(extra, hostile)])
+    _geo_hits(extra, graph, calls, hostile)
     return graph, calls
 
 
@@ -384,7 +456,7 @@ def _resources(rng, hostile):
     return table
 
 
-WORLD_SENSORS = ("ProximitySensor", "VisibilitySensor", "TransformSensor")
+WORLD_SENSORS = ("ProximitySensor", "VisibilitySensor", "TransformSensor", "GeoProximitySensor")
 
 
 def make_world(graph, hostile):
@@ -470,8 +542,8 @@ def schedule(rng, graph, hostile):
     """A list of calls: [name, args...], plain data so a failure can be written out and replayed."""
     calls, clock = [], 0.0
     ids = list(graph.nodes)
-    pointing = [n.id for n in graph.nodes.values() if n.node_type in bs.POINTING]
-    proximity = [n.id for n in graph.nodes.values() if n.node_type == "ProximitySensor"]
+    pointing = [n.id for n in graph.nodes.values() if n.node_type in bs.POINTING or n.node_type in bs.GEO_POINTING]
+    proximity = [n.id for n in graph.nodes.values() if n.node_type in bs.PROXIMITY]
     colliders = [n.id for n in graph.nodes.values() if n.node_type == "CollisionSensor"]
     in_world = [n.id for n in graph.nodes.values() if n.node_type in WORLD_SENSORS]
     moving = [n.id for n in graph.nodes.values() if n.node_type == "Transform" and n.role == bg.TARGET]
@@ -640,6 +712,8 @@ def _apply_call(sim, call):
         return sim.release(args[0], args[1])
     if name == "hover":
         return sim.hover(args[0], args[1], args[2])
+    if name == "hit":
+        return sim.hit(args[0], tuple(args[1]) if isinstance(args[1], list) else args[1], args[2])
     if name == "view":
         position, orientation, now, centre, test, frustum = args
         return sim.view(tuple(position), tuple(orientation), now, tuple(centre), None if test is None else tuple(test),
