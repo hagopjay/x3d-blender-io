@@ -187,6 +187,51 @@ class PureTests(unittest.TestCase):
         self.assertEqual(done.returncode, 3)
         self.assertEqual(json.loads(done.stdout)["verdict"], "error")
 
+    # -- what a 42-pair run on real scenes asked for ---------------------------------------------------------------------
+
+    def test_no_events_in_any_run_is_nothing_moved_and_one_silent_side_is_not(self):
+        self.assertEqual(pj.activity([0, 0, 0], [0, 0, 0]), "nothing-moved")
+        self.assertEqual(pj.activity([0, 0, 0], [5, 4, 6]), "one-side-silent")
+        self.assertEqual(pj.activity([5, 4, 6], [0, 0, 0]), "one-side-silent")
+        self.assertIsNone(pj.activity([0, 3, 3], [5, 4, 6]))          # silent in only some pairings: left to the floor
+        self.assertIsNone(pj.activity([5, 5], [5, 5]))
+
+    def test_overall_reason_is_nothing_moved_only_when_every_stream_is(self):
+        still = {"verdict": "unclear", "reason": "nothing-moved"}
+        self.assertEqual(pj.overall_reason([still, dict(still)]), "nothing-moved")
+        self.assertEqual(pj.overall_reason([still, {"verdict": "unclear", "reason": "blind"}]), "blind")
+        self.assertEqual(pj.overall([still["verdict"]]), "unclear")
+
+    def test_a_recording_that_drew_nothing_still_has_a_window_from_its_start_and_wait(self):
+        trace = {"began": 100.0, "frames": [100.0] * 150}            # X_ITE's clock never moved: every stamp is the start
+        self.assertEqual(pj._stop(trace, 6.0), 106.0)
+        self.assertEqual(pj._stop({"began": 100.0, "frames": [100.0, 107.5]}, 6.0), 107.5)
+        self.assertEqual(pj._stop({"began": 100.0, "frames": []}, 6.0), 106.0)
+
+    def test_a_practically_still_stream_carries_a_span_note_and_keeps_its_verdict(self):
+        n = 60
+        a = [pj.flat(f"0 1 0 {5e-6 * i / n}") for i in range(n)]
+        b = [pj.flat(f"0 1 0 {5e-6 * i / n + 4e-6}") for i in range(n)]
+        r = self.stream([a] * 3, [b] * 3, rotation=True)
+        self.assertEqual(r["verdict"], "differs")                      # the rule is unchanged: the tolerance scales with the span
+        self.assertLess(r["span"], pj.SPAN_LIMIT_ROTATION)
+        self.assertEqual(pj.stream_notes(r["span"], True, 10, False, 30.0), ["span below 0.001 rad"])
+        self.assertEqual(pj.stream_notes(5e-5, False, 10, False, 30.0), ["span below 0.0001 in the field unit"])
+        self.assertEqual(pj.stream_notes(0.5, True, 10, False, 30.0), [])
+        self.assertEqual(pj.stream_notes(0.0, False, 0, False, 30.0), [])    # never moved: that is "nothing-moved", not a span note
+
+    def test_low_frame_rate_is_noted_only_for_a_blind_stream_under_the_limit(self):
+        self.assertEqual(pj.MIN_FPS, 15.0)
+        self.assertEqual(pj.stream_notes(2.0, False, 10, True, 9.0), ["low frame rate"])
+        self.assertEqual(pj.stream_notes(2.0, False, 10, True, 15.0), [])
+        self.assertEqual(pj.stream_notes(2.0, False, 10, False, 3.0), [])
+        self.assertEqual(pj.stream_notes(2.0, False, 10, True, 3.0, min_fps=2.0), [])
+
+    def test_the_drawn_frame_rate_counts_distinct_stamps_in_the_window(self):
+        frames = [10.0] * 30 + [10.1, 10.1, 10.2, 10.3, 10.3, 10.4, 11.5]
+        self.assertEqual(pj.frame_stats(frames, 10.0, 11.0), {"frames": 5, "seconds": 1.0, "fps": 5.0})
+        self.assertEqual(pj.frame_stats(frames, 10.0, 10.0)["fps"], 0.0)
+
 
 def _x_ite():
     for path in X_ITE_CANDIDATES:
@@ -323,6 +368,54 @@ class BrowserTests(unittest.TestCase):
     def test_a_pointer_stimulus_cannot_be_forced_into_simultaneous_mode(self):
         with self.assertRaises(pj.PairJudgeError):
             pj.judge_pair(WORLDS / "door.x3d", WORLDS / "door.x3d", {"clicks": 1}, repeats=2, x_ite=_x_ite(), mode="simultaneous")
+
+    # -- nothing moved, frame rate, span note, shared runs ------------------------------------------------------------------
+
+    def test_a_touch_sensor_and_a_still_box_read_unclear_nothing_moved_with_no_stimulus(self):
+        world = WORLDS / "touch-still.x3d"
+        r = pj.judge_pair(world, world, None, repeats=2, x_ite=_x_ite())
+        print("\ntouch-still vs itself:", r["verdict"], r["reason"], "load", r["load"]["max_1min"], r["wall_time_s"]["total"], self.table(r))
+        self.assertEqual(r["mode"], "simultaneous")
+        self.assertEqual((r["verdict"], r["reason"]), ("unclear", "nothing-moved"))
+        self.assertEqual([(s["verdict"], s["reason"]) for s in r["streams"]], [("unclear", "nothing-moved")])
+        self.assertEqual(pj.EXIT[r["verdict"]], 2)
+
+    def test_the_turntable_reports_a_frame_rate_samples_and_the_wall_time(self):
+        world = WORLDS / "turntable.x3d"
+        r = pj.judge_pair(world, world, {"seconds": 3}, repeats=2, x_ite=_x_ite())
+        print("\nturntable frame rate:", r["frame_rate"]["median"], r["frame_rate"]["per_run"]["a"][:2], r["wall_time_s"],
+              [s["samples"] for s in r["streams"]])
+        rows = r["frame_rate"]["per_run"]
+        self.assertEqual({n: len(rows[n]) for n in rows}, {"a": 6, "b": 6})           # every run of both files: three a repeat
+        self.assertTrue(all(row["frames"] > 0 and row["fps"] > 0 for n in rows for row in rows[n]))
+        self.assertGreater(r["frame_rate"]["median"], 0)
+        self.assertEqual(r["frame_rate"]["low_limit"], 15.0)
+        self.assertEqual({n: len(v) for n, v in r["streams"][0]["samples"].items()}, {"a": 6, "b": 6})
+        self.assertTrue(all(n > 0 for v in r["streams"][0]["samples"].values() for n in v))
+        self.assertEqual(len(r["wall_time_s"]["per_pair"]), 6)                         # 3 pairs a repeat, 2 repeats
+        self.assertGreater(r["wall_time_s"]["total"], 0)
+
+    def test_a_near_still_stream_carries_the_span_note(self):
+        world = WORLDS / "near-still.x3d"
+        r = pj.judge_pair(world, world, {"seconds": 3}, repeats=2, x_ite=_x_ite())
+        s = r["streams"][0]
+        print("\nnear-still vs itself:", r["verdict"], s["verdict"], s["reason"], s["span"], s["span_unit"], s["note"], self.table(r))
+        self.assertEqual(s["span_unit"], "rad")
+        self.assertLess(s["span"], 1e-3)
+        self.assertIn("span below 0.001 rad", s["notes"])
+        self.assertEqual(s["note"].split(";")[0], "span below 0.001 rad")
+
+    def test_shared_runs_form_the_same_floor_pairs_from_four_pages(self):
+        world = WORLDS / "loop-20s.x3d"
+        r = pj.judge_pair(world, world, {"seconds": 4}, repeats=2, x_ite=_x_ite(), share_runs=True)
+        print("\n20 s loop vs itself, shared runs:", r["verdict"], r["wall_time_s"], self.table(r))
+        s = r["streams"][0]
+        self.assertTrue(r["wall_time_s"]["shared_runs"])
+        self.assertEqual(len(r["wall_time_s"]["per_pair"]), 2)                         # one batch of four pages a repeat
+        self.assertEqual((len(s["a_vs_a"]["fraction"]), len(s["b_vs_b"]["fraction"]), len(s["a_vs_b"]["fraction"])), (2, 2, 8))
+        self.assertEqual(r["verdict"], "same")
+        with self.assertRaises(pj.PairJudgeError):
+            pj.judge_pair(world, world, {"seconds": 4}, repeats=2, x_ite=_x_ite(), mode="sequential", share_runs=True)
 
 
 if __name__ == "__main__":

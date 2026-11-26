@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="A TouchSensor and a still box: nothing moves without a click"/>
+    <meta name="generator" content="hand written for tests/test_behaviour_pair_judge.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0 8"/>
+    <Transform DEF="Box"><Shape><Appearance><Material diffuseColor="0.3 0.6 0.3"/></Appearance><Box size="2 2 2"/></Shape><TouchSensor DEF="Touch"/></Transform>
+    <TimeSensor DEF="Clock" cycleInterval="2"/>
+    <PositionInterpolator DEF="Path" key="0 1" keyValue="0 0 0 0 1 0"/>
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Clock" toField="startTime"/>
+    <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Path" toField="set_fraction"/>
+    <ROUTE fromNode="Path" fromField="value_changed" toNode="Box" toField="translation"/>
+  </Scene>
+</X3D>

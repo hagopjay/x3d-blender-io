@@ -218,6 +218,35 @@ flip with a negated angle are the same rotation). The same world has a PositionI
 parses the exponent forms (`1e-05`, `2.5E+0`, `5e-01`) and the simulator agrees on all 62 samples. To turn a full circle, use more than three keys or write the middle key a
 little over pi.
 
+**What a 42-pair run on real scenes asked for (26 Nov 2026).** 39 real scenes and 3 controls gave 25 same, 1 differs, 9
+unclear and 4 tool errors in 108 minutes. Four changes in `tools/behaviour_pair_judge.py`:
+
+- **Nothing moved is not a tool error.** A world with a TouchSensor and nothing moving without a click ended with "the two
+  simultaneous runs overlapped for 0.00 s" (exit 3). Cause (page log of `touch-still.x3d`, X_ITE 16.8.1, headless Chromium:
+  181 requestAnimationFrame ticks, one distinct stamp): `getCurrentTime()` only moves when X_ITE draws a frame, a scene that
+  draws nothing leaves every stamp at the start, and the window was derived from the last stamp. The window now comes from the
+  recording's own start and its asked-for wait (`_stop`: start plus the wait, or the last drawn frame if later). A stream on which no run of either file
+  delivered an event is "unclear" with `reason: "nothing-moved"`, and so is the overall result when every stream is (exit 2);
+  a field X_ITE could not hook is `reason: "unobservable"` instead. A stream silent in every run of one file and active in every run of the
+  other is "differs" with `reason: "one-side-silent"` (the `detail` says it is silent in every A-versus-B pairing); silent in only some
+  runs is left to the floor.
+- **Practically still streams.** The verdict rule is unchanged. Each stream now has `span` with `span_unit` ("rad" or "field unit") and, when it
+  moved at all and its span is under an absolute limit, `note: "span below 0.001 rad"` (rotations) or `"span below 0.0001 in the field unit"` (every other
+  stream; scene units for a length). `notes` is the list, `note` the joined text.
+- **Frame rate.** Per run, `frame_rate.per_run` has the drawn frames (distinct X_ITE frame stamps of the page's requestAnimationFrame
+  log) over the compared window and frames per second; `frame_rate.median` is over all runs. Per stream, `samples` is the events delivered in each
+  run's window. A blind stream with a median under `min_fps` (default 15, `--min-fps`) gets `note: "low frame rate"`; no verdict changes.
+- **Cost.** `wall_time_s` has the total and the seconds of every pair (every run, sequentially). `share_runs=True` (CLI `--share-runs`, simultaneous
+  only) runs A, A, B, B at once in four pages per repeat: A1 with A2 and B1 with B2 are the floor, the four A-with-B combinations the pairings.
+  **Default off.** Measured (the tool itself, X_ITE 16.8.1, 4 cores, 3 repeats, one run after the other; load is the 1-minute load average, which includes the runs):
+  `loop-20s.x3d` watched 4 s: three pairs 93.7 s (load 7.2), floor 0.0, same; four pages 32.6 s (load 9.0), floor 0.0, same. `loops-3-5-7.x3d` watched 6 s: three pairs
+  111.8 s (load 9.0), floor max 0.0 on all three streams, median 53 frames a second; four pages 39.1 s (load 12.8), floor max 0.11, 0.66 and 0.37 on
+  Grower7.scale, Mover3.translation, Turner5.rotation, median 36 frames a second, still "same" but with a floor that is no longer zero. Four browsers at once on four cores are
+  3 times faster and the floor is worse, so it is an option for a quick look, not the default. One measurement each: not a distribution.
+
+Tests: pure ones for each rule; browser ones (skipped with a reason without Chromium or X_ITE) for `touch-still.x3d` ("unclear, nothing-moved" in auto mode with no
+stimulus), the turntable's frame rate and sample counts, `near-still.x3d` (keys 0 and 6.28319, span 4e-6 rad) carrying the span note, and shared runs.
+
 ### Typed field editors
 
 Each single-value field has a real widget (checkbox, number, seconds, colour swatch, vector, axis and angle). An
