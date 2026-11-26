@@ -87,7 +87,7 @@ def field_text(node, name):
 def _store(node, name, value):
     """Set a field from a Python value. A value equal to the standard's default is not stored (not written)."""
     row = _row_of(node, name)
-    text = bg.to_lexical(value, row[1])
+    text = bg.to_lexical(value, row[1], single=True)       # a value set from a widget is a 32-bit Blender float
     index = node.x3d_fields.find(name)
     if row[3] is not None and parse_value(text, row[1]) == parse_value(row[3], row[1]):
         if index >= 0:
