@@ -16,6 +16,7 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 | `tools/behaviour_eyetest.py` | open a real Blender window, import each world with its graph, screenshot the editor, Play it with real (simulated) clicks, check Esc restores everything |
 | `tools/behaviour_replay.cjs` | play the same real mouse clicks on two files in X_ITE and compare what the scene did |
 | `tests/test_behaviour_graph.py`, `tests/test_behaviour_nodes_bpy.py` | 23 plain-Python and 17 Blender tests |
+| `tools/behaviour_fuzz.py`, `tests/test_behaviour_fuzz.py` | random and hostile graphs against the graph, the simulator and the node tree (see Hardening) |
 | `tests/behaviour/` | `route-demo.x3d`, the three Wire Lab worlds, and `route-cases.json` (55 ROUTE legality cases shared with the browser Wire Lab) |
 
 ## Use
@@ -280,9 +281,122 @@ it, and Stop puts it back; the click preset binds the scene camera, and the prox
 moves inside the radius. Not checked: a window (the header and sidebar buttons were not looked at on a real screen), a
 browser (X_ITE was not run on the converted file), Blender 4.5 to 5.2.
 
+## Hardening (26 Nov 2026)
+
+`tools/behaviour_fuzz.py` throws random graphs at the graph, the simulator and the X3D round trip, deterministic from
+`--seed` (graph k of a run comes from `random.Random(seed * 1000003 + k)`); `--blender` adds the node tree and the Player.
+
+**What is generated.** Graph k holds node type k mod 45 and target type k mod 32 of the catalogue (so every behaviour and
+every target type is in every 45 graphs), plus up to six more nodes, up to four more targets, 2 to 14 ROUTEs and 8 to 50
+calls (`start`, `step`, `click`, `press`, `drag`, `release`, `hover`, `send`, `post`, `viewer`) on random nodes. Normal
+graphs: values of the right type, finite, keys increasing with one `keyValue` each, type-correct ROUTEs (also spelled
+`set_x` / `x_changed`), with self-loops, cycles, fan-in and fan-out, and times that only go forward. Hostile graphs add
+text that is not a number, NaN, infinities, 1e308 and 1e-320, empty and mismatched `key` / `keyValue` lists, unsorted and
+repeated keys, zero-length axes, empty and control-character strings, odd names, ROUTEs of the wrong type, to fields
+that do not exist and to nodes that do not exist, calls on nodes that cannot take them, wrong Python values for `send`
+and `post`, and times that repeat, go backwards, are 1e300, NaN or infinite.
+
+**Properties**, each checked on every graph: (a) nothing but a `BehaviourError` escapes `Simulation`, and a node that is
+not run is in `not_simulated`; (b) every call returns in under 2 s (a 20 s alarm stops a hang) and delivers no more events
+to targets than one per ROUTE per timestamp allows; (c) every value that reaches a target is finite and of the field's
+shape. The rule for hostile graphs: a NaN or an infinity is never delivered to a node or a target, and neither is a
+value whose shape does not fit the field it is routed to; each is dropped and counted in `Simulation.dropped`
+(`non-finite`, `mismatch`; also `bad-field`: field text that is not a value, the standard's default is used; `bad-time`: a
+time that is not a number is ignored; `fault`: see below). A legal graph must drop nothing and have no fault.
+(d) `from_x3d(weave(...))` of the graph has no `difference` from it; hostile graphs either do this or `weave` raises a
+`BehaviourError`, never a file that cannot be read (a field whose text is empty is unset by design, so it is compared as
+unset); (e) a second run of the same graph and calls gives the same log, values and counters.
+`Simulation.faults` names a node that raised and was left out of that one event (a sensor fed an impossible ray, a
+distance that overflows beyond about 1e154): for a legal graph there are none, for a hostile one they are counted and
+the rest of the graph runs on.
+
+**Counts** (tools/behaviour_fuzz.py, Python 3.13.18, 22 Nov add-on code plus the fixes below; the run takes 2 to 4 s):
+seeds 1, 2 and 3, 2000 normal and 2000 hostile graphs each: no failure of (a) to (e). About 50 000 calls and 6 500 to
+7 100 events at targets per normal run; about 59 000 calls per hostile run, with per run about 2 100 field texts that
+were not values, 1 700 times that were not numbers, 1 050 non-finite values and 1 300 wrong shapes dropped, and 120 to
+170 isolated faults (all `OverflowError` from magnitudes beyond about 1e154, and Cylinder/SphereSensor geometry that a
+degenerate ray makes impossible). Slowest call 0.003 s. The checks were each shown able to fail: with the non-finite
+filter, the shape filter, the loop rule, the fault guard, the round-trip writer or determinism taken out, the matching
+property fails (22, 52, 16, 17, 20 and 50 graphs of the first 300, 300, 60, 300, 300 and 50). The same hostile seed 1 on
+the code before the fixes: 1055 of 2000 graphs raised out of `Simulation`, 271 delivered NaN, infinity or a wrong shape to a
+target, 2 broke the round trip; the normal graphs were already clean (0 of 2000).
+
+| Finding (hostile, seed 1, graphs listed) | Fix |
+|---|---|
+| `Simulation(...)` raised `ValueError` on field text that is not a number (`cycleInterval="abc"`, `"1e"`, `"0x10"`; 703 graphs: 0, 3, 5, 9 ...) | field text that is not a value is the standard's default, counted in `dropped["bad-field"]` (`_Machine._read`); `parse_value` itself reads such text as empty, so the editor's own draw and sync code cannot raise on it either |
+| `Simulation(...)` raised `OverflowError` / `ValueError` on `inf` or `nan` in an Int32 or Time field (graphs 29, 120, 128 ...) | a non-finite field value is the default too |
+| a Damper with `order=1e9` allocated a billion-entry list (graphs 21, 87, 125, 137; the process was killed for memory) | order is clamped to 64 (X3D: 0 to 5) |
+| a spline with three equal keys (legal X3D) divided by zero when built: node never built (graphs 50, 79, 259 ...) | zero spacing gives a zero tangent; a segment of zero span gives weight 0 |
+| `send` of a wrong-typed or non-finite value raised `TypeError`, `OverflowError` ... inside a node (34 + 25 + 11 + 10 graphs: 32, 46, 49, 88 ...) | `send` checks the value against the field and raises `BehaviourError("bad-value")` |
+| a NaN or an infinity, or a value of the wrong shape (a float into `translation`, a vector into `string`), was delivered to a target (271 graphs: 2, 4, 10, 92 ...) | dropped at the node's output and at the ROUTE's end, counted |
+| `step(inf)` raised, `step(nan)` put NaN into a running timer (graphs 954, 703, 1050 ...) | a time that is not a number is ignored, counted in `dropped["bad-time"]` |
+| `press` / `drag` / `viewer` with a NaN raised `ValueError`, then `release` raised `AttributeError` (graphs 151, 236, 366 ...) | non-finite pointer input is ignored; a failed `press` leaves the sensor with nothing to drag or release |
+| a node that raised in `receive`, `tick`, `start` or a sensor call ended the whole call (all of the above, and overflow in dampers and chasers) | each such call is isolated: the node is left out of that event and `Simulation.faults` says which |
+| `weave` raised the XML `ParseError` for a field holding a control character (hostile seed 1, 2 graphs) | `validate` reports `bad-value`, `weave` raises `BehaviourError("bad-value")`, `node_xml` drops the character so an export stays well-formed |
+| a DEF ending in a newline was legal (`$` matches before it) and was written into ROUTE attributes (found by reading the regular expression; hostile names now include it) | `\Z` |
+| Blender: `Player.stop()` restored an object through its matrix, so Euler angles came back as an equal rotation with other numbers (`(0.011, -2.24, 2.97)` became `(-3.13, -0.90, -0.17)`) and a location 3e-8 off (Blender seed 1, graphs 2 and 18 of 20) | `_TransformState` keeps the location, rotation and scale properties and gives them back |
+
+**Blender pass** (`tools/behaviour_fuzz.py --blender`, bpy 5.3.0): 200 normal graphs, seeds 1 and 2, through
+`behaviour_nodes.apply` then `read` (no `difference`), then `Player` (start, 30 steps, a click or a press-drag-release
+every fourth step, the viewer moved, stop): nothing raised and every object's matrix, location, rotation, scale, visibility
+and lamp colour, every material's colour and the scene camera exactly as before; 55 and 60 of the 200 graphs changed the
+scene while playing. 200 hostile graphs played directly (the node tree removes a link between two field types as it is
+made, so there is nothing to compare): the same. Each takes about 11 s. The suite runs 20 of each.
+
+**Not covered.** Values of node type (`SFNode`, `MFNode`) are never generated; Script, PROTO and carried nodes are not
+generated; wrong-shaped Python arguments to `press`, `drag` and `viewer` (a point of two numbers) are not tried, only
+wrong numbers; no window, so the editor's drawing code is reached only through `apply` and `read`; the simulator's
+agreement with X_ITE is not tested on random graphs (only the recorded worlds, as before); nothing here says the values
+are right, only that they are finite, shaped and bounded; the Blender pass was run on bpy 5.3.0 only, and each graph
+in a fresh scene; a node that overflows beyond 1e154 is isolated, not made to compute the answer.
+## How fast (26 Nov 2026)
+
+Instrument: `tools/behaviour_bench.py` (300 steps of 1/60 s per case, median per step), Intel Xeon Processor @ 2.10GHz
+(from /proc/cpuinfo, 4 cores, shared machine, load average 1.1 to 3.5 during the runs), Python 3.13.18, Blender 5.3.0 bpy
+wheel, `PYTHONHASHSEED=3`. "Before" is the add-on at 2.7.5; "after" is 2.7.6, which holds the performance work and the
+hardening checks together. Same events in the same order with the same values (a digest test pins it).
+Shapes: fan = one looping TimeSensor into N PositionInterpolators; chains = N times TimeSensor, PositionInterpolator,
+PositionDamper; mixed = N copies of the door graph with one click per 10 copies.
+
+Simulation alone, ms per step (60 steps per second needs 16.7 or less), both columns measured back to back in one run:
+
+| shape | N=10 | N=100 | N=1000 | N=5000 |
+|---|---:|---:|---:|---:|
+| fan, before / after | 0.024 / 0.024 | 0.21 / 0.22 | 2.33 / 2.48 | 14.9 / 14.7 |
+| chains, before / after | 0.08 / 0.12 | 0.94 / 0.72 | 11.7 / 9.8 | 89.6 / 79.3 |
+| mixed, before / after | 0.005 / 0.005 | 0.032 / 0.027 | 0.30 / 0.26 | 1.95 / 1.68 |
+
+So the simulation alone is about level on fan and 12 to 16 % faster on chains and mixed from N=1000 up. The performance
+work alone had measured 1.66 ms on fan N=1000; the hardening checks (every value is tested for NaN, infinity and shape
+before it is delivered) take that back. Their first form cost more than the gain (4.3 ms); a checker built once per
+ROUTE for its target's field type brought it to the numbers above.
+
+Player.step in Blender (one empty per target; node glow only where the node tree was built, up to 1000 nodes, because
+building the tree with `behaviour_nodes.apply` itself takes 7 s for 600 nodes), ms per step. "Before" was measured in an
+earlier run on the same machine, "after" in the run above:
+
+| shape | N=10 | N=100 | N=300 | N=1000 | N=5000 |
+|---|---:|---:|---:|---:|---:|
+| fan, before / after | 0.13 / 0.12 | 1.17 / 0.91 | 5.87 / 2.39 | 30.4 / 4.45 | did not finish in 40 s (54 steps, 751 each) / 28.0 |
+| chains, before / after | 0.25 / 0.23 | 2.12 / 1.75 | 5.66 / 3.17 | 41.2 / 13.1 | did not finish in 40 s (49 steps, 803 each) / 102 |
+| mixed, before / after | 0.02 / 0.02 | 0.17 / 0.12 | 0.43 / 0.12 | 3.63 / 0.38 | 107 / 3.37 |
+
+What was slow: the player looked each object up by name (`bpy.data.objects.get`, about 8 microseconds, more on big
+scenes) for every event, and walked every node of the tree each step to see whether it should glow. It now remembers
+the object it moved (and checks it was not deleted or renamed) and visits only the nodes that sent something. The
+simulator builds each ROUTE's key once and skips non-timer nodes when it ticks.
+
+A warning about the instrument: Python's string hash seed changes the fan timing by itself. With `PYTHONHASHSEED` 1 to
+6, fan N=1000 read 4.02, 3.93, 2.23, 2.30, 2.40, 2.34 ms on 2.7.5 and 2.61, 2.38, 2.36, 2.36, 2.49, 2.30 ms on 2.7.6.
+Compare two versions under the same seed, or the difference you see may be the seed.
+
+Largest size that holds 60 steps per second on this machine (checked at 10, 100, 300, 1000 and 5000 only): the
+simulation, fan 5000, mixed 5000, chains between 1000 and 5000; the player, fan 1000 and chains 1000 (fan 5000 takes
+28 ms, chains 5000 102 ms), mixed 5000. Not measured: a real viewport redraw, which costs more than these numbers.
+
 ## Limits
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
 eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
 played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
-importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on; the log lines and `X3D_IMPORT_STRICT=1` are decided before the graph exists and still count them.
+importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on, and so do the "X3D import loss" log lines and `X3D_IMPORT_STRICT=1`: the importer holds its ROUTE losses back until the graph is built, then reports only those the graph could not keep. Losses that are not ROUTEs (event nodes, timers, sensor fields) are reported at once, as with the option off.

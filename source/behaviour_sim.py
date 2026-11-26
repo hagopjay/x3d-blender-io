@@ -47,8 +47,19 @@ _SIZES = {"Vec2f": 2, "Vec2d": 2, "Vec3f": 3, "Vec3d": 3, "Vec4f": 4, "Vec4d": 4
           "Rotation": 4}
 
 
-def parse_value(text, x3d_type):
-    """An X3D lexical value as Python: bool, int, float, str, a tuple (vectors, colours, rotations) or a list (MF)."""
+def parse_value(text, x3d_type, strict=False):
+    """An X3D lexical value as Python: bool, int, float, str, a tuple (vectors, colours, rotations) or a list (MF).
+    Text that is not a value of the type is, as empty text is, the type's zero (empty list for an MF type); with
+    ``strict`` it raises ValueError instead (the simulator uses the field's default then)."""
+    try:
+        return _parse_value(text, x3d_type)
+    except (ValueError, OverflowError):
+        if strict:
+            raise
+        return _parse_value("", x3d_type)
+
+
+def _parse_value(text, x3d_type):
     multiple, base = x3d_type.startswith("MF"), x3d_type[2:]
     if base == "String":
         if not multiple:
@@ -74,6 +85,80 @@ def parse_value(text, x3d_type):
     return {"Bool": False, "Int32": 0}.get(base, (0.0,) * _SIZES[base] if base in _SIZES else 0.0)
 
 
+def _finite(value):
+    """False when a number anywhere in ``value`` is NaN or infinite."""
+    kind = type(value)
+    if kind is float:
+        return value - value == 0.0              # NaN and the infinities are the only floats this is false for
+    if kind is tuple or kind is list:
+        for item in value:
+            if type(item) is float:
+                if item - item != 0.0:
+                    return False
+            elif not _finite(item):
+                return False
+        return True
+    if isinstance(value, float):
+        return math.isfinite(value)
+    if isinstance(value, (tuple, list)):
+        return all(_finite(item) for item in value)
+    return True
+
+
+def _fits(value, x3d_type):
+    """Is ``value`` shaped like an X3D field of ``x3d_type``? (a float is not a Vec3f; a Vec3f has three numbers)"""
+    if x3d_type.startswith("MF"):
+        if x3d_type == "MFNode":
+            return isinstance(value, list)
+        return isinstance(value, list) and all(_fits(item, "SF" + x3d_type[2:]) for item in value)
+    base = x3d_type[2:]
+    if base == "Bool":
+        return isinstance(value, bool)
+    if base == "String":
+        return isinstance(value, str)
+    if base == "Int32":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if base in ("Float", "Double", "Time"):
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if base in _SIZES:
+        return isinstance(value, tuple) and len(value) == _SIZES[base] and \
+            all(isinstance(c, (int, float)) and not isinstance(c, bool) for c in value)
+    return True
+
+
+def _number(value):
+    kind = type(value)
+    return kind is float or kind is int or (isinstance(value, (int, float)) and not isinstance(value, bool))
+
+
+_FITTERS = {}
+
+
+def _fitter(x3d_type):
+    """``_fits`` for one field type, worked out once: every event that crosses a ROUTE is checked with it."""
+    found = _FITTERS.get(x3d_type)
+    if found is None:
+        base = x3d_type[2:]
+        if x3d_type.startswith("SF") and base in ("Float", "Double", "Time"):
+            found = _number
+        elif x3d_type.startswith("SF") and base in _SIZES:
+            size = _SIZES[base]
+
+            def found(value, size=size):
+                if type(value) is not tuple or len(value) != size:
+                    return False
+                for component in value:
+                    kind = type(component)
+                    if kind is not float and kind is not int and not _number(component):
+                        return False
+                return True
+        else:
+            def found(value, x3d_type=x3d_type):
+                return _fits(value, x3d_type)
+        _FITTERS[x3d_type] = found
+    return found
+
+
 def _strings(text):
     found, current, inside, escaped = [], [], False, False
     for ch in text:
@@ -94,12 +179,16 @@ def _strings(text):
 
 def _lerp(a, b, t):
     if isinstance(a, tuple):
+        if len(a) == 3 and len(b) == 3:         # the common case (positions, colours), without the generator
+            return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t)
         return tuple(x + (y - x) * t for x, y in zip(a, b))
     return a + (b - a) * t
 
 
 def _distance(a, b):
     if isinstance(a, tuple):
+        if len(a) == 3 and len(b) == 3:         # sum() of a tuple, not of a generator: the same additions, in order
+            return math.sqrt(sum(((a[0] - b[0]) ** 2, (a[1] - b[1]) ** 2, (a[2] - b[2]) ** 2)))
         return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
     return abs(a - b)
 
@@ -174,8 +263,20 @@ class _Machine:
         self.f = {}
         for name, x3d_type, access, default in bg.field_rows(node.node_type):
             if access in ("inputOutput", "initializeOnly"):
-                self.f[name] = parse_value(node.fields.get(name, default), x3d_type)
+                self.f[name] = self._read(node.fields.get(name, default), x3d_type, default)
         self.setup()
+
+    def _read(self, text, x3d_type, default):
+        """A field's value from its text. Text that is not a value of the type, or holds a NaN or an infinity, is
+        counted in ``sim.dropped`` and the standard's default is used instead."""
+        try:
+            value = parse_value(text, x3d_type, strict=True)
+            if _finite(value):
+                return value
+        except (ValueError, OverflowError):
+            pass
+        self.sim.dropped["bad-field"] = self.sim.dropped.get("bad-field", 0) + 1
+        return parse_value(default, x3d_type)
 
     def setup(self):
         pass
@@ -346,7 +447,8 @@ class _Segmented(_Machine):
         upper = bisect.bisect_right(keys, value)
         if upper != count:
             lower = upper - 1
-            weight = (value - keys[lower]) / (keys[upper] - keys[lower])
+            span = keys[upper] - keys[lower]                      # never 0 for sorted keys; unsorted ones can make it so
+            weight = (value - keys[lower]) / span if span else 0.0
             return self.interpolate(lower, upper, min(1.0, max(0.0, weight)))
         return self.interpolate(count - 2, count - 1, 1.0)
 
@@ -429,13 +531,13 @@ class _SplineInterpolator(_Segmented):
         last = len(keys) - 1
         if self.f.get("closed"):
             d = keys[1] - keys[0] + keys[last] - keys[last - 1]
-            minus, plus = [2 * (keys[1] - keys[0]) / d], [2 * (keys[last] - keys[last - 1]) / d]
+            minus, plus = [2 * (keys[1] - keys[0]) / d if d else 0.0], [2 * (keys[last] - keys[last - 1]) / d if d else 0.0]
         else:
             minus, plus = [1.0], [1.0]
         for i in range(1, last):
-            d = keys[i + 1] - keys[i - 1]
-            minus.append(2 * (keys[i + 1] - keys[i]) / d)
-            plus.append(2 * (keys[i] - keys[i - 1]) / d)
+            d = keys[i + 1] - keys[i - 1]                         # 0 for three equal keys, which X3D allows
+            minus.append(2 * (keys[i + 1] - keys[i]) / d if d else 0.0)
+            plus.append(2 * (keys[i] - keys[i - 1]) / d if d else 0.0)
         minus.append(minus[0])
         plus.append(plus[0])
         count = min(len(tangents), len(plus))
@@ -611,7 +713,7 @@ class _Damper(_Machine):
     mix, gap = staticmethod(_lerp), staticmethod(_distance)
 
     def setup(self):
-        self.buffer = [self.f["initialDestination"]] + [self.f["initialValue"]] * max(1, self.f["order"])
+        self.buffer = [self.f["initialDestination"]] + [self.f["initialValue"]] * min(64, max(1, self.f["order"]))
         self.active = False
 
     def start(self, now):
@@ -1546,18 +1648,30 @@ class Simulation:
 
     def __init__(self, graph, *, log_size=400):
         self.graph = graph
+        # What hostile input cost: ``dropped`` counts values that were never delivered ("non-finite": a NaN or an
+        # infinity; "mismatch": a value whose shape does not fit the field it was routed to; "bad-field": field text
+        # that is not a value, replaced by the default; "bad-time": a time that is not a number, ignored) and
+        # ``faults`` names each node that raised and was left out of that event (none, for a legal graph).
+        self.dropped, self.faults = {}, []
         self.machines, self.not_simulated = {}, []
         for node in graph.nodes.values():
             if node.role == bg.BEHAVIOUR and node.node_type in _MACHINES:
-                self.machines[node.id] = _MACHINES[node.node_type](self, node)
+                try:
+                    self.machines[node.id] = _MACHINES[node.node_type](self, node)
+                except Exception as error:      # a node that cannot be built is reported, not run
+                    self._fault(node.id, "setup", error)
+                    self.not_simulated.append(f"{node.node_type} {node.id}")
             elif node.role != bg.TARGET:
                 self.not_simulated.append(f"{node.node_type} {node.id}")
+        self._ticking = [machine for machine in self.machines.values() if machine.ticks]    # fixed once built
         self._routes = {}
         for route in graph.routes:
             source = self._canonical(route.from_id, route.from_field, "out")
             destination = self._canonical(route.to_id, route.to_field, "in")
             if source and destination:
-                self._routes.setdefault(source, []).append(destination)
+                # the ROUTE's identity is built once here, not for every event that crosses it
+                self._routes.setdefault(source, []).append(
+                    (*destination, self._fitter_of(*destination), (*source, *destination)))
         self.values = {}                 # (target id, field) -> the last value that reached it
         self.outputs = {}                # (node id, field) -> the last value any node sent
         self.log = deque(maxlen=log_size)   # (time, node id, field, value) of every event sent
@@ -1575,29 +1689,69 @@ class Simulation:
         except bg.BehaviourError:
             return None
 
+    def _fitter_of(self, node_id, field_name):
+        x3d_type = self._field_type(node_id, field_name)
+        return _fitter(x3d_type) if x3d_type is not None else None
+
+    def _field_type(self, node_id, field_name):
+        node = self.graph.nodes[node_id]
+        if node.role == bg.CARRIED:
+            return None
+        return bg.resolve_field(node.node_type, field_name, "in")[1]
+
+    def _fault(self, node_id, where, error):
+        self.faults.append(f"{node_id}.{where}: {type(error).__name__}: {error}")
+        del self.faults[:-20]
+        self.dropped["fault"] = self.dropped.get("fault", 0) + 1
+
+    def _time(self, now):
+        """``now`` when it is a number the clock can use; else the time the simulation was already at."""
+        if isinstance(now, (int, float)) and not isinstance(now, bool) and math.isfinite(now):
+            return now
+        self.dropped["bad-time"] = self.dropped.get("bad-time", 0) + 1
+        return self.now if self.now is not None else 0.0
+
+    def _try(self, node_id, where, function, *args):
+        """``function(*args)``, or ``[]`` after counting the fault when it raises (a sensor fed nonsense)."""
+        try:
+            return function(*args)
+        except Exception as error:               # noqa: BLE001 - one bad node must not end the run
+            self._fault(node_id, where, error)
+            return []
+
     # -- the cascade ------------------------------------------------------------------------------------------
 
     def _emit(self, node_id, field_name, value):
         self._queue.append((node_id, field_name, value))
 
     def _drain(self):
-        now = self.now
-        while self._queue:
-            node_id, field_name, value = self._queue.popleft()
-            self.outputs[(node_id, field_name)] = value
-            self.log.append((now, node_id, field_name, value))
-            for to_id, to_field in self._routes.get((node_id, field_name), ()):
-                key = (node_id, field_name, to_id, to_field)
-                if key in self._fired:               # 4.4.8.3: a ROUTE carries one event per timestamp, which
+        now = self.now if self.now is not None else 0.0
+        queue, outputs, log, routes, fired, machines, dropped = \
+            self._queue, self.outputs, self.log, self._routes, self._fired, self.machines, self.dropped
+        while queue:
+            node_id, field_name, value = queue.popleft()
+            if not _finite(value):               # a NaN or an infinity never leaves a node
+                dropped["non-finite"] = dropped.get("non-finite", 0) + 1
+                continue
+            outputs[(node_id, field_name)] = value
+            log.append((now, node_id, field_name, value))
+            for to_id, to_field, fits, key in routes.get((node_id, field_name), ()):
+                if key in fired:                     # 4.4.8.3: a ROUTE carries one event per timestamp, which
                     continue                         # is also what stops a loop of ROUTEs
-                self._fired.add(key)
-                machine = self.machines.get(to_id)
+                if fits is not None and not fits(value):
+                    dropped["mismatch"] = dropped.get("mismatch", 0) + 1
+                    continue
+                fired.add(key)
+                machine = machines.get(to_id)
                 if machine is not None:
-                    machine.receive(to_field, value, now)
+                    try:
+                        machine.receive(to_field, value, now)
+                    except Exception as error:       # noqa: BLE001 - one bad node must not end the run
+                        self._fault(to_id, "receive", error)
                 elif self.graph.nodes[to_id].role == bg.TARGET:
                     self.values[(to_id, to_field)] = value
                     self._changes.append((to_id, to_field, value))
-                    self._emit(to_id, to_field, value)      # an inputOutput field sends what it was given
+                    queue.append((to_id, to_field, value))      # an inputOutput field sends what it was given
 
     def _collect(self):
         changes, self._changes = self._changes, []
@@ -1607,9 +1761,10 @@ class Simulation:
 
     def start(self, now=0.0):
         """Begin at time ``now``: looping timers start, followers that are not at rest wake up."""
+        now = self._time(now)
         self.now, self._fired = now, set()
         for machine in self.machines.values():
-            machine.start(now)
+            self._try(machine.id, "start", machine.start, now)
         self._drain()
         return self._collect()
 
@@ -1617,19 +1772,22 @@ class Simulation:
         """Advance to time ``now``; returns [(target id, field, value)] in the order the values arrived."""
         if self.now is None:
             return self.start(now)
+        now = self._time(now)
         dt, self.now, self._fired = max(0.0, now - self.now), now, set()
         # every time-driven node first works out what it sends, from what it knew before this step; then the events
         # travel. So a follower chases where its destination was one step ago, as it does in X_ITE.
-        for machine in list(self.machines.values()):
-            if machine.ticks:
+        for machine in self._ticking:
+            try:
                 machine.tick(now, dt)
+            except Exception as error:               # noqa: BLE001 - one bad node must not end the run
+                self._fault(machine.id, "tick", error)
         self._drain()
         return self._collect()
 
     def post(self, node_id, field_name, value, now=None):
         """Send ``value`` out of an output field, as the node itself would (a sensor that sensed something)."""
         if now is not None:
-            self.now = now
+            self.now = self._time(now)
         self._fired = set()              # something outside the graph happened: that is a new moment
         self._emit(node_id, field_name, value)
         self._drain()
@@ -1638,13 +1796,15 @@ class Simulation:
     def send(self, node_id, field_name, value, now=None):
         """Deliver ``value`` to an input field, as a ROUTE would."""
         if now is not None:
-            self.now = now
+            self.now = self._time(now)
         machine = self.machines.get(node_id)
         if machine is None:
             raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a node this simulation runs")
-        name = bg.resolve_field(machine.node_type, field_name, "in")[0]
+        name, kind = bg.resolve_field(machine.node_type, field_name, "in")
+        if not _fits(value, kind) or not _finite(value):
+            raise bg.BehaviourError("bad-value", f"{value!r} is not a value of {machine.node_type}.{name} ({kind})")
         self._fired = set()
-        machine.receive(name, value, self.now)
+        self._try(node_id, "receive", machine.receive, name, value, self.now if self.now is not None else 0.0)
         self._drain()
         return self._collect()
 
@@ -1658,8 +1818,12 @@ class Simulation:
         machine = self.machines.get(node_id)
         if machine is None or machine.node_type != "ProximitySensor":
             raise bg.BehaviourError("unknown-def", f"{node_id!r} is not a ProximitySensor in this graph")
+        if not _finite((position, orientation, center_of_rotation, test_position)):
+            self.dropped["non-finite"] = self.dropped.get("non-finite", 0) + 1
+            return []
         changes = []
-        for field_name, value in machine.sense(position, orientation, center_of_rotation, now, test_position):
+        for field_name, value in self._try(node_id, "sense", machine.sense, position, orientation, center_of_rotation,
+                                           now, test_position):
             changes += self.post(node_id, field_name, value, now)
         return changes
 
@@ -1696,13 +1860,18 @@ class Simulation:
         sensor = self._sensor(node_id)
         if not sensor.f.get("enabled", True) or sensor.pressed:
             return []
+        if not _finite((point, ray, eye)):
+            self.dropped["non-finite"] = self.dropped.get("non-finite", 0) + 1
+            return []
         changes = self.hover(node_id, True, now)
         sensor.pressed, sensor.origin = True, tuple(point)
         changes += self.post(node_id, "isActive", True, now)
         sensor.geometry = ray is not None and eye is not None
         if sensor.node_type in ("CylinderSensor", "SphereSensor") and sensor.geometry:
             start = sensor.cylinder_press if sensor.node_type == "CylinderSensor" else sensor.sphere_press
-            for field_name, value in start(_ray(ray), tuple(point), eye):
+            started = self._try(node_id, "press", lambda: start(_ray(ray), tuple(point), eye))
+            sensor.geometry = bool(started)             # a press that failed leaves nothing to drag or release
+            for field_name, value in started:
                 changes += self.post(node_id, field_name, value, now)
             # X_ITE follows the press with one motion along the same ray (recorded: at its next frame, before any move),
             # so a SphereSensor's track point leaves the picked point for the ray's own crossing of the sphere.
@@ -1723,12 +1892,15 @@ class Simulation:
         sensor = self._sensor(node_id)
         if not sensor.pressed:
             return []
+        if not _finite((point, ray)):
+            self.dropped["non-finite"] = self.dropped.get("non-finite", 0) + 1
+            return []
         changes = []
         if sensor.node_type in ("CylinderSensor", "SphereSensor"):
             if ray is None or not getattr(sensor, "geometry", False):
                 return []
             move = sensor.cylinder_drag if sensor.node_type == "CylinderSensor" else sensor.sphere_drag
-            for field_name, value in move(_ray(ray)):
+            for field_name, value in self._try(node_id, "drag", lambda: move(_ray(ray))):
                 changes += self.post(node_id, field_name, value, now)
             return changes
         if sensor.node_type == "PlaneSensor" and getattr(sensor, "rayed", False):
@@ -1757,7 +1929,7 @@ class Simulation:
             changes += self.post(node_id, "touchTime", now, now)
         if sensor.node_type in ("CylinderSensor", "SphereSensor") and getattr(sensor, "geometry", False):
             finish = sensor.cylinder_release if sensor.node_type == "CylinderSensor" else sensor.sphere_release
-            for field_name, value in finish():
+            for field_name, value in self._try(node_id, "release", finish):
                 sensor.f[field_name] = value
                 changes += self.post(node_id, field_name, value, now)
         if sensor.node_type == "PlaneSensor" and sensor.f["autoOffset"] and getattr(sensor, "last", None):

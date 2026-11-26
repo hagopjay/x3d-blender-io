@@ -52,7 +52,8 @@ PLACED_TYPES = {"TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", 
                 "TransformSensor"}
 _STRUCTURAL = {"DEF", "USE", "containerField", "class", "id", "style"}
 _OUT, _IN = "out", "in"
-_XML_NAME = re.compile(r"^[A-Za-z_][\w.\-]*$")
+_XML_NAME = re.compile(r"^[A-Za-z_][\w.\-]*\Z")       # \Z: "$" would let a name end in a newline
+_XML_ILLEGAL = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff\ud800-\udfff]")   # characters XML 1.0 cannot hold
 
 
 class BehaviourError(ValueError):
@@ -208,6 +209,9 @@ def validate(graph: Graph) -> list[dict]:
                 elif row[2] in ("inputOnly", "outputOnly"):
                     problems.append({"code": "event-has-no-value", "where": node.id,
                                      "message": f"{node.node_type}.{name} is {row[2]}: an event cannot hold a value"})
+                if _XML_ILLEGAL.search(node.fields[name]):
+                    problems.append({"code": "bad-value", "where": node.id,
+                                     "message": f"{node.node_type}.{name} holds a character XML cannot hold"})
         if node.role == TARGET and node.binding is None:
             problems.append({"code": "unbound-target", "where": node.id,
                              "message": f"target {node.id!r} ({node.node_type}) is not bound to a Blender datablock"})
@@ -439,7 +443,8 @@ def node_xml(node: Node, def_name: str | None = None) -> str:
     rows = field_rows(node.node_type) or ()
     order = [row[0] for row in rows]
     names = [name for name in order if name in node.fields] + sorted(name for name in node.fields if name not in order)
-    attributes = "".join(f" {name}={quoteattr(node.fields[name])}" for name in names if node.fields[name] != "")
+    attributes = "".join(f" {name}={quoteattr(_XML_ILLEGAL.sub('', node.fields[name]))}" for name in names
+                         if node.fields[name] != "")
     return f"<{node.node_type} DEF={quoteattr(def_name or node.id)}{attributes} />"
 
 
@@ -798,11 +803,14 @@ def weave(x3d_text: str, graph: Graph) -> str:
         if node.role == BEHAVIOUR and node.parent and node.parent not in by_def:
             raise BehaviourError("unknown-def", f"{node.id!r} names parent {node.parent!r}, which is not in the document")
     emission = emit(graph, object_of_parent=lambda parent: parent, indent="")
-    for parent, texts in emission.children.items():
-        for text in texts:
-            by_def[parent].append(ET.fromstring(text))
-    for text in emission.root + emission.routes:
-        scene.append(ET.fromstring(text))
+    try:
+        for parent, texts in emission.children.items():
+            for text in texts:
+                by_def[parent].append(ET.fromstring(text))
+        for text in emission.root + emission.routes:
+            scene.append(ET.fromstring(text))
+    except ET.ParseError as error:                 # a name or a value XML cannot hold: say so, write nothing
+        raise BehaviourError("bad-value", f"the graph is not legal XML text: {error}") from error
     return _document_text(x3d_text, root)
 
 
