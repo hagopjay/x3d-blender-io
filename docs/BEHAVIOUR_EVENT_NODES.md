@@ -579,7 +579,7 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 
 | node | component | class | wired | simulated | judged | played | probes |
 |---|---|---|:-:|:-:|:-:|:-:|---|
-| ProximitySensor | EnvironmentalSensor | pure | yes | yes | yes | yes | `probe-geo.x3d`, `probe-proximity.x3d` and 1 more |
+| ProximitySensor | EnvironmentalSensor | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `probe-geo.x3d` and 2 more |
 | TransformSensor | EnvironmentalSensor | B | yes | yes | yes | - | `probe-world.x3d` |
 | VisibilitySensor | EnvironmentalSensor | B | yes | yes | yes | - | `probe-world.x3d` |
 | BooleanFilter | EventUtilities | pure | yes | yes | yes | yes | `counter.x3d`, `demos/hello-switch` and 7 more |
@@ -611,8 +611,8 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | CoordinateInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `probe-coord.x3d`, `probe-list-followers.x3d` |
 | EaseInEaseOut | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
 | NormalInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-coord.x3d` |
-| OrientationInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-geo.x3d` and 8 more |
-| PositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 13 more |
+| OrientationInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `demos/orrery` and 9 more |
+| PositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `demos/orrery` and 14 more |
 | PositionInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-shader.x3d` |
 | ScalarInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/piano`, `probe-hanim.x3d` and 5 more |
 | SplinePositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
@@ -635,5 +635,5 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | Script | Scripting | E | yes | yes | yes | yes | `demos/piano`, `probe-script.x3d` |
 | AudioClip | Sound | D | yes | yes | yes | yes | `probe-audio.x3d`, `probe-loadlive.x3d` |
 | MovieTexture | Texturing | D | yes | yes | yes | yes | `probe-movie.x3d` |
-| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 21 more |
+| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `demos/orrery` and 22 more |
 <!-- coverage:end -->
