@@ -400,6 +400,137 @@ API does not give them), collision shapes (a convex hull or a mesh is its box he
 CollisionCollection's own fields, and the rigid body simulation itself is Blender's: it only moves when the timeline plays.
 Without a rigid body world the sensor is wired and listed as hosted, not run.
 
+### Profiling and debugging (P7)
+
+Instruments: `tools/behaviour_bench.py` (`PYTHONHASHSEED=3`, simulation only, median of 300 steps of 1/60 s), Python 3.13.18,
+a shared 4-core Intel Xeon @ 2.10 GHz. The first full "before" sweep ran at load average 9 to 15 (other agents were
+working); `fan` is the yardstick that load did not move much (fan at N=1000: 2.60 ms at load 9.6, 2.42 ms at load 1.0).
+"Before" is the tree of commit 8e3ef8f; "after" is this package, at load 1.0 to 1.1. Bench digests (SHA-256 of every event
+the simulation sent, all seven shapes, 50 units, 120 steps) are identical before and after, so no speed was bought with a
+change of answer. Median ms per step, budget 16.7:
+
+| shape | N=100 before | after | N=1000 before | after | N=5000 before | after |
+|---|---:|---:|---:|---:|---:|---:|
+| fan | 0.39 | 0.24 | 2.60 | 2.61 | 18.06 | 14.74 |
+| chains | 0.81 | 0.79 | 12.30 | 10.16 | 116.67 | 81.81 |
+| mixed | 0.03 | 0.03 | 0.27 | 0.24 | 1.63 | 1.53 |
+| hosted | 0.44 | 0.43 | 4.54 | 4.53 | 26.89 | 25.90 |
+| media | 0.16 | 0.15 | 1.68 | 1.63 | 12.69 | 9.11 |
+| world | 1.84 | 0.83 | 20.39 (15.44 at load 1.0) | **7.83** | 79.67 | 37.52 |
+| lists | 14.04 (12.51 at load 1.0) | 6.42 | 197.76 (181.05 at load 1.0) | **84.37** | not finished: 1110.77 over 56 of 300 steps in 60 s | not finished: 409.35 over 147 of 300 steps in 60 s (the whole suite started during this run) |
+
+On the joined tree (main with the pick and geo nodes, load 0.9 to 1.0, same instrument), N=1000: fan 2.54, chains 8.92, mixed 0.27,
+hosted 4.81, media 1.76, world 8.37, geo 10.13, **pick 21.42** and **lists 84.79** ms per step. `pick` (1,000 pickable shapes, 1,202 nodes)
+was not in this package (its branch began before the pick sensors merged) and is over budget: open.
+
+`world` at N=1000 is under budget now. `lists` at N=1000 is **not**, and cannot be in pure Python (below). Nothing else is
+over budget at N=1000 (largest: chains, 10.16 ms).
+
+What helped, in the order of the gain on `lists` (microseconds per damper-step of 100 points, CPU time, N=300, one machine
+state, load 3 to 7): 212 before, collector off during a step 170, one finiteness sum instead of two scans (and `points` without the
+star-unpack) 115, first point before the rest in the at-rest test 62.
+
+- **The collector off for a step** (`Simulation.step`, restored in a `finally`). A list follower makes a tuple per point
+  every step; the generational collector scanning them took a fifth of the time. Also helps `chains` (12.30 to 10.16 ms).
+- **A list of floats the follower knows are finite is marked** (`_Points`, a `list` subclass). The two checks every event
+  crosses (finite, fits MFVec3f) take its word; one `sum` over the flat list proves it (an infinity or a NaN makes the sum
+  one; a sum that overflows only sends the list down the slow check, which gives the right answer). A `_Points` is equal to,
+  printed like and sent as the list it is.
+- **`_within(a, b, size, tolerance)`** is `_gap(a, b, size) < tolerance` with an early no from the first point; tested equal
+  on 40,000 random pairs including NaN, infinities, other lengths and a zero tolerance.
+- **World**: an unrolled `m_mul` with the same bits (20,000 random products), `_separated` projecting each point once, and a
+  box wholly outside a plane of the view volume settled on that plane's exact support (the sum of its half axes' parts on the
+  normal), not a ball's: `sees_box` equals `frustum_meets_box` on 100,000 random boxes of all sizes, tilts and cameras
+  (both answers more than 5,000 times) and on the Tilt box of the probe, `tests/test_behaviour_profile.py`.
+- Already so: a damper that is at rest does nothing (`tick` returns at once and a `set_destination` is what wakes it); a
+  disabled VisibilitySensor is not traversed; world matrices are cached with dirty flags.
+
+What did not help, or was not done:
+
+- **numpy**. Timed in isolation (`timeit`, 300 floats): the blend `x + (y - x) * t` takes 18 microseconds in Python and 10
+  with numpy, the gap 25 against 10, building the tuples for the outgoing value 8 against 16 to 19 (it must be tuples). End to end that is
+  at most 1.5 to 2 times, and every conversion between the flat list and an array eats part of it. Not added: plain CI Python
+  has none, so the pure path would stay and both would need testing, for a gain that leaves `lists` three to four times over.
+- **The gap with one comprehension** (19 microseconds less) is not bit-identical: since Python 3.12 `sum()` of floats is
+  compensated (22.803894043283748 against ...744 on a test pair). Rejected; `_within` keeps the same `sum`.
+- **A lazy outgoing list** (build the tuples only when read). The Player reads every value that leaves a node, and the
+  digest would have to match on `repr`; the saving (8 to 20 microseconds) is below what is left.
+
+The floor. One blend of 100 points costs 18 microseconds (`timeit`, this machine) and a damper of order 3 needs three, 54
+microseconds, so 1,000 dampers cost 54 ms with nothing else done; 16.7 ms is 16.7 microseconds per damper. Measured now: about 62
+(CPU time per damper-step at N=300) to 84 (wall, N=1,000, where 100,000 live tuples stop fitting the cache). To get under budget the
+dampers that share a `tau` and a step would have to be blended as one array (one 1,000 by 300 operation, about a millisecond)
+and their outgoing lists left as array views until a consumer reads them: a change of what a value is inside the machine, with numpy
+required, not a tuning of this one.
+
+#### The list followers' isActive: not a difference
+
+X_ITE 16.8.1 sends 131 to 138 `isActive` events per stream in `probe-list-followers` and the simulator 252 to 270, said the
+judge. The judge merged the events X_ITE stamped alike (the last stands) and counted the simulator's raw. X_ITE itself sends
+`false` then `true` in one time stamp whenever a destination arrives while the follower is on its way (121 stamps of 254 events in
+`Chase3.isActive`), and so does the simulator: raw counts are 254 and 256 (Chase3, Chase2), 258 and 264 (Damp3), 264 and 270 (Damp2).
+Scalar followers do not show the pattern in any recorded trace. What differs is where a frame's events are stamped, at 1
+(chasers) or 3 (dampers) stamps of 133: the recording's first frame, and one frame of a damper, which X_ITE spreads over two stamps
+and the simulator puts in one. Not a difference a listener sees as a count. The judge now reports `x_ite_raw_events` and
+`stamps_with_other_event_count` on every stream (they do not decide agreement); `tests/test_behaviour_faults.py` pins the numbers.
+
+While reading these: a looping TimeSensor that wraps inside a frame sends `fraction_changed` 1 and then the new fraction in one
+stamp on X_ITE 16.8.1; the simulator sends the new fraction only. A BooleanSequencer behind it sees one event less (probe-world `Off1`:
+12 raw X_ITE events against 9; gallery 05 v2: `Blink0, 1, 4, 6, 10, 13, 14` and `Twinkle4`). The judge hides it by merging the stamp. Not
+changed here: the ROUTE rule of one event per timestamp is involved. Grade: Likely.
+
+#### Faults the hostile fuzzer isolated
+
+`tools/behaviour_fuzz.py --hostile --count 2000 --seed 1`: 608 isolated faults in 164 graphs before. By exception site, with the
+line numbers of the tree before (`behaviour_sim.py`, 8e3ef8f) and what was done:
+
+| machine | site (before) | input that does it | count, seed 1 | now |
+|---|---|---|---:|---|
+| ColorChaser, OrientationChaser, PositionChaser2D | `_shift:969` ZeroDivisionError | `duration` 0, or so small that `duration / 60` underflows to 0 | 185, 153, 125 | arrives at once and stops, as the scalar chaser (judged) and the list chasers do |
+| PositionChaser2D, ColorChaser | `_shift:986` OverflowError (`math.floor(inf)`) | a duration so small that a step is an infinite number of slots | 0 (seeds 2, 3: 10 and 15) | the clock-jump rule of the list chasers: the slots are the destination |
+| ColorDamper | `colorsys.rgb_to_hsv` ZeroDivisionError | a colour whose largest part is 0 with a negative part | 8 | a grey of that value, as X_ITE's `Color3.getHSV` |
+| ColorDamper | `colorsys.hsv_to_rgb` ValueError (NaN to integer) | colours of 1e308 | 0 (seen once the line above was fixed: 6) | NaN, which the drain drops and counts in `dropped["non-finite"]` |
+| CylinderSensor | `_cylinder_track:1438` ValueError, ZeroDivisionError, `_interval` ValueError | a press on the cylinder's axis (radius 0), an infinity in the pointer | 0 (seeds 2 to 5: 1 each) | JavaScript's answers: x/0 is an infinity or NaN, `floor(NaN)` NaN, `inf % x` NaN; the NaN track is dropped |
+| Script | `_call:2051` TypeError | a handler that answers with a number | 1 | the answer is dropped, counted in `dropped["mismatch"]` |
+| Script | handler raises | the fuzzer's own handler, on purpose | 12 | contained as designed: left |
+| PositionChaser, PositionChaser2D, PositionDamper, PositionDamper2D, ColorDamper, ColorChaser | `_distance:211` / `:212` / `:1008` OverflowError | a destination or value of magnitude past 1e154 (the square of a float raises in Python where X_ITE's is an infinity) | 109 | fixed at the join: `_distance` falls back to `math.hypot` on `OverflowError` (2e200 for 1e200 against -1e200; JavaScript's would be an infinity, and both are "not close", which is all the distance is asked), and the chaser's close test uses it. `test_a_node_that_raises_is_left_out_not_fatal` now makes a damper raise by a patch, and a second test pins the overflow answer. Hostile seeds 1 to 5 after the join (main with the pick and geo nodes): 13, 13, 13, 22 and 7 faults, every one the fuzzer's own Script handler raising on purpose |
+
+After the package: seed 1 had 121 faults (12 of them the fuzzer's handler, 109 the distance), seeds 2 to 5: 143, 120, 111, 113 (before 578, 509, 606,
+476). After the join with the distance fix: 13, 13, 13, 22 and 7, all the handler's. Fuzz on the joined tree: seeds 1 to 5, 2,000 normal and
+2,000 hostile graphs each, 0 failed graphs in all 10 runs; the package's own runs added `--blender --count 100` on seeds 1 to 3, 0 failed
+(`tools/behaviour_fuzz.py`, Python 3.13.18, bpy 5.3.0 for the Blender runs).
+
+#### The rotation half-turn warning
+
+A step of exactly pi between two `OrientationInterpolator` keys has no shortest way round; rounding picks the direction.
+`tests/behaviour/demos/gallery-05-spin-the-planet` (`Tum0` to `Tum4`) and `gallery-06-solar-gauntlet` (`Arc0` to `Arc5`) write a
+full turn as keys 0, 3.1416, 6.2832. Measured as the signed turn about +z between consecutive events (X_ITE 16.8.1, headless
+Chromium, software GL, recorded once in scratch space for this: a demo folder is never overwritten and these two had no recording):
+
+| interpolator | X_ITE 16.8.1 | simulator (one cycle) | the intended way |
+|---|---|---|---|
+| gallery-05 `Tum0` to `Tum4` | all backward: 0 forward steps of 48 to 52 events; net -22.3, -14.8, -11.1, -8.9, -7.4 rad in 7 s | all backward: 0 forward of 121 to 361 steps; net -6.34 to -6.30 rad per cycle | forward, +2 pi per cycle |
+| gallery-06 `Arc0` to `Arc5` | both ways: 43/33, 34/41, 47/29, 43/32, 47/28, 43/32 forward/backward steps | both ways in equal halves: net -0.015 to 0.0 rad per cycle | forward, +2 pi per cycle |
+
+The simulator and X_ITE agree on every one of these streams (`tools/behaviour_sim_judge.py`: 48 events, 0 gap on the five `Tum`;
+75, 0 on the six `Arc`). The 06 recording needed a scratch copy of the world with its ROUTEs moved after the nodes: the original writes the
+`Flare -> Arc -> Prom` ROUTEs before the prominence nodes and X_ITE drops a ROUTE written before its DEF (zero `Arc` events; the gate ROUTEs and the
+star timers of 05 have the same order bug). The originals are untouched.
+
+The check: `Behaviour.warnings()` (also `behaviour_graph.warnings(graph)`) returns `{"code": "half-turn", "where", "message"}`
+for two consecutive keys of an `OrientationInterpolator` or `SquadOrientationInterpolator` whose rotations are pi apart, or within 0.001
+rad of it, as the angle `2 acos |q1 . q2|` between the unit quaternions (so 0 then 3.1416, 3.14159265, -3.1416, 3.1415, 3.1416 then 6.2832, an
+axis flipped with the same angle, 9.4248 against 6.2832 and an axis of 0 0 2 all warn; 0 then 3.0, 0, 2.0944, 4.1888, 6.2832 and identical keys do not). The message
+names the node and the key indices and says to add a key between: four keys for a full turn. It does not block a write
+(`check()` still returns no problem). Play lists each in the sidebar next to "Not shown" (`player.warnings`).
+
+New sibling folders, the originals untouched: `gallery-05-spin-the-planet-v2` (keys `0 0.3333 0.6667 1`, angles 0, 2.0944, 4.1888, 6.2832; ROUTEs
+after their nodes) and `gallery-06-solar-gauntlet-v2` (the same, plus a viewer driver `Cam` so the judge can see the gates).
+X_ITE 16.8.1: every turn goes forward (0 backward steps of 64 to 66 events per `Tum`, of 117 to 119 per `Arc`) and the simulator agrees on all
+of them. 06 v2 agrees on all 55 streams and is judged by the generic demo test; 05 v2 agrees on 42 of 50, all but the star timers
+(the wrap above), so its recording is `x_ite_turns.json` and its test pins that only `Blink*` and `Twinkle*` differ.
+Not checked: the live Blender window on the v2 demos (their `act.py` is the original's).
+
 ## Rules that hold for every new node
 
 1. X_ITE decides. Where the standard's text and X_ITE 16.8.1 differ, the simulator follows X_ITE and the difference
@@ -453,7 +584,7 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 
 | node | component | class | wired | simulated | judged | played | probes |
 |---|---|---|:-:|:-:|:-:|:-:|---|
-| ProximitySensor | EnvironmentalSensor | pure | yes | yes | yes | yes | `probe-geo.x3d`, `probe-proximity.x3d` and 1 more |
+| ProximitySensor | EnvironmentalSensor | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `probe-geo.x3d` and 2 more |
 | TransformSensor | EnvironmentalSensor | B | yes | yes | yes | - | `probe-world.x3d` |
 | VisibilitySensor | EnvironmentalSensor | B | yes | yes | yes | - | `probe-world.x3d` |
 | BooleanFilter | EventUtilities | pure | yes | yes | yes | yes | `counter.x3d`, `demos/hello-switch` and 7 more |
@@ -485,8 +616,8 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | CoordinateInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `probe-coord.x3d`, `probe-list-followers.x3d` |
 | EaseInEaseOut | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
 | NormalInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-coord.x3d` |
-| OrientationInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-geo.x3d` and 8 more |
-| PositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 13 more |
+| OrientationInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `demos/orrery` and 9 more |
+| PositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `demos/orrery` and 14 more |
 | PositionInterpolator2D | Interpolation | pure | yes | yes | yes | yes | `demos/orrery`, `probe-shader.x3d` |
 | ScalarInterpolator | Interpolation | pure | yes | yes | yes | yes | `demos/piano`, `probe-hanim.x3d` and 5 more |
 | SplinePositionInterpolator | Interpolation | pure | yes | yes | yes | yes | `probe-spline.x3d` |
@@ -509,5 +640,5 @@ Each is one spec, one agent, one worktree, one or two commits, joined by cherry-
 | Script | Scripting | E | yes | yes | yes | yes | `demos/piano`, `probe-script.x3d` |
 | AudioClip | Sound | D | yes | yes | yes | yes | `probe-audio.x3d`, `probe-loadlive.x3d` |
 | MovieTexture | Texturing | D | yes | yes | yes | yes | `probe-movie.x3d` |
-| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/orrery`, `demos/piano` and 21 more |
+| TimeSensor | Time | pure | yes | yes | yes | yes | `demos/gallery-06-solar-gauntlet-v2`, `demos/orrery` and 22 more |
 <!-- coverage:end -->

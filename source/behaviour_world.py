@@ -49,8 +49,17 @@ def _finite(value):
 
 
 def m_mul(a, b):
-    return tuple(a[r * 4] * b[c] + a[r * 4 + 1] * b[4 + c] + a[r * 4 + 2] * b[8 + c] + a[r * 4 + 3] * b[12 + c]
-                 for r in range(4) for c in range(4))
+    # sixteen sums of four products, each added left to right as a loop over rows and columns would: the same bits, without the loop
+    a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15 = a
+    b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15 = b
+    return (a0 * b0 + a1 * b4 + a2 * b8 + a3 * b12, a0 * b1 + a1 * b5 + a2 * b9 + a3 * b13,
+            a0 * b2 + a1 * b6 + a2 * b10 + a3 * b14, a0 * b3 + a1 * b7 + a2 * b11 + a3 * b15,
+            a4 * b0 + a5 * b4 + a6 * b8 + a7 * b12, a4 * b1 + a5 * b5 + a6 * b9 + a7 * b13,
+            a4 * b2 + a5 * b6 + a6 * b10 + a7 * b14, a4 * b3 + a5 * b7 + a6 * b11 + a7 * b15,
+            a8 * b0 + a9 * b4 + a10 * b8 + a11 * b12, a8 * b1 + a9 * b5 + a10 * b9 + a11 * b13,
+            a8 * b2 + a9 * b6 + a10 * b10 + a11 * b14, a8 * b3 + a9 * b7 + a10 * b11 + a11 * b15,
+            a12 * b0 + a13 * b4 + a14 * b8 + a15 * b12, a12 * b1 + a13 * b5 + a14 * b9 + a15 * b13,
+            a12 * b2 + a13 * b6 + a14 * b10 + a15 * b14, a12 * b3 + a13 * b7 + a14 * b11 + a15 * b15)
 
 
 def m_point(m, p):
@@ -189,10 +198,10 @@ def view_volume(fov, aspect, near, far):
 
 def _separated(axes, points1, points2):
     for axis in axes:
-        low1 = min(_dot(p, axis) for p in points1)
-        high1 = max(_dot(p, axis) for p in points1)
-        low2 = min(_dot(p, axis) for p in points2)
-        high2 = max(_dot(p, axis) for p in points2)
+        a0, a1, a2 = axis                  # the same products and sums as ``_dot``, each point projected once
+        projected1 = [p[0] * a0 + p[1] * a1 + p[2] * a2 for p in points1]
+        projected2 = [p[0] * a0 + p[1] * a1 + p[2] * a2 for p in points2]
+        low1, high1, low2, high2 = min(projected1), max(projected1), min(projected2), max(projected2)
         if not ((low1 <= low2 <= high1) or (low2 <= low1 <= high2)):
             return True
     return False
@@ -668,14 +677,23 @@ class World:
         corners, planes = self.frustum()
         middle = m_point(m, center)
         reach = sum(math.sqrt(_dot(axis, axis)) for axis in half_axes)
-        settled = True
+        straddling = []
         for normal, offset in planes:
             distance = _dot(normal, middle) - offset
             if distance < -reach:
                 return False
             if distance < reach:
-                settled = False
-        return True if settled else frustum_meets_box(corners, middle, half_axes)
+                straddling.append((normal, distance))
+        # The ball is a loose bound. Along a plane's own normal the box reaches exactly the sum of its half axes' parts on it,
+        # so a box wholly outside that plane is separated on one of the six frustum normals the full test tries (and one
+        # wholly inside every plane is not separated on any): the answer is the full test's, found without it.
+        for normal, distance in straddling[:]:
+            extent = abs(_dot(normal, half_axes[0])) + abs(_dot(normal, half_axes[1])) + abs(_dot(normal, half_axes[2]))
+            if distance < -extent:
+                return False
+            if distance >= extent:
+                straddling.remove((normal, distance))
+        return True if not straddling else frustum_meets_box(corners, middle, half_axes)
 
     def collision_hits(self):
         """The Collision groups the viewer is touching. X_ITE looks along the six axes of the viewpoint's frame through a slab

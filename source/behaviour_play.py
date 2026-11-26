@@ -253,6 +253,7 @@ class Player:
         self.not_applied += [f"{node.node_type} {node.id}: hover gives no hit point, so hitGeoCoord_changed comes only with a press"
                              for node in self.graph.nodes.values()
                              if node.role == bg.BEHAVIOUR and node.node_type in GEO_POINTING]
+        self.warnings = self.graph.warnings() if hasattr(self.graph, "warnings") else bg.warnings(self.graph)
         self.now = 0.0
         self._transforms, self._hidden, self._materials, self._lights, self._camera = {}, {}, {}, {}, scene.camera
         self._switches, self._choices = {}, {}    # Switch DEF -> [(object, tags)]; Switch DEF -> the whichChoice it was last given
@@ -1274,6 +1275,8 @@ class X3D_PT_behaviour_play(bpy.types.Panel):
                 layout.label(text=f"Not played: {label}", icon="ERROR")
             for label in player.not_applied:
                 layout.label(text=f"Not shown: {label}", icon="INFO")
+            for found in player.warnings:
+                layout.label(text=f"Warning: {found['message'][:90]}", icon="ERROR")
             for label in player.sim.hosted_not_run():
                 layout.label(text=f"Not run: {label} (hosted, wired)", icon="ERROR")
             for line in player.hosting:
