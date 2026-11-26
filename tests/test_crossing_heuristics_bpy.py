@@ -113,7 +113,8 @@ class CrossingHeuristicTests(unittest.TestCase):
 
     def test_a_skipped_grease_pencil_object_is_counted(self):
         self._cube()
-        gp = bpy.data.grease_pencils.new("Ink")
+        gp_data = getattr(bpy.data, "grease_pencils_v3", bpy.data.grease_pencils)   # 4.3 to 4.5 keep the object type on _v3
+        gp = gp_data.new("Ink")
         bpy.context.collection.objects.link(bpy.data.objects.new("Ink", gp))
         dropped, _, _ = _receipt(self._export("gp.x3d"))
         self.assertEqual(dropped, 1)
