@@ -83,6 +83,7 @@ class Player:
                 self._sensors.setdefault(node.parent, []).append(node.id)
         self._flash = self._tree_nodes() if flash else {}
         self._colours = {}
+        self._maps = {}              # material name -> the Mapping nodes Play drives for a TextureTransform, and how to undo them
         self._burst = {}             # node id -> when its current run of events began (for the glow)
 
     # -- what can be clicked ------------------------------------------------------------------------------------
@@ -224,6 +225,8 @@ class Player:
                 self._paint(node, bpy.data.materials.get(name), field_name, value)
             elif kind == "light":
                 self._light(node, bpy.data.objects.get(name), field_name, value)
+            elif kind == "texture":
+                self._texture(node, bpy.data.materials.get(name), field_name, value)
             elif kind == "viewpoint":
                 obj = bpy.data.objects.get(name)
                 if field_name == "set_bind" and value and obj is not None:
@@ -308,6 +311,91 @@ class Player:
         if shader is not None and socket in shader.inputs:
             shader.inputs[socket].default_value = new
 
+    def _texture(self, node, material, field_name, value):
+        """TextureTransform ``translation``, ``rotation`` and ``scale`` onto the Mapping node in front of the material's
+        Image Texture nodes. The importer bakes a TextureTransform into the UVs and makes no Mapping node, so the first
+        event makes one (Texture Coordinate UV -> Mapping -> each Image Texture's Vector) and ``stop`` takes it away again.
+        An event's value is the whole transform, as in X3D; ``center`` is not shown (the Mapping node has none)."""
+        if material is None or not material.use_nodes or material.node_tree is None:
+            return
+        if field_name not in ("translation", "rotation", "scale"):
+            return self._skip(node, field_name)
+        state = self._maps.get(material.name)
+        if state is None:
+            state = self._maps[material.name] = self._mapping_for(material)
+        if state is None:
+            return self._skip(node, field_name)
+        if field_name == "translation":
+            state["values"]["Location"] = (float(value[0]), float(value[1]), 0.0)
+        elif field_name == "rotation":
+            state["values"]["Rotation"] = (0.0, 0.0, float(value))
+        else:
+            state["values"]["Scale"] = (float(value[0]), float(value[1]), 1.0)
+        for mapping in state["mappings"]:
+            for socket, entry in state["values"].items():
+                mapping.inputs[socket].default_value = entry
+
+    @staticmethod
+    def _mapping_for(material):
+        """Mapping nodes in front of ``material``'s Image Textures (found, or made), and what ``stop`` must undo; None
+        when the material has no Image Texture."""
+        tree = material.node_tree
+        images = [n for n in tree.nodes if n.type == "TEX_IMAGE"]
+        if not images:
+            return None
+        state = {"mappings": [], "made": [], "relink": [], "saved": [], "values": {
+            "Location": (0.0, 0.0, 0.0), "Rotation": (0.0, 0.0, 0.0), "Scale": (1.0, 1.0, 1.0)}}
+        coords = fresh = None
+        for image in images:
+            vector = image.inputs["Vector"]
+            upstream = vector.links[0].from_node if vector.links else None
+            if upstream is not None and upstream.type == "MAPPING":
+                mapping = upstream
+                if mapping not in state["mappings"]:
+                    saved = {name: tuple(mapping.inputs[name].default_value) for name in ("Location", "Rotation", "Scale")}
+                    state["saved"].append((mapping, saved))
+                    state["mappings"].append(mapping)
+                    state["values"] = {name: tuple(saved[name]) for name in saved}     # an event sets one field, not all
+                continue
+            origin = had = vector.links[0].from_socket if vector.links else None
+            if origin is None and fresh is not None:          # unlinked images share the one Mapping node made for them
+                tree.links.new(fresh.outputs["Vector"], vector)
+                state["relink"].append((vector, None))
+                continue
+            if origin is None:
+                if coords is None:
+                    coords = tree.nodes.new("ShaderNodeTexCoord")
+                    coords.location = (image.location.x - 560, image.location.y)
+                    state["made"].append(coords)
+                origin = coords.outputs["UV"]
+            mapping = tree.nodes.new("ShaderNodeMapping")
+            mapping.vector_type = "POINT"
+            mapping.location = (image.location.x - 280, image.location.y)
+            state["made"].append(mapping)
+            state["mappings"].append(mapping)
+            tree.links.new(origin, mapping.inputs["Vector"])
+            tree.links.new(mapping.outputs["Vector"], vector)
+            state["relink"].append((vector, had))
+            if had is None:
+                fresh = mapping
+        return state
+
+    def _undo_textures(self):
+        for name, state in self._maps.items():
+            material = bpy.data.materials.get(name)
+            if material is None or state is None or material.node_tree is None:
+                continue
+            tree = material.node_tree
+            for mapping, saved in state["saved"]:
+                for socket, entry in saved.items():
+                    mapping.inputs[socket].default_value = entry
+            for vector, origin in state["relink"]:
+                if origin is not None:
+                    tree.links.new(origin, vector)
+            for made in state["made"]:
+                if tree.nodes.get(made.name) is not None:
+                    tree.nodes.remove(made)
+
     def _light(self, node, obj, field_name, value):
         if obj is None or obj.type != "LIGHT":
             return
@@ -381,12 +469,14 @@ class Player:
             obj = bpy.data.objects.get(name)
             if obj is not None:
                 obj.data.color, obj.hide_viewport, obj.hide_render = colour, viewport, render
+        self._undo_textures()
         for node_id, (custom, colour) in self._colours.items():
             item = self._flash.get(node_id)
             if item is not None:
                 item.use_custom_color, item.color = custom, colour
         self.scene.camera = self._camera
         self._transforms, self._hidden, self._materials, self._lights, self._colours = {}, {}, {}, {}, {}
+        self._maps = {}
         self._burst = {}
 
 

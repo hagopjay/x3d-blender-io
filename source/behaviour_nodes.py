@@ -509,6 +509,9 @@ def rows_on_node(count, limit):
     return list(range(limit - 1)) + [count - 1]
 
 
+MATERIAL_KINDS = ("material", "texture")      # bindings that name a Blender material rather than an object
+
+
 class _TargetNode(_X3DNodeBase):
     x3d_role = bg.TARGET
     x3d_object: PointerProperty(type=bpy.types.Object, name="Object")
@@ -520,10 +523,10 @@ class _TargetNode(_X3DNodeBase):
         self.use_custom_color, self.color = True, (0.16, 0.24, 0.30)
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, "x3d_material" if bg.BINDING_OF.get(self.x3d_type) == "material" else "x3d_object", text="")
+        layout.prop(self, "x3d_material" if bg.BINDING_OF.get(self.x3d_type) in MATERIAL_KINDS else "x3d_object", text="")
 
     def draw_label(self):
-        data = self.x3d_material if bg.BINDING_OF.get(self.x3d_type) == "material" else self.x3d_object
+        data = self.x3d_material if bg.BINDING_OF.get(self.x3d_type) in MATERIAL_KINDS else self.x3d_object
         return f"{self.x3d_type}  {data.name}" if data else f"{self.x3d_type}  (unbound)"
 
 
@@ -661,7 +664,7 @@ def _add_menu(self, context):
 
 def _datablock_of(binding):
     kind, name = binding
-    if kind == "material":
+    if kind in MATERIAL_KINDS:
         return None, bpy.data.materials.get(name)
     return bpy.data.objects.get(name), None
 
@@ -792,7 +795,7 @@ def read(scene):
                     graph.def_hints[item.x3d_parent.name] = recorded
         elif role == bg.TARGET:
             kind = bg.BINDING_OF[item.x3d_type]
-            data = item.x3d_material if kind == "material" else item.x3d_object
+            data = item.x3d_material if kind in MATERIAL_KINDS else item.x3d_object
             graph.nodes[name] = bg.Node(id=name, node_type=item.x3d_type, role=role, position=position,
                                         binding=(kind, data.name) if data else None)
         else:
@@ -823,7 +826,7 @@ def import_graph(scene, filepath, new_actions=None):
 
     def resolver(def_name, node_type):
         kind = bg.BINDING_OF.get(node_type)
-        if kind == "material":
+        if kind in MATERIAL_KINDS:          # a texture target is found through the material it belongs to
             for material in bpy.data.materials:
                 if material.get("x3d_def") == def_name:
                     return kind, material.name
@@ -877,7 +880,7 @@ def _drop_baked_actions(graph, new_actions):
     if not new_actions:
         return []
     driven = {node.binding[1] for node in graph.nodes.values()
-              if node.role == bg.TARGET and node.binding and node.binding[0] != "material"
+              if node.role == bg.TARGET and node.binding and node.binding[0] not in MATERIAL_KINDS
               and any(route.to_id == node.id for route in graph.routes)}
     messages = []
     for name in sorted(driven):
