@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 01: pendulum wave" />
+    <meta name="description" content="15 pendulums, 15 clocks, one beautiful drift. Click the beam: stop all, a 0.05 s gap, start all, in phase." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-01-pendulum-wave/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.02 0.02 0.05" />
+    <Viewpoint DEF="View" description="Front" position="0 1.6 9" orientation="1 0 0 -0.05" />
+    <DirectionalLight direction="-0.3 -1 -0.6" intensity="0.8" />
+    <PointLight location="0 4 4" intensity="30" radius="20" color="1 0.95 0.9" />
+    <Transform translation="0 -1.2 0">
+      <Shape><Appearance><PhysicalMaterial baseColor="0.08 0.09 0.13" roughness="0.8" /></Appearance><Box size="14 0.2 6" /></Shape>
+    </Transform>
+    <Transform DEF="Beam" translation="0 3.25 0">
+      <TouchSensor DEF="Restart" description="Click: restart all clocks in phase" />
+      <Shape><Appearance><PhysicalMaterial baseColor="0.35 0.22 0.1" roughness="0.5" /></Appearance><Box size="8.2 0.16 0.3" /></Shape>
+    </Transform>
+    <Transform translation="-4.2 1.0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.35 0.22 0.1" /></Appearance><Box size="0.2 4.4 0.3" /></Shape></Transform>
+    <Transform translation="4.2 1.0 0"><Shape><Appearance><PhysicalMaterial baseColor="0.35 0.22 0.1" /></Appearance><Box size="0.2 4.4 0.3" /></Shape></Transform>
+    <TimeSensor DEF="Gap" cycleInterval="0.05" />
+    <BooleanFilter DEF="GapDone" />
+    <TimeTrigger DEF="Again" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Gap" toField="startTime" />
+    <ROUTE fromNode="Gap" fromField="isActive" toNode="GapDone" toField="set_boolean" />
+    <ROUTE fromNode="GapDone" fromField="inputNegate" toNode="Again" toField="set_boolean" />
+    <Transform DEF="Pivot0" translation="-3.500 3.2 0">
+      <Transform translation="0 -1.160 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.320" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.320 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint0" baseColor="1.000 0.250 0.250" emissiveColor="0.250 0.062 0.062" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock0" cycleInterval="2.00000" loop="true" />
+    <OrientationInterpolator DEF="Swing0" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow0" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.062 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.062 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 0.250 0.062 0.062 0.250 0.062 0.062" />
+    <ROUTE fromNode="Clock0" fromField="fraction_changed" toNode="Swing0" toField="set_fraction" />
+    <ROUTE fromNode="Swing0" fromField="value_changed" toNode="Pivot0" toField="rotation" />
+    <ROUTE fromNode="Clock0" fromField="fraction_changed" toNode="Glow0" toField="set_fraction" />
+    <ROUTE fromNode="Glow0" fromField="value_changed" toNode="BobPaint0" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock0" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock0" toField="startTime" />
+    <Transform DEF="Pivot1" translation="-3.000 3.2 0">
+      <Transform translation="0 -1.180 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.360" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.360 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint1" baseColor="1.000 0.550 0.250" emissiveColor="0.250 0.138 0.062" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock1" cycleInterval="1.71429" loop="true" />
+    <OrientationInterpolator DEF="Swing1" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow1" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.250 0.138 0.062 0.250 0.138 0.062 0.250 0.138 0.062 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 0.250 0.138 0.062 0.250 0.138 0.062 0.250 0.138 0.062 0.250 0.138 0.062 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 0.250 0.138 0.062 0.250 0.138 0.062" />
+    <ROUTE fromNode="Clock1" fromField="fraction_changed" toNode="Swing1" toField="set_fraction" />
+    <ROUTE fromNode="Swing1" fromField="value_changed" toNode="Pivot1" toField="rotation" />
+    <ROUTE fromNode="Clock1" fromField="fraction_changed" toNode="Glow1" toField="set_fraction" />
+    <ROUTE fromNode="Glow1" fromField="value_changed" toNode="BobPaint1" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock1" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock1" toField="startTime" />
+    <Transform DEF="Pivot2" translation="-2.500 3.2 0">
+      <Transform translation="0 -1.200 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.400" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.400 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint2" baseColor="1.000 0.850 0.250" emissiveColor="0.250 0.213 0.062" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock2" cycleInterval="1.50000" loop="true" />
+    <OrientationInterpolator DEF="Swing2" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow2" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.250 0.213 0.062 0.250 0.213 0.062 0.250 0.213 0.062 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 0.250 0.213 0.062 0.250 0.213 0.062 0.250 0.213 0.062 0.250 0.213 0.062 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 0.250 0.213 0.062 0.250 0.213 0.062" />
+    <ROUTE fromNode="Clock2" fromField="fraction_changed" toNode="Swing2" toField="set_fraction" />
+    <ROUTE fromNode="Swing2" fromField="value_changed" toNode="Pivot2" toField="rotation" />
+    <ROUTE fromNode="Clock2" fromField="fraction_changed" toNode="Glow2" toField="set_fraction" />
+    <ROUTE fromNode="Glow2" fromField="value_changed" toNode="BobPaint2" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock2" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock2" toField="startTime" />
+    <Transform DEF="Pivot3" translation="-2.000 3.2 0">
+      <Transform translation="0 -1.220 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.440" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.440 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint3" baseColor="0.850 1.000 0.250" emissiveColor="0.212 0.250 0.062" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock3" cycleInterval="1.33333" loop="true" />
+    <OrientationInterpolator DEF="Swing3" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow3" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.212 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.212 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.212 0.250 0.062 0.212 0.250 0.062" />
+    <ROUTE fromNode="Clock3" fromField="fraction_changed" toNode="Swing3" toField="set_fraction" />
+    <ROUTE fromNode="Swing3" fromField="value_changed" toNode="Pivot3" toField="rotation" />
+    <ROUTE fromNode="Clock3" fromField="fraction_changed" toNode="Glow3" toField="set_fraction" />
+    <ROUTE fromNode="Glow3" fromField="value_changed" toNode="BobPaint3" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock3" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock3" toField="startTime" />
+    <Transform DEF="Pivot4" translation="-1.500 3.2 0">
+      <Transform translation="0 -1.240 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.480" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.480 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint4" baseColor="0.550 1.000 0.250" emissiveColor="0.137 0.250 0.062" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock4" cycleInterval="1.20000" loop="true" />
+    <OrientationInterpolator DEF="Swing4" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow4" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.137 0.250 0.062 0.137 0.250 0.062 0.137 0.250 0.062 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.137 0.250 0.062 0.137 0.250 0.062 0.137 0.250 0.062 0.137 0.250 0.062 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.137 0.250 0.062 0.137 0.250 0.062" />
+    <ROUTE fromNode="Clock4" fromField="fraction_changed" toNode="Swing4" toField="set_fraction" />
+    <ROUTE fromNode="Swing4" fromField="value_changed" toNode="Pivot4" toField="rotation" />
+    <ROUTE fromNode="Clock4" fromField="fraction_changed" toNode="Glow4" toField="set_fraction" />
+    <ROUTE fromNode="Glow4" fromField="value_changed" toNode="BobPaint4" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock4" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock4" toField="startTime" />
+    <Transform DEF="Pivot5" translation="-1.000 3.2 0">
+      <Transform translation="0 -1.260 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.520" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.520 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint5" baseColor="0.250 1.000 0.250" emissiveColor="0.062 0.250 0.062" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock5" cycleInterval="1.09091" loop="true" />
+    <OrientationInterpolator DEF="Swing5" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow5" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.062 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.062 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.062 0.250 0.062 0.062 0.250 0.062" />
+    <ROUTE fromNode="Clock5" fromField="fraction_changed" toNode="Swing5" toField="set_fraction" />
+    <ROUTE fromNode="Swing5" fromField="value_changed" toNode="Pivot5" toField="rotation" />
+    <ROUTE fromNode="Clock5" fromField="fraction_changed" toNode="Glow5" toField="set_fraction" />
+    <ROUTE fromNode="Glow5" fromField="value_changed" toNode="BobPaint5" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock5" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock5" toField="startTime" />
+    <Transform DEF="Pivot6" translation="-0.500 3.2 0">
+      <Transform translation="0 -1.280 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.560" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.560 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint6" baseColor="0.250 1.000 0.550" emissiveColor="0.062 0.250 0.138" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock6" cycleInterval="1.00000" loop="true" />
+    <OrientationInterpolator DEF="Swing6" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow6" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.062 0.250 0.138 0.062 0.250 0.138 0.062 0.250 0.138 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.062 0.250 0.138 0.062 0.250 0.138 0.062 0.250 0.138 0.062 0.250 0.138 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.062 0.250 0.138 0.062 0.250 0.138" />
+    <ROUTE fromNode="Clock6" fromField="fraction_changed" toNode="Swing6" toField="set_fraction" />
+    <ROUTE fromNode="Swing6" fromField="value_changed" toNode="Pivot6" toField="rotation" />
+    <ROUTE fromNode="Clock6" fromField="fraction_changed" toNode="Glow6" toField="set_fraction" />
+    <ROUTE fromNode="Glow6" fromField="value_changed" toNode="BobPaint6" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock6" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock6" toField="startTime" />
+    <Transform DEF="Pivot7" translation="0.000 3.2 0">
+      <Transform translation="0 -1.300 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.600" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.600 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint7" baseColor="0.250 1.000 0.850" emissiveColor="0.062 0.250 0.212" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock7" cycleInterval="0.92308" loop="true" />
+    <OrientationInterpolator DEF="Swing7" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow7" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.062 0.250 0.212 0.062 0.250 0.212 0.062 0.250 0.212 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.062 0.250 0.212 0.062 0.250 0.212 0.062 0.250 0.212 0.062 0.250 0.212 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.062 0.250 0.212 0.062 0.250 0.212" />
+    <ROUTE fromNode="Clock7" fromField="fraction_changed" toNode="Swing7" toField="set_fraction" />
+    <ROUTE fromNode="Swing7" fromField="value_changed" toNode="Pivot7" toField="rotation" />
+    <ROUTE fromNode="Clock7" fromField="fraction_changed" toNode="Glow7" toField="set_fraction" />
+    <ROUTE fromNode="Glow7" fromField="value_changed" toNode="BobPaint7" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock7" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock7" toField="startTime" />
+    <Transform DEF="Pivot8" translation="0.500 3.2 0">
+      <Transform translation="0 -1.280 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.560" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.560 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint8" baseColor="0.250 0.850 1.000" emissiveColor="0.062 0.212 0.250" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock8" cycleInterval="0.85714" loop="true" />
+    <OrientationInterpolator DEF="Swing8" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow8" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.062 0.212 0.250 0.062 0.212 0.250" />
+    <ROUTE fromNode="Clock8" fromField="fraction_changed" toNode="Swing8" toField="set_fraction" />
+    <ROUTE fromNode="Swing8" fromField="value_changed" toNode="Pivot8" toField="rotation" />
+    <ROUTE fromNode="Clock8" fromField="fraction_changed" toNode="Glow8" toField="set_fraction" />
+    <ROUTE fromNode="Glow8" fromField="value_changed" toNode="BobPaint8" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock8" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock8" toField="startTime" />
+    <Transform DEF="Pivot9" translation="1.000 3.2 0">
+      <Transform translation="0 -1.260 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.520" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.520 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint9" baseColor="0.250 0.550 1.000" emissiveColor="0.062 0.138 0.250" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock9" cycleInterval="0.80000" loop="true" />
+    <OrientationInterpolator DEF="Swing9" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow9" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.062 0.138 0.250 0.062 0.138 0.250 0.062 0.138 0.250 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.062 0.138 0.250 0.062 0.138 0.250 0.062 0.138 0.250 0.062 0.138 0.250 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.062 0.138 0.250 0.062 0.138 0.250" />
+    <ROUTE fromNode="Clock9" fromField="fraction_changed" toNode="Swing9" toField="set_fraction" />
+    <ROUTE fromNode="Swing9" fromField="value_changed" toNode="Pivot9" toField="rotation" />
+    <ROUTE fromNode="Clock9" fromField="fraction_changed" toNode="Glow9" toField="set_fraction" />
+    <ROUTE fromNode="Glow9" fromField="value_changed" toNode="BobPaint9" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock9" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock9" toField="startTime" />
+    <Transform DEF="Pivot10" translation="1.500 3.2 0">
+      <Transform translation="0 -1.240 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.480" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.480 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint10" baseColor="0.250 0.250 1.000" emissiveColor="0.062 0.062 0.250" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock10" cycleInterval="0.75000" loop="true" />
+    <OrientationInterpolator DEF="Swing10" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow10" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.062 0.062 0.250 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.250 0.250 1.000 0.062 0.062 0.250 0.062 0.062 0.250" />
+    <ROUTE fromNode="Clock10" fromField="fraction_changed" toNode="Swing10" toField="set_fraction" />
+    <ROUTE fromNode="Swing10" fromField="value_changed" toNode="Pivot10" toField="rotation" />
+    <ROUTE fromNode="Clock10" fromField="fraction_changed" toNode="Glow10" toField="set_fraction" />
+    <ROUTE fromNode="Glow10" fromField="value_changed" toNode="BobPaint10" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock10" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock10" toField="startTime" />
+    <Transform DEF="Pivot11" translation="2.000 3.2 0">
+      <Transform translation="0 -1.220 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.440" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.440 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint11" baseColor="0.550 0.250 1.000" emissiveColor="0.137 0.062 0.250" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock11" cycleInterval="0.70588" loop="true" />
+    <OrientationInterpolator DEF="Swing11" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow11" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.137 0.062 0.250 0.137 0.062 0.250 0.137 0.062 0.250 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.137 0.062 0.250 0.137 0.062 0.250 0.137 0.062 0.250 0.137 0.062 0.250 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.550 0.250 1.000 0.137 0.062 0.250 0.137 0.062 0.250" />
+    <ROUTE fromNode="Clock11" fromField="fraction_changed" toNode="Swing11" toField="set_fraction" />
+    <ROUTE fromNode="Swing11" fromField="value_changed" toNode="Pivot11" toField="rotation" />
+    <ROUTE fromNode="Clock11" fromField="fraction_changed" toNode="Glow11" toField="set_fraction" />
+    <ROUTE fromNode="Glow11" fromField="value_changed" toNode="BobPaint11" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock11" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock11" toField="startTime" />
+    <Transform DEF="Pivot12" translation="2.500 3.2 0">
+      <Transform translation="0 -1.200 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.400" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.400 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint12" baseColor="0.850 0.250 1.000" emissiveColor="0.213 0.062 0.250" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock12" cycleInterval="0.66667" loop="true" />
+    <OrientationInterpolator DEF="Swing12" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow12" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.213 0.062 0.250 0.213 0.062 0.250 0.213 0.062 0.250 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.213 0.062 0.250 0.213 0.062 0.250 0.213 0.062 0.250 0.213 0.062 0.250 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.850 0.250 1.000 0.213 0.062 0.250 0.213 0.062 0.250" />
+    <ROUTE fromNode="Clock12" fromField="fraction_changed" toNode="Swing12" toField="set_fraction" />
+    <ROUTE fromNode="Swing12" fromField="value_changed" toNode="Pivot12" toField="rotation" />
+    <ROUTE fromNode="Clock12" fromField="fraction_changed" toNode="Glow12" toField="set_fraction" />
+    <ROUTE fromNode="Glow12" fromField="value_changed" toNode="BobPaint12" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock12" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock12" toField="startTime" />
+    <Transform DEF="Pivot13" translation="3.000 3.2 0">
+      <Transform translation="0 -1.180 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.360" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.360 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint13" baseColor="1.000 0.250 0.850" emissiveColor="0.250 0.062 0.212" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock13" cycleInterval="0.63158" loop="true" />
+    <OrientationInterpolator DEF="Swing13" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow13" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.212 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.212 0.250 0.062 0.212 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 1.000 0.250 0.850 0.250 0.062 0.212 0.250 0.062 0.212" />
+    <ROUTE fromNode="Clock13" fromField="fraction_changed" toNode="Swing13" toField="set_fraction" />
+    <ROUTE fromNode="Swing13" fromField="value_changed" toNode="Pivot13" toField="rotation" />
+    <ROUTE fromNode="Clock13" fromField="fraction_changed" toNode="Glow13" toField="set_fraction" />
+    <ROUTE fromNode="Glow13" fromField="value_changed" toNode="BobPaint13" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock13" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock13" toField="startTime" />
+    <Transform DEF="Pivot14" translation="3.500 3.2 0">
+      <Transform translation="0 -1.160 0">
+        <Shape><Appearance><PhysicalMaterial baseColor="0.7 0.7 0.75" metallic="1" roughness="0.3" /></Appearance>
+          <Cylinder radius="0.012" height="2.320" /></Shape>
+      </Transform>
+      <Transform translation="0 -2.320 0">
+        <Shape><Appearance><PhysicalMaterial DEF="BobPaint14" baseColor="1.000 0.250 0.550" emissiveColor="0.250 0.062 0.138" metallic="0.2" roughness="0.25" /></Appearance>
+          <Sphere radius="0.19" /></Shape>
+      </Transform>
+    </Transform>
+    <TimeSensor DEF="Clock14" cycleInterval="0.60000" loop="true" />
+    <OrientationInterpolator DEF="Swing14" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0 0 1 0.00000 0 0 1 0.16047 0 0 1 0.31000 0 0 1 0.43841 0 0 1 0.53694 0 0 1 0.59887 0 0 1 0.62000 0 0 1 0.59887 0 0 1 0.53694 0 0 1 0.43841 0 0 1 0.31000 0 0 1 0.16047 0 0 1 0.00000 0 0 1 -0.16047 0 0 1 -0.31000 0 0 1 -0.43841 0 0 1 -0.53694 0 0 1 -0.59887 0 0 1 -0.62000 0 0 1 -0.59887 0 0 1 -0.53694 0 0 1 -0.43841 0 0 1 -0.31000 0 0 1 -0.16047 0 0 1 -0.00000" />
+    <ColorInterpolator DEF="Glow14" key="0.00000 0.04167 0.08333 0.12500 0.16667 0.20833 0.25000 0.29167 0.33333 0.37500 0.41667 0.45833 0.50000 0.54167 0.58333 0.62500 0.66667 0.70833 0.75000 0.79167 0.83333 0.87500 0.91667 0.95833 1.00000" keyValue="0.250 0.062 0.138 0.250 0.062 0.138 0.250 0.062 0.138 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 0.250 0.062 0.138 0.250 0.062 0.138 0.250 0.062 0.138 0.250 0.062 0.138 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 1.000 0.250 0.550 0.250 0.062 0.138 0.250 0.062 0.138" />
+    <ROUTE fromNode="Clock14" fromField="fraction_changed" toNode="Swing14" toField="set_fraction" />
+    <ROUTE fromNode="Swing14" fromField="value_changed" toNode="Pivot14" toField="rotation" />
+    <ROUTE fromNode="Clock14" fromField="fraction_changed" toNode="Glow14" toField="set_fraction" />
+    <ROUTE fromNode="Glow14" fromField="value_changed" toNode="BobPaint14" toField="emissiveColor" />
+    <ROUTE fromNode="Restart" fromField="touchTime" toNode="Clock14" toField="stopTime" />
+    <ROUTE fromNode="Again" fromField="triggerTime" toNode="Clock14" toField="startTime" />
+  </Scene>
+</X3D>
