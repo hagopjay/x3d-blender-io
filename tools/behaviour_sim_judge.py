@@ -110,24 +110,44 @@ def _viewer_actions(graph, x3d_text, trace):
     return drivers, actions
 
 
+def _view_turn(view):
+    """The viewpoint's orientation as a rotation (a drags file may leave it out: the camera then looks down -z)."""
+    return bs._Rot.axis_angle(*view.get("orientation", (0.0, 0.0, 1.0, 0.0)))
+
+
 def _pointer_ray(view, page_x, page_y, centre=PIXEL_CENTRE):
     x = page_x + centre
     y = view["height"] - page_y + centre
     tf = math.tan(view["fieldOfView"] / 2)
     aspect = view["width"] / view["height"]
     direction = ((2 * x / view["width"] - 1) * tf * aspect, (2 * y / view["height"] - 1) * tf, -1.0)
-    return tuple(view["position"]), bs._v_unit(direction)
+    return tuple(view["position"]), _view_turn(view).rotate(bs._v_unit(direction))
+
+
+def _screen_of(view, chain):
+    """The camera as a PlaneSensor that slides along a line needs it, in the sensor's own coordinates: (right, up), its x
+    and y axes. Valid where the Transforms above the sensor only move and turn (they do not scale)."""
+    turn = _view_turn(view)
+    return tuple(_to_local(chain, turn.rotate(axis), direction=True) for axis in ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0)))
+
+
+def _stamped(trace, sensor, active, when):
+    """X_ITE's own time stamp for the sensor's isActive going ``active`` nearest the pointer's ``when`` (a press and a
+    release are stamped by X_ITE's clock, not the page's), or ``when`` itself if the sensor's isActive is not recorded."""
+    stamps = [e[0] for e in trace["events"] if e[1] == sensor and e[2] == "isActive" and (str(e[3]).lower() == "true") == active]
+    near = min(stamps, key=lambda stamp: abs(stamp - when), default=None)
+    return when if near is None or abs(near - when) > 0.5 else near
 
 
 def _drag_actions(graph, x3d_text, trace, centre=PIXEL_CENTRE):
-    """(time, sensor, action, args) for each recorded drag of a CylinderSensor or SphereSensor: press with the
-    TouchSensor's hit point and the ray, drag with the ray, release."""
+    """(time, sensor, action, args) for each recorded drag of a PlaneSensor, CylinderSensor or SphereSensor: press with
+    the TouchSensor's hit point, the ray, the viewer and the camera, drag with the ray, release."""
     view, actions, queue = trace["view"], [], list(trace.get("drags", []))
     current = None
     for when, kind, page_x, page_y in trace["pointer"]:
         if kind == "mousedown":
             current = queue.pop(0) if queue else None
-            if current is not None and graph.nodes[current["sensor"]].node_type not in ("CylinderSensor", "SphereSensor"):
+            if current is not None and graph.nodes[current["sensor"]].node_type not in bs.DRAGGED:
                 current = None
             if current is None:
                 continue
@@ -137,16 +157,18 @@ def _drag_actions(graph, x3d_text, trace, centre=PIXEL_CENTRE):
             before = [e for e in hits if e[0] <= when + 1e-6]
             hit = (before[-1] if before else hits[0])[3]
             point = tuple(float(c) for c in str(hit).split())
-            eye = (_to_local(chain, tuple(view["position"])), _to_local(chain, (0.0, 0.0, 1.0), direction=True))
+            back = _view_turn(view).rotate((0.0, 0.0, 1.0))
+            eye = (_to_local(chain, tuple(view["position"])), _to_local(chain, back, direction=True))
             origin, direction = _pointer_ray(view, page_x, page_y, centre)
             ray = (_to_local(chain, origin), _to_local(chain, direction, direction=True))
-            actions.append((when, current["sensor"], "press", (point, ray, eye)))
+            actions.append((_stamped(trace, current["sensor"], True, when), current["sensor"], "press",
+                            (point, ray, eye, _screen_of(view, chain))))
         elif current is not None and kind == "mousemove":
             origin, direction = _pointer_ray(view, page_x, page_y, centre)
             ray = (_to_local(current["chain"], origin), _to_local(current["chain"], direction, direction=True))
             actions.append((when, current["sensor"], "drag", (ray,)))
         elif current is not None and kind == "mouseup":
-            actions.append((when, current["sensor"], "release", ()))
+            actions.append((_stamped(trace, current["sensor"], False, when), current["sensor"], "release", ()))
             current = None
     return actions
 
@@ -242,14 +264,18 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
     by_time = {}
     for event in events:
         by_time.setdefault(event[0], []).append(event)
+    # X_ITE steps its followers once a frame, and a frame is a moment something time-driven spoke (the page's own
+    # animation-frame stamps include the moments the pointer moved, when X_ITE does not step). The simulator is stepped
+    # at the same moments; pointer actions and viewer reports happen at their own times without a step.
+    stepped = {event[0] for event in events if event[1] not in pointing} | set(by_view)
     for when in times:
         for _when, kind, event in by_key.get(when, ()):
             sim.key(kind, event, when)
         for _when, sensor, action, args in by_action.get(when, ()):
             sim.now = when
             if action == "press":
-                point, ray, eye = args
-                sim.press(sensor, when, point, ray=ray, eye=eye)
+                point, ray, eye, screen = args
+                sim.press(sensor, when, point, ray=ray, eye=eye, screen=screen)
             elif action == "drag":
                 sim.drag(sensor, None, when, ray=args[0])
             else:
@@ -266,7 +292,8 @@ def judge(x3d_path, trace, centre=PIXEL_CENTRE):
                     machine.over = str(value) == "true" or value is True
                 sim.post(node_id, field_name, bs.parse_value(str(value).lower() if isinstance(value, bool) else str(value),
                                                              x3d_type), when)
-        sim.step(when)
+        if when in stepped:
+            sim.step(when)
     theirs, ours = {}, {}
     for when, node_id, field_name, value in events:
         if node_id not in pointing or node_id in driven:
