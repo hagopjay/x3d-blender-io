@@ -65,6 +65,7 @@ POINTER_OPS = ("press", "drag", "release", "hover", "click")
 # ---------------------------------------------------------------------------------------------------------------
 
 _SIZE = {"SFVec2f": 2, "SFVec3f": 3, "SFColor": 3, "SFRotation": 4, "SFColorRGBA": 4}
+_URLS = ["a.png", "b.wav", "c.webm", "gone.png", "slow.wav", "d.mp4", "e.x3d"]       # what a stateful node's url may name
 _WORDS = ["", "a", "Hello", "x y", 'quo"te', "back\\slash", "tab\there", "line\nbreak", "<&>", "\x01ctl", "é☃"]
 
 
@@ -204,6 +205,13 @@ def _content(rng, node, index, hostile):
     if node.node_type == "Script":
         text = "".join(rng.choice(["a", " ", "<", "&", "]]>", "\n", "x=1;", "é", '"', "'"]) for _ in range(rng.randint(0, 12)))
         return bg._markup_text(text) if text.strip() else ""
+    if node.node_type == "LoadSensor":
+        parts = [f'<{kind} containerField="children" url=\'{url}\'/>' for kind, url in
+                 ((rng.choice(["ImageTexture", "AudioClip", "MovieTexture", "Inline"]),
+                   " ".join('"%s"' % rng.choice(_URLS) for _ in range(rng.randint(1, 3)))) for _ in range(rng.randint(0, 3)))]
+        if hostile and rng.random() < 0.3:
+            parts.append(rng.choice(["<unclosed", "&bad;", "<AudioClip/>", '<ImageTexture url=\'"a.png"\' load="false"/>']))
+        return "".join(parts)
     parts = []
     if node.node_type.endswith("PickSensor") and rng.random() < 0.7:
         parts.append(f'<Box DEF="Pick{index}" containerField="pickingGeometry"/>')
@@ -314,7 +322,16 @@ def generate(rng, index, hostile):
                 graph.route(rng.choice(ids), row[0], rng.choice(ids), "set_" + other_row[0], check=False)
             else:
                 graph.route(node.id, row[0], other.id, other_row[0], check=False)
-    return graph, schedule(rng, graph, hostile)
+    extra = random.Random(len(graph.nodes) * 7919 + len(graph.routes) * 31 + (1 if hostile else 0))   # no draw from ``rng``: older graphs stay as they were
+    for node in graph.nodes.values():
+        if node.role == bg.TARGET and node.node_type in bg.STATEFUL_TARGETS:
+            node.fields["url"] = " ".join('"%s"' % extra.choice(_URLS) for _ in range(extra.randint(1, 3)))
+            if node.node_type in ("AudioClip", "MovieTexture") and extra.random() < 0.6:
+                node.fields["loop"] = extra.choice(["true", "false"])
+                node.fields["startTime"] = _f(extra.uniform(0, 3))
+    calls = schedule(rng, graph, hostile)
+    calls.insert(0, ["resources", _resources(extra, hostile)])
+    return graph, calls
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -348,6 +365,23 @@ def _event_value(rng, kind, hostile):
     return rng.uniform(-3, 6)
 
 
+def _resources(rng, hostile):
+    """A Resources table as plain data: each of ``_URLS`` loads, fails or is left out; hostile adds entries that are not."""
+    table = {}
+    for url in _URLS:
+        roll = rng.random()
+        if roll < 0.15:
+            continue
+        table[url] = {"fails": rng.choice([0.0, 0.2, 1.0])} if roll < 0.35 else \
+            {"loads": rng.choice([0.0, 0.1, 0.5, 3.0]), **({"duration": rng.choice([0.0, 0.5, 2.0, 7.0])} if rng.random() < 0.7 else {})}
+    if hostile:
+        for _ in range(rng.randint(0, 4)):
+            table[rng.choice(_URLS + ["x", 7])] = rng.choice([
+                {"loads": math.nan}, {"loads": -1.0}, {"fails": math.inf}, {"loads": "soon"}, {"duration": -3.0}, {}, None, "x",
+                {"loads": 1e300, "duration": 1e300}, {"loads": 0.0, "duration": math.nan}, {"loads": True}])
+    return table
+
+
 def schedule(rng, graph, hostile):
     """A list of calls: [name, args...], plain data so a failure can be written out and replayed."""
     calls, clock = [], 0.0
@@ -356,6 +390,7 @@ def schedule(rng, graph, hostile):
     proximity = [n.id for n in graph.nodes.values() if n.node_type == "ProximitySensor"]
     colliders = [n.id for n in graph.nodes.values() if n.node_type == "CollisionSensor"]
     behaviours = [n for n in graph.nodes.values() if n.role == bg.BEHAVIOUR]
+    behaviours += [n for n in graph.nodes.values() if n.role == bg.TARGET and n.node_type in bs._SCENE_MACHINES]   # clips take events too
     if not hostile:
         behaviours = [n for n in behaviours if n.node_type in bs.SIMULATED] or behaviours
     if rng.random() < (0.9 if not hostile else 0.75):
@@ -547,6 +582,9 @@ def _chaos_handler(node, hostile):
 
 def run_case(graph, calls, hostile, *, call_seconds=2.0, graph_seconds=20):
     """Run one graph through its schedule. Returns (findings, digest, stats); findings are (property, detail)."""
+    resources = None
+    if calls and calls[0][0] == "resources":       # what the outside world does is part of the stimulus, given at construction
+        resources, calls = calls[0][1], calls[1:]
     findings, stats = [], {"calls": 0, "rejected": 0, "targets_hit": 0, "dropped": {}, "faults": 0, "slowest": 0.0}
     digest = []
     armed = hasattr(signal, "SIGALRM")
@@ -558,7 +596,7 @@ def run_case(graph, calls, hostile, *, call_seconds=2.0, graph_seconds=20):
             armed = False
     try:
         try:
-            sim = bs.Simulation(graph)
+            sim = bs.Simulation(graph, resources=resources)
         except Hang as error:
             return [("b-bounded", f"construction: {error}")], digest, stats
         except bg.BehaviourError as error:

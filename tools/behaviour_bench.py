@@ -4,7 +4,7 @@
 
 """How the behaviour simulator and the Blender player scale: synthetic graphs, timed.
 
-Four shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a fifth that is asked for by name:
+Five shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a sixth that is asked for by name:
 
   fan     one looping TimeSensor drives N PositionInterpolators, each into its own Transform
   chains  N independent chains: TimeSensor (loop) -> PositionInterpolator -> PositionDamper -> Transform
@@ -14,6 +14,8 @@ Four shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), a
           CollisionSensor for every fifth one, told every step whether it touches (class E)
   lists   (``--shapes lists``, simulation only) one looping TimeSensor -> one CoordinateInterpolator of 100 points ->
           N CoordinateDampers, each into its own Coordinate: every damper is chasing a new list on every step
+  media   N looping AudioClips (an X_ITE-judged clock each, 1 s long) whose elapsedTime and isActive each reach a node,
+          and one LoadSensor over N/10 of them; simulation only (the Player lists these nodes as not applied)
 
 For each case the benchmark times ``Simulation(graph)``, ``start()`` and 300 steps of 1/60 s, and reports the median
 and 95th percentile of a step, the events sent per step, and the peak memory (tracemalloc). With ``--bpy`` (needs the
@@ -44,7 +46,7 @@ sys.path.insert(0, str(ROOT / "source"))
 import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
 
-SHAPES = ("fan", "chains", "mixed", "hosted")
+SHAPES = ("fan", "chains", "mixed", "hosted", "media")
 OPT_IN_SHAPES = ("lists",)         # run when named; not in the default sweep, and not timed in the player (no Transform to move)
 POINTS = 100                       # points per list in the "lists" shape
 SIZES = (10, 100, 1000, 5000)
@@ -105,6 +107,8 @@ def build(shape: str, n: int) -> bg.Behaviour:
                            initialDestination=" ".join(f"{p} 0 0" for p in range(POINTS)))
             wave.value_changed >> follow.set_destination
             follow.value_changed >> b.target("Coordinate", f"Mesh{i}").point
+    elif shape == "media":
+        return bg.Behaviour.from_x3d(media_world(n))
     else:
         raise ValueError(f"unknown shape {shape!r}")
     return b
@@ -127,6 +131,26 @@ def touch(sim, shape, n, k, now):
     if shape == "hosted":
         for i in range(0, n, 5):
             sim.contact(f"Hit{i}", bool(k % 2), ["A|B"] if k % 2 else (), ["A"] if k % 2 else (), now)
+def media_world(n: int) -> str:
+    """The "media" shape as X3D text: N looping AudioClips with a sink route each, one LoadSensor over the first N/10."""
+    body = ['<BooleanToggle DEF="SinkB"/><TimeSensor DEF="SinkT" enabled="false"/>']
+    routes = []
+    for i in range(n):
+        body.append(f'<Sound><AudioClip DEF="Clip{i}" url=\'"tone{i % 7}.wav"\' loop="true"/></Sound>')
+        routes.append(f'<ROUTE fromNode="Clip{i}" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>'
+                      f'<ROUTE fromNode="Clip{i}" fromField="isActive" toNode="SinkB" toField="set_boolean"/>')
+    body.append('<LoadSensor DEF="Loading">' + "".join(
+        f'<AudioClip containerField="children" url=\'"tone{i % 7}.wav"\'/>' for i in range(max(1, n // 10))) + "</LoadSensor>")
+    routes.append('<ROUTE fromNode="Loading" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>')
+    return ('<?xml version="1.0" encoding="UTF-8"?><X3D profile="Full" version="4.0"><head/><Scene>'
+            + "".join(body) + "".join(routes) + "</Scene></X3D>")
+
+
+def resources_for(shape: str):
+    """What the "media" shape's URLs do (the others load nothing): seven tones, each ready 0.05 s on and 1 s long."""
+    if shape != "media":
+        return None
+    return {f"tone{k}.wav": {"loads": 0.05 * (k + 1), "duration": 1.0} for k in range(7)}
 
 
 def clicks(shape: str, n: int, steps: int = STEPS) -> dict[int, list[int]]:
@@ -170,7 +194,7 @@ def _rounded(value, places):
 def digest(shape: str, n: int, steps: int, places: int | None = None) -> str:
     """SHA-256 of everything the simulation sent (its whole log, then every change handed back), as exact text, or
     with floats rounded to ``places`` decimals (for graphs that call exp(): the C library's last bit differs)."""
-    sim = bs.Simulation(build(shape, n), log_size=10_000_000)
+    sim = bs.Simulation(build(shape, n), log_size=10_000_000, resources=resources_for(shape))
     changes = run_sim(sim, shape, n, steps)
     h = hashlib.sha256()
     for line in sim.log:
@@ -189,7 +213,7 @@ def p95(values):
 def measure_sim(shape: str, n: int, budget: float) -> dict:
     graph = build(shape, n)
     began = time.perf_counter()
-    sim = bs.Simulation(graph)
+    sim = bs.Simulation(graph, resources=resources_for(shape))
     construct = time.perf_counter() - began
     host(sim, shape)
     began = time.perf_counter()
@@ -216,7 +240,7 @@ def measure_sim(shape: str, n: int, budget: float) -> dict:
            "step_median_ms": statistics.median(steps) * 1e3, "step_p95_ms": p95(steps) * 1e3}
     # events and memory in a second pass (tracemalloc slows everything, so it never shares a pass with the clock)
     tracemalloc.start()
-    sim = bs.Simulation(build(shape, n))
+    sim = bs.Simulation(build(shape, n), resources=resources_for(shape))
     counted = [0]
 
     class CountingLog(deque):          # every event sent is one entry in the log
@@ -406,7 +430,7 @@ def main(argv=None):
             receipt["simulation"].append(measure_sim(shape, n, args.budget))
             print(f"sim {shape} {n}: {receipt['simulation'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)
     if args.bpy:
-        for shape in [shape for shape in args.shapes if shape not in OPT_IN_SHAPES]:
+        for shape in (x for x in args.shapes if x != "media" and x not in OPT_IN_SHAPES):       # the Player applies no sound or points: nothing to time
             for n in args.sizes:
                 receipt["player"].append(measure_player(shape, n, args.budget, args.tree_limit))
                 print(f"player {shape} {n}: {receipt['player'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)

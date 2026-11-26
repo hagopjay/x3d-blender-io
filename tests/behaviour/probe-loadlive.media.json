@@ -1,0 +1,27 @@
+{
+ "l1.png": {
+  "delay": 500
+ },
+ "l2.png": {
+  "delay": 300
+ },
+ "l3.png": {
+  "delay": 700
+ },
+ "l4.png": {
+  "delay": 900
+ },
+ "l6.wav": {
+  "delay": 400
+ },
+ "l7.png": {
+  "delay": 250
+ },
+ "l8.png": {
+  "delay": 1500
+ },
+ "gone4.png": {
+  "status": 404,
+  "delay": 300
+ }
+}

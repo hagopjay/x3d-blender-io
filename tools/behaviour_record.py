@@ -11,7 +11,9 @@ press, drag, release, hover, key, viewer, post; arguments as ``Simulation`` take
 the simulation at 0, steps it every 1/``--fps`` s up to ``--seconds`` (a scripted call at a time happens before the
 step at that time) and writes ``Activity.report()`` with the full trace and the complete stimulus (start and steps
 included): ``trace`` is every delivery, in order, as ``[time, from, from_field, to, to_field, type, value]``. The file
-replays: ``behaviour_activity.replay(Simulation(graph), report["stimulus"])`` sends the same events.
+replays: ``behaviour_activity.replay(Simulation(graph), report["stimulus"])`` sends the same events. ``--resources`` is the
+table of what loading does (url -> loads / fails, duration); the recording keeps it as ``report["resources"]``, and a world
+with outside resources replays on ``Simulation(graph, resources=behaviour_activity.resources_of(report))``.
 """
 
 from __future__ import annotations
@@ -27,10 +29,11 @@ import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
 
 
-def record(x3d_text, script, seconds=4.0, fps=60.0, world=None):
-    """The Activity of ``x3d_text`` run for ``seconds`` with ``script`` (a list of call dicts)."""
+def record(x3d_text, script, seconds=4.0, fps=60.0, world=None, resources=None):
+    """The Activity of ``x3d_text`` run for ``seconds`` with ``script`` (a list of call dicts). ``resources``: what the
+    outside world does when something loads (``{url: {"loads": s, "duration": s} | {"fails": s}}``), recorded with the run."""
     graph = bg.Behaviour.from_x3d(x3d_text)
-    sim = bs.Simulation(graph, log_size=1_000_000)
+    sim = bs.Simulation(graph, log_size=1_000_000, resources=resources)
     activity = ba.Activity.from_simulation(sim, record=True, world=world)
     calls = [(0.0, 0, {"time": 0.0, "call": "start", "node": None, "args": {}})]
     for index, call in enumerate(script):
@@ -49,11 +52,13 @@ def main(argv=None):
     parser.add_argument("--script", help="JSON list of calls (default: none, the world runs by itself)")
     parser.add_argument("--seconds", type=float, default=4.0)
     parser.add_argument("--fps", type=float, default=60.0)
+    parser.add_argument("--resources", help="JSON {url: {\"loads\": s, \"duration\": s} | {\"fails\": s}}: what loading does (default: every URL loads at once)")
     parser.add_argument("--out", required=True, help="where to write the recording (JSON)")
     args = parser.parse_args(argv)
     script = json.loads(Path(args.script).read_text(encoding="utf-8")) if args.script else []
+    resources = json.loads(Path(args.resources).read_text(encoding="utf-8")) if args.resources else None
     activity = record(Path(args.world).read_text(encoding="utf-8"), script, args.seconds, args.fps,
-                      world=Path(args.world).name)
+                      world=Path(args.world).name, resources=resources)
     report = activity.report()
     Path(args.out).write_text(json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
     print(f"{args.out}: {report['events']} events, {report['deliveries']} deliveries, "

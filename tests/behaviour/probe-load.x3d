@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="probe-load.x3d"/>
+    <meta name="description" content="LoadSensors on X_ITE over images and a sound that load while the world is starting: two children (progress), a child that is not there, a time-out that passes before the child arrives, a list whose first URL fails, an AudioClip child, one child that loads and one that does not, and a sensor with no child."/>
+  </head>
+  <Scene>
+    <TimeSensor DEF="Sink" enabled="false"/>
+    <BooleanToggle DEF="SinkB"/>
+    <ScalarInterpolator DEF="SinkF" key="0 1" keyValue="0 1"/>
+    <LoadSensor DEF="Two"><ImageTexture containerField="children" DEF="ImgA" url='"pic1.png"'/><ImageTexture containerField="children" DEF="ImgB" url='"pic2.png"'/></LoadSensor>
+    <LoadSensor DEF="Bad"><ImageTexture containerField="children" DEF="ImgGone" url='"gone1.png"'/></LoadSensor>
+    <LoadSensor DEF="Late" timeOut="0.5"><ImageTexture containerField="children" DEF="ImgSlow" url='"slow.png"'/></LoadSensor>
+    <LoadSensor DEF="Fall"><ImageTexture containerField="children" DEF="ImgFall" url='"gone2.png" "pic3.png"'/></LoadSensor>
+    <LoadSensor DEF="Sound"><AudioClip containerField="children" DEF="Beep" url='"tone.wav"'/></LoadSensor>
+    <LoadSensor DEF="Mixed"><ImageTexture containerField="children" DEF="ImgOk" url='"pic4.png"'/><ImageTexture containerField="children" DEF="ImgNo" url='"gone3.png"'/></LoadSensor>
+    <LoadSensor DEF="Nothing"/>
+    <ROUTE fromNode="Two" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Two" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Two" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="Two" fromField="loadTime" toNode="Sink" toField="set_startTime"/>
+    <ROUTE fromNode="Bad" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Bad" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Bad" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="Bad" fromField="loadTime" toNode="Sink" toField="set_startTime"/>
+    <ROUTE fromNode="Late" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Late" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Late" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="Late" fromField="loadTime" toNode="Sink" toField="set_startTime"/>
+    <ROUTE fromNode="Fall" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Fall" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Fall" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="Fall" fromField="loadTime" toNode="Sink" toField="set_startTime"/>
+    <ROUTE fromNode="Sound" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Sound" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Sound" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="Sound" fromField="loadTime" toNode="Sink" toField="set_startTime"/>
+    <ROUTE fromNode="Mixed" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Mixed" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Mixed" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="Mixed" fromField="loadTime" toNode="Sink" toField="set_startTime"/>
+    <ROUTE fromNode="Nothing" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Nothing" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="Nothing" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+  </Scene>
+</X3D>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="probe-loadlive.x3d"/>
+    <meta name="description" content="LoadSensors on X_ITE over children that are told to load while the world runs (load is set by a ROUTE): one child, two children loaded a second apart, a time-out that passes before the child arrives, a child that is not there, an AudioClip child, a sensor that is enabled after its child has loaded, a time-out changed while the sensor is active."/>
+  </head>
+  <Scene>
+    <TimeSensor DEF="T0" cycleInterval="100" loop="true"/>
+    <TimeSensor DEF="W1" cycleInterval="1.0"/><BooleanFilter DEF="B1"/>
+    <TimeSensor DEF="W2" cycleInterval="2.2"/><BooleanFilter DEF="B2"/>
+    <TimeSensor DEF="W5" cycleInterval="1.35"/><BooleanFilter DEF="B5"/>
+    <TimeTrigger DEF="Q5"/><BooleanTrigger DEF="BT5"/>
+    <TimeSensor DEF="SinkT" enabled="false"/>
+    <BooleanToggle DEF="SinkB"/>
+    <ScalarInterpolator DEF="SinkF" key="0 1" keyValue="0 1"/>
+    <LoadSensor DEF="L1"><ImageTexture containerField="children" DEF="I1" load="false" url='"l1.png"'/></LoadSensor>
+    <LoadSensor DEF="L2"><ImageTexture containerField="children" DEF="I2" load="false" url='"l2.png"'/><ImageTexture containerField="children" DEF="I3" load="false" url='"l3.png"'/></LoadSensor>
+    <LoadSensor DEF="L3" timeOut="0.4" enabled="false"><ImageTexture containerField="children" DEF="I4" load="false" url='"l4.png"'/></LoadSensor>
+    <LoadSensor DEF="L4"><ImageTexture containerField="children" DEF="I5" load="false" url='"gone4.png"'/></LoadSensor>
+    <LoadSensor DEF="L5"><AudioClip containerField="children" DEF="CL" load="false" url='"l6.wav"'/></LoadSensor>
+    <LoadSensor DEF="L6" enabled="false"><ImageTexture containerField="children" DEF="I6" load="false" url='"l7.png"'/></LoadSensor>
+    <LoadSensor DEF="L7" enabled="false" timeOut="1"><ImageTexture containerField="children" DEF="I7" load="false" url='"l8.png"'/></LoadSensor>
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W1" toField="set_startTime"/>
+    <ROUTE fromNode="W1" fromField="isActive" toNode="B1" toField="set_boolean"/>
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W2" toField="set_startTime"/>
+    <ROUTE fromNode="W2" fromField="isActive" toNode="B2" toField="set_boolean"/>
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W5" toField="set_startTime"/>
+    <ROUTE fromNode="W5" fromField="isActive" toNode="B5" toField="set_boolean"/>
+    <ROUTE fromNode="B1" fromField="inputNegate" toNode="I1" toField="set_load"/>
+    <ROUTE fromNode="B1" fromField="inputNegate" toNode="I2" toField="set_load"/>
+    <ROUTE fromNode="B1" fromField="inputNegate" toNode="I5" toField="set_load"/>
+    <ROUTE fromNode="B1" fromField="inputNegate" toNode="I6" toField="set_load"/>
+    <ROUTE fromNode="B2" fromField="inputNegate" toNode="I4" toField="set_load"/>
+    <ROUTE fromNode="B2" fromField="inputNegate" toNode="I7" toField="set_load"/>
+    <ROUTE fromNode="B2" fromField="inputNegate" toNode="I3" toField="set_load"/>
+    <ROUTE fromNode="B2" fromField="inputNegate" toNode="CL" toField="set_load"/>
+    <ROUTE fromNode="B5" fromField="inputNegate" toNode="L6" toField="set_enabled"/>
+    <ROUTE fromNode="B5" fromField="inputNegate" toNode="Q5" toField="set_boolean"/>
+    <ROUTE fromNode="Q5" fromField="triggerTime" toNode="BT5" toField="set_triggerTime"/>
+    <ROUTE fromNode="BT5" fromField="triggerTrue" toNode="L3" toField="set_enabled"/>
+    <ROUTE fromNode="BT5" fromField="triggerTrue" toNode="L7" toField="set_enabled"/>
+    <ROUTE fromNode="L1" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L1" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L1" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="L1" fromField="loadTime" toNode="SinkT" toField="set_startTime"/>
+    <ROUTE fromNode="L2" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L2" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L2" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="L2" fromField="loadTime" toNode="SinkT" toField="set_startTime"/>
+    <ROUTE fromNode="L3" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L3" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L3" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="L3" fromField="loadTime" toNode="SinkT" toField="set_startTime"/>
+    <ROUTE fromNode="L4" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L4" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L4" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="L4" fromField="loadTime" toNode="SinkT" toField="set_startTime"/>
+    <ROUTE fromNode="L5" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L5" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L5" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="L5" fromField="loadTime" toNode="SinkT" toField="set_startTime"/>
+    <ROUTE fromNode="L6" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L6" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L6" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="L6" fromField="loadTime" toNode="SinkT" toField="set_startTime"/>
+    <ROUTE fromNode="L7" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L7" fromField="isLoaded" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="L7" fromField="progress" toNode="SinkF" toField="set_fraction"/>
+    <ROUTE fromNode="L7" fromField="loadTime" toNode="SinkT" toField="set_startTime"/>
+    <ROUTE fromNode="CL" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+  </Scene>
+</X3D>

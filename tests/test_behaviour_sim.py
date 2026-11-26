@@ -815,8 +815,13 @@ class XiteAgreementTests(unittest.TestCase):
         judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord",
                                 "probe-script", "probe-list-followers")))
         judged += [bg.Behaviour.from_x3d((d / f"{d.name}.x3d").read_text(encoding="utf-8")) for d in recorded_demos()]
+        # the worlds recorded for outside resources (tools/behaviour_resources_judge.py, tests/test_behaviour_resources.py)
+        judged += list(map(world, ("probe-load", "probe-loadlive", "probe-audio", "probe-movie")))
         used = {graph.nodes[route.from_id].node_type for graph in judged
                 for route in graph.routes if graph.nodes[route.from_id].role == bg.BEHAVIOUR}
+        # AudioClip and MovieTexture are scene nodes kept in place: targets in the graph, and they send on a ROUTE too
+        used |= {graph.nodes[route.from_id].node_type for graph in judged
+                 for route in graph.routes if graph.nodes[route.from_id].node_type in bg.IN_PLACE}
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one. CollisionSensor is simulated from a contact

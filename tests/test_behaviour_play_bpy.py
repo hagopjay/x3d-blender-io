@@ -479,6 +479,36 @@ class ShaderPlayTests(_Base):
         player.stop()
 
 
+class MediaNodesTests(_Base):
+
+    WORLD = ('<?xml version="1.0" encoding="UTF-8"?><X3D profile="Full" version="4.0"><head/><Scene>\n'
+             '<Transform DEF="Box"><Shape><Box/></Shape></Transform>\n'
+             '<Sound><AudioClip DEF="Tone" url=\'"t.wav"\' loop="true"/></Sound>\n'
+             '<Shape><Appearance><MovieTexture DEF="Film" url=\'"f.webm"\' loop="true"/></Appearance></Shape>\n'
+             '<LoadSensor DEF="Loading"><ImageTexture containerField="children" url=\'"a.png"\'/></LoadSensor>\n'
+             '<BooleanToggle DEF="Sink"/>\n'
+             '<ROUTE fromNode="Tone" fromField="isActive" toNode="Sink" toField="set_boolean"/>\n'
+             '<ROUTE fromNode="Film" fromField="isActive" toNode="Sink" toField="set_boolean"/>\n'
+             '<ROUTE fromNode="Loading" fromField="isLoaded" toNode="Sink" toField="set_boolean"/>\n'
+             '</Scene></X3D>')
+
+    def test_play_runs_the_media_clocks_and_lists_what_it_does_not_apply(self):
+        bg = importlib.import_module("io_scene_x3d.behaviour_graph")
+        scene = self.import_world() if hasattr(self, "import_world") else bpy.context.scene
+        graph = bg.Behaviour.from_x3d(self.WORLD)
+        player = self.bp.Player(scene, graph)
+        player.start(0.0)
+        player.step(0.5)
+        self.assertEqual(sorted(player.not_applied), [
+            "AudioClip.sound (the Player plays no sound; its clock and events run)",
+            "LoadSensor.loading (nothing is fetched; every URL counts as loaded at once)",
+            "MovieTexture.picture (the Player shows no video; its clock and events run)"])
+        self.assertEqual(player.sim.outputs[("Tone", "isActive")], True)           # the clock runs though nothing sounds
+        self.assertEqual(player.sim.outputs[("Loading", "isLoaded")], True)
+        self.assertEqual(player.sim.noted["assumed-loaded"], 3)
+        player.stop()
+
+
 class FieldEditorTests(_Base):
 
     def test_a_typed_widget_reads_and_writes_the_x3d_text(self):

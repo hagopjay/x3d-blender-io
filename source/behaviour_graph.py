@@ -64,7 +64,10 @@ DECLARING_TYPES = {"ComposedShader", "Script"}        # node types whose <field>
 # pickingGeometry, a CollisionSensor's collider, a Geo node's geoOrigin) as ``Node.content``, written back unchanged. The
 # older nodes keep their way: their child elements are named in the diagnostics and not held.
 CONTENT_TYPES = {"GeoPositionInterpolator", "GeoProximitySensor", "GeoTouchSensor", "LinePickSensor", "PointPickSensor",
-                 "PrimitivePickSensor", "VolumePickSensor", "CollisionSensor", "Script"}
+                 "PrimitivePickSensor", "VolumePickSensor", "CollisionSensor", "Script", "LoadSensor"}
+# A target that holds its own state while the scene runs (a clock, a load): its attributes are read into ``Node.fields`` so the
+# simulator starts it from the file's values. The importer keeps none of it, so a graph read from a scene has none.
+STATEFUL_TARGETS = set(IN_PLACE) | {"ImageTexture", "Inline"}
 NODE_FIELD_TYPES = {"SFNode", "MFNode"}      # fields that hold nodes: child elements in the file, never an attribute
 SCRIPT_FIELD_TYPES = {"Script"}              # the node types that may declare a field of a node type
 FIELD_TYPES = {"SFBool", "SFColor", "SFColorRGBA", "SFDouble", "SFFloat", "SFImage", "SFInt32", "SFMatrix3d", "SFMatrix3f",
@@ -418,7 +421,9 @@ def parse_x3d(source) -> Graph:
             target = by_def[name]
             top = root_ancestor(target)
             declared = _declared_fields(target, graph.diagnostics, name) if _local(target.tag) in DECLARING_TYPES else ()
-            graph.nodes[name] = Node(id=name, node_type=_local(target.tag), role=TARGET, declared=declared)
+            graph.nodes[name] = Node(id=name, node_type=_local(target.tag), role=TARGET, declared=declared,
+                                     fields={key: value for key, value in target.attrib.items() if key not in _STRUCTURAL}
+                                     if _local(target.tag) in STATEFUL_TARGETS else {})
             graph._candidates[name] = {
                 "top_def": top.get("DEF") if top is not None else None,
                 "top_xml": _element_text(top) if top is not None else None,

@@ -93,6 +93,38 @@ with unknown duration" (-1, as the standard says for an unknown duration) and is
 `Simulation.noted["assumed-loaded"]`. The judge serves small local files (a WAV and a PNG made by the test itself, no
 third-party asset) so X_ITE's real loading can be compared.
 
+#### As built (P5)
+
+`source/behaviour_resources.py` is the table (pure data, never raises: a bad entry is dropped into `Resources.rejected`
+and counted in `Simulation.dropped["bad-resource"]`); `source/behaviour_media.py` holds the machines, so
+`behaviour_sim.py` only gains a hook at its end. A `url` is a list: the URLs are tried in order, each failure costs its
+`fails` seconds, and the first that loads wins. A recording carries the table in an optional `resources` block
+(`tools/behaviour_record.py --resources '{...}'`); a recording made before has no block and loads as before.
+
+- **AudioClip and MovieTexture** run the X3DTimeDependentNode rules of X_ITE 16.8.1: `startTime`, `stopTime`,
+  `pauseTime`, `resumeTime`, `loop`, `isActive`, `isPaused`, `elapsedTime` and `duration_changed`. A clip whose
+  `duration` is unknown (-1) never ends by itself. AudioClip ends in real seconds whatever `pitch` is; MovieTexture
+  ends at `duration / (speed * pitch)` (a rate outside [0.0625, 16] plays at 1, as the browser's media element does).
+- **LoadSensor** counts its children (`isActive`, `isLoaded`, `progress`, `loadTime`, `timeOut`). Its children are kept
+  as markup (content), as a Script's source is, and built into private url objects, or bound to the scene's own
+  AudioClip, MovieTexture, ImageTexture or Inline when those are in the graph.
+- **X_ITE behaviours found by recording, and followed**: a world's initial loads hold it back from going live, and a
+  clip started before that waits for it; time stamps taken at initialisation are stale; load completion is delivered at
+  the next frame X_ITE processes; a LoadSensor is active at once even when its children have `load="false"`; after a
+  `timeOut` the sensor's `isActive` goes false again when the late child finishes; AudioClip sends `duration_changed`
+  before the first `elapsedTime`, MovieTexture after it; a failed load or an unload sends `duration_changed` -1; events
+  are sent even when the value did not change.
+- **Where the simulator differs on purpose**: a clip ends on the simulator's own frame, and X_ITE sometimes ends it on the
+  next (a strict `>` on the duration fitted 9 of 10 ends; the judge allows exactly one frame at a clip's `isActive`
+  false and nothing anywhere else); X_ITE measures a pause and a LoadSensor `timeOut` on the wall clock, which the
+  judge is told about (`timer_lags`) while the simulator uses its own clock.
+- **Play** runs the clocks and the sensor and lists, as not applied, `AudioClip.sound`, `MovieTexture.picture` and
+  `LoadSensor.loading` (nothing is played, shown or fetched; every URL counts as loaded at once).
+- **Judge**: `tools/behaviour_resources_judge.py` records X_ITE 16.8.1 (headless Chromium, software GL) on four worlds
+  (`probe-load`, `probe-loadlive`, `probe-audio`, `probe-movie`), serving a WAV, a PNG and a WebM the test makes itself
+  (the WebM needs `ffmpeg` with libvpx; no download), each after a delay or refused. Every stream agrees (27, 38, 62
+  and 44 streams; 6 clip ends one frame apart, all in `probe-audio`).
+
 ### `Hosted` (class E)
 
 - **Script**: fields declared with `<field>` become typed ports (the mechanism ComposedShader uses). The simulator

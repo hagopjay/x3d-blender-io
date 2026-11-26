@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0">
+  <head>
+    <meta name="title" content="probe-audio.x3d"/>
+    <meta name="description" content="AudioClips on X_ITE: start, restart, loop with pitch, pause and resume, stop, a start before the clip has loaded, an unload, a clip that is not there. Every start comes from a delay made of TimeSensors, so nothing starts before the world is live."/>
+  </head>
+  <Scene>
+    <TimeSensor DEF="T0" cycleInterval="100" loop="true"/>
+    <TimeSensor DEF="W1" cycleInterval="1.0"/><BooleanFilter DEF="B1"/><TimeTrigger DEF="Q1"/>
+    <TimeSensor DEF="W2" cycleInterval="2.2"/><BooleanFilter DEF="B2"/><TimeTrigger DEF="Q2"/>
+    <TimeSensor DEF="W3" cycleInterval="3.4"/><BooleanFilter DEF="B3"/><TimeTrigger DEF="Q3"/>
+    <TimeSensor DEF="W4" cycleInterval="0.5"/><BooleanFilter DEF="B4"/><TimeTrigger DEF="Q4"/>
+    <TimeSensor DEF="W5" cycleInterval="1.35"/><BooleanFilter DEF="B5"/><TimeTrigger DEF="Q5"/>
+    <TimeSensor DEF="SinkT" enabled="false"/>
+    <BooleanToggle DEF="SinkB"/>
+    <Transform><Sound><AudioClip DEF="A" url='"toneA.wav"'/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="B" url='"toneB.wav"' pitch="2"/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="C" url='"toneC.wav"'/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="D" url='"toneD.wav"' load="false"/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="E" url='"toneE.wav"'/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="F" url='"toneF.wav"'/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="G" url='"gone.wav"'/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="H" url='"toneH.wav"' pitch="2"/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="I" url='"toneI.wav"' pitch="0.5"/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="J" url='"toneJ.wav"'/></Sound></Transform>
+    <Transform><Sound><AudioClip DEF="K" url='"toneK.wav"'/></Sound></Transform>
+
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W1" toField="set_startTime"/>
+    <ROUTE fromNode="W1" fromField="isActive" toNode="B1" toField="set_boolean"/>
+    <ROUTE fromNode="B1" fromField="inputNegate" toNode="Q1" toField="set_boolean"/>
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W2" toField="set_startTime"/>
+    <ROUTE fromNode="W2" fromField="isActive" toNode="B2" toField="set_boolean"/>
+    <ROUTE fromNode="B2" fromField="inputNegate" toNode="Q2" toField="set_boolean"/>
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W3" toField="set_startTime"/>
+    <ROUTE fromNode="W3" fromField="isActive" toNode="B3" toField="set_boolean"/>
+    <ROUTE fromNode="B3" fromField="inputNegate" toNode="Q3" toField="set_boolean"/>
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W4" toField="set_startTime"/>
+    <ROUTE fromNode="W4" fromField="isActive" toNode="B4" toField="set_boolean"/>
+    <ROUTE fromNode="B4" fromField="inputNegate" toNode="Q4" toField="set_boolean"/>
+    <ROUTE fromNode="T0" fromField="cycleTime" toNode="W5" toField="set_startTime"/>
+    <ROUTE fromNode="W5" fromField="isActive" toNode="B5" toField="set_boolean"/>
+    <ROUTE fromNode="B5" fromField="inputNegate" toNode="Q5" toField="set_boolean"/>
+    <ROUTE fromNode="Q1" fromField="triggerTime" toNode="A" toField="set_startTime"/>
+    <ROUTE fromNode="Q2" fromField="triggerTime" toNode="A" toField="set_startTime"/>
+    <ROUTE fromNode="B4" fromField="inputNegate" toNode="B" toField="set_loop"/>
+    <ROUTE fromNode="Q3" fromField="triggerTime" toNode="B" toField="set_stopTime"/>
+    <ROUTE fromNode="Q1" fromField="triggerTime" toNode="C" toField="set_startTime"/>
+    <ROUTE fromNode="Q5" fromField="triggerTime" toNode="C" toField="set_pauseTime"/>
+    <ROUTE fromNode="Q2" fromField="triggerTime" toNode="C" toField="set_resumeTime"/>
+    <ROUTE fromNode="Q4" fromField="triggerTime" toNode="D" toField="set_startTime"/>
+    <ROUTE fromNode="B5" fromField="inputNegate" toNode="D" toField="set_load"/>
+    <ROUTE fromNode="Q1" fromField="triggerTime" toNode="E" toField="set_startTime"/>
+    <ROUTE fromNode="Q5" fromField="triggerTime" toNode="E" toField="set_stopTime"/>
+    <ROUTE fromNode="Q2" fromField="triggerTime" toNode="E" toField="set_startTime"/>
+    <ROUTE fromNode="B3" fromField="inputFalse" toNode="F" toField="set_load"/>
+    <ROUTE fromNode="Q1" fromField="triggerTime" toNode="H" toField="set_startTime"/>
+    <ROUTE fromNode="Q1" fromField="triggerTime" toNode="I" toField="set_startTime"/>
+    <ROUTE fromNode="Q1" fromField="triggerTime" toNode="J" toField="set_startTime"/>
+    <ROUTE fromNode="B5" fromField="inputFalse" toNode="J" toField="set_enabled"/>
+    <ROUTE fromNode="Q1" fromField="triggerTime" toNode="K" toField="set_startTime"/>
+    <ROUTE fromNode="Q5" fromField="triggerTime" toNode="K" toField="set_startTime"/>
+    <ROUTE fromNode="A" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="A" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="A" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="A" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="B" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="B" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="B" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="B" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="C" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="C" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="C" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="C" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="D" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="D" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="D" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="D" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="E" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="E" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="E" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="E" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="F" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="F" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="F" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="F" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="G" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="G" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="G" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="G" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="H" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="H" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="H" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="H" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="I" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="I" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="I" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="I" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="J" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="J" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="J" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="J" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="K" fromField="isActive" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="K" fromField="isPaused" toNode="SinkB" toField="set_boolean"/>
+    <ROUTE fromNode="K" fromField="elapsedTime" toNode="SinkT" toField="set_stopTime"/>
+    <ROUTE fromNode="K" fromField="duration_changed" toNode="SinkT" toField="set_stopTime"/>
+  </Scene>
+</X3D>
