@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Timer only: nothing to touch"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0 8"/>
+    <Transform DEF="Mover"><Shape><Appearance><Material diffuseColor="0.8 0.4 0.1"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+    <TimeSensor DEF="Clock" cycleInterval="2" loop="true"/>
+    <PositionInterpolator DEF="Path" key="0 0.5 1" keyValue="-2 0 0 2 1 0 -2 0 0"/>
+    <ROUTE fromNode="Clock" fromField="fraction_changed" toNode="Path" toField="set_fraction"/>
+    <ROUTE fromNode="Path" fromField="value_changed" toNode="Mover" toField="translation"/>
+  </Scene>
+</X3D>

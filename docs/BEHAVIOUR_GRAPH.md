@@ -13,6 +13,8 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 | `tools/behaviour_sim_judge.cjs`, `tools/behaviour_sim_judge.py`, `tools/behaviour_probe.py` | record X_ITE's events, replay them through the simulator, compare; build the probe world |
 | `tests/test_behaviour_sim.py`, `tests/test_behaviour_play_bpy.py` | version 2: 20 plain-Python tests (4 replay X_ITE traces) and 15 Blender tests |
 | `tools/behaviour_roundtrip.py` | import a file with its graph, optionally set fields, export, print the graph difference |
+| `tools/behaviour_record.py` | record a world's full activity (every delivery, every call) from a script, in plain Python |
+| `source/behaviour_activity.py` | live activity while playing: the counting model (plain Python) and its drawing in the node editor |
 | `tools/behaviour_eyetest.py` | open a real Blender window, import each world with its graph, screenshot the editor, Play it with real (simulated) clicks, check Esc restores everything |
 | `tools/behaviour_replay.cjs` | play the same real mouse clicks on two files in X_ITE and compare what the scene did |
 | `tests/test_behaviour_graph.py`, `tests/test_behaviour_nodes_bpy.py` | 23 plain-Python and 17 Blender tests |
@@ -81,7 +83,7 @@ Nothing is keyframed and nothing is left changed.
 
 | Simulated | Not simulated (named in the sidebar, never silently skipped) |
 |---|---|
-| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer; ProximitySensor from the viewer | Coordinate and Normal interpolators, coordinate and texture-coordinate followers, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
+| TimeSensor; Scalar, Position, Position2D, Color (HSV) and Orientation (slerp) interpolators; EaseInEaseOut; the Scalar, Position and Position2D Spline interpolators; SquadOrientationInterpolator; the Coordinate, Coordinate2D and Normal interpolators; Boolean and Integer sequencers; BooleanFilter, BooleanToggle, BooleanTrigger, IntegerTrigger, TimeTrigger; the Scalar, Position, Position2D, Color and Orientation dampers and chasers; TouchSensor, PlaneSensor, CylinderSensor (including disk mode and angle limits) and SphereSensor from the pointer; ProximitySensor from the viewer | coordinate and texture-coordinate followers, VisibilitySensor, TransformSensor, KeySensor, StringSensor, LoadSensor, Scripts and PROTOs |
 
 Shown on Blender data: Transform translation, rotation, scale, visible; material baseColor / diffuseColor,
 emissiveColor, transparency, roughness, metallic; light color and on; Viewpoint set_bind (the scene camera). Anything
@@ -129,6 +131,79 @@ all five. **X_ITE 16.7.1 cannot load a world with a vector Spline interpolator (
 `normalizeVelocity` is true** ("e.norm is not a function"); the scalar one loads. The simulator runs that case as X_ITE's
 code intends; it is not judged. Through Blender, `probe-spline.x3d` keeps 19 of 20 ROUTEs: the one into a
 TextureTransform is left out and named (targets are Transform, Viewpoint, lights and materials).
+
+**Coordinate, Coordinate2D and Normal interpolators (26 Nov 2026).** `probe-coord.x3d` (hand written; a TouchSensor starts
+a TimeSensor that drives all five interpolators from the same fraction: 3 keys of 4 points into a Coordinate, a
+TextureCoordinate and a Normal, plus one with 13 points for 3 keys and one with 2 points for 3 keys) recorded on X_ITE
+16.8.1 (headless Chromium, software GL; load average 1.5 at the recording, 79 frames; a first recording at load 4.3 agreed
+too). Judged stream by stream with `tools/behaviour_sim_judge_mf.py`: 6 of 6 agree, worst gap 0.000001 (tolerance
+0.002). The judge's own reader takes lists of numbers; X_ITE writes an MF value as text and the simulator sends a list of
+tuples, so the wrapper flattens both and leaves everything else to the judge. The judge was checked against four wrong
+simulators (Normal as a straight lerp, its weight times 0.98, every weight times 1.02, nothing sent for a bad count): it
+rejects all four. What X_ITE does where the standard leaves room, now in the simulator: the list sent has
+`len(keyValue) // len(key)` points, so a `keyValue` that is not a whole number of lists is read as that many whole lists
+(the rest is ignored) and one shorter than `key` sends an empty list on every event (not "nothing"); both are counted in
+`sim.noted["bad-count"]`, not in `dropped`, because nothing is lost. A Normal interpolator slerps without normalising and
+without taking the short way, so vectors that are not unit vectors can give NaN, which is dropped like every non-finite
+value. Not judged: a change of `keyValue` while a fraction is held (X_ITE re-sends for the Normal interpolator only).
+Through Blender nothing changes: a ROUTE into a Coordinate, TextureCoordinate or Normal has no Blender datablock to bind
+to, so Play shows it as "Not shown: Coordinate.point" as before (no change to `behaviour_play.py`); driving mesh vertices
+is not done.
+
+### Two files against X_ITE, with their own noise floor
+
+`tools/behaviour_pair_judge.py` (`judge_pair(file_a, file_b, stimulus, repeats=3, x_ite=dist)` and a CLI) replays two
+files in X_ITE, `repeats` times each, interleaved A B A B, under the same stimulus, and judges every field a ROUTE ends at
+in the scene (matched by DEF and field name; what only one file has is listed as unmatched). It exists because a fixed
+1 % threshold failed six unchanged solutions in another repo: on a loaded machine the same file against itself read up to
+5.5 %. Each stream gets the disagreement A-versus-B (fraction of samples outside tolerance, largest absolute difference,
+for every pairing), the same two numbers for A-versus-A and B-versus-B (the floor, measured in the same session), and a
+verdict: "same" (the middle A-versus-B pairing is no worse than the worst repeat-against-repeat pairing), "differs"
+(every A-versus-B pairing above the typical floor by 3 times and by at least 1 % of the samples), else "unclear". The
+result carries the machine load (`os.getloadavg` before and after every run), X_ITE and Chromium versions, the
+tolerances (2 % of each stream's span, samples every 0.05 s from each run's own time zero: the first start of a TimeSensor, else the
+first pointer press, else the first cycle start of a TimeSensor) and every raw per-pairing number. CLI exit codes: 0 same, 1 differs, 2 unclear,
+3 tool error (Node, Playwright, X_ITE or a file missing, or a stimulus call that X_ITE cannot be given). Stimulus: none or
+`{"seconds": 4}` (a timer-only world: load, run, sample), `{"clicks": n, "hold": [ms], "gap": ms}`, `{"click_plan":
+[DEF]}`, `{"drags": ...}`, `{"keys": ...}` (the formats of `tools/behaviour_sim_judge.cjs`), or the recorded list
+`[{time, call, node, args}]`, of which only `start`, `click` and `press` followed by `release` of one sensor can be
+replayed; any other call is a tool error, not skipped. Tests: `tests/test_behaviour_pair_judge.py` (pure parts on
+synthetic series; three browser cases, skipped with a reason when Node, Playwright or an X_ITE dist is missing: door.x3d
+against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
+from the last run are in the commit message of the change that added it.
+
+### Two files against X_ITE, with their own noise floor
+
+`tools/behaviour_pair_judge.py` (`judge_pair(file_a, file_b, stimulus, repeats=3, x_ite=dist)` and a CLI) replays two
+files in X_ITE, `repeats` times each, interleaved A B A B, under the same stimulus, and judges every field a ROUTE ends at
+in the scene (matched by DEF and field name; what only one file has is listed as unmatched). It exists because a fixed
+1 % threshold failed six unchanged solutions in another repo: on a loaded machine the same file against itself read up to
+5.5 %. Each stream gets the disagreement A-versus-B (fraction of samples outside tolerance, largest absolute difference,
+for every pairing), the same two numbers for A-versus-A and B-versus-B (the floor, measured in the same session), and a
+verdict: "same" (the middle A-versus-B pairing is no worse than the worst repeat-against-repeat pairing), "differs"
+(every A-versus-B pairing above the typical floor by 3 times and by at least 1 % of the samples), else "unclear". The
+result carries the machine load (`os.getloadavg` before and after every run), X_ITE and Chromium versions, the
+tolerances (2 % of each stream's span, samples every 0.05 s from each run's own time zero: the first start of a TimeSensor, else the
+first pointer press, else the first cycle start of a TimeSensor) and every raw per-pairing number. CLI exit codes: 0 same, 1 differs, 2 unclear,
+3 tool error (Node, Playwright, X_ITE or a file missing, or a stimulus call that X_ITE cannot be given). Stimulus: none or
+`{"seconds": 4}` (a timer-only world: load, run, sample), `{"clicks": n, "hold": [ms], "gap": ms}`, `{"click_plan":
+[DEF]}`, `{"drags": ...}`, `{"keys": ...}` (the formats of `tools/behaviour_sim_judge.cjs`), or the recorded list
+`[{time, call, node, args}]`, of which only `start`, `click` and `press` followed by `release` of one sensor can be
+replayed; any other call is a tool error, not skipped. Tests: `tests/test_behaviour_pair_judge.py` (pure parts on
+synthetic series; three browser cases, skipped with a reason when Node, Playwright or an X_ITE dist is missing: door.x3d
+against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
+from the last run are in the commit message of the change that added it.
+
+**A turn written as 0, pi, 2 pi (26 Nov 2026).** `probe-turn.x3d`, recorded on X_ITE 16.8.1 (load average 5.4 to 6.2): an
+OrientationInterpolator with key `0 0.5 1` and keyValue about y of 0, 3.14159265, 6.28318531 (a hair under pi and 2 pi)
+rocks in X_ITE: it turns to pi and comes back to 0, because each half is a shortest-path slerp. The same with 3.141593 and
+6.283185 (a hair over) is one continuous full turn, going the other way round first (to about -pi), then on to 2 pi; four
+keys 0, 2.0944, 4.18879, 5.23599, 6.28318 turn normally. The simulator agrees at every one of the 62 samples of each
+stream (distance 0 at the judge's 6-decimal rounding); no simulator change was needed. The judge already compares
+rotations as rotations (the angle between the two quaternions, `behaviour_sim._rotation_distance`, so q and -q and an axis
+flip with a negated angle are the same rotation). The same world has a PositionInterpolator with key `0 5e-01 1` and keyValue `0 0 0 1e-05 2.5E+0 -3.0e-1 0 0 0`: X_ITE
+parses the exponent forms (`1e-05`, `2.5E+0`, `5e-01`) and the simulator agrees on all 62 samples. To turn a full circle, use more than three keys or write the middle key a
+little over pi.
 
 ### Typed field editors
 
@@ -242,6 +317,91 @@ Without the graph, nothing changes (the baked keyframes stay).
 
 Seen and not changed: the sidebar repeats an unlinked input (`key`, `keyValue`) as a bare label after the node's panel
 (Blender draws unlinked inputs there).
+
+## Activity while playing
+
+While Play runs, the X3D behaviour node editor shows the events the simulation really delivered: dots travelling along
+the links, a glow on a link that just carried something, a count badge at the middle of each link that carried
+anything, "in / out" beside each node, and one HUD block (events, events per second, ROUTEs active, widest cascade, the
+latest event lines). Checkboxes under Activity in the Play panel (N, tab X3D) switch the overlay, the event lines and
+the badges (`Scene.x3d_activity_show`, `x3d_activity_stream`, `x3d_activity_badges`); **Copy activity report** puts the
+last Play's numbers on the clipboard as a table. Off, Play pays for one `if`.
+
+What the numbers mean (`source/behaviour_activity.py`, class `Activity`, no Blender needed):
+
+| Word | Meaning |
+|---|---|
+| event | one line of `Simulation.log`: a node sent a value from an output field |
+| delivery | an event carried over one ROUTE, as the simulation delivered it (one per ROUTE per `post` the simulation makes, and only a value that fits the destination) |
+| ROUTE total | deliveries over that ROUTE; per second is the last second of simulation time |
+| widest cascade | most events sharing one timestamp |
+| active ROUTEs a/b | ROUTEs that carried an event in the last second, of all |
+| packet | a delivery younger than 0.35 s; at most 3 per ROUTE (a 60 per second stream is grouped by age, the count says how many events a dot stands for) and 400 in all |
+
+Nothing is drawn or counted without a delivered event. `Activity` reads the simulation's log (it replaces `sim.log`
+by a `CountingLog`, the same lines in the same order, so a bounded log loses nothing from the totals) and the
+simulation's ROUTE table; it never runs or changes the simulation. `Activity.report()` returns the totals, every
+ROUTE's count and rate, every node's in and out and the last 200 event lines (a stream within 0.25 s updates one line)
+as plain data, `to_json()` as JSON (`x3d.activity/1`), for use outside Blender.
+
+### Full recording (opt in)
+
+`Activity(record=True)`, `Activity.from_simulation(sim, record=True)`, or `Scene.x3d_activity_record` (the "Record full
+trace" checkbox, default off) keeps every delivery in order and every call the world received, as plain JSON, up to
+200,000 of each (`trace_truncated` says when that was hit; the counts are never capped). `report()` then has:
+
+| Key | Meaning |
+|---|---|
+| `trace` | `[time, from, from_field, to, to_field, type, value]` per delivery, in the simulation's order, uncoalesced, `value` as JSON numbers, strings, booleans and lists; `null` when recording is off |
+| `stimulus` | `{time, call, node, args}` per call: `start`, `step`, `press`, `drag`, `release`, `hover`, `key`, `viewer` (and `click`, `post` for scripts); the Player records the Simulation-level calls it makes (a click is a `press` and a `release`); `null` when off |
+| `trace_truncated`, `world` | the cap was hit; the file's name when known |
+
+    {"schema": "x3d.activity/1", "world": "door.x3d", "events": 918, "deliveries": 365,
+     "trace": [[0.5, "Click", "touchTime", "Timer", "startTime", "SFTime", 0.5]],
+     "stimulus": [{"time": 0.0, "call": "start", "node": null, "args": {}},
+                  {"time": 0.5, "call": "press", "node": "Click", "args": {}}], "...": "..."}
+
+A pointer call (`press`, `drag`, `release`, `hover`, `click`) also names the scene object the sensor sits on, as
+`"object"` (the sensor's parent: a person points at an object, not at a sensor), next to `"node"`. A sensor at the
+scene root, or in a group the graph has no name for, has `"object": null` and a `"note"` saying so. Replay works from
+`"node"` alone, or from `"object"` alone (`behaviour_activity.sensors_on(graph, object, parent_of)` finds the sensors
+on that object as `Player.sensors_for` does, and `perform` does the call on each).
+
+Sensors with no named parent. The graph keeps only the DEF of the Transform a sensor sits in. A sensor at the scene root
+has `parent` None, and `Player.sensors_for` returns it for every object (X3D: a sensor affects the geometry under its
+parent group, here the whole scene); `Simulation.click/press/hover` work on it by id. A sensor inside a Transform
+without a DEF also has `parent` None (or, nested in a DEF'd one, that DEF), so it answers for more objects than its
+siblings: the importer gives it no name, so its siblings cannot be known and nothing is guessed. A test pins this.
+
+`behaviour_activity.replay(Simulation(graph), report["stimulus"])` sends the same events again; the tests require the
+trace to come out identical. `tools/behaviour_record.py world.x3d --script stimulus.json --seconds 4 --out
+x.activity.json` (plain Python, no Blender) makes a recording from a script of calls; three are committed under
+`tests/behaviour/activity/` (door, counter, one CylinderSensor drag on `probe-drag.x3d` with the arguments the X_ITE
+drag tests use), each under 60 KB. The simulation forgets which ROUTEs fired at the start of every `post` (a press or a
+drag makes several), so Activity feeds each `post` as its own batch (it wraps `sim.post` on the instance); counting a
+whole press as one batch under-counted by half in the drag recording, which the trace-against-changes test caught.
+
+Checked, with the instrument:
+
+- `tests/test_behaviour_activity.py` (plain Python, 36 tests, including the recordings and the committed files): counts equal the log of the bench worlds and of
+  `door.x3d`; deliveries into Transforms equal the changes the simulation handed back; a bounded log; windows; caps;
+  packets empty without events; determinism; the link curve passes through both sockets; packets lie on the curve at
+  three zoom scales; panel rectangles stay inside the region.
+- `tests/test_behaviour_activity_bpy.py` (bpy 5.3.0 wheel, no window, 8 tests): on the door, counter and snake worlds
+  the totals equal what the simulation logged for the same calls; Activity off or on gives the same `values` and the
+  same log; the benchmark digest is unchanged with Activity attached; the overlay handler is added once and removed
+  (Stop, file load, unregister); the Scene properties come back after being deleted.
+- Cost: `Player.step` on the `fan` benchmark graph, N = 1000, 300 steps, `PYTHONHASHSEED=3`, bpy 5.3.0 wheel, a shared
+  4-core machine, four runs each way alternating: median 4.35 ms per step off, 4.99 ms on (+15 %; one on-run was disturbed by another job).
+
+The drawing was first seen in a CI run (Blender 5.2.2 LTS, Xvfb, Mesa llvmpipe, OpenGL 4.5, the `eyetest.yml`
+workflow), which showed that the first version's socket estimate and its HUD were wrong (inputs about 10 px off, the
+HUD under the sidebar). Now: links, glow and packets are drawn in the editor's own view space (a POST_VIEW handler, so
+they follow the links at any zoom), text and the HUD in pixels (POST_PIXEL; the HUD in the bottom-left of what the
+sidebar and header leave). Socket positions come from a layout measured on that screenshot (header 23.3, row 21.6,
+inputs from the node's foot, outputs from its head: `socket_position`), which `--activity-debug` draws as crosses and
+node boxes so a run can be checked. Still not looked at by a person: UI scales other than 1, HiDPI, a real GPU,
+Blender 4.2 to 5.1, and the latest layout rule on a screen.
 
 ## Presets to graph (26 Nov 2026)
 
@@ -400,3 +560,48 @@ Looked at on a real screen by a script (see below) and by the owner for `door.x3
 eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
 played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
 importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on, and so do the "X3D import loss" log lines and `X3D_IMPORT_STRICT=1`: the importer holds its ROUTE losses back until the graph is built, then reports only those the graph could not keep. Losses that are not ROUTEs (event nodes, timers, sensor fields) are reported at once, as with the option off.
+
+### Building the node tree
+
+Instrument: `tools/behaviour_bench.py --tree` (one case per process; seconds for `behaviour_nodes.apply` onto an empty
+scene, with milliseconds per node in brackets), same machine and Blender as above, load average 0.4 to 4.4 during the
+runs (the "before" column ran at 0.4 to 3.5, the "after" column at 2.3 to 4.4, so differences under about 10 % are
+noise). "Before" is the code at 8e4f4fb, "after" the code with the changes below. `read` of the finished tree takes
+0.02 s or less for every size that finished (it was 0.25 s at 2001 nodes: see below). A second `apply` onto the existing tree costs the
+same as the first.
+
+| shape | N (nodes) | apply before | apply after |
+|---|---:|---:|---:|
+| fan | 10 (21) | 0.019 (0.89) | 0.017 (0.81) |
+| fan | 30 (61) | 0.090 (1.48) | 0.108 (1.77) |
+| fan | 100 (201) | 0.825 (4.10) | 0.810 (4.03); 0.74 in two other runs |
+| fan | 300 (601) | 6.56 (10.9) | 6.16 (10.3); 5.65 in another run |
+| fan | 1000 (2001) | 78.1 (39.0) | 68.8 (34.4) |
+| chains | 100 (400) | 3.22 (8.05) | 2.91 (7.28) |
+| chains | 300 (1200) | 28.6 (23.8) | 26.8 (22.3) |
+| chains | 1000 (4000) | did not finish in 200 s | did not finish in 120 s |
+| mixed | 100 (400) | 3.70 (9.25) | 3.38 (8.45) |
+| mixed | 300 (1200) | 32.0 (26.6) | 30.6 (25.5) |
+| mixed | 1000 (4000) | did not finish in 200 s | did not finish in 120 s |
+
+It is still not linear, and what is left is inside Blender, not in this add-on. cProfile (fan N=100) puts 88 % of `apply` in the Blender calls made from `_make_sockets` and `apply` itself:
+`inputs.new`, `outputs.new` and the property sets that Blender answers with a check of the whole tree (a gdb stack
+sampled during a loop of `node.location = ...` shows `RNA_property_update`, `BKE_main_ensure_invariants`,
+`NodeTreeMainUpdater::update_tree` and `ensure_topology_cache`). Every `nodes.new`, `inputs.new`, `links.new`, `name` and
+`location` call pays for the nodes and sockets already in the tree: about 0.15 microseconds per socket per call, 7222
+sockets and about 9600 such calls for the 601-node fan. The same shape shows in a minimal script without this add-on (a
+Python node tree with a Python or a built-in socket type, 300 nodes of 10 sockets: 0.87 s to build, and one `location`
+set then costs 0.44 ms; with 100, 200 and 400 nodes of 6 sockets the build took 0.16, 0.65 and 2.2 s). What
+the add-on could change, it did, in `behaviour_nodes.py`:
+
+* the tree's own `update` callback (it removes a link between two field types) walked every link in Python after every
+  change, so a build of L links did L times L work in Python; it now waits while `apply` fills the tree, and one pass
+  after the build removes the links of unequal types;
+* a node gets its sockets after all nodes are made, so the node, its name and its place are set while the tree holds no
+  sockets, and the sockets are made in the same order afterwards (about 10 to 14 % less than before);
+* `read` built the set of all routes for every link (`Graph.route`), 0.25 s at 2001 nodes; it now checks duplicates with
+  one set (0.014 s).
+
+The result is the same tree: `tests/test_behaviour_perf.py` pins a digest of every node, field, socket and link of
+three trees (door, probe, mixed N=20), computed before the change. Not done because it would change what is built:
+fewer sockets (the dump holds every socket) or sockets made only when a link needs them.

@@ -105,6 +105,12 @@ def valid_scalar(rng, name, kind):
     return _f(rng.uniform(-5, 5))
 
 
+def _unit(rng):
+    v = [rng.gauss(0, 1) for _ in range(3)]
+    length = math.sqrt(sum(c * c for c in v)) or 1.0
+    return [c / length for c in v]
+
+
 def valid_field(rng, node_type, name, kind, n):
     """Text of a legal value; ``n`` is the node's key count, which key and keyValue must agree on."""
     if kind.startswith("SF"):
@@ -129,6 +135,8 @@ def valid_field(rng, node_type, name, kind, n):
         return " ".join(_f(rng.uniform(-5, 5)) for _ in range(n))
     if "Vec2f" == base:
         return " ".join(_vec(rng, "SFVec2f") for _ in range(n))
+    if "Vec3f" == base and node_type == "NormalInterpolator":      # unit vectors: a slerp of others can be NaN (as in X_ITE)
+        return " ".join(_f(c) for _ in range(n) for c in _unit(rng))
     if "Vec3f" == base:
         return " ".join(_vec(rng, "SFVec3f") for _ in range(n))
     if base == "Color":

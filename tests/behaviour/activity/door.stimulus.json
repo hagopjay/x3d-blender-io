@@ -1,0 +1,14 @@
+[
+ {
+  "time": 0.5,
+  "call": "press",
+  "node": "Click",
+  "args": {}
+ },
+ {
+  "time": 0.6,
+  "call": "release",
+  "node": "Click",
+  "args": {}
+ }
+]

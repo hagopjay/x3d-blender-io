@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 import math
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -45,6 +47,11 @@ def _arg(name, default=None, many=False):
 OUT = Path(_arg("--out", tempfile.mkdtemp(prefix="x3d_eyetest_")))
 WORLDS = _arg("--worlds", ["door", "counter", "snake", "probe", "route-demo"], many=True)
 KEEP_OPEN = "--keep-open" in ARGS
+STRICT = "--strict" in ARGS                          # exit with a failure code when a check or the run failed (CI)
+SLOW = float(_arg("--slow", 1.0))                    # multiply every wait: software GL is slow
+ACTIVITY_DEBUG = "--activity-debug" in ARGS          # one extra shot per world with crosses at the estimated sockets
+X11_GRAB = "--x11-grab" in ARGS                      # take screenshots from the X display (Xvfb with software GL)
+ACTIVITY = "--activity" in ARGS                      # also look at the Activity overlay (door, counter, snake)
 SOURCE = Path(_arg("--source", REPO / "source"))      # another checkout's add-on, to compare before and after
 OUT.mkdir(parents=True, exist_ok=True)
 LOG = {"blender": bpy.app.version_string, "source": str(SOURCE), "worlds": {}, "errors": []}
@@ -82,15 +89,162 @@ def region_of(area, kind="WINDOW"):
     return next(r for r in area.regions if r.type == kind)
 
 
+MIN_COLOURS = 50                                  # a screenshot with fewer distinct colours is blank
+SHOTS = {}                                        # file name -> how it was taken and what came out (goes to eyetest.json)
+
+
+def distinct_colours(path):
+    """How many different colours a PNG holds: Blender's own image loader with numpy; else ImageMagick; else None."""
+    try:
+        import numpy as np
+        image = bpy.data.images.load(str(path), check_existing=False)
+        try:
+            pixels = np.empty(len(image.pixels), dtype=np.float32)
+            image.pixels.foreach_get(pixels)
+            rgb = (pixels.reshape(-1, image.channels)[:, :3] * 255 + 0.5).astype(np.uint32)
+            return int(len(np.unique(rgb[:, 0] | (rgb[:, 1] << 8) | (rgb[:, 2] << 16))))
+        finally:
+            bpy.data.images.remove(image)
+    except Exception as error:  # noqa: BLE001
+        LOG.setdefault("capture", {})["colour_count_error"] = f"{type(error).__name__}: {error}"
+    tool = shutil.which("convert") or shutil.which("magick")
+    if tool:
+        done = subprocess.run([tool, str(path), "-format", "%k", "info:"], capture_output=True, text=True, timeout=60)
+        if done.returncode == 0 and done.stdout.strip().isdigit():
+            return int(done.stdout.strip())
+    return None
+
+
+def run_tool(command, timeout=60):
+    """(return code, stderr text) of an external command; never raises (a missing tool is code -1)."""
+    try:
+        done = subprocess.run(command, capture_output=True, timeout=timeout)
+        return done.returncode, done.stderr.decode("utf-8", "replace")[-400:]
+    except (OSError, subprocess.SubprocessError) as error:
+        return -1, f"{type(error).__name__}: {error}"
+
+
+def x11_grab(path, area):
+    """The X display's root window to ``path``, cropped to ``area`` (Blender's origin is bottom left, X's top left).
+    ImageMagick's ``import``, else ``xwd`` through ``convert``. Returns a dict of what happened."""
+    info = {"display": os.environ.get("DISPLAY")}
+    win = window()
+    full = path.with_suffix(".full.png")
+    redraw = None
+    try:        # a real redraw and swap, so the front buffer the X server shows is the current state
+        with bpy.context.temp_override(window=win, area=win.screen.areas[0]):
+            bpy.ops.wm.redraw_timer(type="DRAW_WIN_SWAP", iterations=2)
+        redraw = "ok"
+    except Exception as error:  # noqa: BLE001
+        redraw = f"{type(error).__name__}: {error}"
+    info["redraw"] = redraw
+    tools = {name: shutil.which(name) for name in ("import", "xwd", "convert", "magick")}
+    info["tools"] = tools
+    code, err = (-1, "no import and no xwd+convert")
+    if tools["import"]:
+        code, err = run_tool([tools["import"], "-display", info["display"] or ":0", "-window", "root", str(full)])
+        info["import"] = [code, err]
+    if (code != 0 or not full.is_file()) and tools["xwd"] and (tools["convert"] or tools["magick"]):
+        xwd = subprocess.run([tools["xwd"], "-root", "-silent", "-display", info["display"] or ":0"],
+                             capture_output=True, timeout=60)
+        info["xwd"] = [xwd.returncode, xwd.stderr.decode("utf-8", "replace")[-200:], len(xwd.stdout)]
+        if xwd.returncode == 0 and xwd.stdout:
+            convert = tools["convert"] or tools["magick"]
+            done = subprocess.run([convert, "xwd:-", str(full)], input=xwd.stdout, capture_output=True, timeout=60)
+            code, err = done.returncode, done.stderr.decode("utf-8", "replace")[-200:]
+            info["xwd_convert"] = [code, err]
+    if code != 0 or not full.is_file():
+        info["ok"] = False
+        return info
+    box = (0, 0, win.width, win.height) if area is None else (
+        area.x, win.height - (area.y + area.height), area.width, area.height)      # x, top, width, height
+    info["crop"] = list(box)
+    try:
+        from PIL import Image
+        picture = Image.open(full)
+        info["root_size"] = list(picture.size)
+        picture.crop((box[0], box[1], box[0] + box[2], box[1] + box[3])).save(path)
+        info["cropped_with"] = "PIL"
+    except ImportError:
+        convert = tools["convert"] or tools["magick"]
+        if convert:
+            code, err = run_tool([convert, str(full), "-crop", f"{box[2]}x{box[3]}+{box[0]}+{box[1]}", "+repage", str(path)])
+            info["cropped_with"] = f"convert ({code}) {err}"
+            if code != 0:
+                info["ok"] = False
+                return info
+        else:
+            shutil.copy(full, path)
+            info["cropped_with"] = "none: the full root window"
+    full.unlink(missing_ok=True)
+    info["ok"] = True
+    return info
+
+
 def shot(name, area=None):
+    """Screenshot of the window (or of ``area``). ``bpy.ops.screen.screenshot`` first (it works on macOS and Windows);
+    the X display's own picture when that is blank (Xvfb with llvmpipe gives black) or when ``--x11-grab`` is set."""
     path = OUT / f"{name}.png"
     win = window()
-    with bpy.context.temp_override(window=win, area=area or win.screen.areas[0]):
-        if area is None:
-            bpy.ops.screen.screenshot(filepath=str(path))
-        else:
-            bpy.ops.screen.screenshot_area(filepath=str(path))
+    info = {"method": None}
+    if not X11_GRAB:
+        try:
+            with bpy.context.temp_override(window=win, area=area or win.screen.areas[0]):
+                if area is None:
+                    bpy.ops.screen.screenshot(filepath=str(path))
+                else:
+                    bpy.ops.screen.screenshot_area(filepath=str(path))
+            info["method"] = "blender"
+        except Exception as error:  # noqa: BLE001
+            info["blender_error"] = f"{type(error).__name__}: {error}"
+        if path.is_file():
+            info["blender_colours"] = distinct_colours(path)
+    if info["method"] != "blender" or (info.get("blender_colours") or 0) <= MIN_COLOURS:
+        grab = x11_grab(path, area)
+        info["x11"] = grab
+        if grab.get("ok"):
+            info["method"] = "x11"
+    info["colours"] = distinct_colours(path) if path.is_file() else None
+    info["bytes"] = path.stat().st_size if path.is_file() else None
+    SHOTS[path.name] = info
+    LOG["shots"] = SHOTS
     return path.name
+
+
+def panel_category(prefixes, fallbacks):
+    """The sidebar category of a registered panel whose class name starts with one of ``prefixes`` (looked up, not
+    hard-coded), else the first of ``fallbacks``."""
+    for prefix in prefixes:
+        for attr in dir(bpy.types):
+            if attr.startswith(prefix):
+                found = getattr(getattr(bpy.types, attr), "bl_category", None)
+                if found:
+                    return found
+    return fallbacks[0]
+
+
+def open_tab(name, area, key, prefixes, fallbacks, tries=3):
+    """Open a sidebar tab of ``area`` by category, retrying after a redraw. The result (wanted, the categories the
+    region offers, whether it opened) is a check, so a failure counts in --strict."""
+    ui = region_of(area, "UI")
+    wanted = panel_category(prefixes, fallbacks)
+    offered, error = [], None
+    for _ in range(tries):
+        try:
+            offered = [item.identifier for item in ui.bl_rna.properties["active_panel_category"].enum_items]
+        except Exception as problem:  # noqa: BLE001
+            offered = [f"(not readable: {type(problem).__name__})"]
+        try:
+            ui.active_panel_category = wanted
+            error = None
+            break
+        except (AttributeError, TypeError) as problem:
+            error = f"{type(problem).__name__}: {problem}"
+            yield 0.5
+    opened = error is None and ui.active_panel_category == wanted
+    LOG["worlds"].setdefault(name, {}).setdefault("checks", {})[key] = {
+        "ok": bool(opened), "detail": {"wanted": wanted, "offered": offered, "error": error}}
+    print(f"[eyetest] {name}: check {key} = {'ok' if opened else 'FAILED'} {wanted} {offered} {error or ''}")
 
 
 def mouse(x, y, kind="MOUSEMOVE", value="NOTHING"):
@@ -189,6 +343,147 @@ def demo_act(world):
 RIG = None                                        # what a demo act may call; filled in below the helpers it names
 
 
+def act_module():
+    import importlib
+    return importlib.import_module("x3d_blender_io.behaviour_activity")
+
+
+def activity_checks(name):
+    return LOG["worlds"].setdefault(name, {}).setdefault("activity_checks", {})
+
+
+def check(name, key, ok, detail=None):
+    """A pass / fail the script decides itself (not by eye), kept in the JSON."""
+    activity_checks(name)[key] = {"ok": bool(ok), "detail": detail}
+    print(f"[eyetest] {name}: check {key} = {'ok' if ok else 'FAILED'} {detail if detail is not None else ''}")
+
+
+def zoom_to_link(name, editor, win, region, player):
+    """Zoom so the busiest link spans about a third of the editor's width, centred on it: select its two nodes, frame
+    them, then zoom in a step at a time while the overlay reports the scale (``px_per_unit`` in its diagnostics)."""
+    mod = act_module()
+    tree = bpy.context.scene.x3d_behaviour_tree
+    busiest = player.activity.busiest(1)
+    if not busiest:
+        note(name, "zoom_to_link", "no ROUTE has carried an event")
+        return
+    source, _field, target, _to = busiest[0][0]
+    ends = [n for n in tree.nodes if (n.x3d_def or n.name) in (source, target)]
+    for n in tree.nodes:
+        n.select = n in ends
+    with bpy.context.temp_override(window=win, area=editor, region=region):
+        bpy.ops.node.view_selected()
+    yield 0.4
+    ui = bpy.context.preferences.system.ui_scale or 1.0
+    a = next((n for n in ends if (n.x3d_def or n.name) == source), None)
+    b = next((n for n in ends if (n.x3d_def or n.name) == target), None)
+    steps = []
+    for _ in range(12):
+        per_unit = mod.diagnostics().get("px_per_unit") or 0.0
+        gap = abs((b.location.x * ui) - (a.location.x * ui + a.dimensions.x)) if a and b else 0.0
+        length_px = max(gap, 60.0) * per_unit
+        steps.append(round(length_px))
+        if length_px >= region.width / 3.0:
+            break
+        with bpy.context.temp_override(window=win, area=editor, region=region):
+            bpy.ops.view2d.zoom_in()
+        yield 0.4
+    note(name, "zoom_to_link", {"link": [source, target], "link_px_per_step": steps, "region_width": region.width})
+    for n in tree.nodes:
+        n.select = False
+
+
+def activity_shots(name, editor, win, player, targets):
+    """Mid-play screenshots of the node editor with the Activity overlay, at two zoom levels (``--activity``). The
+    pointer clicks what a sensor senses again so events are in flight when the shot is taken; the counts the overlay
+    shows are the player's own Activity, written next to the shots so the picture can be checked against numbers."""
+    act = player.activity
+    check(name, "activity_attached", act is not None)
+    if act is None:
+        return
+    region = region_of(editor)
+    point = next((p for p in (screen_point(o) for o in targets) if p), None)
+    seen = []                                         # packets on screen at each shot (the overlay's own count)
+    for zoom in ("fit", "close"):
+        with bpy.context.temp_override(window=win, area=editor, region=region):
+            bpy.ops.node.view_all()
+        yield 0.3
+        if zoom == "close":
+            yield from zoom_to_link(name, editor, win, region, player)
+        if point is not None:                         # an event stream: the shot is taken within a packet's travel time
+            mouse(*point)
+            yield 0.05
+            mouse(*point, "LEFTMOUSE", "PRESS")
+            yield 0.03
+            mouse(*point, "LEFTMOUSE", "RELEASE")
+        for key in ("a", "d", "w"):
+            if player.has_keys():
+                type_key(key)
+        yield 0.05
+        mod = act_module()
+        taken = shot(f"{name}-activity-{zoom}", editor)
+        diagnostics = mod.diagnostics()
+        seen.append(diagnostics.get("packets_drawn"))
+        note(name, f"activity_{zoom}", {"shot": taken, "events": act.events, "deliveries": act.deliveries,
+                                        "packets_drawn": diagnostics.get("packets_drawn"),
+                                        "overlay": mod.handler_active(), "diagnostics": diagnostics})
+        yield 0.1
+    if ACTIVITY_DEBUG:
+        mod = act_module()
+        with bpy.context.temp_override(window=win, area=editor, region=region):
+            bpy.ops.node.view_all()
+        mod.set_debug(True)
+        yield 0.4
+        taken = shot(f"{name}-activity-debug", editor)
+        seen.append(mod.diagnostics().get("packets_drawn"))
+        note(name, "activity_debug", {"shot": taken, "diagnostics": mod.diagnostics()})
+        mod.set_debug(False)
+        yield 0.2
+    note(name, "packets_drawn_per_shot", seen)
+    check(name, "packets_seen", any((n or 0) >= 1 for n in seen), seen)
+    mod = act_module()
+    check(name, "overlay_drew", mod.draw_count() > 0, {"draws": mod.draw_count()})
+    check(name, "overlay_did_not_fail", mod.failure() is None, mod.failure())
+    check(name, "events_equal_sim_log", act.events == player.sim.log.appended,
+          {"activity": act.events, "log": player.sim.log.appended})
+    check(name, "has_events", act.events > 0, act.events)
+    report = act.report()
+    check(name, "route_totals_add_up", sum(r["events"] for r in report["routes"]) == act.deliveries)
+
+
+def activity_after_stop(name, editor, win, tree):
+    """After the Esc the run ends with: no handler. Then the copy button, the panel checkboxes, a second Play ended by
+    the Stop operator."""
+    from x3d_blender_io import behaviour_play
+    mod = act_module()
+    check(name, "no_handler_after_esc", not mod.handler_active() and behaviour_play._running["player"] is None)
+    scene = bpy.context.scene
+    check(name, "properties_exist", all(hasattr(scene, p) for p in ("x3d_activity_show", "x3d_activity_stream",
+                                                                    "x3d_activity_badges")))
+    check(name, "panel_registered", hasattr(bpy.types, "X3D_PT_behaviour_play"))
+    bpy.context.window_manager.clipboard = ""
+    with bpy.context.temp_override(window=win, area=editor, region=region_of(editor)):
+        result = bpy.ops.x3d.behaviour_activity_copy()
+    clip = bpy.context.window_manager.clipboard
+    check(name, "copy_fills_clipboard", "FINISHED" in result and "ROUTE" in clip and len(clip) > 40,
+          {"result": sorted(result), "chars": len(clip)})
+    view = areas("VIEW_3D")[0]
+    view.spaces.active.show_region_ui = True
+    yield 0.4
+    yield from open_tab(name, view, "sidebar_x3d_tab", ("X3D_PT_behaviour_play",), ("X3D",))
+    yield 0.5
+    note(name, "shot_play_panel", shot(f"{name}-activity-panel", view))
+    with bpy.context.temp_override(window=win, area=editor, region=region_of(editor)):
+        bpy.ops.x3d.behaviour_play("INVOKE_DEFAULT")
+    yield 0.6
+    check(name, "second_play_has_handler", mod.handler_active() and behaviour_play._running["player"] is not None)
+    with bpy.context.temp_override(window=win, area=editor, region=region_of(editor)):
+        bpy.ops.x3d.behaviour_stop()
+    mouse(300, 300)                                   # the modal operator sees the stop on its next event
+    yield 0.8
+    check(name, "no_handler_after_stop", not mod.handler_active() and behaviour_play._running["player"] is None)
+
+
 def world_steps(world, tag=""):
     from x3d_blender_io import behaviour_nodes, behaviour_play
     path = world_path(world)
@@ -227,20 +522,14 @@ def world_steps(world, tag=""):
         shown = editors
     editor = shown[0]
     editor.spaces.active.show_region_ui = True    # the sidebar: every field, the key table
-    try:
-        region_of(editor, "UI").active_panel_category = "Node"
-    except (AttributeError, TypeError) as error:          # read-only in some versions: click the tab instead
-        note(name, "sidebar_tab", f"{type(error).__name__}: {error}")
-        ui = region_of(editor, "UI")
-        tab = (ui.x + ui.width - 8, ui.y + ui.height - 75)
-        mouse(*tab)
-        mouse(*tab, "LEFTMOUSE", "PRESS")
-        mouse(*tab, "LEFTMOUSE", "RELEASE")
     interp = next((n for n in tree.nodes if "Interpolator" in n.bl_idname or "Sequencer" in n.bl_idname), None)
+    active = interp or next((n for n in tree.nodes if getattr(n, "x3d_role", None) == "behaviour"), None)
     for n in tree.nodes:
-        n.select = n is interp
-    if interp is not None:
-        tree.nodes.active = interp
+        n.select = n is active
+    if active is not None:                        # the sidebar's Node tab needs an active node (counter has no interpolator)
+        tree.nodes.active = active
+    yield 0.6                                     # the sidebar only lists the Node tab once a node is active and drawn
+    yield from open_tab(name, editor, "sidebar_node_tab", ("NODE_PT_active_node", "NODE_PT_node_"), ("Node", "Item"))
     yield 0.4
     note(name, "shot_editor", shot(f"{name}-2-editor", editor))
     tree.x3d_blender_axes = True
@@ -324,6 +613,12 @@ def world_steps(world, tag=""):
         except Exception:
             LOG["errors"].append(f"{name} act: {traceback.format_exc()}")
             note(name, "act_ok", False)
+    if ACTIVITY and world in ("door", "counter", "snake") and not tag:
+        try:
+            yield from activity_shots(name, editor, win, player, targets)
+        except Exception:
+            LOG["errors"].append(f"{name} activity: {traceback.format_exc()}")
+            note(name, "activity_ok", False)
     glowing = [n.name for n in tree.nodes if n.use_custom_color]
     note(name, "glowing_after_click", glowing)
     note(name, "shot_glow", shot(f"{name}-4-play-glow"))
@@ -342,6 +637,12 @@ def world_steps(world, tag=""):
     note(name, "not_restored", {k: [before_full.get(k), v] for k, v in after_full.items() if before_full.get(k) != v})
     note(name, "custom_colour_left", [n.name for n in tree.nodes if n.use_custom_color])
     note(name, "shot_restored", shot(f"{name}-6-restored"))
+    if ACTIVITY and world in ("door", "counter", "snake") and not tag:
+        try:
+            yield from activity_after_stop(name, editor, win, tree)
+        except Exception:
+            LOG["errors"].append(f"{name} activity after stop: {traceback.format_exc()}")
+            note(name, "activity_after_stop_ok", False)
 
 
 RIG = __import__("types").SimpleNamespace(mouse=mouse, key=key, type_key=type_key, shot=shot, note=note, screen_point=screen_point,
@@ -429,11 +730,48 @@ def witness_record(subject_at_start):
     }
 
 
+def failures():
+    """What failed: every error, every activity check that is not ok, and a world that was played but not restored."""
+    found = [f"error: {e.splitlines()[0][:120]}" for e in LOG["errors"]]
+    for world, values in LOG["worlds"].items():
+        found += [f"{world}: {key}" for key, c in values.get("activity_checks", {}).items() if not c["ok"]]
+        found += [f"{world}: {key}" for key, c in values.get("checks", {}).items() if not c["ok"]]
+        found += [f"{world}: {key} is False" for key in ("act_ok", "activity_ok", "activity_after_stop_ok")
+                  if values.get(key) is False]
+        if values.get("playing") and values.get("restored") is not True:
+            found.append(f"{world}: not restored")
+    blank = sorted(n for n, info in SHOTS.items() if (info.get("colours") or 0) <= MIN_COLOURS)
+    if blank:
+        found.append(f"shots_not_blank: {len(blank)} blank or unreadable of {len(SHOTS)}: {', '.join(blank[:6])}")
+    return found
+
+
+def capture_facts():
+    """What the window runs on, written first so one CI run tells everything even when a shot fails."""
+    facts = {"display": os.environ.get("DISPLAY"), "x11_grab_flag": X11_GRAB,
+             "tools": {name: shutil.which(name) for name in ("import", "xwd", "convert", "magick")},
+             "blender": bpy.app.version_string, "window": [window().width, window().height]}
+    try:
+        import gpu
+        facts.update({"gl_renderer": gpu.platform.renderer_get(), "gl_vendor": gpu.platform.vendor_get(),
+                      "gl_version": gpu.platform.version_get(), "gpu_backend": gpu.platform.backend_type_get()})
+    except Exception as error:  # noqa: BLE001
+        facts["gpu_error"] = f"{type(error).__name__}: {error}"
+    try:
+        import PIL
+        facts["pil"] = PIL.__version__
+    except ImportError:
+        facts["pil"] = None
+    LOG.setdefault("capture", {}).update(facts)
+    print("[eyetest] capture:", facts)
+
+
 def run():
     global SUBJECT_AT_START
     SUBJECT_AT_START = source_candidate()       # taken before the add-on loads; checked again at the end
     load_addon()
     yield 0.5
+    capture_facts()
     key("ESC")                                   # the splash screen
     yield 0.3
     plan = [(WORLDS[0], "-no-editor")] + [(world, "") for world in WORLDS]
@@ -449,6 +787,13 @@ def run():
     (OUT / "eyetest.json").write_text(json.dumps(LOG, indent=1))
     (OUT / "host-eyes.json").write_text(json.dumps(witness_record(SUBJECT_AT_START), sort_keys=True, indent=2) + "\n")
     print(f"[eyetest] done: {OUT}")
+    failed = failures()
+    (OUT / "eyetest-result.json").write_text(json.dumps({"failed": failed, "errors": len(LOG["errors"]),
+                                                         "blender": bpy.app.version_string}, indent=1))
+    if STRICT and failed:
+        print("[eyetest] FAILED:", failed)
+        sys.stdout.flush()
+        os._exit(1)
     if not KEEP_OPEN:
         bpy.ops.wm.quit_blender()
 
@@ -458,13 +803,16 @@ _steps = run()
 
 def _tick():
     try:
-        return next(_steps)
+        return next(_steps) * SLOW
     except StopIteration:
         return None
     except Exception:
         LOG["errors"].append(traceback.format_exc())
         (OUT / "eyetest.json").write_text(json.dumps(LOG, indent=1))
         print(traceback.format_exc())
+        if STRICT:
+            sys.stdout.flush()
+            os._exit(1)
         bpy.ops.wm.quit_blender()
         return None
 

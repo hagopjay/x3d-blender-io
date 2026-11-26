@@ -18,6 +18,7 @@ bpy module) it also builds the scene (one empty per target, the node tree) and t
 
     python tools/behaviour_bench.py --out receipt.json
     python tools/behaviour_bench.py --bpy --sizes 10 100 1000 --out receipt.json
+    python tools/behaviour_bench.py --tree --shapes fan --sizes 100 300     # apply, read, second apply (bpy)
 """
 
 from __future__ import annotations
@@ -228,6 +229,77 @@ def measure_player(shape: str, n: int, budget: float, tree_limit: int = 1000) ->
             "step_median_ms": statistics.median(steps) * 1e3, "step_p95_ms": p95(steps) * 1e3}
 
 
+TREE_SIZES = (10, 30, 100, 300, 1000)
+
+
+def _tree_env():
+    import importlib
+    import tempfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    import bpy
+    from test_roundtrip_bpy import _register_extension
+    _register_extension(tempfile.mkdtemp(prefix="x3d_bench_"))
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bn = importlib.import_module("io_scene_x3d.behaviour_nodes")
+    bn.ensure_registered()
+    return bpy, bn
+
+
+def bind_targets(bpy, scene, graph):
+    """One empty per target and per sensor parent, as measure_player does."""
+    for node in list(graph.nodes.values()):
+        if node.role == bg.TARGET:
+            obj = bpy.data.objects.new(node.id, None)
+            scene.collection.objects.link(obj)
+            node.binding = ("transform", obj.name)
+        elif node.parent and node.parent not in bpy.data.objects:
+            scene.collection.objects.link(bpy.data.objects.new(node.parent, None))
+
+
+def measure_tree(shape: str, n: int, budget: float) -> dict:
+    """Seconds for apply (fresh scene), read, and a second apply onto the tree that exists. A call that takes longer
+    than ``budget`` seconds is not interrupted (it cannot be), so run big sizes one at a time and give up by hand."""
+    bpy, bn = _tree_env()
+    scene = bpy.context.scene
+    graph = build(shape, n)
+    bind_targets(bpy, scene, graph)
+    row = {"shape": shape, "n": n, "nodes": len(graph.nodes), "routes": len(graph.routes)}
+    began = time.perf_counter()
+    bn.apply(graph, scene)
+    row["apply_s"] = time.perf_counter() - began
+    began = time.perf_counter()
+    back = bn.read(scene)
+    row["read_s"] = time.perf_counter() - began
+    row["read_differences"] = sum(len(v) for v in bg.difference(graph, back).values())
+    began = time.perf_counter()
+    bn.apply(graph, scene)
+    row["apply_again_s"] = time.perf_counter() - began
+    for key in ("apply", "read", "apply_again"):
+        row[f"{key}_ms_per_node"] = row[f"{key}_s"] / row["nodes"] * 1e3
+    row["over_budget"] = max(row["apply_s"], row["read_s"], row["apply_again_s"]) > budget
+    return row
+
+
+def measure_tree_all(shapes, sizes, budget):
+    rows = []
+    for shape in shapes:
+        for n in sizes:
+            rows.append(measure_tree(shape, n, budget))
+            r = rows[-1]
+            print(f"tree {shape} {n}: apply {r['apply_s']:.3f}s read {r['read_s']:.3f}s again {r['apply_again_s']:.3f}s",
+                  file=sys.stderr)
+    return rows
+
+
+def tree_table(rows):
+    out = ["### Node tree (seconds; ms per node in brackets)", "",
+           "| shape | N | nodes | apply | read | apply again |", "|---|---:|---:|---:|---:|---:|"]
+    for r in rows:
+        cells = [f"{r[k + '_s']:.3f} ({r[k + '_ms_per_node']:.2f})" for k in ("apply", "read", "apply_again")]
+        out.append(f"| {r['shape']} | {r['n']} | {r['nodes']} | " + " | ".join(cells) + " |")
+    return "\n".join(out)
+
+
 def machine() -> dict:
     cpu = "unknown"
     try:
@@ -263,8 +335,18 @@ def main(argv=None):
     ap.add_argument("--bpy", action="store_true", help="also time Player.step in Blender (needs the bpy module)")
     ap.add_argument("--budget", type=float, default=120.0, help="seconds of stepping allowed per case")
     ap.add_argument("--tree-limit", type=int, default=1000, help="--bpy: build the node tree (glow on) up to this many nodes")
+    ap.add_argument("--tree", action="store_true", help="time behaviour_nodes.apply, read and a second apply (needs bpy); "
+                    "uses --sizes (default here: 10 30 100 300 1000) and --shapes; --budget is the seconds one call may take")
     ap.add_argument("--out", help="write the JSON receipt here")
     args = ap.parse_args(argv)
+    if args.tree:
+        sizes = args.sizes if args.sizes != list(SIZES) else list(TREE_SIZES)
+        rows = measure_tree_all(args.shapes, sizes, args.budget)
+        if args.out:
+            Path(args.out).write_text(json.dumps({"machine": machine(), "tree": rows}, indent=1), encoding="utf-8")
+        print(f"Machine: {machine()}\n")
+        print(tree_table(rows))
+        return
     receipt = {"machine": machine(), "steps": STEPS, "dt": DT, "simulation": [], "player": []}
     for shape in args.shapes:
         for n in args.sizes:

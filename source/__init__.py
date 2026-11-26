@@ -6,7 +6,7 @@ bl_info = {
     "name": "X3D Blender I/O",
     "description": "Import-Export X3D, Import VRML2",
     "author": "HagopJay; upstream maintainer: Bujus_Krachus",
-    "version": (2, 7, 6),
+    "version": (2, 7, 7),
     "blender": (4, 2, 0),
     "location": "",
     "warning": "",
@@ -52,6 +52,7 @@ from bpy_extras.io_utils import (
 from .translations import get_language, translate
 from .prefs import X3D_Preferences
 from . import interaction_ui
+from . import behaviour_activity
 from . import behaviour_nodes
 from . import behaviour_play
 from . import behaviour_presets
@@ -821,6 +822,7 @@ def register():
 
     behaviour_nodes.register()
     behaviour_play.register()
+    behaviour_activity.register()
     behaviour_presets.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
@@ -831,6 +833,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
     behaviour_presets.unregister()
+    behaviour_activity.unregister()
     behaviour_play.unregister()
     behaviour_nodes.unregister()
     for cls in classes:

@@ -10,6 +10,7 @@ sends. The synthetic graphs come from tools/behaviour_bench.py::
 
 from __future__ import annotations
 
+import hashlib
 import statistics
 import sys
 import time
@@ -79,6 +80,139 @@ class SpeedTests(unittest.TestCase):
         for k in range(1, 31):
             sim.step(k * bench.DT)
         self.assertLess((time.perf_counter() - began) / 30 * 1e3, 10.0)
+
+
+def canonical_tree_dump(tree) -> str:
+    """Everything apply builds, as text: per node its class, name, label, place, stored fields (in order), bindings,
+    width and colour switch, key-row count and every socket (name, class, type, enabled, hidden, link limit) in order;
+    per link its two ends. Floats are rounded to 4 places."""
+    lines = []
+    for node in tree.nodes:
+        lines.append(repr((
+            node.bl_idname, node.name, node.label, round(node.location.x, 4) + 0.0, round(node.location.y, 4) + 0.0,
+            getattr(node, "x3d_def", None), tuple((f.name, f.value) for f in getattr(node, "x3d_fields", ())),
+            getattr(node.x3d_parent, "name", None) if hasattr(node, "x3d_parent") else None,
+            getattr(node.x3d_object, "name", None) if hasattr(node, "x3d_object") else None,
+            getattr(node.x3d_material, "name", None) if hasattr(node, "x3d_material") else None,
+            getattr(node, "x3d_type", None), len(getattr(node, "x3d_rows", ())),
+            round(node.width, 3), node.use_custom_color, tuple(round(c, 4) for c in node.color) if node.use_custom_color else None,
+            tuple((s.name, s.bl_idname, s.enabled, s.hide, s.link_limit) for s in node.inputs),
+            tuple((s.name, s.bl_idname, s.enabled, s.hide, s.link_limit) for s in node.outputs))))
+    for link in tree.links:
+        lines.append(repr((link.from_node.name, link.from_socket.name, link.to_node.name, link.to_socket.name,
+                           link.is_valid, link.is_muted)))
+    return "\n".join(lines)
+
+
+def tree_digest(tree) -> str:
+    return hashlib.sha256(canonical_tree_dump(tree).encode()).hexdigest()
+
+
+@unittest.skipUnless(HAVE_BPY, "bpy is not available")
+class SameTreeTests(unittest.TestCase):
+    """behaviour_nodes.apply must build the same node tree it built before it was made fast. The digests were computed
+    from apply as it was BEFORE the performance work (commit 8e4f4fb plus the benchmark's --tree mode)."""
+
+    # apply of "fan" with 100 interpolators (201 nodes) measured 0.74 s after the performance work (0.83 s before; the
+    # cost is inside Blender, see docs/BEHAVIOUR_GRAPH.md): tools/behaviour_bench.py --tree, bpy 5.3.0, Intel Xeon
+    # 2.1 GHz, load average about 2. The budget is 5 times that, so a busy machine does not trip it.
+    FAN_100_BUDGET_S = 3.7
+
+    DOOR = "103ce95551519f301c72b9a9ebfd575c285e37430f9f4e11a21302bbc5b68902"
+    PROBE = "9a9aadd3a4845e095578aa7c22e2e46a03aec7dde71dec983e700630cc7705d6"
+    MIXED_20 = "37081ee4b5519d99e6c623884eb552089a4e8e54d7477f4c7116231796bf0728"
+
+    def setUp(self):
+        import importlib
+        from test_roundtrip_bpy import _register_extension
+        _register_extension(tempfile.mkdtemp(prefix="x3d_sametree_"))
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn = importlib.import_module("io_scene_x3d.behaviour_nodes")
+        self.bg = importlib.import_module("io_scene_x3d.behaviour_graph")
+        self.bn.ensure_registered()
+        self.scene = bpy.context.scene
+
+    def _no_difference(self, graph):
+        self.assertEqual(self.bg.difference(graph, self.bn.read(self.scene)),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [],
+                          "routes_added": []})
+
+    def test_door_world(self):
+        bpy.ops.mesh.primitive_cube_add()
+        door = bpy.context.active_object
+        door.name = "Door"
+        b = self.bg.Behaviour()
+        click = b.add("TouchSensor", "Click", parent="Door")
+        timer = b.add("TimeSensor", "Timer", cycleInterval=2)
+        slide = b.add("PositionInterpolator", "Slide", key=[0, 1], keyValue=[(0, 0, 0), (0, 2, 0)])
+        target = self.bn.target(b, door)
+        click.touchTime >> timer.startTime
+        timer.fraction_changed >> slide.set_fraction
+        slide.value_changed >> target.translation
+        tree = self.bn.apply(b, self.scene)
+        self.assertEqual(tree_digest(tree), self.DOOR, canonical_tree_dump(tree))
+        self._no_difference(b)
+
+    def test_probe_world(self):
+        path = ROOT / "tests" / "behaviour" / "probe.x3d"
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=str(path), use_behaviour_graph=True), {"FINISHED"})
+        tree = self.scene.x3d_behaviour_tree
+        self.assertGreater(len(tree.nodes), 5)
+        self.assertEqual(tree_digest(tree), self.PROBE, canonical_tree_dump(tree))
+        again = self.bn.read(self.scene)
+        self.bn.apply(again, self.scene)                      # a second apply onto the existing tree: same tree
+        self.assertEqual(tree_digest(self.scene.x3d_behaviour_tree), self.PROBE)
+
+    def test_mixed_20(self):
+        graph = bench.build("mixed", 20)
+        bench.bind_targets(bpy, self.scene, graph)
+        tree = self.bn.apply(graph, self.scene)
+        self.assertEqual(tree_digest(tree), self.MIXED_20, canonical_tree_dump(tree))
+        self._no_difference(graph)
+        self.bn.apply(graph, self.scene)
+        self.assertEqual(tree_digest(self.scene.x3d_behaviour_tree), self.MIXED_20)
+
+    def test_a_route_between_two_types_is_not_drawn_but_an_editor_link_is_removed_as_before(self):
+        graph = self.bg.Behaviour()
+        graph.add("TimeSensor", "Clock")
+        graph.add("PositionInterpolator", "Move")
+        graph.route("Clock", "fraction_changed", "Move", "set_fraction", check=False)
+        graph.route("Clock", "cycleTime", "Move", "keyValue", check=False)          # SFTime into MFVec3f: wrong
+        tree = self.bn.apply(graph, self.scene)
+        self.assertEqual([(l.from_socket.name, l.to_socket.name) for l in tree.links],
+                         [("fraction_changed", "set_fraction")])
+        tree.links.new(tree.nodes["Clock"].outputs["cycleTime"], tree.nodes["Move"].inputs["keyValue"])
+        self.assertEqual(len(tree.links), 1)                 # the callback is live again after apply
+
+    def test_a_failed_apply_leaves_the_callback_and_the_sockets_working(self):
+        graph = bench.build("mixed", 2)
+        bench.bind_targets(bpy, self.scene, graph)
+        graph.nodes["Slide0"].node_type = "NoSuchNode"
+        with self.assertRaises(Exception):
+            self.bn.apply(graph, self.scene)
+        self.assertEqual(self.bn._SOCKETS_LATER, [])
+        self.assertEqual(self.bn._BUILDING, set())
+        tree = self.bn.apply(bench.build("mixed", 2), self.scene)
+        self.assertGreater(len(tree.nodes["Timer0"].inputs), 3)
+
+    def test_apply_of_a_fan_of_100_stays_inside_its_budget(self):
+        graph = bench.build("fan", 100)
+        bench.bind_targets(bpy, self.scene, graph)
+        began = time.perf_counter()
+        self.bn.apply(graph, self.scene)
+        seconds = time.perf_counter() - began
+        self.assertLess(seconds, self.FAN_100_BUDGET_S, f"{seconds:.2f} s")
+
+    def test_the_dump_sees_a_difference(self):
+        graph = bench.build("mixed", 3)
+        bench.bind_targets(bpy, self.scene, graph)
+        tree = self.bn.apply(graph, self.scene)
+        before = tree_digest(tree)
+        tree.nodes["Slide0"].location.x += 1
+        self.assertNotEqual(tree_digest(tree), before)
+        tree.nodes["Slide0"].location.x -= 1
+        tree.nodes["Slide0"].inputs[0].hide = True
+        self.assertNotEqual(tree_digest(tree), before)
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")

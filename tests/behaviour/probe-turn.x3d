@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Behaviour simulator probe: full turns written as 0, pi, 2 pi; exponent number forms"/>
+    <meta name="generator" content="hand written for tests/test_behaviour_sim.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0 10"/>
+    <Transform DEF="Pad"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.5"/></Appearance><Box size="12 4 0.2"/></Shape>
+      <TouchSensor DEF="Touch"/>
+    </Transform>
+    <Transform DEF="TurnA" translation="-3 3 0"><Shape><Appearance><Material diffuseColor="0.8 0.3 0.2"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+    <Transform DEF="TurnB" translation="0 3 0"><Shape><Appearance><Material diffuseColor="0.3 0.8 0.2"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+    <Transform DEF="TurnC" translation="3 3 0"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.8"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+    <Transform DEF="MoveD" translation="0 -2 0"><Shape><Appearance><Material diffuseColor="0.8 0.8 0.2"/></Appearance><Sphere radius="0.4"/></Shape></Transform>
+    <TimeSensor DEF="Timer" cycleInterval="4"/>
+    <OrientationInterpolator DEF="ExactPi" key="0 0.5 1" keyValue="0 1 0 0, 0 1 0 3.14159265, 0 1 0 6.28318531"/>
+    <OrientationInterpolator DEF="JustOver" key="0 0.5 1" keyValue="0 1 0 0, 0 1 0 3.141593, 0 1 0 6.283185"/>
+    <OrientationInterpolator DEF="Safe" key="0 0.25 0.5 0.75 1" keyValue="0 1 0 0, 0 1 0 2.0944, 0 1 0 4.18879, 0 1 0 5.23599, 0 1 0 6.28318"/>
+    <PositionInterpolator DEF="Exponent" key="0 5e-01 1" keyValue="0 0 0 1e-05 2.5E+0 -3.0e-1 0 0 0"/>
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Timer" toField="startTime"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="ExactPi" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="JustOver" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Safe" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Exponent" toField="set_fraction"/>
+    <ROUTE fromNode="Exponent" fromField="value_changed" toNode="MoveD" toField="translation"/>
+    <ROUTE fromNode="ExactPi" fromField="value_changed" toNode="TurnA" toField="rotation"/>
+    <ROUTE fromNode="JustOver" fromField="value_changed" toNode="TurnB" toField="rotation"/>
+    <ROUTE fromNode="Safe" fromField="value_changed" toNode="TurnC" toField="rotation"/>
+  </Scene>
+</X3D>

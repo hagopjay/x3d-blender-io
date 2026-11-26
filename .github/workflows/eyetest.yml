@@ -1,0 +1,82 @@
+name: Behaviour eyetest (real window)
+
+# Opens a real Blender window on a virtual display (Xvfb, Mesa software GL), plays door, counter and snake with the
+# Activity overlay and screenshots the node editor. The script decides pass or fail itself (the overlay drew, Stop and
+# Esc leave no draw handler, the copy button fills the clipboard, totals equal the simulation's log); the screenshots
+# are uploaded for a person to look at. Taste is not judged here.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "source/behaviour_*.py"
+      - "tools/behaviour_eyetest.py"
+      - ".github/workflows/eyetest.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  eyetest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BLENDER_VERSION: "5.2.2"
+      BLENDER_DIR: ${{ github.workspace }}/.blender/5.2.2
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Runtime libraries for Blender with a window on a virtual display
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 \
+            libgl1 libegl1 libglx-mesa0 xz-utils \
+            xvfb libgl1-mesa-dri mesa-utils libxkbcommon-x11-0 libxcursor1 libxinerama1 \
+            imagemagick x11-apps
+
+      - name: Cache Blender 5.2.2
+        id: cache-blender
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.BLENDER_DIR }}
+          key: blender-linux-x64-5.2.2
+
+      - name: Download Blender 5.2.2
+        if: steps.cache-blender.outputs.cache-hit != 'true'
+        run: bash .github/scripts/install_blender.sh "$BLENDER_VERSION" "$BLENDER_DIR"
+
+      - name: Blender version
+        run: '"$BLENDER_DIR/blender" --version'
+
+      - name: The virtual display's OpenGL
+        run: LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B
+
+      - name: Play door, counter and snake in a real window
+        # no continue-on-error: Blender not opening a window, an exception in the script or a failed check fails the job
+        run: |
+          mkdir -p eyetest-out
+          LIBGL_ALWAYS_SOFTWARE=1 timeout 900 xvfb-run -a -s "-screen 0 1600x1000x24" "$BLENDER_DIR/blender" \
+            --factory-startup --gpu-backend opengl --enable-event-simulate --window-geometry 0 0 1600 1000 \
+            --python tools/behaviour_eyetest.py -- --out eyetest-out --activity --activity-debug --strict --x11-grab --slow 3 \
+            --worlds door counter snake
+
+      - name: The script's own verdict
+        if: always()
+        run: |
+          test -f eyetest-out/eyetest-result.json || { echo "the eyetest never finished (no window, or it crashed)"; exit 1; }
+          cat eyetest-out/eyetest-result.json
+          python3 - <<'PY'
+          import json, sys
+          result = json.load(open("eyetest-out/eyetest-result.json"))
+          if result["failed"] or result["errors"]:
+              print("FAILED:", result["failed"], file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: eyetest-shots
+          path: eyetest-out/
+          if-no-files-found: warn
