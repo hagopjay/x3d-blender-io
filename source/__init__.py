@@ -206,6 +206,10 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         if self.use_behaviour_graph and 'FINISHED' in result:
             for message in behaviour_nodes.import_graph(context.scene, self.filepath):
                 self.report({'INFO'}, message)
+            tree = getattr(context.scene, "x3d_behaviour_tree", None)
+            if tree is not None:      # say where the graph went: the import used to end with nothing on screen
+                area = behaviour_nodes.show_tree(context, tree)
+                self.report({'INFO'}, behaviour_nodes.import_summary(tree, area))
         return result
 
     def invoke(self, context, event):

@@ -527,6 +527,23 @@ def difference(before: Graph, after: Graph) -> dict:
     }
 
 
+def unstack_columns(boxes, *, gap=40.0):
+    """New y for boxes that overlap the one above them in their column; ``boxes`` is ``(key, x, y, height)`` with y up
+    (the top edge) and nodes in one column sharing x. Returns only the keys that move. ``layout`` spaces rows evenly;
+    a node is as tall as the fields it shows, which only the editor knows after drawing it."""
+    columns: dict[int, list] = {}
+    for box in boxes:
+        columns.setdefault(round(box[1]), []).append(box)
+    moved = {}
+    for column in columns.values():
+        floor = None
+        for key, _x, y, height in sorted(column, key=lambda box: -box[2]):
+            if floor is not None and y > floor:
+                y = moved[key] = floor
+            floor = y - height - gap
+    return moved
+
+
 def layout(graph: Graph, *, column=320.0, row=200.0) -> dict[str, tuple[float, float]]:
     """A left-to-right position for every node: events flow from the sensors on the left to the scene on the right.
     Columns are the longest path from a source; a cycle is cut where it is first met."""

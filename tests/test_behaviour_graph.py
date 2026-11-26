@@ -238,6 +238,16 @@ class DocumentTests(unittest.TestCase):
         c.cycleTime >> a.startTime
         self.assertEqual(set(bg.layout(b)), {"A", "B"})
 
+    def test_unstack_pushes_a_tall_node_s_neighbour_down(self):
+        # rows 200 apart, but the top node is 500 tall: the one below must move, the other column must not
+        boxes = [("Tall", 0, 0, 500), ("Below", 0, -200, 100), ("Last", 0, -400, 100), ("Other", 320, -200, 100)]
+        moved = bg.unstack_columns(boxes, gap=40)
+        self.assertEqual(moved, {"Below": -540, "Last": -680})
+
+    def test_unstack_leaves_a_spaced_column_alone(self):
+        boxes = [("A", 0, 0, 100), ("B", 0, -200, 100), ("C", 0, -400, 100)]
+        self.assertEqual(bg.unstack_columns(boxes, gap=40), {})
+
 
 if __name__ == "__main__":
     unittest.main()
