@@ -153,6 +153,10 @@ class _TransformState:
 
     def __init__(self, obj, global_matrix):
         self.obj, self.basis = obj, obj.matrix_basis.copy()
+        # the properties the matrix is made from, so a restore gives back the very numbers (and the Euler angles the
+        # user typed), not a matrix decomposed again
+        self.properties = (obj.location.copy(), obj.rotation_euler.copy(), obj.rotation_quaternion.copy(),
+                           tuple(obj.rotation_axis_angle), obj.scale.copy())
         if obj.parent is None:
             self.outer = global_matrix.inverted()                     # matrix_basis = outer @ X3D matrix
             local = global_matrix @ obj.matrix_basis
@@ -165,7 +169,9 @@ class _TransformState:
         self.obj.matrix_basis = self.outer @ Matrix.LocRotScale(self.location, self.rotation, self.scale)
 
     def restore(self):
-        self.obj.matrix_basis = self.basis
+        obj = self.obj
+        obj.matrix_basis = self.basis
+        obj.location, obj.rotation_euler, obj.rotation_quaternion, obj.rotation_axis_angle, obj.scale = self.properties
 
 
 class Player:
