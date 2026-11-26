@@ -15,7 +15,7 @@ translation, a material's colour) is reported back.
         ...
 
 What it runs: TimeSensor, the linear interpolators (scalar, position, 2D position, colour in HSV, orientation by slerp),
-the sequencers, the four event utilities and triggers, the dampers and the chasers. Pointing sensors do not sense by
+EaseInEaseOut, the Spline interpolators (scalar, position, 2D position), SquadOrientationInterpolator, the sequencers, the four event utilities and triggers, the dampers and the chasers. Pointing sensors do not sense by
 themselves here; the caller says what the pointer did (``hover``, ``press``, ``release``, ``drag``). Whatever is not run
 is named in ``Simulation.not_simulated``, never silently skipped.
 
@@ -25,6 +25,7 @@ where the standard leaves room they follow X_ITE; ``tools/behaviour_sim_judge.cj
 
 from __future__ import annotations
 
+import bisect
 import colorsys
 import math
 from collections import deque
@@ -305,6 +306,226 @@ class _OrientationInterpolator(_Interpolator):
     mix = staticmethod(slerp)
 
 
+# -- EaseInEaseOut, the Spline interpolators and Squad: X_ITE's algorithms, judged against it -----------------------
+
+class _Segmented(_Machine):
+    """X_ITE's X3DInterpolatorNode: which two keys a fraction falls between and how far along (0 to 1). Before the
+    first key: (0, 1, 0); after the last: the last two keys at 1; one key: (0, 0, 0); no key: no event."""
+
+    def setup(self):
+        self.rebuild()
+
+    def changed(self, name, now):
+        self.rebuild()
+
+    def rebuild(self):
+        pass
+
+    def receive(self, name, value, now):
+        if name != "set_fraction":
+            return super().receive(name, value, now)
+        keys = self.f.get("key") or []
+        count = len(keys)
+        if count == 0:
+            return None
+        if count == 1:
+            return self.interpolate(0, 0, 0.0)
+        if value <= keys[0]:
+            return self.interpolate(0, 1, 0.0)
+        upper = bisect.bisect_right(keys, value)
+        if upper != count:
+            lower = upper - 1
+            weight = (value - keys[lower]) / (keys[upper] - keys[lower])
+            return self.interpolate(lower, upper, min(1.0, max(0.0, weight)))
+        return self.interpolate(count - 2, count - 1, 1.0)
+
+    def _padded(self, name, zero):
+        """X_ITE pads a value list that is shorter than ``key`` with its last value (or the type's zero)."""
+        values = list(self.f.get(name) or [])
+        wanted = len(self.f.get("key") or [])
+        if len(values) < wanted:
+            values += [values[-1] if values else zero] * (wanted - len(values))
+        return values
+
+
+class _EaseInEaseOut(_Segmented):
+    """Sends the eased weight within the segment, 0 to 1 (X_ITE), not a fraction mapped back onto the keys. A
+    segment's ease out is its first key's y, its ease in the second key's x; together above 1, both are scaled down."""
+
+    def interpolate(self, lower, upper, weight):
+        pairs = self._padded("easeInEaseOut", (0.0, 0.0))
+        ease_out, ease_in = pairs[lower][1], pairs[upper][0]
+        total = ease_out + ease_in
+        if total < 0:
+            return self.emit("modifiedFraction_changed", weight)
+        if total > 1:
+            ease_in, ease_out = ease_in / total, ease_out / total
+        t = 1 / (2 - ease_out - ease_in)
+        if weight < ease_out:
+            eased = (t / ease_out) * weight * weight
+        elif weight <= 1 - ease_in:                    # X_ITE: <=, so an ease in of 0 never divides by it
+            eased = t * (2 * weight - ease_out)
+        else:
+            eased = 1 - (t * (1 - weight) ** 2) / ease_in
+        return self.emit("modifiedFraction_changed", eased)
+
+
+def _scale(a, k):
+    return tuple(x * k for x in a) if isinstance(a, tuple) else a * k
+
+
+def _sub(a, b):
+    return tuple(x - y for x, y in zip(a, b)) if isinstance(a, tuple) else a - b
+
+
+def _magnitude(a):
+    return math.sqrt(sum(x * x for x in a)) if isinstance(a, tuple) else abs(a)
+
+
+class _SplineInterpolator(_Segmented):
+    """X_ITE's CatmullRomSplineInterpolator (X3D 19.4.5 to 19.4.7) as written there: an open curve's end tangents are
+    zero; a closed one's first tangent wraps and its last copies the first; velocities shorter than ``key`` are padded
+    with zeros; ``normalizeVelocity`` scales every velocity but the last to the path length; tangents are weighted by
+    the key spacing on each side, then a cubic Hermite runs on each segment."""
+
+    def rebuild(self):
+        keys = self.f.get("key") or []
+        zero = (0.0,) * len(self.f["keyValue"][0]) if self.f.get("keyValue") and \
+            isinstance(self.f["keyValue"][0], tuple) else 0.0
+        if self.node_type == "SplinePositionInterpolator2D":
+            zero = (0.0, 0.0)
+        elif self.node_type == "SplinePositionInterpolator":
+            zero = (0.0, 0.0, 0.0)
+        values = self.values = self._padded("keyValue", zero)
+        velocities = list(self.f.get("keyVelocity") or [])
+        if velocities and len(velocities) < len(keys):
+            velocities += [zero] * (len(keys) - len(velocities))
+        self.T0, self.T1 = [zero], [zero]
+        if len(keys) <= 1:
+            return
+        if not velocities:
+            first = _scale(_sub(values[1], values[-2]), 0.5) if self.f.get("closed") else zero
+            tangents = [first] + [_scale(_sub(values[i + 1], values[i - 1]), 0.5) for i in range(1, len(values) - 1)]
+            tangents.append(tangents[0])
+        else:
+            tangents = list(velocities)
+            if self.f.get("normalizeVelocity"):
+                path = sum(_magnitude(_sub(values[i + 1], values[i])) for i in range(len(values) - 1))
+                for i in range(len(tangents) - 1):            # X_ITE leaves the last velocity as it is
+                    size = _magnitude(tangents[i])
+                    if size:
+                        tangents[i] = _scale(tangents[i], path / size)
+        last = len(keys) - 1
+        if self.f.get("closed"):
+            d = keys[1] - keys[0] + keys[last] - keys[last - 1]
+            minus, plus = [2 * (keys[1] - keys[0]) / d], [2 * (keys[last] - keys[last - 1]) / d]
+        else:
+            minus, plus = [1.0], [1.0]
+        for i in range(1, last):
+            d = keys[i + 1] - keys[i - 1]
+            minus.append(2 * (keys[i + 1] - keys[i]) / d)
+            plus.append(2 * (keys[i] - keys[i - 1]) / d)
+        minus.append(minus[0])
+        plus.append(plus[0])
+        count = min(len(tangents), len(plus))
+        self.T0 = [_scale(tangents[i], plus[i]) for i in range(count)]
+        self.T1 = [_scale(tangents[i], minus[i]) for i in range(count)]
+
+    def interpolate(self, lower, upper, weight):
+        w2, w3 = weight * weight, weight * weight * weight
+        h = (2 * w3 - 3 * w2 + 1, -2 * w3 + 3 * w2, w3 - 2 * w2 + weight, w3 - w2)
+        parts = (self.values[lower], self.values[upper], self.T0[lower], self.T1[upper])
+        if isinstance(parts[0], tuple):
+            value = tuple(sum(k * part[i] for k, part in zip(h, parts)) for i in range(len(parts[0])))
+        else:
+            value = sum(k * part for k, part in zip(h, parts))
+        return self.emit("value_changed", value)
+
+
+# quaternions as (x, y, z, w), with X_ITE's conventions: q.multRight(r) is r * q; slerp goes the short way and returns
+# the source unchanged when the two are equal
+
+def _q_mul(p, q):
+    px, py, pz, pw = p
+    qx, qy, qz, qw = q
+    return (pw * qx + px * qw + py * qz - pz * qy, pw * qy + py * qw + pz * qx - px * qz,
+            pw * qz + pz * qw + px * qy - py * qx, pw * qw - px * qx - py * qy - pz * qz)
+
+
+def _q_inverse(q):
+    x, y, z, w = -q[0], -q[1], -q[2], q[3]
+    norm = x * x + y * y + z * z + w * w
+    return (x / norm, y / norm, z / norm, w / norm) if norm else (x, y, z, w)
+
+
+def _q_log(q):
+    x, y, z, w = q
+    r = math.sqrt(x * x + y * y + z * z)
+    t = math.atan2(r, w) / r if r > 0 else 0.0
+    return (x * t, y * t, z * t, 0.5 * math.log(x * x + y * y + z * z + w * w))
+
+
+def _q_exp(q):
+    x, y, z, w = q
+    r = math.sqrt(x * x + y * y + z * z)
+    et = math.exp(w)
+    s = et * math.sin(r) / r if r > 0 else 0.0
+    return (x * s, y * s, z * s, et * math.cos(r))
+
+
+def _q_normalize(q):
+    n = math.sqrt(sum(c * c for c in q))
+    return tuple(c / n for c in q) if n else q
+
+
+def _q_slerp(a, b, t):
+    cosom = sum(x * y for x, y in zip(a, b))
+    if cosom < 0:
+        cosom, b = -cosom, tuple(-c for c in b)
+    if cosom >= 1:
+        return a
+    omega = math.acos(cosom)
+    sinom = math.sin(omega)
+    k0, k1 = math.sin((1 - t) * omega) / sinom, math.sin(t * omega) / sinom
+    return tuple(x * k0 + y * k1 for x, y in zip(a, b))
+
+
+def _q_spline(q0, q1, q2):
+    """Shoemake's inner control point at q1 (X_ITE's Quaternion.spline)."""
+    if sum(x * y for x, y in zip(q0, q1)) < 0:
+        q0 = tuple(-c for c in q0)
+    if sum(x * y for x, y in zip(q2, q1)) < 0:
+        q2 = tuple(-c for c in q2)
+    inverse = _q_inverse(q1)
+    a, b = _q_log(_q_mul(q0, inverse)), _q_log(_q_mul(q2, inverse))
+    middle = _q_exp(tuple((x + y) / -4 for x, y in zip(a, b)))
+    return _q_normalize(_q_mul(middle, q1))
+
+
+class _SquadOrientationInterpolator(_Segmented):
+    """X_ITE's SquadInterpolator: Shoemake's squad through inner points made by ``_q_spline``; an open path's ends use
+    the key itself as their inner point. X_ITE does not use ``normalizeVelocity`` here."""
+
+    def rebuild(self):
+        keys = self.f.get("key") or []
+        rotations = self._padded("keyValue", (0.0, 0.0, 1.0, 0.0))
+        self.q = [quaternion(r) for r in rotations]
+        q, n = self.q, len(keys)
+        if n > 1:
+            closed = bool(self.f.get("closed"))
+            self.inner = [_q_spline(q[n - 2], q[0], q[1]) if closed else q[0]]
+            self.inner += [_q_spline(q[i - 1], q[i], q[i + 1]) for i in range(1, n - 1)]
+            self.inner.append(_q_spline(q[n - 2], q[n - 1], q[1]) if closed else q[n - 1])
+        else:
+            self.inner = q[:1]
+
+    def interpolate(self, lower, upper, weight):
+        q, inner = self.q, self.inner
+        outer = _q_slerp(q[lower], q[upper], weight)
+        between = _q_slerp(inner[lower], inner[upper], weight)
+        return self.emit("value_changed", axis_angle(_q_slerp(outer, between, 2 * weight * (1 - weight))))
+
+
 class _Sequencer(_Machine):
     def setup(self):
         self.index = -1
@@ -538,6 +759,9 @@ _MACHINES = {
     "TimeSensor": _TimeSensor,
     "ScalarInterpolator": _Interpolator, "PositionInterpolator": _Interpolator, "PositionInterpolator2D": _Interpolator,
     "ColorInterpolator": _ColorInterpolator, "OrientationInterpolator": _OrientationInterpolator,
+    "EaseInEaseOut": _EaseInEaseOut, "SplinePositionInterpolator": _SplineInterpolator,
+    "SplinePositionInterpolator2D": _SplineInterpolator, "SplineScalarInterpolator": _SplineInterpolator,
+    "SquadOrientationInterpolator": _SquadOrientationInterpolator,
     "BooleanSequencer": _Sequencer, "IntegerSequencer": _Sequencer,
     "BooleanFilter": _BooleanFilter, "BooleanToggle": _BooleanToggle, "BooleanTrigger": _BooleanTrigger,
     "IntegerTrigger": _IntegerTrigger, "TimeTrigger": _TimeTrigger,
