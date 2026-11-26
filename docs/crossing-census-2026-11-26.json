@@ -1,0 +1,624 @@
+{
+ "meta": {
+  "blender": "5.3.0",
+  "probes": 29,
+  "summary": {
+   "carried": 18,
+   "approximated": 5,
+   "dropped": 6,
+   "error": 0
+  },
+  "negative_control_failures": []
+ },
+ "results": [
+  {
+   "area": "geometry",
+   "feature": "mesh (a cube)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "IndexedFaceSet, 14 points (8 corners, split at UV seams)"
+  },
+  {
+   "area": "geometry",
+   "feature": "smooth shading",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "approximated",
+   "evidence": "creaseAngle [3.141593]"
+  },
+  {
+   "area": "geometry",
+   "feature": "subdivision modifier (evaluated)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "125 points (cube has 8)"
+  },
+  {
+   "area": "geometry",
+   "feature": "UV map",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "TextureCoordinate"
+  },
+  {
+   "area": "geometry",
+   "feature": "colour attribute (vertex colours)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "Color/ColorRGBA"
+  },
+  {
+   "area": "geometry",
+   "feature": "linked duplicates (shared mesh)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 2,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "1 USE"
+  },
+  {
+   "area": "geometry",
+   "feature": "parent and child",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 2,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "nested Transform"
+  },
+  {
+   "area": "geometry",
+   "feature": "Geometry Nodes instances",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 9,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "8 Shape, the instance mesh defined once and 7 USE"
+  },
+  {
+   "area": "geometry",
+   "feature": "text object",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "approximated",
+   "evidence": "converted to a mesh"
+  },
+  {
+   "area": "geometry",
+   "feature": "bevelled curve",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "approximated",
+   "evidence": "meshed"
+  },
+  {
+   "area": "geometry",
+   "feature": "Grease Pencil drawing",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "dropped",
+   "evidence": "nothing in the file"
+  },
+  {
+   "area": "material",
+   "feature": "Principled base colour, metallic, roughness",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "baseColor [0.8, 0.3, 0.1] metallic 0.7 roughness 0.25"
+  },
+  {
+   "area": "material",
+   "feature": "emission (strength 5)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "approximated",
+   "evidence": "emissiveColor [0.2, 0.9, 1.0]: strength folded or clamped to [0, 1]"
+  },
+  {
+   "area": "material",
+   "feature": "alpha 0.5",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "transparency 0.5"
+  },
+  {
+   "area": "material",
+   "feature": "glass transmission",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "1",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "dropped",
+   "evidence": "opaque: X3D 4.0 has no transmission"
+  },
+  {
+   "area": "material",
+   "feature": "image texture",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "ImageTexture url \"census-checker.png\""
+  },
+  {
+   "area": "material",
+   "feature": "procedural texture (noise)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "dropped",
+   "evidence": "flat baseColor 0.800000 0.800000 0.800000"
+  },
+  {
+   "area": "animation",
+   "feature": "keyframed location",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 1
+   },
+   "verdict": "carried",
+   "evidence": "1 PositionInterpolator, 2 ROUTE"
+  },
+  {
+   "area": "animation",
+   "feature": "keyframed rotation",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 1
+   },
+   "verdict": "carried",
+   "evidence": "1 OrientationInterpolator"
+  },
+  {
+   "area": "animation",
+   "feature": "keyframed scale",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 1
+   },
+   "verdict": "carried",
+   "evidence": "1 ROUTE to scale"
+  },
+  {
+   "area": "animation",
+   "feature": "keyframes, exported with the default options",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "dropped",
+   "evidence": "use_animation is off by default: a still"
+  },
+  {
+   "area": "animation",
+   "feature": "driver (expression)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 1
+   },
+   "verdict": "carried",
+   "evidence": "baked: 1 OrientationInterpolator"
+  },
+  {
+   "area": "animation",
+   "feature": "shape key animation",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "1 CoordinateInterpolator"
+  },
+  {
+   "area": "animation",
+   "feature": "shape key moved by a driver",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "dropped",
+   "evidence": "no CoordinateInterpolator: keyed shape keys cross, driven ones do not"
+  },
+  {
+   "area": "animation",
+   "feature": "armature (skinned)",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 2,
+    "animated": 1
+   },
+   "verdict": "carried",
+   "evidence": "1 HAnimHumanoid, 2 joints"
+  },
+  {
+   "area": "scene",
+   "feature": "point, sun, spot and area lights",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "1",
+    "approximated": "4",
+    "clamped": "3"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 4,
+    "animated": 0
+   },
+   "verdict": "approximated",
+   "evidence": "{'PointLight': 1, 'DirectionalLight': 2, 'SpotLight': 1}: the area light became a DirectionalLight"
+  },
+  {
+   "area": "scene",
+   "feature": "camera field of view",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "fieldOfView 0.5632, camera angle 0.9500"
+  },
+  {
+   "area": "scene",
+   "feature": "world colour",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "carried",
+   "evidence": "skyColor [0.1, 0.2, 0.4]"
+  },
+  {
+   "area": "scene",
+   "feature": "custom property",
+   "export": [
+    "FINISHED"
+   ],
+   "receipt": {
+    "dropped": "0",
+    "approximated": "0",
+    "clamped": "0"
+   },
+   "round_trip": {
+    "import": [
+     "FINISHED"
+    ],
+    "objects": 1,
+    "animated": 0
+   },
+   "verdict": "dropped",
+   "evidence": "no Metadata node"
+  }
+ ]
+}
