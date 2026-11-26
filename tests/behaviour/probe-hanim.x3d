@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <component name="HAnim" level="1"/>
+    <meta name="title" content="Behaviour simulator probe: HAnimJoint, HAnimSite and HAnimSegment as ROUTE ends"/>
+    <meta name="generator" content="hand written for tests/test_behaviour_sim.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 1 8"/>
+    <Transform DEF="Pad" translation="0 -1 0"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.5"/></Appearance><Box size="8 0.2 4"/></Shape>
+      <TouchSensor DEF="Touch"/>
+    </Transform>
+    <HAnimHumanoid DEF="hanim_Body" name="Body" version="2.0">
+      <HAnimJoint DEF="hanim_root" name="root" center="0 1 0" containerField="skeleton">
+        <HAnimJoint DEF="hanim_spine" name="spine" center="0 1.5 0">
+          <HAnimSegment DEF="hanim_spine_seg" name="spine_seg"><Shape><Appearance><Material diffuseColor="0.8 0.6 0.4"/></Appearance><Box size="0.3 1 0.3"/></Shape></HAnimSegment>
+          <HAnimSite DEF="hanim_tip" name="tip" translation="0 0.5 0"/>
+        </HAnimJoint>
+      </HAnimJoint>
+    </HAnimHumanoid>
+    <Transform DEF="MirrorRotation" translation="-3 1 0"><Shape><Appearance><Material diffuseColor="0.8 0.3 0.2"/></Appearance><Box size="0.5 0.5 0.5"/></Shape></Transform>
+    <Transform DEF="MirrorTranslation" translation="3 1 0"><Shape><Appearance><Material diffuseColor="0.3 0.8 0.2"/></Appearance><Sphere radius="0.3"/></Shape></Transform>
+    <ScalarInterpolator DEF="Sink" key="0 1" keyValue="0 1"/>
+    <TimeSensor DEF="Timer" cycleInterval="3"/>
+    <OrientationInterpolator DEF="Swing" key="0 0.5 1" keyValue="0 0 1 0, 0 0 1 1, 0 0 1 0"/>
+    <PositionInterpolator DEF="Slide" key="0 1" keyValue="0 0 0, 0 0.5 0.25"/>
+    <PositionInterpolator DEF="Grow" key="0 1" keyValue="1 1 1, 1.5 2 1.5"/>
+    <PositionInterpolator DEF="Shift" key="0 1" keyValue="0 1.5 0, 0.5 1.5 0"/>
+    <OrientationInterpolator DEF="Twist" key="0 1" keyValue="1 0 0 0, 1 0 0 1.2"/>
+    <PositionInterpolator DEF="Mass" key="0 1" keyValue="0 0 0, 0 2 0"/>
+    <ScalarInterpolator DEF="Heavier" key="0 1" keyValue="10 20"/>
+    <ROUTE fromNode="Touch" fromField="touchTime" toNode="Timer" toField="startTime"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Swing" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Slide" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Grow" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Shift" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Twist" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Mass" toField="set_fraction"/>
+    <ROUTE fromNode="Timer" fromField="fraction_changed" toNode="Heavier" toField="set_fraction"/>
+    <ROUTE fromNode="Swing" fromField="value_changed" toNode="hanim_root" toField="rotation"/>
+    <ROUTE fromNode="Slide" fromField="value_changed" toNode="hanim_spine" toField="translation"/>
+    <ROUTE fromNode="Grow" fromField="value_changed" toNode="hanim_spine" toField="scale"/>
+    <ROUTE fromNode="Shift" fromField="value_changed" toNode="hanim_spine" toField="center"/>
+    <ROUTE fromNode="Twist" fromField="value_changed" toNode="hanim_tip" toField="rotation"/>
+    <ROUTE fromNode="Slide" fromField="value_changed" toNode="hanim_tip" toField="translation"/>
+    <ROUTE fromNode="Mass" fromField="value_changed" toNode="hanim_spine_seg" toField="centerOfMass"/>
+    <ROUTE fromNode="Heavier" fromField="value_changed" toNode="hanim_spine_seg" toField="mass"/>
+    <ROUTE fromNode="hanim_root" fromField="rotation_changed" toNode="MirrorRotation" toField="rotation"/>
+    <ROUTE fromNode="hanim_spine" fromField="translation_changed" toNode="MirrorTranslation" toField="translation"/>
+    <ROUTE fromNode="hanim_spine" fromField="scale_changed" toNode="MirrorTranslation" toField="scale"/>
+    <ROUTE fromNode="hanim_spine" fromField="center_changed" toNode="MirrorTranslation" toField="center"/>
+    <ROUTE fromNode="hanim_tip" fromField="translation_changed" toNode="MirrorRotation" toField="translation"/>
+    <ROUTE fromNode="hanim_tip" fromField="rotation_changed" toNode="MirrorTranslation" toField="rotation"/>
+    <ROUTE fromNode="hanim_spine_seg" fromField="centerOfMass_changed" toNode="MirrorRotation" toField="scale"/>
+    <ROUTE fromNode="hanim_spine_seg" fromField="mass_changed" toNode="Sink" toField="set_fraction"/>
+  </Scene>
+</X3D>

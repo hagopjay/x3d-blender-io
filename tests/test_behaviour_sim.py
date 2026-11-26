@@ -469,6 +469,98 @@ class XiteAgreementTests(unittest.TestCase):
         self.assertGreater(max(over), 6.0)                      # ... and on, to a full turn by the end
         self.assertGreater(max(safe), 6.1)
 
+    def test_hanim_joint_site_and_segment_receive_and_echo_as_in_x_ite(self):
+        # HAnimJoint rotation, translation, scale and center, HAnimSite rotation and translation, HAnimSegment centerOfMass and
+        # mass, each fed by an interpolator and echoed by its *_changed (tests/behaviour/probe-hanim.x3d, X_ITE 16.8.1): 16
+        # streams, the six echoes among them, all the same event for event.
+        self.agree("probe-hanim", 16)
+
+    def test_a_plane_sensor_pressed_by_a_ray_that_misses_the_plane_has_nothing_to_drag(self):
+        # found by the hostile fuzz once HAnim targets changed which graphs it draws (seed 1, graph 246, minimised): the
+        # press's ray (a direction of 1e308) never met the plane, so no start point was set and the next drag raised
+        # AttributeError out of Simulation
+        b = bg.Behaviour()
+        b.add("PlaneSensor", "Pan", parent="T0", minPosition="0.4067", maxPosition="2 2", offset="")
+        b.target("Transform", "T0")
+        sim = bs.Simulation(b)
+        sim.start(0.0)
+        sim.press("Pan", 0.032, point=(2.06, 2.65, 1.04), ray=((2.67, 2.61, 1.07), (1e308, 0.0, 0.0)),
+                  eye=((-0.95, 2.69, 0.67), (2.65, -2.97, -1.21)))
+        sim.drag("Pan", (-1.9, 1.49, -2.31), 999994.532, ray=((-1.94, -1.0, -2.36), (1.51, -0.52, -2.69)))
+        self.assertEqual(sim.faults, [])
+
+    def test_switch_whichChoice_is_delivered_and_echoed_as_in_x_ite(self):
+        # IntegerSequencer 2, 1, -1, 5 into Switch.whichChoice (an index past the last child, and -1, are delivered as
+        # they are), echoed from whichChoice_changed (tests/behaviour/probe-switch.x3d, X_ITE 16.8.1): 3 streams
+        self.agree("probe-switch", 3)
+
+    def test_a_composed_shader_s_declared_fields_receive_and_echo_as_in_x_ite(self):
+        # uTime SFFloat, uTint SFColor, uSteps SFInt32, uFlag SFBool and uOffset SFVec3f, all inputOutput, each fed by an
+        # interpolator or sequencer and echoed from its *_changed (tests/behaviour/probe-shader.x3d, X_ITE 16.8.1): 12
+        # streams, the five echoes among them, all the same event for event. uScale (SFVec2f, inputOnly) cannot be heard.
+        self.agree("probe-shader", 12)
+
+    def test_a_composed_shader_s_fields_are_kept_in_values_and_typed_from_the_declaration(self):
+        graph = world("probe-shader")
+        sim = bs.Simulation(graph)
+        self.assertEqual(sim.not_simulated, [])
+        sim.start(0.0)
+        sim.click("Touch", 0.1, held=0.0)
+        for now in (0.2, 1.0, 2.0, 3.2):
+            sim.step(now)
+        self.assertEqual(sim.values[("Glow", "uTime")], 7.5)
+        self.assertEqual(sim.values[("Glow", "uTint")], (0.0, 0.0, 1.0))
+        self.assertEqual(sim.values[("Glow", "uSteps")], 0)
+        self.assertIs(sim.values[("Glow", "uFlag")], True)
+        self.assertEqual(sim.values[("Glow", "uOffset")], (1.0, -2.0, 0.5))
+        self.assertEqual(sim.values[("Glow", "uScale")], (3.0, 0.5))
+        self.assertEqual(sim.values[("Echoed", "diffuseColor")], (0.0, 0.0, 1.0))                # an echo reaches on
+        self.assertEqual(sim.dropped, {})
+
+    def test_a_shader_field_of_the_wrong_shape_is_dropped_not_delivered(self):
+        # a ROUTE the graph's own check refuses (a float into a declared SFVec3f), written past it: judged by the declaration
+        b = bg.Behaviour()
+        shader = b.target("ComposedShader", "Glow", declared=[("uTime", "SFFloat", "inputOutput"), ("uOffset", "SFVec3f", "inputOutput")])
+        timer = b.add("TimeSensor", "Timer", cycleInterval=1, loop=True)
+        timer.fraction_changed >> shader.uTime
+        b.route("Timer", "fraction_changed", "Glow", "uOffset", check=False)
+        sim = bs.Simulation(b)
+        sim.start(0.0)
+        sim.step(0.5)
+        self.assertEqual(sim.values[("Glow", "uTime")], 0.5)
+        self.assertNotIn(("Glow", "uOffset"), sim.values)
+        self.assertGreater(sim.dropped["mismatch"], 0)
+
+    def test_switch_whichChoice_is_kept_in_values(self):
+        sim = bs.Simulation(world("probe-switch"))
+        sim.start(0.0)
+        sim.click("Touch", 0.1, held=0.0)
+        seen = []
+        for now in (0.2, 1.0, 2.0, 3.0):
+            sim.step(now)
+            seen.append(sim.values[("Pick", "whichChoice")])
+        self.assertEqual(seen, [2, 1, -1, 5])
+        self.assertEqual(sim.values[("Echo", "whichChoice")], 5)
+        self.assertEqual([e[3] for e in sim.log if e[1] == "Pick" and e[2] == "whichChoice"], [2, 1, -1, 5])
+
+    def test_hanim_targets_hold_the_last_value_that_reached_them(self):
+        graph = world("probe-hanim")
+        sim = bs.Simulation(graph)
+        sim.start(0.0)
+        sim.press("Touch", 0.1)
+        sim.release("Touch", 0.2)
+        sim.step(3.4)
+        self.assertEqual(sim.not_simulated, [])
+        self.assertEqual(sim.values[("hanim_root", "rotation")], (0.0, 0.0, 1.0, 0.0))     # the swing is over: back to rest
+        self.assertEqual(sim.values[("hanim_spine", "translation")], (0.0, 0.5, 0.25))
+        self.assertEqual(sim.values[("hanim_spine", "scale")], (1.5, 2.0, 1.5))
+        self.assertEqual(sim.values[("hanim_spine", "center")], (0.5, 1.5, 0.0))
+        self.assertEqual(sim.values[("hanim_tip", "translation")], (0.0, 0.5, 0.25))
+        self.assertAlmostEqual(sim.values[("hanim_tip", "rotation")][3], 1.2, places=6)
+        self.assertEqual(sim.values[("hanim_spine_seg", "centerOfMass")], (0.0, 2.0, 0.0))
+        self.assertEqual(sim.values[("hanim_spine_seg", "mass")], 20.0)
+        self.assertEqual(sim.values[("MirrorTranslation", "translation")], (0.0, 0.5, 0.25))     # a joint's echo reaches on
+
     def test_the_probe_covers_what_the_simulator_runs(self):
         # judged means: sends on a ROUTE in a recorded world (a node that only receives is never compared)
         judged = list(map(world, ("probe", "snake", "probe-spline", "probe-drag", "probe-proximity", "probe-timer", "probe-coord")))

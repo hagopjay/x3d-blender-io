@@ -50,7 +50,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(len(X3DUOM_SHA256), 64)
         self.assertEqual(len(NODES), 45)
         self.assertEqual(sum(len(rows) for _group, rows in NODES.values()), 303)
-        self.assertEqual(len(TARGETS), 32)
+        self.assertEqual(len(TARGETS), 35)       # 32, then HAnimSegment, HAnimSite and ComposedShader
 
     def test_events_are_in_the_catalogue(self):
         fields = {row[0]: row for row in NODES["TouchSensor"][1]}
@@ -148,6 +148,241 @@ class ScriptingTests(unittest.TestCase):
         self.assertEqual(bg.signature(again), bg.signature(b))
         with self.assertRaises(bg.BehaviourError):
             bg.from_json({"schema": "other"})
+
+
+HANIM_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><head><component name="HAnim" level="1"/></head><Scene>
+  <HAnimHumanoid DEF="Body" name="Body">
+    <HAnimJoint DEF="hanim_root" name="root" center="0 1 0" containerField="skeleton">
+      <HAnimSegment DEF="Seg" name="seg"/>
+      <HAnimSite DEF="Tip" name="tip" translation="0 1 0"/>
+    </HAnimJoint>
+  </HAnimHumanoid>
+</Scene></X3D>
+"""
+
+
+class HAnimTargetTests(unittest.TestCase):
+
+    def graph(self):
+        b = bg.Behaviour()
+        timer = b.add("TimeSensor", "Timer", cycleInterval=2)
+        turn = b.add("OrientationInterpolator", "Turn", key=[0, 1], keyValue=[(0, 0, 1, 0), (0, 0, 1, 1)])
+        slide = b.add("PositionInterpolator", "Slide", key=[0, 1], keyValue=[(0, 0, 0), (0, 1, 0)])
+        weigh = b.add("ScalarInterpolator", "Weigh", key=[0, 1], keyValue=[1, 2])
+        joint, site, segment = b.target("HAnimJoint", "hanim_root"), b.target("HAnimSite", "Tip"), b.target("HAnimSegment", "Seg")
+        timer.fraction_changed >> turn.set_fraction
+        timer.fraction_changed >> slide.set_fraction
+        timer.fraction_changed >> weigh.set_fraction
+        turn.value_changed >> joint.rotation
+        slide.value_changed >> joint.translation
+        slide.value_changed >> joint.scale
+        slide.value_changed >> joint.center
+        turn.value_changed >> site.rotation
+        slide.value_changed >> site.translation
+        weigh.value_changed >> segment.mass
+        return b
+
+    def test_the_three_types_are_targets_with_the_fields_of_the_object_model(self):
+        for name in ("HAnimJoint", "HAnimSegment", "HAnimSite"):
+            self.assertIn(name, TARGETS)
+        joint = {row[0]: row for row in TARGETS["HAnimJoint"]}
+        for field, kind in (("rotation", "SFRotation"), ("translation", "SFVec3f"), ("scale", "SFVec3f"), ("center", "SFVec3f")):
+            self.assertEqual(joint[field][1:3], (kind, "inputOutput"))
+        self.assertEqual({row[0]: row[1] for row in TARGETS["HAnimSegment"]}["mass"], "SFFloat")
+        self.assertEqual({row[0]: row[1] for row in TARGETS["HAnimSite"]}["translation"], "SFVec3f")
+        self.assertEqual([bg.BINDING_OF[t] for t in ("HAnimJoint", "HAnimSite", "HAnimSegment")], ["joint", "site", "site"])
+
+    def test_a_segment_has_no_rotation_in_the_object_model_so_a_route_to_it_is_refused(self):
+        # X3DUOM 4.0 gives HAnimSegment centerOfMass, mass, momentsOfInertia, coord ...: no rotation or translation.
+        b = bg.Behaviour()
+        turn = b.add("OrientationInterpolator", "Turn")
+        segment = b.target("HAnimSegment", "Seg")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            turn.value_changed >> segment.rotation
+        self.assertEqual(caught.exception.code, "unknown-field")
+
+    def test_the_type_is_checked_like_a_transform_s(self):
+        b = bg.Behaviour()
+        slide = b.add("PositionInterpolator", "Slide")
+        joint = b.target("HAnimJoint", "J")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            slide.value_changed >> joint.rotation
+        self.assertEqual(caught.exception.code, "type-mismatch")
+
+    def test_routes_to_them_read_from_a_file_and_write_back_with_no_difference(self):
+        b = self.graph()
+        self.assertEqual(b.check(), [])
+        text = b.weave(HANIM_SCENE)
+        again = bg.Behaviour.from_x3d(text)
+        self.assertEqual(again.nodes["hanim_root"].node_type, "HAnimJoint")
+        self.assertEqual(again.nodes["hanim_root"].binding, ("joint", "hanim_root"))
+        self.assertEqual(again.nodes["Tip"].binding, ("site", "Tip"))
+        self.assertEqual(bg.difference(b, again),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(bg.difference(again, bg.Behaviour.from_x3d(again.weave(bg.strip(text)))),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(len(again.routes), 10)
+
+    def test_bind_keeps_a_joint_the_resolver_does_not_know_by_name(self):
+        parsed = bg.parse_x3d(self.graph().weave(HANIM_SCENE))
+        self.assertEqual(parsed.nodes["hanim_root"].binding, None)
+        self.assertEqual(parsed._candidates["hanim_root"]["hanim_name"], "root")      # what the importer names the bone
+        bg.bind(parsed, lambda name, node_type: (bg.BINDING_OF[node_type], name) if node_type in bg.BINDING_OF else None)
+        self.assertEqual(parsed.nodes["hanim_root"].binding, ("joint", "hanim_root"))
+        self.assertEqual(len([n for n in parsed.nodes.values() if n.role == bg.CARRIED]), 0)
+        self.assertEqual(len(parsed.routes), 10)
+
+    def test_json_keeps_the_binding(self):
+        again = bg.from_json(bg.to_json(self.graph()))
+        self.assertEqual(again.nodes["Seg"].binding, ("site", "Seg"))
+        self.assertEqual(bg.difference(self.graph(), again)["routes_lost"], [])
+
+
+SWITCH_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><Scene>
+  <Switch DEF="Pick" whichChoice="0"><Shape><Box/></Shape><Shape><Sphere/></Shape></Switch>
+</Scene></X3D>
+"""
+
+
+class SwitchTargetTests(unittest.TestCase):
+
+    def graph(self):
+        b = bg.Behaviour()
+        steps = b.add("IntegerSequencer", "Steps", key=[0, 0.5], keyValue=[1, 0])
+        b.add("TimeSensor", "Timer", cycleInterval=2).fraction_changed >> steps.set_fraction
+        steps.value_changed >> b.target("Switch", "Pick").whichChoice
+        return b
+
+    def test_whichChoice_is_an_int32_target_bound_as_a_switch(self):
+        row = {r[0]: r for r in TARGETS["Switch"]}["whichChoice"]
+        self.assertEqual(row[1:3], ("SFInt32", "inputOutput"))
+        self.assertEqual(bg.BINDING_OF["Switch"], "switch")
+        self.assertEqual(self.graph().nodes["Pick"].binding, ("switch", "Pick"))
+
+    def test_a_float_is_not_a_choice(self):
+        b = bg.Behaviour()
+        weigh = b.add("ScalarInterpolator", "Weigh")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            weigh.value_changed >> b.target("Switch", "Pick").whichChoice
+        self.assertEqual(caught.exception.code, "type-mismatch")
+
+    def test_the_route_reads_from_a_file_and_writes_back_with_no_difference(self):
+        b = self.graph()
+        again = bg.Behaviour.from_x3d(b.weave(SWITCH_SCENE))
+        self.assertEqual(again.nodes["Pick"].binding, ("switch", "Pick"))
+        self.assertEqual(bg.difference(b, again),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(len(again.routes), 2)
+
+
+SHADER_SCENE = """<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0"><Scene>
+  <Shape><Appearance>
+    <ComposedShader DEF="Glow" language="GLSL">
+      <field name="uTime" type="SFFloat" accessType="inputOutput" value="0"/>
+      <field name="uTint" type="SFColor" accessType="inputOutput"/>
+      <field name="uScale" type="SFVec2f" accessType="inputOnly"/>
+      <field name="uDone" type="SFBool" accessType="outputOnly"/>
+      <field name="uSeed" type="SFInt32" accessType="initializeOnly" value="3"/>
+    </ComposedShader>
+  </Appearance><Box/></Shape>
+</Scene></X3D>
+"""
+
+
+class ShaderTargetTests(unittest.TestCase):
+
+    DECLARED = (("uTime", "SFFloat", "inputOutput"), ("uTint", "SFColor", "inputOutput"), ("uScale", "SFVec2f", "inputOnly"),
+                ("uDone", "SFBool", "outputOnly"), ("uSeed", "SFInt32", "initializeOnly"))
+
+    def graph(self):
+        b = bg.Behaviour()
+        shader = b.target("ComposedShader", "Glow", declared=list(self.DECLARED))
+        timer = b.add("TimeSensor", "Timer", cycleInterval=2)
+        clock = b.add("ScalarInterpolator", "Clock", key=[0, 1], keyValue=[0, 5])
+        tint = b.add("ColorInterpolator", "Tint", key=[0, 1], keyValue=[(1, 0, 0), (0, 0, 1)])
+        zoom = b.add("PositionInterpolator2D", "Zoom", key=[0, 1], keyValue=[(1, 1), (2, 2)])
+        for node in (clock, tint, zoom):
+            timer.fraction_changed >> node.set_fraction
+        clock.value_changed >> shader.uTime
+        tint.value_changed >> shader.uTint
+        zoom.value_changed >> shader.uScale
+        return b
+
+    def test_the_catalogue_has_the_node_and_the_binding_is_a_name(self):
+        self.assertIn("ComposedShader", TARGETS)
+        self.assertEqual(bg.BINDING_OF["ComposedShader"], "shader")
+        self.assertEqual(self.graph().nodes["Glow"].binding, ("shader", "Glow"))
+
+    def test_a_declared_field_is_typed_from_its_declaration(self):
+        b = self.graph()
+        self.assertEqual(b.check(), [])
+        self.assertEqual(bg.resolve_field("ComposedShader", "uTime", "in", b.nodes["Glow"].declared), ("uTime", "SFFloat"))
+        self.assertEqual(bg.resolve_field("ComposedShader", "set_uTime", "in", b.nodes["Glow"].declared), ("uTime", "SFFloat"))
+        self.assertEqual(bg.resolve_field("ComposedShader", "uTint_changed", "out", b.nodes["Glow"].declared), ("uTint", "SFColor"))
+        self.assertEqual(bg.route_verdict("ComposedShader", "uTime", "ComposedShader", "uTime"), "unknown-field")   # by type alone: none
+
+    def test_the_declared_type_and_direction_are_enforced(self):
+        b = self.graph()
+        shader = b.get("Glow")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.get("Clock").value_changed >> shader.uTint                                 # a float into a colour
+        self.assertEqual(caught.exception.code, "type-mismatch")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.get("Clock").value_changed >> shader.uDone                                 # outputOnly is no destination
+        self.assertEqual(caught.exception.code, "wrong-direction")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.get("Clock").value_changed >> shader.uSeed                                 # initializeOnly takes no events
+        self.assertEqual(caught.exception.code, "wrong-direction")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            _ = shader.uMissing
+        self.assertEqual(caught.exception.code, "unknown-field")
+
+    def test_declarations_that_cannot_be_fields_are_refused(self):
+        b = bg.Behaviour()
+        for declared in ([("1bad", "SFFloat", "inputOutput")], [("x", "SFNode", "inputOutput")], [("x", "SFFloat", "sideways")],
+                         [("language", "SFFloat", "inputOutput")], [("x", "SFFloat", "inputOutput")] * 2):
+            with self.subTest(declared=declared), self.assertRaises(bg.BehaviourError) as caught:
+                b.target("ComposedShader", "S" + str(len(b.nodes)), declared=declared)
+            self.assertEqual(caught.exception.code, "bad-declaration")
+        with self.assertRaises(bg.BehaviourError) as caught:
+            b.target("Transform", "T", declared=[("x", "SFFloat", "inputOutput")])        # only a shader declares fields
+        self.assertEqual(caught.exception.code, "bad-declaration")
+
+    def test_the_declarations_are_read_from_the_file_s_field_elements(self):
+        parsed = bg.parse_x3d(self.graph().weave(SHADER_SCENE))
+        self.assertEqual(sorted(parsed.nodes["Glow"].declared), sorted(self.DECLARED))
+        self.assertEqual(parsed.diagnostics, [])
+        self.assertEqual(len(parsed.routes), 6)
+
+    def test_a_file_s_bad_field_element_is_left_out_and_said(self):
+        text = SHADER_SCENE.replace('<field name="uSeed"', '<field name="uBad" type="SFNode" accessType="inputOutput"/>'
+                                    '<field name="uTime" type="SFFloat" accessType="inputOnly"/><field name="uSeed"')
+        graph = bg.parse_x3d(text.replace("</Scene>", '<TimeSensor DEF="T"/><ROUTE fromNode="T" fromField="cycleTime" '
+                                                       'toNode="Glow" toField="uTime"/></Scene>'))
+        self.assertEqual([row[0] for row in graph.nodes["Glow"].declared], ["uTime", "uTint", "uScale", "uDone", "uSeed"])
+        self.assertEqual(len(graph.diagnostics), 2)
+        self.assertIn("uBad", graph.diagnostics[0])
+        self.assertIn("repeats", graph.diagnostics[1])
+
+    def test_routes_to_a_shader_write_back_and_read_again_with_no_difference(self):
+        b = self.graph()
+        text = b.weave(SHADER_SCENE)
+        again = bg.Behaviour.from_x3d(text)
+        self.assertEqual(again.nodes["Glow"].binding, ("shader", "Glow"))
+        self.assertEqual(again.check(), [])
+        self.assertEqual(bg.difference(b, again),
+                         {"nodes_lost": [], "nodes_added": [], "fields_changed": {}, "routes_lost": [], "routes_added": []})
+        self.assertEqual(len(again.routes), 6)
+
+    def test_json_keeps_the_declarations(self):
+        b = self.graph()
+        again = bg.from_json(json.loads(json.dumps(bg.to_json(b))))
+        self.assertEqual(again.nodes["Glow"].declared, self.DECLARED)
+        self.assertEqual(again.check(), [])
+        self.assertEqual(len(again.routes), 6)
 
 
 class DocumentTests(unittest.TestCase):

@@ -119,7 +119,7 @@ class SameTreeTests(unittest.TestCase):
     FAN_100_BUDGET_S = 3.7
 
     DOOR = "103ce95551519f301c72b9a9ebfd575c285e37430f9f4e11a21302bbc5b68902"
-    PROBE = "9a9aadd3a4845e095578aa7c22e2e46a03aec7dde71dec983e700630cc7705d6"
+    PROBE = "b20742594f59fbfb97e875a295c0449ccd855114758093d50551cf17af242b3d"   # Pick (a Switch) is now a target node, was a carried one
     MIXED_20 = "37081ee4b5519d99e6c623884eb552089a4e8e54d7477f4c7116231796bf0728"
 
     def setUp(self):

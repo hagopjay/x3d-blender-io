@@ -5,7 +5,7 @@ editable graph: plain Python data, a Blender node tree, and X3D text, kept in st
 
 | File | What it is |
 |---|---|
-| `source/behaviour_catalogue.py` | generated from the X3D Unified Object Model 4.0 by `tools/behaviour_catalogue_gen.py` (`--check` fails when stale): 45 behaviour node types with 303 fields, 32 target types |
+| `source/behaviour_catalogue.py` | generated from the X3D Unified Object Model 4.0 by `tools/behaviour_catalogue_gen.py` (`--check` fails when stale): 45 behaviour node types with 303 fields, 35 target types |
 | `source/behaviour_graph.py` | the graph without Blender: parse from X3D, validate, edit, emit, weave into a document, compare, lay out, JSON; and the scripting methods (`Behaviour`, `add`, `target`, `>>`) |
 | `source/behaviour_nodes.py` | the Blender node tree `X3DBehaviourTree`: one node class per X3D node, one socket class per field type; `apply`, `read`, `target`, `import_graph` |
 | `source/behaviour_sim.py` | version 2: the event model in plain Python (`Simulation`): timers, interpolators, sequencers, event utilities, dampers, chasers, pointer events |
@@ -172,27 +172,40 @@ synthetic series; three browser cases, skipped with a reason when Node, Playwrig
 against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
 from the last run are in the commit message of the change that added it.
 
-### Two files against X_ITE, with their own noise floor
+#### The pair judge on real scenes: blind, simultaneous, rotations (26 Nov 2026)
 
-`tools/behaviour_pair_judge.py` (`judge_pair(file_a, file_b, stimulus, repeats=3, x_ite=dist)` and a CLI) replays two
-files in X_ITE, `repeats` times each, interleaved A B A B, under the same stimulus, and judges every field a ROUTE ends at
-in the scene (matched by DEF and field name; what only one file has is listed as unmatched). It exists because a fixed
-1 % threshold failed six unchanged solutions in another repo: on a loaded machine the same file against itself read up to
-5.5 %. Each stream gets the disagreement A-versus-B (fraction of samples outside tolerance, largest absolute difference,
-for every pairing), the same two numbers for A-versus-A and B-versus-B (the floor, measured in the same session), and a
-verdict: "same" (the middle A-versus-B pairing is no worse than the worst repeat-against-repeat pairing), "differs"
-(every A-versus-B pairing above the typical floor by 3 times and by at least 1 % of the samples), else "unclear". The
-result carries the machine load (`os.getloadavg` before and after every run), X_ITE and Chromium versions, the
-tolerances (2 % of each stream's span, samples every 0.05 s from each run's own time zero: the first start of a TimeSensor, else the
-first pointer press, else the first cycle start of a TimeSensor) and every raw per-pairing number. CLI exit codes: 0 same, 1 differs, 2 unclear,
-3 tool error (Node, Playwright, X_ITE or a file missing, or a stimulus call that X_ITE cannot be given). Stimulus: none or
-`{"seconds": 4}` (a timer-only world: load, run, sample), `{"clicks": n, "hold": [ms], "gap": ms}`, `{"click_plan":
-[DEF]}`, `{"drags": ...}`, `{"keys": ...}` (the formats of `tools/behaviour_sim_judge.cjs`), or the recorded list
-`[{time, call, node, args}]`, of which only `start`, `click` and `press` followed by `release` of one sensor can be
-replayed; any other call is a tool error, not skipped. Tests: `tests/test_behaviour_pair_judge.py` (pure parts on
-synthetic series; three browser cases, skipped with a reason when Node, Playwright or an X_ITE dist is missing: door.x3d
-against itself, against a copy with the interpolator's keyValue changed, and `timer-only.x3d` against itself). Numbers
-from the last run are in the commit message of the change that added it.
+Its first use on real scenes found three defects, fixed in `tools/behaviour_pair_judge.py`; this subsection replaces what
+the text above says about interleaving and raw numbers where they differ.
+
+- **Blind.** In X_ITE a looping TimeSensor with startTime 0 has the wall clock's phase (a cycle starts at every whole
+  multiple of `cycleInterval` since 1970). With a watch shorter than the loop no cycle start falls in it, time zero falls back to the
+  moment recording began, and a file disagrees with itself on up to all of its samples. The judge used to say "same" then,
+  for everything, planted differences included. Now a stream whose median floor pairing (A against A and B against B) has
+  0.5 or more of its samples outside tolerance (`blind=0.5`) is "unclear" with `reason: "blind"` (and a `detail` with the
+  number), whatever A-versus-B reads; the overall result carries `reason: "blind"` too, and the exit code is 2. "Same" is
+  impossible when blind. Measured, `loop-20s.x3d` against itself, sequential, 4 s watch: floor 1.0, unclear, blind.
+- **Simultaneous mode** (`mode="simultaneous"`, the default for a world nobody touches; CLI `--mode`). One time zero per run
+  was wrong for a scene with several loops (3, 5, 7 s): lined up on one timer, another stream read "differs" though identical.
+  Now A and B run at the same moment in two browsers started together and are compared at the same X_ITE time stamps (its
+  clock is the wall clock, shared by both), so equal loops are in equal phase with no alignment step. Each repeat runs
+  three pairs, A with B, A with A, B with B; the floor is the A with A and B with B pairs. The runs watch `seconds` plus
+  2 s and the compared window is the overlap of the two recordings, cut to `seconds`; less than 1 s of overlap is a tool
+  error. `mode="sequential"` is the old A B A B layout from each run's own time zero: use it when the world starts on a
+  click or a key (the default, `auto`, picks it for any pointer, key or drag stimulus; pointer stimuli cannot be made at the
+  same moment in two browsers, so asking for both is a tool error), or for a timer started by an event. Simultaneous mode
+  needs a shared wall clock: two browsers on one machine.
+- **Rotations as rotations.** An SFRotation or MFRotation stream is compared by the angle between the two rotations (the
+  maths of `behaviour_sim._rotation_distance`: `0 1 0 6.17` and `0 -1 0 0.11` are 0.003 rad apart, not 6 apart), the span
+  is the widest angle swept from the first value, and the tolerance (2 % of that span) is in radians; each stream says
+  `tolerance_unit: "rad"`. A stream whose values are nodes (SFNode, MFNode: `addChildren`, a rigid body's `set_contacts`)
+  has nothing to compare: it is listed under `skipped` with the reason, from the catalogue's field type, or, for a node type
+  the catalogue does not have, from the values ("Shape { }").
+
+Tests (`tests/test_behaviour_pair_judge.py`): pure ones for a blind floor never giving "same" (nor "differs"), the blind
+limit, equal rotations spelled two ways, and node values; browser ones (skipped with a reason when Chromium, Node or X_ITE
+is missing) for `loop-20s.x3d` against itself watched 4 s (not blind, same) and against a copy with a changed keyValue
+(differs), the same sequentially (blind), `loops-3-5-7.x3d` against itself (same on all three streams), and
+`turntable.x3d` with key 3.14159265 against a copy with 3.141593 (differs by about 3.1 rad).
 
 **A turn written as 0, pi, 2 pi (26 Nov 2026).** `probe-turn.x3d`, recorded on X_ITE 16.8.1 (load average 5.4 to 6.2): an
 OrientationInterpolator with key `0 0.5 1` and keyValue about y of 0, 3.14159265, 6.28318531 (a hair under pi and 2 pi)
@@ -441,12 +454,143 @@ it, and Stop puts it back; the click preset binds the scene camera, and the prox
 moves inside the radius. Not checked: a window (the header and sidebar buttons were not looked at on a real screen), a
 browser (X_ITE was not run on the converted file), Blender 4.5 to 5.2.
 
+## Scene targets beyond Transform (26 Nov 2026)
+
+Of 160 real scenes, 17 were left out of a search experiment because a ROUTE ends at a node type the graph did not treat as
+a target. This section adds them one at a time. A target is a catalogue type (the field names, types and access come from
+X3DUOM 4.0, `tools/behaviour_catalogue_gen.py`), a binding kind that says what Blender holds for it, a way the simulator
+delivers to it (every target is delivered to the same way: the value is kept in `values()` and sent on from the field's
+`*_changed`), and a rule for what `Player` does with it.
+
+### HAnimJoint, HAnimSite, HAnimSegment
+
+Catalogue: HAnimJoint was already a target type; HAnimSegment and HAnimSite are added (34 target types; ComposedShader makes 35, below). Fields come from
+X3DUOM 4.0: a joint and a site have `translation`, `rotation`, `scale`, `center` (SFVec3f, SFRotation, SFVec3f, SFVec3f,
+inputOutput), a segment has `centerOfMass` (SFVec3f), `mass` (SFFloat), `momentsOfInertia` (MFFloat) and no placement field at
+all. **A ROUTE to `HAnimSegment.rotation` is refused as `unknown-field`**, because X3D 4.0 gives a segment no such field;
+the one wild scene whose ROUTE ends there is therefore not a legal graph, and the graph does not pretend otherwise (a
+test pins that). Binding kinds: `joint` (a bone, named by the joint's `name` attribute, else its DEF) and `site` (an
+object found by DEF; also used for a segment, which has nothing to place). The importer keeps the binding even where
+Blender has nothing to show, so the ROUTEs are kept (before: the whole HAnimHumanoid was carried as XML, or the ROUTEs
+were dropped).
+
+What `Player` applies. *HAnimJoint*: `rotation`, `translation`, `scale` and `center` turn the pose bone found by name among
+the scene's armatures (it must be in exactly one; zero or two are listed under Not shown with the reason, never
+guessed). The pose is the importer's own formula for a joint's keys, J = T(translation) T(center) R S T(-center) in the
+armature's space and basis = rest^-1 J rest; `center` starts as the bone's head (the importer made the head from the
+joint's center). Stop gives back the pose bone's rotation mode, location, rotations and scale. *HAnimSite*:
+`translation`, `rotation`, `scale` and `visible` move an object whose name is the DEF or that carries `x3d_def` equal to
+it; the importer makes no object for a site, so with an imported file this is listed as not shown. *HAnimSegment*: every
+field is listed as not shown (a segment has no placement; the importer makes nothing for it). Not applied for any of the
+three: `visible` of a joint, `scaleOrientation`, `limitOrientation`, `llimit`, `ulimit`, `stiffness`, `displacers`, skin
+weights, `mass`, `centerOfMass`. Exporting from Blender still drops a ROUTE to a joint (the exporter writes its own joint
+DEFs; the diagnostic says "not in the exported file"): only the graph's own `weave`, which writes into a document that
+already holds the joint, keeps it. The node tree shows the binding as a text field (`x3d_bone`) because a bone is no object.
+
+Judged on X_ITE 16.8.1 (headless Chromium 157, software GL, load average 2.5 to 4.5 during the runs):
+`tests/behaviour/probe-hanim.x3d` drives a joint's rotation, translation, scale and center, a site's rotation and
+translation and a segment's centerOfMass and mass from interpolators, and echoes six of them through their `*_changed`.
+`tools/behaviour_sim_judge.py` finds the simulator agreeing with X_ITE's recorded events at all 16 streams (and the trace
+is a test). The pair judge (`tools/behaviour_pair_judge.py`, 3 repeats, the same click) compares that world, with the
+segment left out, against a copy where each joint and site is a Transform of the same DEF: verdict **same** at all 12
+watched streams (joint and site fields behave as a Transform's in X_ITE); the same copy with the swing's keyValue
+changed from 1 to 2 radians: **differs**, at exactly the two streams that carry it (`hanim_root.rotation` and the
+Transform it echoes into), **same** at the other ten. The judge cannot compare a segment against a Transform (it has no
+such field); the segment is covered by the trace.
+
+Tests: `tests/test_behaviour_graph.py` `HAnimTargetTests` (6), `tests/test_behaviour_sim.py` (the trace, the values, and
+a PlaneSensor press that misses its plane, see the fuzz note), `tests/test_behaviour_play_bpy.py` `HAnimPlayTests` (6,
+bpy 5.3.0: the bone moves and equals the importer's keyed pose at a key, stop restores, not-shown reasons, a site found
+by `x3d_def`, no bone or two, the node tree keeps the binding). Fuzz after the catalogue grew to 34 targets
+(`tools/behaviour_fuzz.py`, Python 3.13.18): `--count 2000 --seed 1` 0 failed (49 854 calls, 6 983 events at targets),
+`--hostile` 0 failed (59 336 calls, 1 123 non-finite and 1 467 wrong shapes dropped, 624 isolated faults), `--blender
+--count 100 --seed 1` 0 failed; seeds 2 and 3 both ways 0 failed. The first hostile run found one failure the new graph
+mix reached (seed 1, graph 246): a PlaneSensor pressed by a ray that never meets its plane left no start point and the
+next drag raised `AttributeError` out of `Simulation`; `plane_press` now clears the start point and `plane_drag` sends
+nothing until a press has one. Not checked: a real Blender window; a humanoid with several armatures sharing bone names
+beyond the two-armature case; a joint whose center is not in the armature's space (the importer's own assumption);
+Blender's exporter for joint ROUTEs.
+
+### Switch.whichChoice
+
+`whichChoice` (SFInt32, inputOutput) was in the catalogue; the binding kind is now `switch`, named by the Switch's DEF. The
+simulator delivers an index as it comes (an index past the last child and -1 are delivered, not clamped: X_ITE does the
+same) and keeps it in `values()`.
+
+What `Player` applies. The importer now tags every object it makes under a DEF'd Switch with `x3d_switch`, "DEF:branch:
+whichChoice-in-the-file" for each Switch above it (`import_x3d.switch_branches`; the only change to the importer: a custom
+property, nothing else reads it). When `whichChoice` arrives, each tagged object is shown when every Switch above it chooses
+its branch (a Switch that has not yet received an event counts as the file's own choice) and hidden otherwise, one object at
+a time (the objects under it have their own tags); `stop()` gives back each object's viewport, render and eye state. A Switch
+with no tagged object (a scripted graph naming a Switch the importer did not see) is listed "Switch.whichChoice (no object
+under Switch 'X')". Not applied: a Switch's `visible`; children that are not objects (a light group, a Script); a Switch
+under an Inline or a USE'd Switch's second instance (one object per instance is tagged only when the importer made it);
+showing a branch also overrides a `visible="false"` the importer applied to the same object. Import binds a Switch only when
+some object carries its tag; otherwise it is carried whole as before. Blender's exporter writes no Switch, so a ROUTE to one
+is dropped on export ("not in the exported file").
+
+Judged on X_ITE 16.8.1 (load average 0.4 to 5.8, another agent's browser tests ran at the same time): `probe-switch.x3d`
+(an IntegerSequencer 2, 1, -1, 5 into a Switch and the Switch echoed into a second one): the simulator agrees at all 3
+streams. Pair judge (3 repeats, one click): the file against a copy with only its title changed, **same** at both
+`whichChoice` streams; against a copy with the keyValue 2 1 -1 5 changed to 2 0 -1 5, **differs** at both. The judge
+watches the field's events; it does not look at which child X_ITE draws. Tests: `SwitchTargetTests` (3) in
+`tests/test_behaviour_graph.py`, two in `tests/test_behaviour_sim.py`, `SwitchPlayTests` (3, bpy 5.3.0: the importer's tags,
+one branch shown and then none, nothing found is listed) in `tests/test_behaviour_play_bpy.py`. Fuzz (Python 3.13.18,
+bpy 5.3.0): 2000 normal and 2000 hostile graphs of seed 1, and 100 Blender graphs, 0 failed, the same counts as above (the
+generated graphs are unchanged: Switch was already a target type). One pinned value changed on purpose: the digest of the node tree built from `probe.x3d` in `tests/test_behaviour_perf.py` (its
+Switch `Pick` was a carried node and is now a target node). Not checked: nested Switches (the code takes every Switch above an object into account; no
+test builds one), a Switch inside an Inline, X_ITE drawing.
+
+### ComposedShader user-defined fields
+
+A ComposedShader's own fields, the ones its `<field name type accessType value>` children declare, are targets (and sources, for
+the output ones). `ComposedShader` joins the catalogue's target types (35 now; its own fields are `activate`, `isSelected`,
+`isValid`, `language`, `parts`, `field`) and has the binding kind `shader`, a name only. The graph reads the declarations
+from the file inside the target's own node and nowhere else: a `Node` has `declared`, a tuple of `(name, type, access)`;
+`resolve_field(type, name, direction, declared)` tries the catalogue's rows and then these, so `x`, `set_x` and `x_changed`
+spell a declared inputOutput field as they spell any other; `node_rows(node)` is the node's whole table. There is no PROTO
+handling and no declaration is read from anywhere but a ComposedShader's `<field>` children. A declaration that cannot be a
+field (an illegal name, a type that is not one of the 40 field types, an unknown access type, a name the node has or has
+already declared) is left out of the graph and named in `diagnostics`; the same checks refuse a script's
+`target("ComposedShader", "Glow", declared=[...])` with `bad-declaration`. A ROUTE is then checked against the declaration:
+a float into a declared `SFColor` is `type-mismatch`; into an outputOnly or initializeOnly field it is `wrong-direction`.
+The declarations survive `to_json` / `from_json` (an `x3d_declared` property of the node in the node tree: one "name type
+access" per line, with a socket for each).
+
+What `Player` applies: nothing. The simulator delivers and echoes, `values()` holds the last value of each field, and Play
+lists each such field under Not shown as `ComposedShader.<field> (a shader's fields are not set in Blender)`. Blender's
+exporter writes no ComposedShader, so a ROUTE to one is dropped on export with the usual "not in the exported file" line. The
+importer keeps these ROUTEs (before: the whole top-level node that held the Appearance was carried as XML, duplicating the
+geometry). A `ShaderPart`, PackagedShader and ProgramShader are not targets.
+
+Judged on X_ITE 16.8.1 (headless Chromium 157, software GL; load average 0.5 to 4.7 during the runs): the judge can watch
+these fields, inputOutput and inputOnly alike. `tests/behaviour/probe-shader.x3d` has a shader (with vertex and fragment
+parts) whose `uTime` (SFFloat), `uTint` (SFColor), `uSteps` (SFInt32), `uFlag` (SFBool) and `uOffset` (SFVec3f) are fed by an
+interpolator or sequencer each and echoed from `*_changed`, and an inputOnly `uScale` (SFVec2f); X_ITE loads it with no page
+error and the simulator agrees at all 12 streams recorded (the inputOnly field has no output, so the trace cannot hold it).
+The pair judge (3 repeats, one click) finds a copy with only its title changed **same** at all 9 watched streams (the six
+shader fields, among them the inputOnly `uScale`, and three they echo into), and a copy with `uTime`'s key value 7.5 changed
+to 3 **differs** at `Glow.uTime` and **same** at the other eight. The GLSL in the probe was never inspected for what it
+draws: nothing here looks at the picture.
+
+Tests: `ShaderTargetTests` (9) in `tests/test_behaviour_graph.py`, three in `tests/test_behaviour_sim.py` (the trace, the
+values and the declared types, a wrong shape dropped), `ShaderPlayTests` (3, bpy 5.3.0: import keeps the shader, its six
+declarations and all 18 ROUTEs, the node tree has the sockets and survives apply and read, Play simulates and lists). The fuzz
+(`tools/behaviour_fuzz.py`) now gives every ComposedShader of a graph 1 to 5 declared fields of random type and access (110
+shaders in the 2000 normal graphs of seed 1, 37 ROUTEs into declared fields and 33 out of them), writes the declarations into
+the document of its round-trip check, and types a ROUTE from the declaration. Python 3.13.18, bpy 5.3.0: seeds 1, 2 and 3,
+2000 normal and 2000 hostile graphs each, 0 failed (seed 1: 49 713 calls and 7 000 events at targets normal, 58 923 calls
+hostile with 1 424 wrong shapes and 1 077 non-finite values dropped and 549 isolated faults); `--blender --count 100 --seed
+1` 0 failed. The two normal graphs of seeds 2 and 3 that drop a non-finite value (3 and 1 values) do so on the code before this
+change as well. Not checked: a shader with a `ProtoInstance` field, a field type X_ITE does not accept (`SFNode`, rejected
+here), what Blender's exporter would write for a shader, the GLSL.
+
 ## Hardening (26 Nov 2026)
 
 `tools/behaviour_fuzz.py` throws random graphs at the graph, the simulator and the X3D round trip, deterministic from
 `--seed` (graph k of a run comes from `random.Random(seed * 1000003 + k)`); `--blender` adds the node tree and the Player.
 
-**What is generated.** Graph k holds node type k mod 45 and target type k mod 32 of the catalogue (so every behaviour and
+**What is generated.** Graph k holds node type k mod 45 and target type k mod 35 of the catalogue (so every behaviour and
 every target type is in every 45 graphs), plus up to six more nodes, up to four more targets, 2 to 14 ROUTEs and 8 to 50
 calls (`start`, `step`, `click`, `press`, `drag`, `release`, `hover`, `send`, `post`, `viewer`) on random nodes. Normal
 graphs: values of the right type, finite, keys increasing with one `keyValue` each, type-correct ROUTEs (also spelled
@@ -558,7 +702,7 @@ simulation, fan 5000, mixed 5000, chains between 1000 and 5000; the player, fan 
 
 Looked at on a real screen by a script (see below) and by the owner for `door.x3d` only; nobody has judged the look by
 eye on the other four worlds, at other UI scales, or in Blender 4.5 to 5.2 with a window. The player uses the Forward and Up axes set under Play in the X3D sidebar tab (default -Z and Y, the export dialog's defaults; the first Play takes the axes the export dialog was last used with in this Blender session); it does not follow a later change to the dialog, so set them to match your export. Of the sensors that need the viewer, only ProximitySensor is simulated, with one 3D view as the viewer (VisibilitySensor is not). XML encoding only on import. Scripts and PROTOs are carried as XML, not edited or
-played. Targets are Transform, Viewpoint, lights and materials. Names survive only for what the graph touches. The
+played. Targets are Transform, Viewpoint, lights, materials, Text, Switch, HAnimJoint, HAnimSite, HAnimSegment and a ComposedShader's declared fields (see Scene targets beyond Transform). Names survive only for what the graph touches. The
 importer's loss report (`scene["x3d_import_losses"]`) leaves out ROUTEs the node tree holds when "Behaviour as node graph" is on, and so do the "X3D import loss" log lines and `X3D_IMPORT_STRICT=1`: the importer holds its ROUTE losses back until the graph is built, then reports only those the graph could not keep. Losses that are not ROUTEs (event nodes, timers, sensor fields) are reported at once, as with the option off.
 
 ### Building the node tree

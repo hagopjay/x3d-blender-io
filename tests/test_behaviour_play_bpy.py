@@ -254,6 +254,231 @@ class PlayTests(_Base):
         player.stop()
 
 
+class HAnimPlayTests(_Base):
+    """HAnimJoint, HAnimSite and HAnimSegment as targets (tests/behaviour/probe-hanim.x3d): the importer makes a bone for each
+    joint and no object for a site or a segment."""
+
+    def import_world(self, graph=True):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        bpy.ops.import_scene.x3d(filepath=str(WORLDS / "probe-hanim.x3d"), use_behaviour_graph=graph)
+        return bpy.context.scene
+
+    def poses(self, scene):
+        armature = scene.objects["Body"]
+        return {pb.name: (pb.rotation_mode, tuple(round(v, 5) for v in pb.location),
+                          tuple(round(v, 5) for v in pb.rotation_quaternion), tuple(round(v, 5) for v in pb.scale))
+                for pb in armature.pose.bones}
+
+    def test_the_importer_binds_a_joint_to_the_bone_it_named_after_the_joint(self):
+        scene = self.import_world()
+        graph = self.bn.read(scene)
+        self.assertEqual(graph.nodes["hanim_root"].binding, ("joint", "root"))       # name="root", not the DEF
+        self.assertEqual(graph.nodes["hanim_spine"].binding, ("joint", "spine"))
+        self.assertEqual(graph.nodes["hanim_tip"].binding, ("site", "hanim_tip"))
+        self.assertEqual(graph.nodes["hanim_spine_seg"].binding, ("site", "hanim_spine_seg"))
+        self.assertEqual(len(graph.routes), 24)                        # and no ROUTE was lost to carrying a Humanoid whole
+        self.assertEqual([n.id for n in graph.nodes.values() if n.role == "carried"], [])
+
+    def test_a_joint_turns_its_bone_as_the_importer_turns_it_from_keys_and_stop_puts_it_back(self):
+        scene = self.import_world()
+        rest = self.poses(scene)
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.5)                       # half way through the 3 s cycle: the swing's middle key, 1 radian
+        self.assertAlmostEqual(player.sim.values[("hanim_root", "rotation")][3], 1.0, places=9)
+        applied = self.poses(scene)
+        self.assertNotEqual(applied["root"], rest["root"])
+        self.assertNotEqual(applied["spine"], rest["spine"])                  # translation, scale and center
+        # the importer keys the same joint from the same interpolator (no graph); at a key the two agree (between keys it
+        # blends quaternion components, the Player turns by the angle)
+        baked = self.import_world(graph=False)
+        baked.frame_set(baked.frame_start + round(1.5 * baked.render.fps / baked.render.fps_base))
+        self.assertEqual(tuple(round(v, 3) for v in self.poses(baked)["root"][2]), tuple(round(v, 3) for v in applied["root"][2]))
+        scene = self.import_world()
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.2)
+        player.stop()
+        self.assertEqual(self.poses(scene), rest)
+
+    def test_what_is_not_shown_is_listed_with_why(self):
+        scene = self.import_world()
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.0)
+        self.assertEqual(player.not_applied, [
+            "HAnimSite.translation (no object 'hanim_tip')", "HAnimSite.rotation (no object 'hanim_tip')",
+            "HAnimSegment.centerOfMass (a segment has no placement)", "HAnimSegment.mass (a segment has no placement)",
+            "Transform.center"])
+        player.stop()
+
+    def test_a_site_is_moved_where_some_object_carries_its_def(self):
+        scene = self.import_world()
+        marker = bpy.data.objects.new("Marker", None)
+        scene.collection.objects.link(marker)
+        marker["x3d_def"] = "hanim_tip"
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(3.5)
+        self.assertEqual(self.as_exported(marker), (0.0, 0.5, 0.25))            # Slide's last value, in the file's axes
+        self.assertNotIn("HAnimSite.translation", " ".join(player.not_applied))
+        player.stop()
+        self.assertEqual(tuple(marker.location), (0.0, 0.0, 0.0))
+
+    def test_a_joint_with_no_bone_or_with_two_is_listed_not_guessed(self):
+        scene = self.import_world()
+        graph = self.bn.read(scene)
+        graph.nodes["hanim_root"].binding = ("joint", "no_such_bone")
+        player = self.bp.Player(scene, graph)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.0)
+        self.assertIn("HAnimJoint.rotation (no bone 'no_such_bone')", player.not_applied)
+        player.stop()
+        twin = bpy.data.objects.new("Twin", bpy.data.armatures.new("Twin"))
+        scene.collection.objects.link(twin)
+        bpy.context.view_layer.objects.active = twin
+        bpy.ops.object.mode_set(mode="EDIT")
+        bone = twin.data.edit_bones.new("spine")
+        bone.head, bone.tail = (0, 0, 0), (0, 0.1, 0)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        before = self.poses(scene)
+        player = self.bp.Player(scene, self.bn.read(scene))
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.0)
+        self.assertIn("HAnimJoint.translation (2 armatures have a bone 'spine')", player.not_applied)
+        player.stop()
+        self.assertEqual(self.poses(scene), before)
+
+    def test_the_binding_survives_the_node_tree(self):
+        scene = self.import_world()
+        tree = scene.x3d_behaviour_tree
+        labels = sorted(n.label for n in tree.nodes if n.x3d_role == "target")
+        self.assertIn("HAnimJoint  root", labels)
+        self.assertIn("HAnimSite  hanim_tip", labels)
+        again = self.bn.read(scene)
+        self.assertEqual(again.nodes["hanim_spine"].binding, ("joint", "spine"))
+        self.bn.apply(again, scene)
+        self.assertEqual(self.bn.read(scene).nodes["hanim_spine"].binding, ("joint", "spine"))
+
+
+class SwitchPlayTests(_Base):
+    """Switch.whichChoice as a target (tests/behaviour/probe-switch.x3d): the importer tags each object made under a DEF'd
+    Switch with its branch."""
+
+    def import_world(self):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        bpy.ops.import_scene.x3d(filepath=str(WORLDS / "probe-switch.x3d"), use_behaviour_graph=True)
+        return bpy.context.scene
+
+    def shown(self, scene):
+        bpy.context.view_layer.update()
+        return sorted(name for name in ("Red", "Green", "Blue") if scene.objects[name].visible_get() and not scene.objects[name].hide_render)
+
+    def test_the_importer_tags_each_branch_object_with_its_switch_branch_and_choice(self):
+        scene = self.import_world()
+        self.assertEqual({n: scene.objects[n].get("x3d_switch") for n in ("Red", "Green", "Blue")},
+                         {"Red": "Pick:0:0", "Green": "Pick:1:0", "Blue": "Pick:2:0"})
+        self.assertEqual(scene.objects["Pad"].get("x3d_switch"), None)
+        graph = self.bn.read(scene)
+        self.assertEqual(graph.nodes["Pick"].binding, ("switch", "Pick"))
+        self.assertEqual(graph.nodes["Echo"].binding, ("switch", "Echo"))   # the Echo's one Shape is tagged too ("Echo:0:-1")
+        self.assertEqual(self.bp.SWITCH_PROPERTY, importlib.import_module("io_scene_x3d.import_x3d").SWITCH_BRANCH_PROPERTY)
+
+    def test_a_choice_shows_one_branch_and_stop_puts_the_scene_back(self):
+        scene = self.import_world()
+        self.assertEqual(self.shown(scene), ["Red"])                       # whichChoice="0" in the file
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(0.2)                                                   # Steps sends 2 at fraction 0
+        self.assertEqual(self.shown(scene), ["Blue"])
+        player.step(1.0)                                                   # 1
+        self.assertEqual(self.shown(scene), ["Green"])
+        player.step(2.0)                                                   # -1: none
+        self.assertEqual(self.shown(scene), [])
+        player.step(2.8)                                                   # 5: past the last child, none
+        self.assertEqual(self.shown(scene), [])
+        self.assertNotIn("Switch.whichChoice", " ".join(player.not_applied))
+        player.stop()
+        self.assertEqual(self.shown(scene), ["Red"])
+
+    def test_a_switch_with_no_object_under_it_is_listed_not_guessed(self):
+        scene = self.import_world()
+        bg = importlib.import_module("io_scene_x3d.behaviour_graph")
+        graph = bg.Behaviour()
+        steps = graph.add("IntegerSequencer", "Steps", key=[0, 1], keyValue=[1, 0])
+        graph.add("TimeSensor", "Timer", cycleInterval=2, loop=True).fraction_changed >> steps.set_fraction
+        steps.value_changed >> graph.target("Switch", "Nowhere").whichChoice
+        player = self.bp.Player(scene, graph)
+        player.start(0.0)
+        player.step(0.5)
+        self.assertEqual(player.not_applied, ["Switch.whichChoice (no object under Switch 'Nowhere')"])
+        self.assertEqual(self.shown(scene), ["Red"])
+        player.stop()
+
+
+class ShaderPlayTests(_Base):
+    """A ComposedShader's own fields as targets (tests/behaviour/probe-shader.x3d): kept in the graph and the node tree,
+    simulated, and not applied in Blender."""
+
+    def import_world(self):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        self.bn.ensure_registered()
+        bpy.ops.import_scene.x3d(filepath=str(WORLDS / "probe-shader.x3d"), use_behaviour_graph=True)
+        return bpy.context.scene
+
+    def test_the_importer_keeps_the_shader_and_its_declared_fields_and_every_route(self):
+        scene = self.import_world()
+        graph = self.bn.read(scene)
+        glow = graph.nodes["Glow"]
+        self.assertEqual((glow.role, glow.binding), ("target", ("shader", "Glow")))
+        self.assertEqual([row[:2] for row in glow.declared],
+                         [("uTime", "SFFloat"), ("uTint", "SFColor"), ("uSteps", "SFInt32"), ("uFlag", "SFBool"),
+                          ("uOffset", "SFVec3f"), ("uScale", "SFVec2f")])
+        self.assertEqual(len(graph.routes), 18)
+        self.assertEqual(graph.check(), [])
+        self.assertEqual([n.id for n in graph.nodes.values() if n.role == "carried"], [])
+
+    def test_the_node_tree_has_a_socket_for_each_declared_field_and_survives_apply_and_read(self):
+        scene = self.import_world()
+        node = next(n for n in scene.x3d_behaviour_tree.nodes if n.name == "Glow")
+        self.assertEqual(node.label, "ComposedShader  Glow")
+        self.assertIn("uTime", node.inputs)
+        self.assertIn("uTime", node.outputs)                  # inputOutput: both
+        self.assertIn("uScale", node.inputs)
+        self.assertNotIn("uScale", node.outputs)              # inputOnly
+        self.assertEqual(node.inputs["uOffset"].bl_idname, "X3DSocketSFVec3f")
+        graph = self.bn.read(scene)
+        self.bn.apply(graph, scene)
+        again = self.bn.read(scene)
+        self.assertEqual(again.nodes["Glow"].declared, graph.nodes["Glow"].declared)
+        self.assertEqual(len(again.routes), 18)
+        self.assertEqual(self.bg_module().difference(graph, again)["routes_lost"], [])
+
+    def bg_module(self):
+        return importlib.import_module("io_scene_x3d.behaviour_graph")
+
+    def test_play_runs_the_fields_and_says_it_does_not_show_them(self):
+        scene = self.import_world()
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Pad"], 0.0, held=0.0)
+        player.step(1.5)
+        self.assertEqual(player.sim.values[("Glow", "uTime")], 3.75)                  # half of 7.5
+        self.assertEqual(player.not_applied, [f"ComposedShader.{field} (a shader's fields are not set in Blender)"
+                                              for field in ("uTime", "uTint", "uSteps", "uFlag", "uOffset", "uScale")])
+        self.assertEqual(player.sim.not_simulated, [])
+        player.stop()
+
+
 class FieldEditorTests(_Base):
 
     def test_a_typed_widget_reads_and_writes_the_x3d_text(self):

@@ -36,6 +36,7 @@ from . import behaviour_nodes
 from . import behaviour_presets
 from .behaviour_sim import POINTING, Simulation
 
+SWITCH_PROPERTY = "x3d_switch"     # set by the importer on an object under a DEF'd Switch (import_x3d.SWITCH_BRANCH_PROPERTY)
 EXPORT_AXES = axis_conversion(to_forward='-Z', to_up='Y').to_4x4()      # the export dialog's default: -Z forward, Y up
 
 # The export dialog's "Forward" and "Up" choices (same identifiers and names as the export operator's).
@@ -175,6 +176,36 @@ class _TransformState:
         obj.location, obj.rotation_euler, obj.rotation_quaternion, obj.rotation_axis_angle, obj.scale = self.properties
 
 
+class _JointState:
+    """One bone as the X3D HAnimJoint the importer made it from: the pose is J = T(translation) T(center) R S T(-center) in
+    the armature's space, and the pose bone's basis is rest^-1 J rest (the importer's own formula for a joint's keys)."""
+
+    def __init__(self, armature, bone_name):
+        self.armature, self.bone_name = armature, bone_name
+        bone = armature.data.bones[bone_name]
+        pose = armature.pose.bones[bone_name]
+        self.rest = bone.matrix_local.copy()
+        self.saved = (pose.rotation_mode, pose.location.copy(), pose.rotation_quaternion.copy(), pose.rotation_euler.copy(),
+                      tuple(pose.rotation_axis_angle), pose.scale.copy())
+        self.translation, self.rotation, self.scale = Vector(), Quaternion(), Vector((1.0, 1.0, 1.0))
+        self.center = Vector(bone.head_local)        # the importer made the bone's head from the joint's center
+
+    def write(self):
+        pose = self.armature.pose.bones[self.bone_name]
+        joint = Matrix.Translation(self.translation) @ Matrix.Translation(self.center) @ \
+            Matrix.LocRotScale(Vector(), self.rotation, self.scale) @ Matrix.Translation(-self.center)
+        location, rotation, scale = (self.rest.inverted() @ joint @ self.rest).decompose()
+        pose.rotation_mode = "QUATERNION"
+        pose.location, pose.rotation_quaternion, pose.scale = location, rotation, scale
+
+    def restore(self):
+        pose = self.armature.pose.bones[self.bone_name]
+        mode, location, quaternion, euler, axis_angle, scale = self.saved
+        pose.rotation_mode = mode
+        pose.location, pose.rotation_quaternion, pose.rotation_euler, pose.scale = location, quaternion, euler, scale
+        pose.rotation_axis_angle = axis_angle
+
+
 class Player:
     """A scene's behaviour graph, running on the scene's own objects."""
 
@@ -191,6 +222,8 @@ class Player:
         self.not_applied = []          # "Type.field" an event reached but the player does not show
         self.now = 0.0
         self._transforms, self._hidden, self._materials, self._lights, self._camera = {}, {}, {}, {}, scene.camera
+        self._switches, self._choices = {}, {}    # Switch DEF -> [(object, tags)]; Switch DEF -> the whichChoice it was last given
+        self._joints, self._unfound = {}, {}      # bone name -> _JointState; name -> why a joint or a site was not found
         self._over, self._held, self._plane = [], [], {}
         self._sensors = {}             # Blender object name (None: the scene root) -> [sensor id, ...]
         for node in self.graph.nodes.values():
@@ -377,10 +410,41 @@ class Player:
     def _apply(self, changes):
         if self.activity is not None:
             self.activity.feed_log(self.sim.log, self.sim.now)       # what the simulation just delivered
-        touched = {}
+        touched, touched_joints = {}, {}
         for node_id, field_name, value in changes:
             node = self.graph.nodes[node_id]
             kind, name = node.binding or (None, None)
+            if kind == "joint":
+                state = self._joint(node, name)
+                if state is None:
+                    self._skip(node, field_name, self._unfound[name])
+                elif field_name == "translation":
+                    state.translation = Vector(value)
+                elif field_name == "rotation":
+                    axis = Vector(value[:3])
+                    state.rotation = Quaternion(axis.normalized(), value[3]) if axis.length > 0 else Quaternion()
+                elif field_name == "scale":
+                    state.scale = Vector(value)
+                elif field_name == "center":
+                    state.center = Vector(value)
+                else:
+                    self._skip(node, field_name)
+                    continue
+                if state is not None:
+                    touched_joints[name] = state
+                continue
+            if kind == "shader":
+                self._skip(node, field_name, "a shader's fields are not set in Blender")
+                continue
+            if kind == "switch":
+                self._switch(node, name, field_name, value)
+                continue
+            if kind == "site":
+                found = self._site_object(node, name)
+                if found is None:
+                    self._skip(node, field_name, self._unfound.get(name, "no object"))
+                    continue
+                kind, name = "transform", found
             if kind == "transform" or (kind in ("viewpoint", "light") and field_name == "visible"):
                 state = self._transforms.get(name)
                 if state is not None and field_name != "visible" and self._still_there(state, name):
@@ -433,6 +497,80 @@ class Player:
                 self._skip(node, field_name)
         for state in touched.values():
             state.write()
+        for state in touched_joints.values():
+            state.write()
+
+    def _switch(self, node, name, field_name, value):
+        """``whichChoice`` of a Switch: every object the importer made under one of its branches (``x3d_switch`` on the
+        object, "DEF:branch:whichChoice-in-the-file" for each Switch above it) is shown when every Switch above it chooses its
+        branch and hidden when one does not. A Switch nothing was found under, and every other field, is listed."""
+        if field_name != "whichChoice":
+            self._skip(node, field_name)
+            return
+        members = self._switches.get(name)
+        if members is None:
+            members = []
+            for obj in self.scene.objects:
+                try:
+                    tags = [(d, int(b), int(i)) for d, b, i in (e.rsplit(":", 2) for e in str(obj.get(SWITCH_PROPERTY) or "").split())]
+                except ValueError:         # a property someone edited by hand
+                    continue
+                if any(tag[0] == name for tag in tags):
+                    members.append((obj, tags))
+            self._switches[name] = members
+        if not members:
+            self._skip(node, field_name, f"no object under Switch {name!r}")
+            return
+        self._choices[name] = int(value)
+        for obj, tags in members:
+            chosen = all(self._choices.get(def_name, initial) == branch for def_name, branch, initial in tags)
+            try:
+                self._show_one(obj, chosen)
+            except ReferenceError:         # deleted while playing
+                pass
+
+    def _show_one(self, obj, visible):
+        """Show or hide this one object (not what is under it: those objects have their own branches)."""
+        if obj.name not in self._hidden:
+            self._hidden[obj.name] = (obj.hide_viewport, obj.hide_render, self._eye(obj))
+        obj.hide_viewport = obj.hide_render = not visible
+        self._set_eye(obj, not visible)
+
+    def _joint(self, node, name):
+        """The state of the bone an HAnimJoint was made into, or None (``self._unfound[name]`` says why): the bone is found
+        by name among the scene's armatures, and must be in exactly one of them."""
+        state = self._joints.get(name)
+        if state is not None:
+            return state
+        if name in self._unfound:
+            return None
+        for wanted in (name, name[len("hanim_"):] if name.startswith("hanim_") else None):
+            if not wanted:
+                continue
+            armatures = [obj for obj in self.scene.objects if obj.type == "ARMATURE" and wanted in obj.data.bones]
+            if len(armatures) == 1:
+                state = self._joints[name] = _JointState(armatures[0], wanted)
+                return state
+            if len(armatures) > 1:
+                self._unfound[name] = f"{len(armatures)} armatures have a bone {wanted!r}"
+                return None
+        self._unfound[name] = f"no bone {name!r}"
+        return None
+
+    def _site_object(self, node, name):
+        """The name of the object an HAnimSite or HAnimSegment stands for (one called ``name``, or the outermost carrying
+        that DEF), or None. The importer makes no object for either, so this finds one only where something else did."""
+        if node.node_type != "HAnimSite":
+            self._unfound[name] = "a segment has no placement"
+            return None
+        if bpy.data.objects.get(name) is None:
+            found = [obj for obj in self.scene.objects if obj.get("x3d_def") == name]
+            outer = [obj for obj in found if obj.parent is None or obj.parent not in found]
+            if not found:
+                self._unfound[name] = f"no object {name!r}"
+                return None
+            return (outer or found)[0].name
+        return name
 
     @staticmethod
     def _still_there(state, name):
@@ -442,8 +580,8 @@ class Player:
         except ReferenceError:
             return False
 
-    def _skip(self, node, field_name):
-        label = f"{node.node_type}.{field_name}"
+    def _skip(self, node, field_name, why=None):
+        label = f"{node.node_type}.{field_name}" + (f" ({why})" if why else "")
         if label not in self.not_applied:
             self.not_applied.append(label)
 
@@ -650,6 +788,11 @@ class Player:
         """Put every object, material, light and node colour back as it was before ``start``."""
         for state in self._transforms.values():
             state.restore()
+        for state in self._joints.values():
+            try:
+                state.restore()
+            except (ReferenceError, KeyError):       # the armature or the bone was deleted while playing
+                pass
         for name, (viewport, render, eye) in self._hidden.items():
             obj = bpy.data.objects.get(name)
             if obj is not None:
@@ -677,6 +820,8 @@ class Player:
                 item.use_custom_color, item.color = custom, colour
         self.scene.camera = self._camera
         self._transforms, self._hidden, self._materials, self._lights, self._colours = {}, {}, {}, {}, {}
+        self._joints, self._unfound = {}, {}
+        self._switches, self._choices = {}, {}
         self._maps = {}
         self._burst, self._down = {}, {}
 

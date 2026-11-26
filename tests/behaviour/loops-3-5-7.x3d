@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <meta name="title" content="Three free-running loops of 3, 5 and 7 s, each with its own phase"/>
+    <meta name="generator" content="hand written for tests/test_behaviour_pair_judge.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0 12"/>
+    <Transform DEF="Mover3" translation="-3 2 0"><Shape><Appearance><Material diffuseColor="0.8 0.3 0.2"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+    <Transform DEF="Turner5" translation="0 2 0"><Shape><Appearance><Material diffuseColor="0.3 0.8 0.2"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+    <Transform DEF="Grower7" translation="3 2 0"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.8"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+    <TimeSensor DEF="Clock3" cycleInterval="3" loop="true"/>
+    <TimeSensor DEF="Clock5" cycleInterval="5" loop="true"/>
+    <TimeSensor DEF="Clock7" cycleInterval="7" loop="true"/>
+    <PositionInterpolator DEF="Path3" key="0 0.5 1" keyValue="-3 -2 0 -3 2 0 -3 -2 0"/>
+    <OrientationInterpolator DEF="Turn5" key="0 0.25 0.5 0.75 1" keyValue="0 1 0 0, 0 1 0 1.5708, 0 1 0 3.14159, 0 1 0 4.71239, 0 1 0 6.28318"/>
+    <PositionInterpolator DEF="Grow7" key="0 0.5 1" keyValue="1 1 1 2 2 2 1 1 1"/>
+    <ROUTE fromNode="Clock3" fromField="fraction_changed" toNode="Path3" toField="set_fraction"/>
+    <ROUTE fromNode="Clock5" fromField="fraction_changed" toNode="Turn5" toField="set_fraction"/>
+    <ROUTE fromNode="Clock7" fromField="fraction_changed" toNode="Grow7" toField="set_fraction"/>
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Mover3" toField="translation"/>
+    <ROUTE fromNode="Turn5" fromField="value_changed" toNode="Turner5" toField="rotation"/>
+    <ROUTE fromNode="Grow7" fromField="value_changed" toNode="Grower7" toField="scale"/>
+  </Scene>
+</X3D>
