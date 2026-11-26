@@ -197,6 +197,7 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         keywords["global_matrix"] = global_matrix
 
         from .matrix_safety import recursion_headroom
+        actions_before = set(bpy.data.actions)          # the graph may drop what this import bakes, nothing older
         with recursion_headroom():      # the tree is walked by recursion: deep files need the headroom (2.7.3)
             result = import_x3d.load(context, **keywords)
         if 'CANCELLED' in result:
@@ -204,7 +205,8 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
                 self.report({'WARNING'}, message)       # ERROR would raise in a script that calls the operator
             return result
         if self.use_behaviour_graph and 'FINISHED' in result:
-            for message in behaviour_nodes.import_graph(context.scene, self.filepath):
+            made = set(bpy.data.actions) - actions_before
+            for message in behaviour_nodes.import_graph(context.scene, self.filepath, new_actions=made):
                 self.report({'INFO'}, message)
             tree = getattr(context.scene, "x3d_behaviour_tree", None)
             if tree is not None:      # say where the graph went: the import used to end with nothing on screen

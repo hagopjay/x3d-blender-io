@@ -181,6 +181,25 @@ class PlayTests(_Base):
         self.assertEqual({node.name: (node.use_custom_color, tuple(node.color)) for node in tree.nodes}, before)
 
 
+    def test_a_running_timer_settles_to_a_readable_tint(self):
+        # one event flashes; a node that keeps sending (the 3 s timer) drops to GLOW_BUSY after the first 0.35 s
+        scene = self.load("door")
+        tree = scene.x3d_behaviour_tree
+        player = self.bp.Player(scene)
+        player.start(0.0)
+        player.click(scene.objects["Button"], 1.0)
+        player.step(1.15)
+        flash = tree.nodes["Timer"].color[0]
+        for frame in range(1, 31):                                  # 30 frames at 60 Hz: still running at 1.65
+            player.step(1.15 + frame / 60)
+        busy = tree.nodes["Timer"].color[0]
+        grey, orange = 0.19, self.bp.GLOW_COLOUR[0]
+        self.assertAlmostEqual(flash, grey + (orange - grey) * self.bp.GLOW_FLASH, delta=0.05)
+        self.assertAlmostEqual(busy, grey + (orange - grey) * self.bp.GLOW_BUSY, delta=0.05)
+        self.assertFalse(tree.nodes["Click"].use_custom_color)    # sent once at 1.1, faded by 1.65
+        player.stop()
+
+
 class FieldEditorTests(_Base):
 
     def test_a_typed_widget_reads_and_writes_the_x3d_text(self):

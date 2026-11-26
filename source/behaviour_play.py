@@ -38,6 +38,11 @@ def _srgb_to_linear(c):
     return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 
 
+GLOW_COLOUR = (0.95, 0.62, 0.15)   # a node that sends an event is tinted towards this
+GLOW_FLASH = 0.85                  # how far, for an event that starts a run (1: all the way)
+GLOW_BUSY = 0.35                   # how far, while a node keeps sending (a running timer): its text stays readable
+
+
 class _TransformState:
     """One object as the X3D Transform the exporter writes for it."""
 
@@ -78,6 +83,7 @@ class Player:
                 self._sensors.setdefault(node.parent, []).append(node.id)
         self._flash = self._tree_nodes() if flash else {}
         self._colours = {}
+        self._burst = {}             # node id -> when its current run of events began (for the glow)
 
     # -- what can be clicked ------------------------------------------------------------------------------------
 
@@ -280,6 +286,8 @@ class Player:
                                         if getattr(item, "x3d_role", None) is not None}
 
     def _flash_nodes(self, glow=0.35):
+        """Tint the nodes that just sent events. A single event flashes (FLASH) and fades over ``glow`` seconds; a
+        node that keeps sending, like a running timer, settles at BUSY after ``glow`` so its fields stay readable."""
         if not self._flash:
             return
         recent = {}
@@ -293,10 +301,16 @@ class Player:
             if node_id not in self._colours:
                 self._colours[node_id] = (item.use_custom_color, tuple(item.color))
             base = self._colours[node_id][1] if self._colours[node_id][0] else (0.19, 0.19, 0.19)
-            heat = max(0.0, 1 - (self.now - recent[node_id]) / glow) if node_id in recent else 0.0
+            if node_id in recent:
+                began = self._burst.setdefault(node_id, recent[node_id])
+                peak = GLOW_FLASH if self.now - began <= glow else GLOW_BUSY
+                heat = peak * max(0.0, 1 - (self.now - recent[node_id]) / glow)
+            else:
+                heat = 0.0
             item.use_custom_color = True
-            item.color = tuple(b + (h - b) * heat for b, h in zip(base, (0.95, 0.62, 0.15)))
+            item.color = tuple(b + (h - b) * heat for b, h in zip(base, GLOW_COLOUR))
             if heat == 0.0:
+                self._burst.pop(node_id, None)
                 item.use_custom_color, item.color = self._colours.pop(node_id)
 
     # -- the end --------------------------------------------------------------------------------------------------
@@ -331,6 +345,7 @@ class Player:
                 item.use_custom_color, item.color = custom, colour
         self.scene.camera = self._camera
         self._transforms, self._hidden, self._materials, self._lights, self._colours = {}, {}, {}, {}, {}
+        self._burst = {}
 
 
 # ---------------------------------------------------------------------------------------------------------------
