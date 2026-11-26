@@ -6,7 +6,7 @@ bl_info = {
     "name": "X3D Blender I/O",
     "description": "Import-Export X3D, Import VRML2",
     "author": "HagopJay; upstream maintainer: Bujus_Krachus",
-    "version": (2, 7, 7),
+    "version": (2, 7, 8),
     "blender": (4, 2, 0),
     "location": "",
     "warning": "",
