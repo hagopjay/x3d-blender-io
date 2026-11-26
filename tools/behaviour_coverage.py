@@ -85,6 +85,7 @@ PLAYED = frozenset({
     "ScalarDamper", "PositionDamper", "PositionDamper2D", "ColorDamper", "OrientationDamper",
     "ScalarChaser", "PositionChaser", "PositionChaser2D", "ColorChaser", "OrientationChaser",
     "TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor", "ProximitySensor", "KeySensor", "StringSensor",
+    "CoordinateChaser", "CoordinateDamper", "TexCoordChaser2D", "TexCoordDamper2D",   # points are listed as "Not shown"
     "Script", "CollisionSensor",     # hosted: the Player runs a handler the person enabled, and reads the rigid body world
 })
 NOT_PLAYED = frozenset({"VisibilitySensor"})    # simulated, but the Player has no way to say what the viewer can see
