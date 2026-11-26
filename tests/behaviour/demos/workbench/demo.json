@@ -1,0 +1,9 @@
+{
+ "title": "Workbench: drag a fader, turn a dial, spin a globe",
+ "streams": 12,
+ "clicks": 0,
+ "seconds": 4,
+ "drags": "drags.json",
+ "keys": null,
+ "judges": ["PlaneSensor", "ColorChaser"]
+}

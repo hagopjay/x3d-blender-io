@@ -15,8 +15,10 @@ translation, a material's colour) is reported back.
         ...
 
 What it runs: TimeSensor, the linear interpolators (scalar, position, 2D position, colour in HSV, orientation by slerp),
-EaseInEaseOut, the Spline interpolators (scalar, position, 2D position), SquadOrientationInterpolator, CylinderSensor and
-SphereSensor drags (from the pointer's ray and the viewer, X_ITE's rules), the sequencers, the four event utilities and triggers, the dampers and the chasers. Pointing sensors do not sense by
+EaseInEaseOut, the Spline interpolators (scalar, position, 2D position), SquadOrientationInterpolator, PlaneSensor,
+CylinderSensor and SphereSensor drags (from the pointer's ray and the viewer, X_ITE's rules), the sequencers, the four event
+utilities and triggers, the dampers and the chasers (the colour and orientation chasers buffer by buffer as X_ITE's do; the
+scalar and position chasers sum eased jumps). Pointing sensors do not sense by
 themselves here; the caller says what the pointer did (``hover``, ``press``, ``release``, ``drag``). Whatever is not run
 is named in ``Simulation.not_simulated``, never silently skipped.
 
@@ -706,46 +708,163 @@ class _Chaser(_Machine):
             self.emit("isActive", False)
 
 
-class _OrientationChaser(_Machine):
-    """One ramp at a time: slerp from where it was when the destination last changed."""
+def _rgb_to_hsv(rgb):
+    """X_ITE's Color3.getHSV: hue in radians on [0, 2 pi), and a grey has no hue and no saturation."""
+    r, g, b = rgb
+    top, bottom = max(rgb), min(rgb)
+    delta = top - bottom
+    if top == 0 or delta == 0:
+        return (0.0, 0.0, top)
+    hue = (g - b) / delta if r == top else 2 + (b - r) / delta if g == top else 4 + (r - g) / delta
+    hue *= math.pi / 3
+    return (hue + 2 * math.pi if hue < 0 else hue, delta / top, top)
+
+
+def _hsv_to_rgb(hsv):
+    """X_ITE's Color3.setHSV."""
+    h, s, v = hsv
+    s, v = max(s, 0.0), max(v, 0.0)
+    if s == 0:
+        return (v, v, v)
+    w = math.degrees(_interval(h, 0, 2 * math.pi)) / 60
+    sector = math.floor(w)
+    f = w - sector
+    p, q, t = v * (1 - s), v * (1 - s * f), v * (1 - s * (1 - f))
+    return ((v, t, p), (q, v, p), (p, v, t), (p, q, v), (t, p, v), (v, p, q))[int(sector) % 6]
+
+
+def _hsv_lerp(a, b, t):
+    """X_ITE's Color3.lerp on two HSV colours (hue in radians, the short way round the circle)."""
+    (ha, sa, va), (hb, sb, vb) = a, b
+    if sa == 0:
+        ha = hb
+    if sb == 0:
+        hb = ha
+    value, saturation = va + t * (vb - va), sa + t * (sb - sa)
+    if abs(hb - ha) <= math.pi:
+        return (ha + t * (hb - ha), saturation, value)
+    step = (2 * math.pi - abs(hb - ha)) * t
+    h = ha - step if ha < hb else ha + step
+    h = h + 2 * math.pi if h < 0 else h - 2 * math.pi if h > 2 * math.pi else h
+    return (h, saturation, value)
+
+
+class _BufferChaser(_Machine):
+    """X_ITE's chaser, buffer for buffer (X3DChaserNode.js; the scheme of the standard's Followers component). The destination is
+    sampled into 60 slots, ``duration / 60`` apart; every frame the slots shift by the whole steps that have passed
+    (the newest ones are blended from the destination back to the last sample, so a destination that moved between two
+    frames is spread over the gap) and the output is the previous value plus every step between neighbouring slots,
+    each answered with the eased ramp for its age. A kind of chaser says how its values blend and add up."""
     ticks = True
+    SLOTS, TOLERANCE = 60, 1e-8
 
     def setup(self):
-        self.destination = self.origin = self.value = None
-        self.destination, self.value = self.f["initialDestination"], self.f["initialValue"]
-        self.origin, self.began, self.active = self.value, 0.0, False
+        self.destination = self.lift(self.f["initialDestination"])
+        self.previous = self.lift(self.f["initialValue"])
+        self.buffer = [self.destination] + [self.lift(self.f["initialValue"])] * (self.SLOTS - 1)
+        self.step_time = self.f["duration"] / self.SLOTS
+        self.buffer_end, self.active = 0.0, False
 
     def start(self, now):
-        if _rotation_distance(self.destination, self.value) > 1e-6:
-            self.began, self.active = now, True
-            self.emit("isActive", True)
+        self.buffer_end = now
+        if self.close(self.destination, self.previous):
+            self.emit("value_changed", self.lower(self.destination))
+        else:
+            self._activate(True)
+
+    def _activate(self, on):
+        if on != self.active:
+            self.active = on
+            self.emit("isActive", on)
 
     def receive(self, name, value, now):
-        if name in ("set_destination", "set_value"):
-            if name == "set_value":
-                self.value = value
-                self.emit("value_changed", value)
-            elif _rotation_distance(value, self.destination) < 1e-9:
-                return
-            else:
-                self.destination = value
-            self.origin, self.began = self.value, now
+        if name == "set_destination":
+            self.destination = self.lift(value)
+        elif name == "set_value":
             if not self.active:
-                self.active = True
-                self.emit("isActive", True)
+                self.buffer_end = now
+            self.buffer = [self.lift(value)] * self.SLOTS
+            self.previous = self.lift(value)
+            self.emit("value_changed", value)
         else:
-            super().receive(name, value, now)
+            return super().receive(name, value, now)
+        if not self.active:
+            self.buffer_end = now
+        self._activate(True)
+
+    def ramp(self, age):
+        duration = self.f["duration"]
+        return 0.0 if age <= 0 else 1.0 if age >= duration else 0.5 - 0.5 * math.cos(age / duration * math.pi)
+
+    def _shift(self, now):
+        """X_ITE's updateBuffer: the slots move on by the steps that have passed; what is left of a step is returned."""
+        slots, fraction = self.SLOTS, (now - self.buffer_end) / self.step_time
+        if fraction >= 1:
+            steps = math.floor(fraction)
+            fraction -= steps
+            if steps < slots:
+                self.previous = self.buffer[slots - steps]
+                for i in range(slots - 1, steps - 1, -1):
+                    self.buffer[i] = self.buffer[i - steps]
+                for i in range(steps):
+                    self.buffer[i] = self.blend(self.destination, self.buffer[steps], i / steps)
+            else:
+                self.previous = self.buffer[0] if steps == slots else self.destination
+                self.buffer = [self.destination] * slots
+            self.buffer_end += steps * self.step_time
+        return fraction
 
     def tick(self, now, dt):
         if not self.active:
             return
-        duration = self.f["duration"]
-        t = min(1.0, (now - self.began) / duration) if duration > 0 else 1.0
-        self.value = slerp(self.origin, self.destination, _ease(t))
-        self.emit("value_changed", self.value)
-        if t >= 1.0:
-            self.active = False
-            self.emit("isActive", False)
+        slots = self.SLOTS
+        fraction = self._shift(now)
+        output = self.blend(self.previous, self.buffer[slots - 1], self.ramp((slots - 1 + fraction) * self.step_time))
+        for i in range(slots - 2, -1, -1):
+            output = self.add(output, self.buffer[i], self.buffer[i + 1], self.ramp((i + fraction) * self.step_time))
+        self.emit("value_changed", self.lower(output))
+        if self.close(output, self.destination):
+            self._activate(False)
+
+
+class _ColorChaser(_BufferChaser):
+    """A ColorChaser follows in HSV, hue in radians, as X_ITE does."""
+    lift, lower, blend = staticmethod(_rgb_to_hsv), staticmethod(_hsv_to_rgb), staticmethod(_hsv_lerp)
+
+    @staticmethod
+    def add(output, value1, value2, t):
+        return _hsv_lerp(output, tuple(o + a - b for o, a, b in zip(output, value1, value2)), t)
+
+    @classmethod
+    def close(cls, a, b):
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b))) < cls.TOLERANCE
+
+
+class _OrientationChaser(_BufferChaser):
+    """An OrientationChaser follows with quaternions: slerp for the blend, rotation steps composed as X_ITE does."""
+
+    @staticmethod
+    def lift(rotation):
+        return _Rot.axis_angle(*rotation).q
+
+    @staticmethod
+    def lower(q):
+        return _Rot(q).value()
+
+    @staticmethod
+    def blend(source, destination, t):
+        return _q_slerp(source, destination, t)
+
+    @staticmethod
+    def add(output, value1, value2, t):
+        conjugate = (-value2[0], -value2[1], -value2[2], value2[3])
+        step = _q_normalize(_q_mul(_q_normalize(_q_mul(value1, conjugate)), output))     # multRight, then multLeft
+        return _q_slerp(output, step, t)
+
+    @classmethod
+    def close(cls, a, b):
+        x, y, z, w = _q_normalize(_q_mul(b, (-a[0], -a[1], -a[2], a[3])))
+        return abs(2 * math.acos(max(-1.0, min(1.0, w)))) < cls.TOLERANCE
 
 
 # -- drag sensors: X_ITE's CylinderSensor and SphereSensor --------------------------------------------------------
@@ -1067,6 +1186,112 @@ class _Sensor(_Machine):
         self.origin = None
 
 
+class _PlaneSensor(_Sensor):
+    """A PlaneSensor, from the pointer's ray (X_ITE's rules, PlaneSensor.js). With both limits free on one axis
+    (``minPosition.x == maxPosition.x`` or the same for y) X_ITE does not use a plane: it slides along that axis as a
+    line, and the point on the line is the one whose picture on the screen is nearest the pointer. That needs the
+    camera: ``screen`` is (right, up), the camera's own x and y axes in the sensor's coordinates (the Transforms above
+    the sensor may move and turn it but not scale it), and the ray's origin is the eye. The pixel size cancels out. With
+    both axes limited, or none, the pointer's ray meets the plane through the press point, square to the sensor's z."""
+
+    def setup(self):
+        super().setup()
+        self.last = None
+        self.sent = {"trackPoint_changed": (0.0, 0.0, 0.0), "translation_changed": (0.0, 0.0, 0.0)}
+
+    def _line_point(self, ray, screen, point, direction):
+        """The point of the line (``point``, unit ``direction``) nearest the pointer's picture of it, or None when the
+        ray and the line are parallel: X_ITE's getLineTrackPoint."""
+        origin, ray_direction = ray
+        if screen is None:                     # no camera: the point of the line nearest the ray itself
+            t = _v_dot(direction, ray_direction)
+            if abs(t) >= 1:
+                return None
+            u = _v_sub(origin, point)
+            t = (_v_dot(u, direction) - t * _v_dot(u, ray_direction)) / (1 - t * t)
+            return _v_add(_v_scale(direction, t), point)
+        right, up = screen
+        back = _v_cross(right, up)
+
+        def picture(p):                                    # where the camera sees it, in units of the pixel size
+            v = _v_sub(p, origin)
+            depth = -_v_dot(v, back)
+            return (_v_dot(v, right) / depth, _v_dot(v, up) / depth)
+
+        pointer = picture(_v_add(origin, ray_direction))
+        near, far = picture(point), picture(_v_add(_v_scale(direction, 1e9), point))
+        way = (far[0] - near[0], far[1] - near[1])
+        length = math.hypot(*way)
+        way = (way[0] / length, way[1] / length)
+        along = (pointer[0] - near[0]) * way[0] + (pointer[1] - near[1]) * way[1]
+        foot = (near[0] + way[0] * along, near[1] + way[1] * along)
+        through = _v_unit(_v_sub(_v_add(_v_scale(right, foot[0]), _v_scale(up, foot[1])), back))
+        t = _v_dot(direction, through)
+        if abs(t) >= 1:
+            return None
+        u = _v_sub(origin, point)
+        t = (_v_dot(u, direction) - t * _v_dot(u, through)) / (1 - t * t)
+        return _v_add(_v_scale(direction, t), point)
+
+    def _line_direction(self):
+        low, high = self.f["minPosition"], self.f["maxPosition"]
+        if low[0] == high[0]:
+            along = (0.0, abs(high[1] - low[1]), 0.0)
+        elif low[1] == high[1]:
+            along = (abs(high[0] - low[0]), 0.0, 0.0)
+        else:
+            return None
+        return _v_unit(_Rot.axis_angle(*self.f["axisRotation"]).rotate(along))
+
+    def _send(self, name, value, always=False):
+        if always or value != self.sent[name]:
+            self.sent[name] = value
+            return [(name, value)]
+        return []
+
+    def plane_press(self, ray, hit, screen):
+        origin, direction = ray
+        self.hit, self.line = tuple(hit), self._line_direction()
+        self.screen = screen
+        if self.line is None:
+            self.plane = _Plane(hit, _Rot.axis_angle(*self.f["axisRotation"]).rotate((0.0, 0.0, 1.0)))
+            start = self.plane.meet(origin, direction)
+            track = start
+        else:
+            start = self._line_point(ray, screen, hit, self.line)
+            track = self._line_point(ray, screen, self.line, self.line) if start is not None else None
+            track = start if track is None else track
+        if start is None:
+            return []
+        self.start_point, self.start_offset = start, self.f["offset"]
+        self.last = self.f["offset"]
+        return self._send("trackPoint_changed", track, True) + self._send("translation_changed", self.f["offset"], True)
+
+    def plane_drag(self, ray, always=False):
+        origin, direction = ray
+        if self.line is None:
+            end = track = self.plane.meet(origin, direction)
+        else:
+            end = self._line_point(ray, self.screen, self.hit, self.line)
+            track = self._line_point(ray, self.screen, (0.0, 0.0, 0.0), self.line) if end is not None else None
+            track = end if track is None else track
+        if end is None:
+            return self._send("trackPoint_changed", self.sent["trackPoint_changed"], True) + \
+                self._send("translation_changed", self.sent["translation_changed"], True)
+        moved = _Rot.axis_angle(*self.f["axisRotation"]).inverse().rotate(
+            _v_sub(_v_add(end, self.start_offset), self.start_point))
+        low, high = self.f["minPosition"], self.f["maxPosition"]
+        moved = tuple(min(max(moved[i], low[i]), high[i]) if i < 2 and not low[i] > high[i] else moved[i]
+                      for i in range(3))
+        self.last = moved
+        # X_ITE works the translation out as (end + offset) - start. On the motion that follows a press, end and start are
+        # the same point, so the result is the offset up to the rounding of that sum: X_ITE's exact-equality guard lets
+        # it through whenever the offset is not zero (and the track point, found a different way, always differs in the
+        # last bits). Both are sent on that first motion; later motions send only what changed.
+        return self._send("trackPoint_changed", track, always) + \
+            self._send("translation_changed", moved, always and any(self.start_offset))
+
+
 _MACHINES = {
     "TimeSensor": _TimeSensor,
     "ScalarInterpolator": _Interpolator, "PositionInterpolator": _Interpolator, "PositionInterpolator2D": _Interpolator,
@@ -1079,14 +1304,15 @@ _MACHINES = {
     "IntegerTrigger": _IntegerTrigger, "TimeTrigger": _TimeTrigger,
     "ScalarDamper": _Damper, "PositionDamper": _Damper, "PositionDamper2D": _Damper, "ColorDamper": _ColorDamper,
     "OrientationDamper": _OrientationDamper,
-    "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _Chaser, "ColorChaser": _Chaser,
+    "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _Chaser, "ColorChaser": _ColorChaser,
     "OrientationChaser": _OrientationChaser,
-    "TouchSensor": _Sensor, "PlaneSensor": _Sensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
+    "TouchSensor": _Sensor, "PlaneSensor": _PlaneSensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
     "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _Sensor, "StringSensor": _Sensor,
 }
 
 # sensors the caller can drive with press / release / drag; the others only through post()
 POINTING = ("TouchSensor", "PlaneSensor", "CylinderSensor", "SphereSensor")
+DRAGGED = POINTING[1:]            # the ones a drag moves
 SIMULATED = tuple(sorted(_MACHINES))
 
 
@@ -1225,10 +1451,12 @@ class Simulation:
         sensor.over = bool(over)
         return self.post(node_id, "isOver", sensor.over, now)
 
-    def press(self, node_id, now, point=(0.0, 0.0, 0.0), ray=None, eye=None, follow=True):
+    def press(self, node_id, now, point=(0.0, 0.0, 0.0), ray=None, eye=None, follow=True, screen=None):
         """The pointer button goes down on the sensor's shapes. ``point`` is where, in the sensor's own coordinates.
         A CylinderSensor or SphereSensor also needs the pointer's ``ray`` (origin, direction) and the viewer's ``eye``
-        (where it is, which way is back), in the same coordinates; without them it sends only isActive."""
+        (where it is, which way is back), in the same coordinates; without them it sends only isActive. A PlaneSensor
+        given a ``ray`` runs from it (X_ITE's way: see ``_PlaneSensor``; ``screen`` is the camera, needed when it slides
+        along a line); without one the caller drags it with points on its plane."""
         sensor = self._sensor(node_id)
         if not sensor.f.get("enabled", True) or sensor.pressed:
             return []
@@ -1245,9 +1473,15 @@ class Simulation:
             # ``follow=False`` leaves that motion to the caller (the judge sends it at X_ITE's next frame time).
             if follow:
                 changes += self.drag(node_id, None, now, ray=ray)
+        sensor.rayed = sensor.node_type == "PlaneSensor" and ray is not None
+        if sensor.rayed:
+            for field_name, value in sensor.plane_press(_ray(ray), tuple(point), screen):
+                changes += self.post(node_id, field_name, value, now)
+            if follow:     # the motion X_ITE makes along the press's own ray: its track point is worked out afresh
+                changes += self.drag(node_id, None, now, ray=ray, fresh=True)
         return changes
 
-    def drag(self, node_id, point, now, ray=None):
+    def drag(self, node_id, point, now, ray=None, fresh=False):
         """The pointer moves with the button down. A PlaneSensor sends where its plane was hit, less where it began;
         a CylinderSensor or SphereSensor turns by the pointer's ``ray``, in the sensor's own coordinates."""
         sensor = self._sensor(node_id)
@@ -1260,6 +1494,11 @@ class Simulation:
             move = sensor.cylinder_drag if sensor.node_type == "CylinderSensor" else sensor.sphere_drag
             for field_name, value in move(_ray(ray)):
                 changes += self.post(node_id, field_name, value, now)
+            return changes
+        if sensor.node_type == "PlaneSensor" and getattr(sensor, "rayed", False):
+            if ray is not None:
+                for field_name, value in sensor.plane_drag(_ray(ray), always=fresh):
+                    changes += self.post(node_id, field_name, value, now)
             return changes
         if sensor.node_type == "PlaneSensor":
             changes += self.post(node_id, "trackPoint_changed", tuple(point), now)

@@ -352,7 +352,7 @@ class XiteAgreementTests(unittest.TestCase):
         unjudged = sorted(set(bs.SIMULATED) - used)
         # not judged against X_ITE: sensors the caller drives (they send what the caller says), and four followers
         # and one interpolator that share their code with a judged one
-        self.assertEqual(unjudged, ["ColorChaser", "KeySensor", "PlaneSensor", "PositionChaser2D",
+        self.assertEqual(unjudged, ["KeySensor", "PositionChaser2D",
                                     "PositionInterpolator2D", "StringSensor", "VisibilitySensor"])
 
 

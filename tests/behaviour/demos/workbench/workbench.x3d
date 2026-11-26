@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <meta name="title" content="Behaviour demo: Workbench, drag, turn, spin" />
+    <meta name="description" content="A workshop bench with a fader (PlaneSensor, a car chasing it), a brass dial (CylinderSensor, a colour sweep through a ColorChaser into the lamp) and a globe (SphereSensor, a moon trailing it)." />
+    <meta name="generator" content="tests/behaviour/demos/workbench/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.07 0.05 0.04" />
+    <Viewpoint DEF="View" description="Bench" position="0 2.3 6.5" orientation="1 0 0 -0.2" />
+    <DirectionalLight direction="-0.3 -1 -0.6" intensity="1" color="1 0.92 0.8" />
+    <PointLight DEF="Fill" location="1 3.5 2" color="1 0.9 0.75" intensity="2.5" radius="14" />
+    <Transform translation="0 -0.1 0">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.46 0.27 0.13" metallic="0" roughness="0.75" />
+        </Appearance>
+        <Box size="9.4 0.2 3.6" />
+      </Shape>
+    </Transform>
+    <Transform translation="0 -0.26 1.7">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.24 0.14 0.08" metallic="0" roughness="0.8" />
+        </Appearance>
+        <Box size="9.4 0.12 0.3" />
+      </Shape>
+    </Transform>
+    <Transform translation="0 2.4 -1.9">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.22 0.15 0.11" metallic="0" roughness="0.9" />
+        </Appearance>
+        <Box size="10 5 0.2" />
+      </Shape>
+    </Transform>
+    <Transform translation="-3.6 -0.5 1.5">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+        </Appearance>
+        <Box size="0.2 0.2 0.2" />
+      </Shape>
+    </Transform>
+    <Transform DEF="Lamp" translation="-2.6 0 -1">
+      <Transform translation="0 0.04 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+          </Appearance>
+          <Cylinder radius="0.3" height="0.08" />
+        </Shape>
+      </Transform>
+      <Transform translation="0 0.74 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+          </Appearance>
+          <Cylinder radius="0.04" height="1.4" />
+        </Shape>
+      </Transform>
+      <Transform translation="0 1.55 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial DEF="ShadePaint" baseColor="0.4 0.34 0.24" metallic="0" roughness="0.5" emissiveColor="1 0.62 0.12" />
+          </Appearance>
+          <Cone bottomRadius="0.55" height="0.6" />
+        </Shape>
+      </Transform>
+    </Transform>
+    <PointLight DEF="BenchLight" location="-2.6 1.45 -1" color="1 0.62 0.12" intensity="3" radius="9" />
+    <Transform DEF="FaderBase" translation="-2.2 0.1 1">
+      <Transform translation="0 -0.07 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+          </Appearance>
+          <Box size="2.9 0.06 0.4" />
+        </Shape>
+      </Transform>
+      <Transform translation="-2 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="-1.5 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="-1 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="-0.5 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="0 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="0.5 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="1 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="1.5 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform translation="2 -0.03 0">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Box size="0.03 0.02 0.22" />
+        </Shape>
+      </Transform>
+      <Transform DEF="Knob">
+        <Transform translation="0 0.14 0">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.95 0.72 0.28" metallic="0.35" roughness="0.4" />
+            </Appearance>
+            <Box size="0.3 0.34 0.5" />
+          </Shape>
+        </Transform>
+      </Transform>
+      <Transform DEF="FaderHit" />
+      <Transform translation="0 -0.035 0">
+        <Transform DEF="FaderDot" translation="0 0 0">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="1 0.9 0.5" metallic="0" roughness="0.6" emissiveColor="1 0.62 0.12" />
+            </Appearance>
+            <Sphere radius="0.04" />
+          </Shape>
+        </Transform>
+      </Transform>
+      <PlaneSensor DEF="Slide" maxPosition="1 0" minPosition="-1 0" />
+      <TouchSensor DEF="SlideTouch" />
+    </Transform>
+    <Transform DEF="CarRail" translation="-2.2 0.02 -0.3">
+      <Transform translation="0 0 -0.17">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+          </Appearance>
+          <Box size="2.9 0.04 0.05" />
+        </Shape>
+      </Transform>
+      <Transform translation="0 0 0.17">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+          </Appearance>
+          <Box size="2.9 0.04 0.05" />
+        </Shape>
+      </Transform>
+      <Transform DEF="Car">
+        <Transform translation="0 0.1 0">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.78 0.14 0.1" metallic="0.1" roughness="0.35" />
+            </Appearance>
+            <Box size="0.62 0.16 0.3" />
+          </Shape>
+        </Transform>
+        <Transform translation="-0.04 0.25 0">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.78 0.14 0.1" metallic="0.1" roughness="0.35" />
+            </Appearance>
+            <Box size="0.3 0.14 0.26" />
+          </Shape>
+        </Transform>
+        <Transform translation="-0.2 0.075 -0.17" rotation="1 0 0 1.5708">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.05 0.05 0.06" metallic="0" roughness="0.6" />
+            </Appearance>
+            <Cylinder radius="0.075" height="0.05" />
+          </Shape>
+        </Transform>
+        <Transform translation="-0.2 0.075 0.17" rotation="1 0 0 1.5708">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.05 0.05 0.06" metallic="0" roughness="0.6" />
+            </Appearance>
+            <Cylinder radius="0.075" height="0.05" />
+          </Shape>
+        </Transform>
+        <Transform translation="0.2 0.075 -0.17" rotation="1 0 0 1.5708">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.05 0.05 0.06" metallic="0" roughness="0.6" />
+            </Appearance>
+            <Cylinder radius="0.075" height="0.05" />
+          </Shape>
+        </Transform>
+        <Transform translation="0.2 0.075 0.17" rotation="1 0 0 1.5708">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.05 0.05 0.06" metallic="0" roughness="0.6" />
+            </Appearance>
+            <Cylinder radius="0.075" height="0.05" />
+          </Shape>
+        </Transform>
+      </Transform>
+    </Transform>
+    <Transform translation="0.3 0.9 -0.98">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.24 0.14 0.08" metallic="0" roughness="0.8" />
+        </Appearance>
+        <Box size="2.4 1.7 0.2" />
+      </Shape>
+    </Transform>
+    <Transform DEF="DialBase" translation="0.3 1 -0.78" rotation="1 0 0 1.5708">
+      <Transform DEF="Dial">
+        <Transform translation="0 0 0">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.95 0.72 0.28" metallic="0.35" roughness="0.4" />
+            </Appearance>
+            <Cylinder radius="0.45" height="0.3" />
+          </Shape>
+        </Transform>
+        <Transform translation="0 0.16 -0.3">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+            </Appearance>
+            <Box size="0.07 0.04 0.3" />
+          </Shape>
+        </Transform>
+        <Transform translation="0 0.2 0">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.95 0.72 0.28" metallic="0.35" roughness="0.4" />
+            </Appearance>
+            <Sphere radius="0.07" />
+          </Shape>
+        </Transform>
+      </Transform>
+      <Transform translation="-0.438406 0.01 0.438406">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.95 0.72 0.28" metallic="0.35" roughness="0.4" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="-0.598874 0.01 0.160468">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="-0.598874 0.01 -0.160468">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="-0.438406 0.01 -0.438406">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.95 0.72 0.28" metallic="0.35" roughness="0.4" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="-0.160468 0.01 -0.598874">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="0.160468 0.01 -0.598874">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="0.438406 0.01 -0.438406">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.95 0.72 0.28" metallic="0.35" roughness="0.4" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="0.598874 0.01 -0.160468">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="0.598874 0.01 0.160468">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.9 0.86 0.74" metallic="0" roughness="0.5" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform translation="0.438406 0.01 0.438406">
+        <Shape>
+          <Appearance>
+            <PhysicalMaterial baseColor="0.95 0.72 0.28" metallic="0.35" roughness="0.4" />
+          </Appearance>
+          <Sphere radius="0.025" />
+        </Shape>
+      </Transform>
+      <Transform DEF="DialHit" />
+      <CylinderSensor DEF="Turn" />
+      <TouchSensor DEF="TurnTouch" />
+    </Transform>
+    <Transform translation="2.6 0.05 0.2">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+        </Appearance>
+        <Cylinder radius="0.5" height="0.1" />
+      </Shape>
+    </Transform>
+    <Transform translation="2.6 0.375 0.2">
+      <Shape>
+        <Appearance>
+          <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+        </Appearance>
+        <Cylinder radius="0.05" height="0.55" />
+      </Shape>
+    </Transform>
+    <Transform DEF="GlobeBase" translation="2.6 1.15 0.2">
+      <Transform DEF="GlobeSense">
+        <Transform DEF="Globe">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.12 0.32 0.62" metallic="0.1" roughness="0.4" />
+            </Appearance>
+            <Sphere radius="0.55" />
+          </Shape>
+          <Transform translation="0 0 0.5" scale="1 0.55 1">
+            <Shape>
+              <Appearance>
+                <PhysicalMaterial baseColor="0.25 0.55 0.22" metallic="0" roughness="0.7" />
+              </Appearance>
+              <Sphere radius="0.2" />
+            </Shape>
+          </Transform>
+          <Transform translation="0.425 0.15 0.225" scale="1 0.55 1">
+            <Shape>
+              <Appearance>
+                <PhysicalMaterial baseColor="0.25 0.55 0.22" metallic="0" roughness="0.7" />
+              </Appearance>
+              <Sphere radius="0.2" />
+            </Shape>
+          </Transform>
+          <Transform translation="-0.4 0.1 0.275" scale="1 0.55 1">
+            <Shape>
+              <Appearance>
+                <PhysicalMaterial baseColor="0.25 0.55 0.22" metallic="0" roughness="0.7" />
+              </Appearance>
+              <Sphere radius="0.2" />
+            </Shape>
+          </Transform>
+          <Transform translation="0 0.475 0.15" scale="1 0.55 1">
+            <Shape>
+              <Appearance>
+                <PhysicalMaterial baseColor="0.25 0.55 0.22" metallic="0" roughness="0.7" />
+              </Appearance>
+              <Sphere radius="0.2" />
+            </Shape>
+          </Transform>
+        </Transform>
+        <SphereSensor DEF="Roll" />
+        <TouchSensor DEF="RollTouch" />
+      </Transform>
+      <Transform DEF="MoonArm">
+        <Transform translation="0.525 0.125 0" rotation="0 0 1 0.233743">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.16 0.17 0.2" metallic="0.8" roughness="0.4" />
+            </Appearance>
+            <Box size="1.08 0.02 0.02" />
+          </Shape>
+        </Transform>
+        <Transform translation="1.05 0.25 0">
+          <Shape>
+            <Appearance>
+              <PhysicalMaterial baseColor="0.72 0.74 0.8" metallic="0" roughness="0.9" />
+            </Appearance>
+            <Sphere radius="0.15" />
+          </Shape>
+        </Transform>
+      </Transform>
+      <Transform DEF="GlobeHit" />
+    </Transform>
+    <PositionChaser DEF="CarChase" duration="0.8" />
+    <BooleanFilter DEF="Press" />
+    <TimeTrigger DEF="Kick" />
+    <TimeSensor DEF="Sweep" cycleInterval="2" />
+    <ColorInterpolator DEF="Colours" key="0 0.5 1" keyValue="1 0.62 0.12 0.95 0.25 0.45 0.1 0.75 0.7" />
+    <ColorChaser DEF="GlowChase" duration="0.6" initialDestination="1 0.62 0.12" initialValue="1 0.62 0.12" />
+    <OrientationChaser DEF="MoonChase" duration="0.8" />
+    <ROUTE fromNode="SlideTouch" fromField="hitPoint_changed" toNode="FaderHit" toField="translation" />
+    <ROUTE fromNode="Slide" fromField="translation_changed" toNode="Knob" toField="translation" />
+    <ROUTE fromNode="Slide" fromField="trackPoint_changed" toNode="FaderDot" toField="translation" />
+    <ROUTE fromNode="Slide" fromField="translation_changed" toNode="CarChase" toField="set_destination" />
+    <ROUTE fromNode="CarChase" fromField="value_changed" toNode="Car" toField="translation" />
+    <ROUTE fromNode="TurnTouch" fromField="hitPoint_changed" toNode="DialHit" toField="translation" />
+    <ROUTE fromNode="Turn" fromField="rotation_changed" toNode="Dial" toField="rotation" />
+    <ROUTE fromNode="Turn" fromField="isActive" toNode="Press" toField="set_boolean" />
+    <ROUTE fromNode="Press" fromField="inputTrue" toNode="Kick" toField="set_boolean" />
+    <ROUTE fromNode="Kick" fromField="triggerTime" toNode="Sweep" toField="startTime" />
+    <ROUTE fromNode="Sweep" fromField="fraction_changed" toNode="Colours" toField="set_fraction" />
+    <ROUTE fromNode="Colours" fromField="value_changed" toNode="GlowChase" toField="set_destination" />
+    <ROUTE fromNode="GlowChase" fromField="value_changed" toNode="ShadePaint" toField="emissiveColor" />
+    <ROUTE fromNode="GlowChase" fromField="value_changed" toNode="BenchLight" toField="color" />
+    <ROUTE fromNode="RollTouch" fromField="hitPoint_changed" toNode="GlobeHit" toField="translation" />
+    <ROUTE fromNode="Roll" fromField="rotation_changed" toNode="Globe" toField="rotation" />
+    <ROUTE fromNode="Roll" fromField="rotation_changed" toNode="MoonChase" toField="set_destination" />
+    <ROUTE fromNode="MoonChase" fromField="value_changed" toNode="MoonArm" toField="rotation" />
+  </Scene>
+</X3D>
