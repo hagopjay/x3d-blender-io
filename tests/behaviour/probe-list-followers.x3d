@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Immersive" version="4.0">
+  <head>
+    <component name="EventUtilities" level="1"/>
+    <component name="Interpolation" level="2"/>
+    <component name="Followers" level="1"/>
+    <meta name="title" content="Behaviour simulator probe: followers of lists (Coordinate and TexCoord, Chaser and Damper)"/>
+    <meta name="generator" content="hand written for tests/test_behaviour_sim.py"/>
+  </head>
+  <Scene>
+    <NavigationInfo type='"NONE"'/>
+    <Viewpoint position="0 0 10"/>
+    <Transform DEF="PadA" translation="-5 3.5 1"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.3"/></Appearance><Box size="1.6 0.8 0.2"/></Shape>
+      <TouchSensor DEF="TouchA"/></Transform>   <!-- Morph: 4 points -->
+    <Transform DEF="PadB" translation="-3 3.5 1"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.4"/></Appearance><Box size="1.6 0.8 0.2"/></Shape>
+      <TouchSensor DEF="TouchB"/></Transform>   <!-- Grow: 6 points -->
+    <Transform DEF="PadC" translation="-1 3.5 1"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.5"/></Appearance><Box size="1.6 0.8 0.2"/></Shape>
+      <TouchSensor DEF="TouchC"/></Transform>   <!-- Shrink: 2 points -->
+    <Transform DEF="PadD" translation="1 3.5 1"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.6"/></Appearance><Box size="1.6 0.8 0.2"/></Shape>
+      <TouchSensor DEF="TouchD"/></Transform>   <!-- Empty lists -->
+    <Transform DEF="PadE" translation="3 3.5 1"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.7"/></Appearance><Box size="1.6 0.8 0.2"/></Shape>
+      <TouchSensor DEF="TouchE"/></Transform>   <!-- Back to 4 points -->
+    <Transform DEF="PadF" translation="5 3.5 1"><Shape><Appearance><Material diffuseColor="0.2 0.3 0.8"/></Appearance><Box size="1.6 0.8 0.2"/></Shape>
+      <TouchSensor DEF="TouchF"/></Transform>   <!-- set_value lists -->
+    <Transform translation="-3 1.5 0"><Shape><Appearance><Material diffuseColor="0.8 0.5 0.2"/></Appearance>
+      <IndexedFaceSet coordIndex="0 1 2 3 -1" solid="false"><Coordinate DEF="ChasedVerts" point="0 0 0 1 0 0 1 1 0 0 1 0"/>
+        <TextureCoordinate DEF="ChasedMap" point="0 0 1 0 1 1 0 1"/></IndexedFaceSet></Shape></Transform>
+    <Transform translation="3 1.5 0"><Shape><Appearance><Material diffuseColor="0.5 0.8 0.2"/></Appearance>
+      <IndexedFaceSet coordIndex="0 1 2 3 -1" solid="false"><Coordinate DEF="DampedVerts" point="0 0 0 1 0 0 1 1 0 0 1 0"/>
+        <TextureCoordinate DEF="DampedMap" point="0 0 1 0 1 1 0 1"/></IndexedFaceSet></Shape></Transform>
+    <!-- the destinations are continuous where the length changes (the first key of Grow is where Morph ended, and so on) and the new points are small: X_ITE steps a follower it has just woken by 1/frame-rate, not by the time since the last frame, so a jump of 3 in the first frames is not a thing a simulator that is stepped at X_ITE's frame times can match -->
+    <CoordinateChaser DEF="Chase3" duration="1" initialValue="0 0 0  1 0 0  1 1 0  0 1 0" initialDestination="0 0 0  1 0 0  1 1 0  0 1 0"/>
+    <CoordinateDamper DEF="Damp3" tau="0.2" order="3" initialValue="0 0 0  1 0 0  1 1 0  0 1 0" initialDestination="0 0 0  1 0 0  1 1 0  0 1 0"/>
+    <TexCoordChaser2D DEF="Chase2" duration="0.8" initialValue="0 0  1 0  1 1  0 1" initialDestination="0 0  1 0  1 1  0 1"/>
+    <TexCoordDamper2D DEF="Damp2" tau="0.15" order="2" tolerance="0.01" initialValue="0 0  1 0  1 1  0 1" initialDestination="0 0  1 0  1 1  0 1"/>
+    <BooleanFilter DEF="WatchChase3"/>
+    <BooleanFilter DEF="WatchDamp3"/>
+    <BooleanFilter DEF="WatchChase2"/>
+    <BooleanFilter DEF="WatchDamp2"/>
+    <!-- keeps X_ITE drawing between the clicks: a follower takes its step from the frame rate X_ITE has measured, which
+         falls while nothing moves, and the first steps after a long rest would then be too big for any simulator -->
+    <Transform DEF="Spinner" translation="0 -1.5 0"><Shape><Appearance><Material diffuseColor="0.9 0.9 0.9"/></Appearance><Box size="0.5 0.5 0.5"/></Shape></Transform>
+    <TimeSensor DEF="Spin" cycleInterval="4" loop="true"/>
+    <OrientationInterpolator DEF="Turn" key="0 0.5 1" keyValue="0 1 0 0  0 1 0 3.14159  0 1 0 6.28318"/>
+    <ROUTE fromNode="Spin" fromField="fraction_changed" toNode="Turn" toField="set_fraction"/>
+    <ROUTE fromNode="Turn" fromField="value_changed" toNode="Spinner" toField="set_rotation"/>
+    <TimeSensor DEF="TimerA" cycleInterval="2"/>
+    <TimeSensor DEF="TimerB" cycleInterval="2"/>
+    <TimeSensor DEF="TimerC" cycleInterval="2"/>
+    <TimeSensor DEF="TimerD" cycleInterval="2"/>
+    <TimeSensor DEF="TimerE" cycleInterval="2"/>
+    <TimeSensor DEF="TimerF" cycleInterval="2"/>
+    <CoordinateInterpolator DEF="Morph3" key="0 0.4 1"
+      keyValue="0 0 0  1 0 0  1 1 0  0 1 0  0 0 1  2 0 0  1 2 0  0 1 1  0 0 0  1 0 -1  3 1 0  0 3 0"/>
+    <CoordinateInterpolator2D DEF="Morph2" key="0 0.4 1"
+      keyValue="0 0  1 0  1 1  0 1  0.5 0  1 0.5  1 1  0 0.5  1 1  0 1  0 0  1 0"/>
+    <CoordinateInterpolator DEF="Grow3" key="0 1"
+      keyValue="0 0 0  1 0 -1  3 1 0  0 3 0  0.3 0.3 0  0.5 0.5 0   0 0 0.2  1 0 -1  3 1 0.2  0 3 0  0.6 0.6 0.3  0.9 0.9 0.5"/>
+    <CoordinateInterpolator2D DEF="Grow2" key="0 1"
+      keyValue="1 1  0 1  0 0  1 0  0.5 0.5  0.2 0.8   1 1  0 1  0.1 0.1  1 0.1  0.6 0.4  0.3 0.9"/>
+    <CoordinateInterpolator DEF="Shrink3" key="0 1"
+      keyValue="0 0 0.2  1 0 -1   0.5 0.5 0.5  0 1 0"/>
+    <CoordinateInterpolator2D DEF="Shrink2" key="0 1"
+      keyValue="1 1  0 1   0.5 0.5  0.2 0.8"/>
+    <CoordinateInterpolator DEF="Back3" key="0 1" keyValue="0.2 0 0  0.4 0 0  0.4 0.4 0  0 0.4 0   0.3 0 0  0.5 0 0  0.5 0.5 0  0 0.5 0"/>
+    <CoordinateInterpolator2D DEF="Back2" key="0 1" keyValue="0.2 0  0.4 0  0.4 0.4  0 0.4   0.3 0  0.5 0  0.5 0.5  0 0.5"/>
+    <CoordinateInterpolator DEF="Empty3" key="0 1" keyValue="0 0 0"/>
+    <CoordinateInterpolator2D DEF="Empty2" key="0 1" keyValue="0 0"/>
+    <CoordinateInterpolator DEF="Jump3" key="0 1" keyValue="0 0 2  1 0 2  1 1 2  0 1 2   0 0 3  2 0 3  2 2 3  0 2 3"/>
+    <CoordinateInterpolator2D DEF="Jump2" key="0 1" keyValue="0 0  2 0  2 2  0 2   0 0  3 0  3 3  0 3"/>
+    <ROUTE fromNode="TouchA" fromField="touchTime" toNode="TimerA" toField="startTime"/>
+    <ROUTE fromNode="TouchB" fromField="touchTime" toNode="TimerB" toField="startTime"/>
+    <ROUTE fromNode="TouchC" fromField="touchTime" toNode="TimerC" toField="startTime"/>
+    <ROUTE fromNode="TouchD" fromField="touchTime" toNode="TimerD" toField="startTime"/>
+    <ROUTE fromNode="TouchE" fromField="touchTime" toNode="TimerE" toField="startTime"/>
+    <ROUTE fromNode="TouchF" fromField="touchTime" toNode="TimerF" toField="startTime"/>
+    <ROUTE fromNode="TimerA" fromField="fraction_changed" toNode="Morph3" toField="set_fraction"/>
+    <ROUTE fromNode="TimerA" fromField="fraction_changed" toNode="Morph2" toField="set_fraction"/>
+    <ROUTE fromNode="TimerB" fromField="fraction_changed" toNode="Grow3" toField="set_fraction"/>
+    <ROUTE fromNode="TimerB" fromField="fraction_changed" toNode="Grow2" toField="set_fraction"/>
+    <ROUTE fromNode="TimerC" fromField="fraction_changed" toNode="Shrink3" toField="set_fraction"/>
+    <ROUTE fromNode="TimerC" fromField="fraction_changed" toNode="Shrink2" toField="set_fraction"/>
+    <ROUTE fromNode="TimerD" fromField="fraction_changed" toNode="Empty3" toField="set_fraction"/>
+    <ROUTE fromNode="TimerD" fromField="fraction_changed" toNode="Empty2" toField="set_fraction"/>
+    <ROUTE fromNode="TimerF" fromField="fraction_changed" toNode="Jump3" toField="set_fraction"/>
+    <ROUTE fromNode="TimerF" fromField="fraction_changed" toNode="Jump2" toField="set_fraction"/>
+    <ROUTE fromNode="Morph3" fromField="value_changed" toNode="Chase3" toField="set_destination"/>
+    <ROUTE fromNode="Morph3" fromField="value_changed" toNode="Damp3" toField="set_destination"/>
+    <ROUTE fromNode="Grow3" fromField="value_changed" toNode="Chase3" toField="set_destination"/>
+    <ROUTE fromNode="Grow3" fromField="value_changed" toNode="Damp3" toField="set_destination"/>
+    <ROUTE fromNode="Shrink3" fromField="value_changed" toNode="Chase3" toField="set_destination"/>
+    <ROUTE fromNode="Shrink3" fromField="value_changed" toNode="Damp3" toField="set_destination"/>
+    <ROUTE fromNode="Empty3" fromField="value_changed" toNode="Chase3" toField="set_destination"/>
+    <ROUTE fromNode="Empty3" fromField="value_changed" toNode="Damp3" toField="set_destination"/>
+    <ROUTE fromNode="Morph2" fromField="value_changed" toNode="Chase2" toField="set_destination"/>
+    <ROUTE fromNode="Morph2" fromField="value_changed" toNode="Damp2" toField="set_destination"/>
+    <ROUTE fromNode="Grow2" fromField="value_changed" toNode="Chase2" toField="set_destination"/>
+    <ROUTE fromNode="Grow2" fromField="value_changed" toNode="Damp2" toField="set_destination"/>
+    <ROUTE fromNode="Shrink2" fromField="value_changed" toNode="Chase2" toField="set_destination"/>
+    <ROUTE fromNode="Shrink2" fromField="value_changed" toNode="Damp2" toField="set_destination"/>
+    <ROUTE fromNode="Empty2" fromField="value_changed" toNode="Chase2" toField="set_destination"/>
+    <ROUTE fromNode="Empty2" fromField="value_changed" toNode="Damp2" toField="set_destination"/>
+    <ROUTE fromNode="TimerE" fromField="fraction_changed" toNode="Back3" toField="set_fraction"/>
+    <ROUTE fromNode="Back3" fromField="value_changed" toNode="Chase3" toField="set_destination"/>
+    <ROUTE fromNode="Back3" fromField="value_changed" toNode="Damp3" toField="set_destination"/>
+    <ROUTE fromNode="TimerE" fromField="fraction_changed" toNode="Back2" toField="set_fraction"/>
+    <ROUTE fromNode="Back2" fromField="value_changed" toNode="Chase2" toField="set_destination"/>
+    <ROUTE fromNode="Back2" fromField="value_changed" toNode="Damp2" toField="set_destination"/>
+    <ROUTE fromNode="Jump3" fromField="value_changed" toNode="Chase3" toField="set_value"/>
+    <ROUTE fromNode="Jump3" fromField="value_changed" toNode="Damp3" toField="set_value"/>
+    <ROUTE fromNode="Jump2" fromField="value_changed" toNode="Chase2" toField="set_value"/>
+    <ROUTE fromNode="Jump2" fromField="value_changed" toNode="Damp2" toField="set_value"/>
+    <ROUTE fromNode="Chase3" fromField="isActive" toNode="WatchChase3" toField="set_boolean"/>
+    <ROUTE fromNode="Damp3" fromField="isActive" toNode="WatchDamp3" toField="set_boolean"/>
+    <ROUTE fromNode="Chase2" fromField="isActive" toNode="WatchChase2" toField="set_boolean"/>
+    <ROUTE fromNode="Damp2" fromField="isActive" toNode="WatchDamp2" toField="set_boolean"/>
+    <ROUTE fromNode="Chase3" fromField="value_changed" toNode="ChasedVerts" toField="point"/>
+    <ROUTE fromNode="Damp3" fromField="value_changed" toNode="DampedVerts" toField="point"/>
+    <ROUTE fromNode="Chase2" fromField="value_changed" toNode="ChasedMap" toField="point"/>
+    <ROUTE fromNode="Damp2" fromField="value_changed" toNode="DampedMap" toField="point"/>
+  </Scene>
+</X3D>

@@ -34,6 +34,7 @@ import colorsys
 import math
 import xml.etree.ElementTree as ET
 from collections import deque
+from itertools import chain
 
 try:
     from . import behaviour_graph as bg
@@ -91,6 +92,11 @@ def _finite(value):
     kind = type(value)
     if kind is float:
         return value - value == 0.0              # NaN and the infinities are the only floats this is false for
+    if kind is list and value and type(value[0]) is tuple:       # a list of vectors (a Coordinate's points): in C, not per number
+        try:
+            return all(map(math.isfinite, chain.from_iterable(value)))
+        except (TypeError, OverflowError):                       # something that is not a vector of numbers: the slow way
+            pass
     if kind is tuple or kind is list:
         for item in value:
             if type(item) is float:
@@ -133,6 +139,7 @@ def _number(value):
 
 
 _FITTERS = {}
+_TUPLE, _FLOAT = frozenset((tuple,)), frozenset((float,))
 
 
 def _fitter(x3d_type):
@@ -153,6 +160,14 @@ def _fitter(x3d_type):
                     if kind is not float and kind is not int and not _number(component):
                         return False
                 return True
+        elif x3d_type.startswith("MF") and base in _SIZES:
+            size = _SIZES[base]       # a list of vectors (a Coordinate's points) is checked a point at a time, not a number at a time
+
+            def found(value, size=size, x3d_type=x3d_type, sizes=frozenset((size,))):
+                if type(value) is list and set(map(type, value)) <= _TUPLE and set(map(len, value)) <= sizes \
+                        and set(map(type, chain.from_iterable(value))) <= _FLOAT:
+                    return True
+                return _fits(value, x3d_type)           # not the plain case (an int, a subclass, a wrong size): the full test decides
         else:
             def found(value, x3d_type=x3d_type):
                 return _fits(value, x3d_type)
@@ -1032,6 +1047,213 @@ class _VectorChaser(_BufferChaser):
     def close(cls, a, b):
         return _distance(a, b) < cls.TOLERANCE
 
+# -- followers of lists: CoordinateChaser, CoordinateDamper, TexCoordChaser2D, TexCoordDamper2D ---------------------
+# X_ITE lifts its chaser and damper over a list of vectors (X3DArrayFollowerTemplate): the same machines, with the lists
+# kept as long as the destination, a point that one list lacks taken as the zero vector, and "at rest" meaning the same
+# length and every point within tolerance. Inside, a list of points is one flat list of floats (x0 y0 z0 x1 ...): the
+# blends and sums are then one pass over numbers, not a tuple made per point. A list is never changed in place, so the
+# slots of a chaser and the buffers of a damper share lists freely; the lists that leave a node are lists of tuples.
+
+_MAX_POINTS = 10_000      # a list longer than this is cut to it (counted in ``sim.noted["capped"]``): memory is points x slots
+
+
+def _blend(source, target, t):
+    """X_ITE's array ``interpolate`` on flat lists: as long as ``source``; what ``target`` lacks is zero."""
+    spare = len(source) - len(target)
+    if spare > 0:
+        target = target + [0.0] * spare
+    return [x + (y - x) * t for x, y in zip(source, target)]
+
+
+def _gap(a, b, size):
+    """The largest distance between matching points, or infinity when the lists are not as long as each other."""
+    if len(a) != len(b):
+        return math.inf
+    if not a:
+        return 0.0
+    squares = [(d := x - y) * d for x, y in zip(a, b)]
+    return math.sqrt(max(map(sum, zip(*[squares[i::size] for i in range(size)]))))
+
+
+class _ListMixin:
+    """What both kinds of list follower share: the size of their vectors, how a list is kept inside, and the cap."""
+    size = 3
+    shown, whole = 0, False       # points in the last value_changed; True while a value is sent whole (start, set_value)
+
+    def emit(self, name, value):
+        # X_ITE 16.8.1: a list a follower works out is written into value_changed point by point, then cut to its length,
+        # so an empty list after an empty list is no event at all; a list it is given (set_value, the initial value) is
+        # assigned whole and is an event even when empty (tools/behaviour_sim_judge.cjs on a world of its own)
+        if name == "value_changed":
+            if not value and not self.shown and not self.whole:
+                return
+            self.shown = len(value)
+        super().emit(name, value)
+
+    def flat(self, points):
+        """``points`` (a list of vectors) as a flat list of floats, cut to the cap."""
+        if len(points) > _MAX_POINTS:
+            self.sim.noted["capped"] = self.sim.noted.get("capped", 0) + 1
+            points = points[:_MAX_POINTS]
+        flat = list(chain.from_iterable(points))
+        if len(flat) != self.size * len(points):
+            raise ValueError("a list of vectors of another size")
+        return flat
+
+    def points(self, flat):
+        """A flat list as the list of tuples a node sends."""
+        return list(zip(*[flat[i::self.size] for i in range(self.size)]))
+
+    def fitted(self, flat, count):
+        """``flat`` made ``count`` points long: cut, or padded with zero vectors (what X_ITE does to every buffer when a
+        destination of another length arrives)."""
+        length = count * self.size
+        if len(flat) == length:
+            return flat
+        if len(flat) > length:
+            return flat[:length]
+        return flat + [0.0] * (length - len(flat))
+
+
+class _ListChaser(_ListMixin, _BufferChaser):
+    """CoordinateChaser and TexCoordChaser2D: X_ITE's buffer chaser on lists of vectors. A destination of another length
+    first makes every one of the 60 slots that long (cut, or padded with zero vectors); the output is as long as the
+    last value until the slots have shifted once, so a list of another length takes a frame or so to arrive."""
+
+    def lift(self, value):
+        return self.flat(value)
+
+    def lower(self, flat):
+        return self.points(flat)
+
+    def blend(self, source, target, t):
+        return _blend(source, target, t)
+
+    def add(self, output, value1, value2, t):
+        spare1, spare2 = len(output) - len(value1), len(output) - len(value2)
+        if spare1 > 0:
+            value1 = value1 + [0.0] * spare1
+        if spare2 > 0:
+            value2 = value2 + [0.0] * spare2
+        return [o + (a - b) * t for o, a, b in zip(output, value1, value2)]
+
+    def close(self, a, b):
+        return _gap(a, b, self.size) < self.TOLERANCE
+
+    def tick(self, now, dt):
+        if self.f["duration"] > 0:
+            if self.active and not (now - self.buffer_end) / self.step_time < 1e15:       # a clock that jumped, to infinity or NaN
+                self.buffer, self.previous, self.buffer_end = [self.destination] * self.SLOTS, self.destination, now
+            return super().tick(now, dt)
+        if self.active:                    # no duration (X_ITE's step time is then 0 and its output NaN): the chaser jumps
+            self.buffer, self.previous = [self.destination] * self.SLOTS, self.destination
+            self.emit("value_changed", self.lower(self.destination))
+            self._activate(False)
+
+    def start(self, now):
+        self.whole = True
+        super().start(now)
+        self.whole = False
+
+    def receive(self, name, value, now):
+        if name == "set_destination":
+            count = min(len(value), _MAX_POINTS)
+            fitted = {}
+            for i, slot in enumerate(self.buffer):
+                key = id(slot)
+                if key not in fitted:
+                    fitted[key] = self.fitted(slot, count)
+                self.buffer[i] = fitted[key]
+        elif name == "set_value":
+            self.whole = True
+        super().receive(name, value, now)
+        self.whole = False
+
+
+class _ListDamper(_ListMixin, _Machine):
+    """CoordinateDamper and TexCoordDamper2D: X_ITE's damper on lists. Every ``set_destination`` or ``set_value`` wakes
+    it (the lists need not differ); it is at rest when its last stage is as long as the destination and every point is
+    within tolerance. Buffers are 1 + order (clamped to 0 .. 5) lists; the first holds the destination."""
+    ticks = True
+
+    def setup(self):
+        order = min(5, max(0, self.f["order"]))
+        self.buffer = [self.flat(self.f["initialDestination"])] + [self.flat(self.f["initialValue"])] * order
+        self.active = False
+
+    def tolerance(self):
+        return self.f["tolerance"] if self.f["tolerance"] >= 0 else 1e-4
+
+    def start(self, now):
+        if _gap(self.flat(self.f["initialDestination"]), self.flat(self.f["initialValue"]), self.size) < self.tolerance():
+            self.whole = True
+            self.emit("value_changed", self.points(self.buffer[0]))
+            self.whole = False
+        else:
+            self._wake()
+
+    def _wake(self):
+        if not self.active:
+            self.active = True
+            self.emit("isActive", True)
+
+    def receive(self, name, value, now):
+        if name == "set_destination":
+            flat = self.flat(value)
+            count, fitted = len(flat) // self.size, {}
+            for i in range(1, len(self.buffer)):
+                key = id(self.buffer[i])
+                if key not in fitted:
+                    fitted[key] = self.fitted(self.buffer[i], count)
+                self.buffer[i] = fitted[key]
+            self.buffer[0] = flat
+            self._wake()
+        elif name == "set_value":
+            flat = self.flat(value)
+            self.buffer[1:] = [flat] * (len(self.buffer) - 1)
+            self.whole = True
+            self.emit("value_changed", self.points(flat))
+            self.whole = False
+            self._wake()
+        else:
+            super().receive(name, value, now)
+
+    def tick(self, now, dt):
+        if not self.active:
+            return
+        buffer, tau = self.buffer, self.f["tau"]
+        last = len(buffer) - 1
+        if tau > 0:
+            alpha = math.exp(-dt / tau)
+            for i in range(last):
+                buffer[i + 1] = _blend(buffer[i], buffer[i + 1], alpha)
+            self.emit("value_changed", self.points(buffer[last]))
+            if not _gap(buffer[last], buffer[0], self.size) < self.tolerance():
+                return
+        else:
+            self.emit("value_changed", self.points(buffer[0]))
+            last = 0
+        buffer[1:] = [buffer[last]] * (len(buffer) - 1)
+        self.active = False
+        self.emit("isActive", False)
+
+
+class _CoordinateChaser(_ListChaser):
+    size = 3
+
+
+class _TexCoordChaser2D(_ListChaser):
+    size = 2
+
+
+class _CoordinateDamper(_ListDamper):
+    size = 3
+
+
+class _TexCoordDamper2D(_ListDamper):
+    size = 2
+
+
 # -- drag sensors: X_ITE's CylinderSensor and SphereSensor --------------------------------------------------------
 # Vectors are 3-tuples in the sensor's own coordinates. A rotation is kept as X_ITE keeps it (Rotation4): a quaternion
 # built from axis and angle with the half angle wrapped into [0, pi), compared exactly, read back by acos.
@@ -1761,6 +1983,8 @@ _MACHINES = {
     "OrientationDamper": _OrientationDamper,
     "ScalarChaser": _Chaser, "PositionChaser": _Chaser, "PositionChaser2D": _VectorChaser, "ColorChaser": _ColorChaser,
     "OrientationChaser": _OrientationChaser,
+    "CoordinateChaser": _CoordinateChaser, "CoordinateDamper": _CoordinateDamper,
+    "TexCoordChaser2D": _TexCoordChaser2D, "TexCoordDamper2D": _TexCoordDamper2D,
     "TouchSensor": _Sensor, "PlaneSensor": _PlaneSensor, "CylinderSensor": _DragSensor, "SphereSensor": _DragSensor,
     "ProximitySensor": _ProximitySensor, "VisibilitySensor": _Sensor, "KeySensor": _KeySensor, "StringSensor": _StringSensor,
     "Script": _Script, "CollisionSensor": _CollisionSensor,
@@ -1866,12 +2090,21 @@ class Simulation:
                 continue
             outputs[(node_id, field_name)] = value
             log.append((now, node_id, field_name, value))
+            verdicts = None
             for to_id, to_field, fits, key in routes.get((node_id, field_name), ()):
                 if key in fired:                     # 4.4.8.3: a ROUTE carries one event per timestamp, which
                     continue                         # is also what stops a loop of ROUTEs
-                if fits is not None and not fits(value):
-                    dropped["mismatch"] = dropped.get("mismatch", 0) + 1
-                    continue
+                if fits is not None:
+                    # one event, one value: asked once per kind of field (a list of points sent to 1000 followers)
+                    ok = verdicts.get(fits) if verdicts is not None else None
+                    if ok is None:
+                        ok = fits(value)
+                        if verdicts is None:
+                            verdicts = {}
+                        verdicts[fits] = ok
+                    if not ok:
+                        dropped["mismatch"] = dropped.get("mismatch", 0) + 1
+                        continue
                 fired.add(key)
                 machine = machines.get(to_id)
                 if machine is not None:

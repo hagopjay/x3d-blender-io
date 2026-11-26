@@ -56,6 +56,7 @@ import behaviour_sim as bs             # noqa: E402
 
 NODE_TYPES = sorted(cat.NODES)
 TARGET_TYPES = sorted(cat.TARGETS)
+LIST_FOLLOWERS = ("CoordinateChaser", "CoordinateDamper", "TexCoordChaser2D", "TexCoordDamper2D")   # lists whose lengths need not agree
 PROPERTIES = ("a-no-exception", "b-bounded", "c-values", "d-round-trip", "e-deterministic")
 POINTER_OPS = ("press", "drag", "release", "hover", "click")
 
@@ -135,6 +136,8 @@ def valid_field(rng, node_type, name, kind, n):
         return " ".join('"' + rng.choice(["a", "b c", "d"]) + '"' for _ in range(rng.randint(0, 3)))
     if base == "Float":
         return " ".join(_f(rng.uniform(-5, 5)) for _ in range(n))
+    if node_type in LIST_FOLLOWERS and name in ("initialValue", "initialDestination"):
+        n = rng.randint(0, 5)                    # the two lists need not be as long as each other (nor as long as key)
     if "Vec2f" == base:
         return " ".join(_vec(rng, "SFVec2f") for _ in range(n))
     if "Vec3f" == base and node_type == "NormalInterpolator":      # unit vectors: a slerp of others can be NaN (as in X_ITE)

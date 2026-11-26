@@ -4,7 +4,7 @@
 
 """How the behaviour simulator and the Blender player scale: synthetic graphs, timed.
 
-Four shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them):
+Four shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a fifth that is asked for by name:
 
   fan     one looping TimeSensor drives N PositionInterpolators, each into its own Transform
   chains  N independent chains: TimeSensor (loop) -> PositionInterpolator -> PositionDamper -> Transform
@@ -12,6 +12,8 @@ Four shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them):
           one click per 10 copies spread over the run
   hosted  N Scripts with Python handlers fed by one looping TimeSensor, each into its own Transform, and a
           CollisionSensor for every fifth one, told every step whether it touches (class E)
+  lists   (``--shapes lists``, simulation only) one looping TimeSensor -> one CoordinateInterpolator of 100 points ->
+          N CoordinateDampers, each into its own Coordinate: every damper is chasing a new list on every step
 
 For each case the benchmark times ``Simulation(graph)``, ``start()`` and 300 steps of 1/60 s, and reports the median
 and 95th percentile of a step, the events sent per step, and the peak memory (tracemalloc). With ``--bpy`` (needs the
@@ -43,6 +45,8 @@ import behaviour_graph as bg      # noqa: E402
 import behaviour_sim as bs        # noqa: E402
 
 SHAPES = ("fan", "chains", "mixed", "hosted")
+OPT_IN_SHAPES = ("lists",)         # run when named; not in the default sweep, and not timed in the player (no Transform to move)
+POINTS = 100                       # points per list in the "lists" shape
 SIZES = (10, 100, 1000, 5000)
 STEPS = 300
 DT = 1 / 60
@@ -89,6 +93,18 @@ def build(shape: str, n: int) -> bg.Behaviour:
             script.place >> _lift(b, f"Thing{i}").translation
             if i % 5 == 0:
                 b.add("CollisionSensor", f"Hit{i}")
+    elif shape == "lists":
+        clock = b.add("TimeSensor", "Clock", cycleInterval=4, loop=True)
+        wave = b.add("CoordinateInterpolator", "Wave", key=[0, 0.5, 1],
+                     keyValue=[(i, 0, 0) for i in range(POINTS)] + [(i, 1 + i % 3, 0) for i in range(POINTS)]
+                     + [(i, 0, 1) for i in range(POINTS)])
+        clock.fraction_changed >> wave.set_fraction
+        for i in range(n):
+            follow = b.add("CoordinateDamper", f"Follow{i}", tau=0.3,
+                           initialValue=" ".join(f"{p} 0 0" for p in range(POINTS)),
+                           initialDestination=" ".join(f"{p} 0 0" for p in range(POINTS)))
+            wave.value_changed >> follow.set_destination
+            follow.value_changed >> b.target("Coordinate", f"Mesh{i}").point
     else:
         raise ValueError(f"unknown shape {shape!r}")
     return b
@@ -125,17 +141,19 @@ def clicks(shape: str, n: int, steps: int = STEPS) -> dict[int, list[int]]:
 
 
 def run_sim(sim: bs.Simulation, shape: str, n: int, steps: int = STEPS, times: list | None = None) -> list:
-    """Start ``sim`` and step it; returns every step's changes. ``times`` collects each step's seconds."""
+    """Start ``sim`` and step it; returns every step's changes (not for the "lists" shape: 300 steps of N lists of
+    points are gigabytes). ``times`` collects each step's seconds."""
     when = clicks(shape, n, steps)
     host(sim, shape)
+    keep = shape not in OPT_IN_SHAPES
     out = list(sim.start(0.0))
     for k in range(1, steps + 1):
         now = k * DT
         began = time.perf_counter()
         for i in when.get(k, ()):
-            out.extend(sim.click(f"Click{i}", now))
+            out.extend(sim.click(f"Click{i}", now)) if keep else sim.click(f"Click{i}", now)
         touch(sim, shape, n, k, now)
-        out.extend(sim.step(now))
+        out.extend(sim.step(now)) if keep else sim.step(now)
         if times is not None:
             times.append(time.perf_counter() - began)
     return out
@@ -366,7 +384,7 @@ def table(rows: list[dict], title: str, columns: list[tuple[str, str]]) -> str:
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--sizes", type=int, nargs="+", default=list(SIZES))
-    ap.add_argument("--shapes", nargs="+", default=list(SHAPES), choices=SHAPES)
+    ap.add_argument("--shapes", nargs="+", default=list(SHAPES), choices=SHAPES + OPT_IN_SHAPES)
     ap.add_argument("--bpy", action="store_true", help="also time Player.step in Blender (needs the bpy module)")
     ap.add_argument("--budget", type=float, default=120.0, help="seconds of stepping allowed per case")
     ap.add_argument("--tree-limit", type=int, default=1000, help="--bpy: build the node tree (glow on) up to this many nodes")
@@ -376,7 +394,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     if args.tree:
         sizes = args.sizes if args.sizes != list(SIZES) else list(TREE_SIZES)
-        rows = measure_tree_all(args.shapes, sizes, args.budget)
+        rows = measure_tree_all([shape for shape in args.shapes if shape not in OPT_IN_SHAPES], sizes, args.budget)
         if args.out:
             Path(args.out).write_text(json.dumps({"machine": machine(), "tree": rows}, indent=1), encoding="utf-8")
         print(f"Machine: {machine()}\n")
@@ -388,7 +406,7 @@ def main(argv=None):
             receipt["simulation"].append(measure_sim(shape, n, args.budget))
             print(f"sim {shape} {n}: {receipt['simulation'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)
     if args.bpy:
-        for shape in args.shapes:
+        for shape in [shape for shape in args.shapes if shape not in OPT_IN_SHAPES]:
             for n in args.sizes:
                 receipt["player"].append(measure_player(shape, n, args.budget, args.tree_limit))
                 print(f"player {shape} {n}: {receipt['player'][-1]['step_median_ms']:.3f} ms/step", file=sys.stderr)
