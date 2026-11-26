@@ -4,7 +4,7 @@
 
 """How the behaviour simulator and the Blender player scale: synthetic graphs, timed.
 
-Six shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a seventh that is asked for by name:
+Eight shapes, each at N = 10, 100, 1000, 5000 units (``--sizes`` changes them), and a ninth that is asked for by name:
 
   fan     one looping TimeSensor drives N PositionInterpolators, each into its own Transform
   chains  N independent chains: TimeSensor (loop) -> PositionInterpolator -> PositionDamper -> Transform

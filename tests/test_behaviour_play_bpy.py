@@ -509,6 +509,40 @@ class MediaNodesTests(_Base):
         player.stop()
 
 
+class GeoNodesTests(_Base):
+
+    ORIGIN = '<GeoOrigin geoSystem=\'"GD" "WE"\' geoCoords="48.7 2.2 0" containerField="geoOrigin"/>'
+    WORLD = ('<?xml version="1.0" encoding="UTF-8"?><X3D profile="Full" version="4.0"><head/><Scene>\n'
+             '<GeoOrigin DEF="Home" geoSystem=\'"GD" "WE"\' geoCoords="48.7 2.2 0"/>\n'
+             '<GeoTouchSensor DEF="Pick" geoSystem=\'"GD" "WE"\'>' + ORIGIN + '</GeoTouchSensor>\n'
+             '<GeoTouchSensor DEF="PickUse" geoSystem=\'"GD" "WE"\'><GeoOrigin USE="Home" containerField="geoOrigin"/></GeoTouchSensor>\n'
+             '<GeoProximitySensor DEF="Near" geoSystem=\'"GD" "WE"\' size="-1 -1 -1">' + ORIGIN + '</GeoProximitySensor>\n'
+             '</Scene></X3D>')
+
+    def test_play_feeds_the_geo_sensors_and_lists_what_it_cannot_give(self):
+        bg = importlib.import_module("io_scene_x3d.behaviour_graph")
+        scene = bpy.context.scene
+        thing = bpy.data.objects.new("Thing", None)
+        scene.collection.objects.link(thing)
+        player = self.bp.Player(scene, bg.Behaviour.from_x3d(self.WORLD))
+        self.assertEqual(player.proximity_sensors(), ["Near"])
+        self.assertEqual(sorted(player.not_applied), [
+            "GeoTouchSensor Pick: hover gives no hit point, so hitGeoCoord_changed comes only with a press",
+            "GeoTouchSensor PickUse: hover gives no hit point, so hitGeoCoord_changed comes only with a press"])
+        player.start(0.0)
+        player.view(thing.matrix_world.copy(), (0.0, 0.0, 0.0), 0.1)
+        self.assertEqual(player.sim.outputs[("Near", "isActive")], True)
+        self.assertIn(("Near", "geoCoord_changed"), player.sim.outputs)
+        self.assertTrue(player.press(thing, 0.2, location=(1.0, 2.0, 3.0)))
+        self.assertEqual(player.sim.outputs[("Pick", "isActive")], True)
+        self.assertIn(("Pick", "hitGeoCoord_changed"), player.sim.outputs)
+        # a GeoOrigin named by USE is a node Play does not read from the scene: refused by name, nothing sent from it
+        self.assertNotIn(("PickUse", "hitGeoCoord_changed"), player.sim.outputs)
+        self.assertGreaterEqual(player.sim.noted.get("geo-origin-unresolved", 0), 1)
+        player.release(0.3)
+        player.stop()
+
+
 class FieldEditorTests(_Base):
 
     def test_a_typed_widget_reads_and_writes_the_x3d_text(self):
