@@ -24,8 +24,8 @@
     <Transform translation="0 5.5 -9.15"><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Box size="14.4 0.14 0.2" /></Shape></Transform>
     <Transform translation="0 1.7 -9.15"><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Box size="14.4 0.14 0.2" /></Shape></Transform>
     <!-- the year clock ticks the chart along like a ratchet: PositionInterpolator2D -> PositionChaser2D (glides each tick) -> TextureTransform -->
-    <TimeSensor DEF="YearClock" cycleInterval="20.0" loop="true" />
-    <PositionInterpolator2D DEF="ChartPan" key="0 0.1 0.12 0.3 0.32 0.5 0.52 0.7 0.72 1" keyValue="0 0  0 0  0.6 0  0.6 0  1.2 0.3  1.2 0.3  0.6 0.3  0.6 0.3  0 0  0 0" />
+    <TimeSensor DEF="YearClock" cycleInterval="12.0" loop="true" />
+    <PositionInterpolator2D DEF="ChartPan" key="0 0.08 0.12 0.33 0.37 0.58 0.62 0.83 0.87 1" keyValue="0 0  0 0  1.4 0  1.4 0  2.8 0.7  2.8 0.7  1.4 0.7  1.4 0.7  0 0  0 0" />
     <PositionChaser2D DEF="ChartSmooth" duration="1.5" initialDestination="0 0" initialValue="0 0" />
     <!-- the sun: a body you can click, and the light at the middle -->
     <Transform DEF="Sun" translation="0 1.2 0"><TouchSensor DEF="SunTouch" description="Fly to the sun" /><Shape><Appearance><PhysicalMaterial baseColor="1 0.7 0.2" emissiveColor="1 0.62 0.15" /></Appearance><Sphere radius="0.8" /></Shape><Transform translation="0 1.6 0"><Shape><Appearance><PhysicalMaterial baseColor="0.78 0.55 0.22" metallic="1" roughness="0.32" /></Appearance><Cone bottomRadius="0.7" height="1.7" /></Shape></Transform></Transform>
