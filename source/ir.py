@@ -332,6 +332,9 @@ class IRShape:
     # An imported Box, Sphere, Cylinder or Cone written back as that node: {"node": ..., "fields": {...}}
     # (extract.primitive_for_mesh); used instead of geometry_name.
     primitive: dict | None = None
+    # A Blender text object written as Text with a FontStyle: {"string": [lines], "size", "spacing", "justify", "style",
+    # "family"} (extract.text_for_object); used instead of geometry_name.
+    text: dict | None = None
 
 
 @dataclass

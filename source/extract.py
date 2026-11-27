@@ -462,9 +462,10 @@ def _color_values(mesh):
     return accessor, domain
 
 
-# Set by the import on a mesh it tessellated from a Box, Sphere, Cylinder or Cone (import_x3d.mark_primitive).
+# Set by the import on a mesh it tessellated from a Box, Sphere, Cylinder, Cone, Rectangle2D, Extrusion or ElevationGrid
+# (import_x3d.mark_primitive).
 PRIMITIVE_PROPERTY = "x3d_primitive"
-_PRIMITIVE_NODES = frozenset(("Box", "Sphere", "Cylinder", "Cone"))
+_PRIMITIVE_NODES = frozenset(("Box", "Sphere", "Cylinder", "Cone", "Rectangle2D", "Extrusion", "ElevationGrid"))
 
 
 def _position_signature(mesh):
@@ -503,6 +504,30 @@ def primitive_for_mesh(mesh):
             or abs(float(signature[2]) - current[2]) > 1e-4 * max(1.0, abs(current[2])):
         return None
     return {"node": record["node"], "fields": dict(record["fields"])}
+
+
+_JUSTIFY = {"LEFT": "BEGIN", "CENTER": "MIDDLE", "RIGHT": "END", "JUSTIFY": "BEGIN", "FLUSH": "BEGIN"}
+
+
+def text_for_object(obj):
+    """A Blender text object as the X3D Text it stands for: {"string": [...], "size", "spacing", "justify", "style"},
+    or None when it has what Text cannot say (extrusion, bevel, an offset, a modifier or several materials), in which
+    case the export writes the evaluated outline as a mesh, as before. The importer's own shift of the baseline
+    (offset_y = -size) is the import's way of placing X3D's baseline, so it is taken as no offset."""
+    data = obj.data
+    if obj.type != "FONT" or not (data.body or "").strip() or len(obj.modifiers):
+        return None
+    shifted = abs(data.offset_y + data.size) < 1e-6        # the import's own placement of X3D's baseline
+    if data.extrude or data.bevel_depth or abs(data.offset_x) > 1e-6 or not (shifted or abs(data.offset_y) < 1e-6):
+        return None
+    if data.size <= 0.0 or len([m for m in obj.material_slots if m.material is not None]) > 1:
+        return None
+    formats = list(getattr(data, "body_format", ()) or ())
+    bold = bool(data.get("bold")) or any(getattr(f, "use_bold", False) for f in formats)
+    italic = bool(data.get("italic")) or any(getattr(f, "use_italic", False) for f in formats)
+    return {"string": data.body.split("\n"), "size": float(data.size), "spacing": float(data.space_line),
+            "justify": _JUSTIFY.get(data.align_x, "BEGIN"),
+            "style": "BOLDITALIC" if bold and italic else "BOLD" if bold else "ITALIC" if italic else "PLAIN"}
 
 
 def _edge_polylines(edges) -> list[list[int]]:
@@ -1662,6 +1687,12 @@ def extract_scene(
         geometry_key = obj.name if needs_eval else obj.data.name
         source_key = f"{obj.type}:{geometry_key}"
         source_keys.setdefault(source_key, obj.name)
+
+        text = text_for_object(obj)
+        if text is not None:
+            material = next((slot.material for slot in obj.material_slots if slot.material is not None), None)
+            register_material(material)
+            return source_key, [IRShape(material_name=material.name if material else None, geometry_hint="Text", text=text)]
 
         primitive = primitive_for_mesh(obj.data) if obj.type == "MESH" and not needs_eval else None
         if primitive is not None:

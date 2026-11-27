@@ -134,7 +134,8 @@
     },
     "Rectangle2D": {
       "import": "yes",
-      "round_trip": "unmeasured"
+      "round_trip": "unmeasured",
+      "note": "written for meshes the import made from a Rectangle2D while no vertex moved (also from a hint, as before)"
     },
     "DirectionalLight": {
       "import": "yes",
@@ -226,6 +227,26 @@
       "import": "yes",
       "round_trip": "exact",
       "note": "X3D 4.1 draft; written by x3d_version X3D41"
+    },
+    "Text": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "a Blender text object (no extrusion, bevel or modifier) is written as Text with a FontStyle; string, size, spacing, justify and style survive, family does not (the import picks an installed font)"
+    },
+    "FontStyle": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "written inside Text only when a field differs from the standard's default"
+    },
+    "Extrusion": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "written for meshes the import made from an Extrusion while no vertex moved (the primitive mechanism of Box)"
+    },
+    "ElevationGrid": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "written for meshes the import made from an ElevationGrid without Color, Normal or TextureCoordinate children, while no vertex moved"
     }
   },
   "asymmetries": [
