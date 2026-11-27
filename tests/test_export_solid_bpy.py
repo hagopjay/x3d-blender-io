@@ -73,6 +73,12 @@ class ExportSolidTests(unittest.TestCase):
                   "TriangleSet2D": "{tag} vertices='0 0, 1 0, 0 1'"}
         for appearance in (CLASSIC, PHYSICAL):
             for tag, template in shapes.items():
+                if tag == "Rectangle2D":      # an unedited Rectangle2D comes back as the node (2.9.0), solid FALSE being its default
+                    root = self._round_trip(appearance, "<Rectangle2D/>")
+                    self.assertIsNone(root.find(".//Rectangle2D").attrib.get("solid"), (appearance, tag))
+                    root = self._round_trip(appearance, "<Rectangle2D solid='true'/>")
+                    self.assertEqual(root.find(".//Rectangle2D").attrib.get("solid"), "true", (appearance, tag, "explicit solid"))
+                    continue
                 node = self._round_trip(appearance, "<" + template.format(tag=tag) + "/>").find(".//IndexedFaceSet")
                 self.assertIsNotNone(node, (appearance, tag))
                 self.assertEqual(node.attrib.get("solid"), "false", (appearance, tag))

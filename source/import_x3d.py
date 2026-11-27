@@ -2744,6 +2744,10 @@ def importMesh_ElevationGrid(geom, ancestry):
 
     bpymesh.validate()
     bpymesh.update()
+    if not (colors or tex_coord or geom.getChildBySpec('Normal')):      # children the node could not be written back with
+        mark_primitive(bpymesh, geom, ancestry, 'ElevationGrid', xDimension=x_dim, zDimension=z_dim, xSpacing=x_spacing,
+                       zSpacing=z_spacing, height=[float(h) for h in height[:x_dim * z_dim]], ccw=ccw,
+                       creaseAngle=geom.getFieldAsFloat('creaseAngle', 0.0, ancestry))
     return bpymesh
 
 
@@ -2872,6 +2876,16 @@ def importMesh_Extrusion(geom, ancestry):
     ccw = geom.getFieldAsBool('ccw', True, ancestry)
     begin_cap = geom.getFieldAsBool('beginCap', True, ancestry)
     end_cap = geom.getFieldAsBool('endCap', True, ancestry)
+    # what the export writes back while the mesh is unedited (mark_primitive, extract.primitive_for_mesh)
+    extrusion_fields = {
+        "crossSection": [list(map(float, c)) for c in geom.getFieldAsArray('crossSection', 2, ancestry)],
+        "spine": [list(map(float, s)) for s in geom.getFieldAsArray('spine', 3, ancestry)],
+        "scale": [list(map(float, s)) for s in geom.getFieldAsArray('scale', 2, ancestry)],
+        "orientation": [list(map(float, o)) for o in geom.getFieldAsArray('orientation', 4, ancestry)],
+        "beginCap": begin_cap, "endCap": end_cap, "ccw": ccw,
+        "convex": geom.getFieldAsBool('convex', True, ancestry),
+        "creaseAngle": geom.getFieldAsFloat('creaseAngle', 0.0, ancestry),
+    }
     cross = geom.getFieldAsArray('crossSection', 2, ancestry)
     if not cross:
         cross = ((1, 1), (1, -1), (-1, -1), (-1, 1), (1, 1))
@@ -3070,6 +3084,7 @@ def importMesh_Extrusion(geom, ancestry):
 
     bpymesh.validate()
     bpymesh.update()
+    mark_primitive(bpymesh, geom, ancestry, 'Extrusion', **extrusion_fields)
     return bpymesh
 
 
@@ -4315,7 +4330,7 @@ def position_signature(bpymesh):
 def mark_primitive(bpymesh, geom, ancestry, node_type, **fields):
     """Remember the primitive node behind ``bpymesh`` (see PRIMITIVE_PROPERTY)."""
     import json
-    fields["solid"] = geom.getFieldAsBool('solid', True, ancestry)
+    fields["solid"] = geom.getFieldAsBool('solid', geom.getSpec() not in SOLID_DEFAULT_FALSE_SPECS, ancestry)
     bpymesh[PRIMITIVE_PROPERTY] = json.dumps({"node": node_type, "fields": fields,
                                               "signature": position_signature(bpymesh)})
 
@@ -4578,6 +4593,7 @@ def importMesh_Rectangle2D(geom, ancestry):
     bpymesh.validate()
     bpymesh.uv_layers.new().data.foreach_set('uv', (0, 0, 1, 0, 1, 1, 0, 1))
     bpymesh.update()
+    mark_primitive(bpymesh, geom, ancestry, 'Rectangle2D', size=[size[0], size[1]])
     return bpymesh
 
 
@@ -5672,7 +5688,8 @@ def importText(geom, ancestry):
         size = fmt.getFieldAsFloat("size", 1, ancestry)
         horizontal_alignment = fmt.getFieldAsMFStringArray("justify", [], ancestry)
         line_height = fmt.getFieldAsFloat("spacing", 1, ancestry)
-        style = fmt.getFieldAsMFStringArray("style", None, ancestry)
+        # style is an SFString in X3D 4.0 (BOLD) and was an MFString before ("BOLD"): read either
+        style = fmt.getFieldAsString("style", "PLAIN", ancestry).replace('"', " ").replace("'", " ").split() or None
         family = fmt.getFieldAsMFStringArray("family", None, ancestry)
     else:
         size = 1
@@ -6532,14 +6549,15 @@ def importAudio(bpycollection, node, ancestry, global_matrix):
     location = node.getFieldAsFloatTuple('location', (0.0, 0.0, 0.0), ancestry, conversion_scale)
     direction = node.getFieldAsFloatTuple('direction', (0.0, 0.0, 0.0), ancestry, conversion_scale)
     volume = node.getFieldAsFloat('intensity', 1.0, ancestry, conversion_scale)
-    # Back and Front is not available in blender, thus only use the max value of both
+    # Back and Front is not available in blender, thus only use the max value of both. The standard's defaults
+    # (10 and 1) stand in for a field the file leaves out: a bare <Sound> used to stop the import with a TypeError.
     max_distance = max(
-        node.getFieldAsFloat('maxBack', None, ancestry, conversion_scale),
-        node.getFieldAsFloat('maxFront', None, ancestry, conversion_scale)
+        node.getFieldAsFloat('maxBack', 10.0 * conversion_scale, ancestry, conversion_scale),
+        node.getFieldAsFloat('maxFront', 10.0 * conversion_scale, ancestry, conversion_scale)
     )
     ref_distance = max(
-        node.getFieldAsFloat('minBack', None, ancestry, conversion_scale),
-        node.getFieldAsFloat('minFront', None, ancestry, conversion_scale)
+        node.getFieldAsFloat('minBack', 1.0 * conversion_scale, ancestry, conversion_scale),
+        node.getFieldAsFloat('minFront', 1.0 * conversion_scale, ancestry, conversion_scale)
     )
 
     bpy.ops.object.speaker_add(location=location)

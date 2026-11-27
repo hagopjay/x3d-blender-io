@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="Geometry2D" level="2"/>
+  </head>
+  <Scene>
+    <Transform DEF="Words" translation="0 2 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.9 0.2 0.2"/></Appearance>
+        <Text string='"Hello" "board"'>
+          <FontStyle size="0.5" spacing="1.5" justify='"MIDDLE" "FIRST"' style="BOLD"/>
+        </Text>
+      </Shape>
+    </Transform>
+    <Transform DEF="Plain" translation="3 2 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.2 0.2 0.9"/></Appearance>
+        <Text string='"x"'/>
+      </Shape>
+    </Transform>
+    <Transform DEF="Pipe" translation="-4 0 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.3 0.7 0.3"/></Appearance>
+        <Extrusion crossSection="1 0 0 1 -1 0 0 -1 1 0" spine="0 0 0 0 1 0 0 2 1" scale="1 1 0.5 0.5 0.25 0.25"
+                   orientation="0 1 0 0 0 1 0 0.2 0 1 0 0" beginCap="false" creaseAngle="0.5" solid="false"/>
+      </Shape>
+    </Transform>
+    <Transform DEF="Hills" translation="0 -2 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.6 0.5 0.3"/></Appearance>
+        <ElevationGrid xDimension="3" zDimension="3" xSpacing="0.5" zSpacing="0.5" creaseAngle="0.8"
+                       height="0 0.2 0 0.2 1 0.2 0 0.2 0"/>
+      </Shape>
+    </Transform>
+    <Transform DEF="Panel" translation="4 -2 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.8 0.8 0.1"/></Appearance>
+        <Rectangle2D size="3 1.5" solid="true"/>
+      </Shape>
+    </Transform>
+  </Scene>
+</X3D>

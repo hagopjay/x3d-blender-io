@@ -510,7 +510,15 @@ def _imported_primitive_xml(primitive, defs: _DefNames, indent):
     if not defs.first_use("primitive", key):
         return f'{indent}<{node} USE="{primitive_def}" />\n'
     attrs = [f'DEF="{primitive_def}"']
-    if node == "Box":
+    if node == "Rectangle2D":
+        size = tuple(float(v) for v in fields.get("size", (2.0, 2.0)))
+        if size != (2.0, 2.0):
+            attrs.append('size="' + " ".join(_fmt_length(v) for v in size[:2]) + '"')
+    elif node == "Extrusion":
+        attrs += _extrusion_attrs(fields)
+    elif node == "ElevationGrid":
+        attrs += _elevation_grid_attrs(fields)
+    elif node == "Box":
         size = tuple(float(v) for v in fields.get("size", (2.0, 2.0, 2.0)))
         if size != (2.0, 2.0, 2.0):
             attrs.append(f'size="{_fmt3_length(size)}"')
@@ -526,9 +534,70 @@ def _imported_primitive_xml(primitive, defs: _DefNames, indent):
         for flag in (("bottom", "side", "top") if node == "Cylinder" else ("bottom", "side")):
             if not fields.get(flag, True):
                 attrs.append(f'{flag}="false"')
-    if not fields.get("solid", True):
-        attrs.append('solid="false"')
+    default_solid = node != "Rectangle2D"          # Geometry2D's rectangle is not solid unless the file says so
+    if bool(fields.get("solid", default_solid)) != default_solid:
+        attrs.append(f'solid="{"true" if not default_solid else "false"}"')
     return f'{indent}<{node}{"".join(" " + a for a in attrs)} />\n'
+
+
+def _text_xml(text, indent):
+    """A Blender text object as Text with its FontStyle; fields at their X3D default are left out."""
+    lines = _mfstring([line.replace("\r", "") for line in text["string"]])
+    style = []
+    if float(text.get("size", 1.0)) != 1.0:
+        style.append(f'size="{_fmt_short_length(float(text["size"]))}"')
+    if float(text.get("spacing", 1.0)) != 1.0:
+        style.append(f'spacing="{_fmt_short(float(text["spacing"]))}"')
+    if text.get("justify", "BEGIN") != "BEGIN":
+        style.append(f'justify=\'"{text["justify"]}" "FIRST"\'')
+    if text.get("style", "PLAIN") != "PLAIN":
+        style.append(f'style="{text["style"]}"')
+    font = f"{indent}  <FontStyle {' '.join(style)} />\n" if style else ""
+    if not font:
+        return f"{indent}<Text string='{lines}' />\n"
+    return f"{indent}<Text string='{lines}'>\n{font}{indent}</Text>\n"
+
+
+def _flat(rows, width=None):
+    return " ".join(_fmt_short_length(float(v)) for row in rows for v in (row if width is None else row[:width]))
+
+
+def _extrusion_attrs(fields):
+    """The Extrusion fields that differ from the standard's defaults."""
+    attrs = []
+    cross = fields.get("crossSection") or []
+    if cross and cross != [[1.0, 1.0], [1.0, -1.0], [-1.0, -1.0], [-1.0, 1.0], [1.0, 1.0]]:
+        attrs.append(f'crossSection="{_flat(cross, 2)}"')
+    spine = fields.get("spine") or []
+    if spine and spine != [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]:
+        attrs.append(f'spine="{_flat(spine, 3)}"')
+    scale = fields.get("scale") or []
+    if scale and scale != [[1.0, 1.0]]:
+        attrs.append(f'scale="{_flat(scale, 2)}"')
+    orientation = fields.get("orientation") or []
+    if orientation and orientation != [[0.0, 0.0, 1.0, 0.0]]:
+        attrs.append(f'orientation="{_flat(orientation, 4)}"')
+    for flag in ("beginCap", "endCap", "ccw", "convex"):
+        if not fields.get(flag, True):
+            attrs.append(f'{flag}="false"')
+    if float(fields.get("creaseAngle", 0.0)) != 0.0:
+        attrs.append(f'creaseAngle="{_fmt_short(float(fields["creaseAngle"]))}"')
+    return attrs
+
+
+def _elevation_grid_attrs(fields):
+    attrs = [f'xDimension="{int(fields.get("xDimension", 0))}"', f'zDimension="{int(fields.get("zDimension", 0))}"']
+    for name in ("xSpacing", "zSpacing"):
+        if float(fields.get(name, 1.0)) != 1.0:
+            attrs.append(f'{name}="{_fmt_short_length(float(fields[name]))}"')
+    heights = fields.get("height") or []
+    if heights:
+        attrs.append('height="' + " ".join(_fmt_short_length(float(h)) for h in heights) + '"')
+    if not fields.get("ccw", True):
+        attrs.append('ccw="false"')
+    if float(fields.get("creaseAngle", 0.0)) != 0.0:
+        attrs.append(f'creaseAngle="{_fmt_short(float(fields["creaseAngle"]))}"')
+    return attrs
 
 
 def _primitive_geometry_xml(hint, indent):
@@ -740,6 +809,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
             xml.append(_default_appearance_xml(indent + "    ", look))
         if geometry is not None:
             xml.append(_geometry_xml(geometry, defs, indent + "    "))
+        elif shape.text:
+            xml.append(_text_xml(shape.text, indent + "    "))
         elif shape.primitive:
             xml.append(_imported_primitive_xml(shape.primitive, defs, indent + "    "))
         else:
