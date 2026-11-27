@@ -1,0 +1,1230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 23: dance floor" />
+    <meta name="description" content="18 stick-and-ball dancers on flashing tiles; three buttons pick the choreography: Mexican wave, disco point, twirl." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-23-dance-floor/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.02 0.0 0.05" />
+    <Viewpoint DEF="View" description="Front of the stage" position="0 5.2 11.5" orientation="1 0 0 -0.3" />
+    <DirectionalLight direction="0 -1 -0.5" intensity="1.0" />
+    <Transform DEF="Stage" translation="0 -0.2 0"><Shape><Appearance><PhysicalMaterial baseColor="0.04 0.04 0.07" emissiveColor="0.02 0.02 0.04" /></Appearance><Box size="11.5 0.2 6.6" /></Shape></Transform>
+    <Transform DEF="Tile0_0" translation="-4.25 -0.06 -1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat0_0" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer0_0" translation="-4.25 0 -1.7">
+      <Transform DEF="Root0_0">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head0_0" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL0_0" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL0_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR0_0" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR0_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL0_0" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR0_0" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile0_1" translation="-4.25 -0.06 0"><Shape><Appearance><PhysicalMaterial DEF="TileMat0_1" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer0_1" translation="-4.25 0 0">
+      <Transform DEF="Root0_1">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head0_1" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL0_1" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL0_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR0_1" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR0_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL0_1" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR0_1" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile0_2" translation="-4.25 -0.06 1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat0_2" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer0_2" translation="-4.25 0 1.7">
+      <Transform DEF="Root0_2">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head0_2" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL0_2" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL0_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR0_2" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR0_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL0_2" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR0_2" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.2375" emissiveColor="0.285 0.0712 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile1_0" translation="-2.55 -0.06 -1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat1_0" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer1_0" translation="-2.55 0 -1.7">
+      <Transform DEF="Root1_0">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head1_0" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL1_0" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL1_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR1_0" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR1_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL1_0" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR1_0" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile1_1" translation="-2.55 -0.06 0"><Shape><Appearance><PhysicalMaterial DEF="TileMat1_1" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer1_1" translation="-2.55 0 0">
+      <Transform DEF="Root1_1">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head1_1" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL1_1" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL1_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR1_1" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR1_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL1_1" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR1_1" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile1_2" translation="-2.55 -0.06 1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat1_2" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer1_2" translation="-2.55 0 1.7">
+      <Transform DEF="Root1_2">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head1_2" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL1_2" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL1_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR1_2" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR1_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL1_2" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR1_2" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.95 0.2375" emissiveColor="0.285 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile2_0" translation="-0.85 -0.06 -1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat2_0" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer2_0" translation="-0.85 0 -1.7">
+      <Transform DEF="Root2_0">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head2_0" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL2_0" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL2_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR2_0" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR2_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL2_0" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR2_0" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile2_1" translation="-0.85 -0.06 0"><Shape><Appearance><PhysicalMaterial DEF="TileMat2_1" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer2_1" translation="-0.85 0 0">
+      <Transform DEF="Root2_1">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head2_1" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL2_1" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL2_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR2_1" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR2_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL2_1" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR2_1" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile2_2" translation="-0.85 -0.06 1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat2_2" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer2_2" translation="-0.85 0 1.7">
+      <Transform DEF="Root2_2">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head2_2" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL2_2" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL2_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR2_2" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR2_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL2_2" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR2_2" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.2375" emissiveColor="0.0712 0.285 0.0712" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile3_0" translation="0.85 -0.06 -1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat3_0" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer3_0" translation="0.85 0 -1.7">
+      <Transform DEF="Root3_0">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head3_0" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL3_0" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL3_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR3_0" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR3_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL3_0" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR3_0" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile3_1" translation="0.85 -0.06 0"><Shape><Appearance><PhysicalMaterial DEF="TileMat3_1" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer3_1" translation="0.85 0 0">
+      <Transform DEF="Root3_1">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head3_1" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL3_1" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL3_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR3_1" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR3_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL3_1" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR3_1" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile3_2" translation="0.85 -0.06 1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat3_2" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer3_2" translation="0.85 0 1.7">
+      <Transform DEF="Root3_2">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head3_2" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL3_2" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL3_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR3_2" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR3_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL3_2" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR3_2" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.95 0.95" emissiveColor="0.0712 0.285 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile4_0" translation="2.55 -0.06 -1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat4_0" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer4_0" translation="2.55 0 -1.7">
+      <Transform DEF="Root4_0">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head4_0" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL4_0" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL4_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR4_0" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR4_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL4_0" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR4_0" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile4_1" translation="2.55 -0.06 0"><Shape><Appearance><PhysicalMaterial DEF="TileMat4_1" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer4_1" translation="2.55 0 0">
+      <Transform DEF="Root4_1">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head4_1" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL4_1" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL4_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR4_1" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR4_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL4_1" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR4_1" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile4_2" translation="2.55 -0.06 1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat4_2" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer4_2" translation="2.55 0 1.7">
+      <Transform DEF="Root4_2">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head4_2" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL4_2" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL4_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR4_2" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR4_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL4_2" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR4_2" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.2375 0.2375 0.95" emissiveColor="0.0712 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile5_0" translation="4.25 -0.06 -1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat5_0" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer5_0" translation="4.25 0 -1.7">
+      <Transform DEF="Root5_0">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head5_0" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL5_0" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL5_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR5_0" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR5_0" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL5_0" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR5_0" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile5_1" translation="4.25 -0.06 0"><Shape><Appearance><PhysicalMaterial DEF="TileMat5_1" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer5_1" translation="4.25 0 0">
+      <Transform DEF="Root5_1">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head5_1" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL5_1" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL5_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR5_1" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR5_1" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL5_1" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR5_1" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="Tile5_2" translation="4.25 -0.06 1.7"><Shape><Appearance><PhysicalMaterial DEF="TileMat5_2" baseColor="0.1 0.1 0.15" emissiveColor="0.05 0.05 0.08" roughness="0.3" /></Appearance><Box size="1.60 0.12 1.60" /></Shape></Transform>
+    <Transform DEF="Dancer5_2" translation="4.25 0 1.7">
+      <Transform DEF="Root5_2">
+        <Transform translation="0 1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Box size="0.42 0.62 0.24" /></Shape></Transform>
+        <Transform DEF="Head5_2" translation="0 1.36 0"><Transform translation="0 0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Sphere radius="0.17" /></Shape></Transform></Transform>
+        <Transform DEF="ArmL5_2" translation="-0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeL5_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="ArmR5_2" translation="0.28 1.27 0"><Transform translation="0 -0.18 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.07" height="0.36" /></Shape></Transform><Transform DEF="ForeR5_2" translation="0 -0.36 0"><Transform translation="0 -0.17 0"><Shape><Appearance><PhysicalMaterial baseColor="1 0.85 0.7" emissiveColor="0.3 0.255 0.21" roughness="0.5" /></Appearance><Cylinder radius="0.06" height="0.34" /></Shape></Transform></Transform></Transform>
+        <Transform DEF="LegL5_2" translation="-0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+        <Transform DEF="LegR5_2" translation="0.12 0.72 0"><Transform translation="0 -0.37 0"><Shape><Appearance><PhysicalMaterial baseColor="0.95 0.2375 0.95" emissiveColor="0.285 0.0712 0.285" roughness="0.5" /></Appearance><Cylinder radius="0.085" height="0.74" /></Shape></Transform></Transform>
+      </Transform>
+    </Transform>
+    <Transform DEF="ButtonA" translation="-2.6 0.2 4">
+      <TouchSensor DEF="TouchA" description="Mexican wave" />
+      <Shape><Appearance><PhysicalMaterial baseColor="0.15 0.898 1" emissiveColor="0.09 0.5388 0.6" metallic="0.5" roughness="0.3" /></Appearance><Cylinder radius="0.55" height="0.4" /></Shape>
+    </Transform>
+    <Transform DEF="ButtonB" translation="0 0.2 4">
+      <TouchSensor DEF="TouchB" description="Disco point" />
+      <Shape><Appearance><PhysicalMaterial baseColor="1 0.15 0.813" emissiveColor="0.6 0.09 0.4878" metallic="0.5" roughness="0.3" /></Appearance><Cylinder radius="0.55" height="0.4" /></Shape>
+    </Transform>
+    <Transform DEF="ButtonC" translation="2.6 0.2 4">
+      <TouchSensor DEF="TouchC" description="Twirl" />
+      <Shape><Appearance><PhysicalMaterial baseColor="0.32 1 0.15" emissiveColor="0.192 0.6 0.09" metallic="0.5" roughness="0.3" /></Appearance><Cylinder radius="0.55" height="0.4" /></Shape>
+    </Transform>
+    <TimeSensor DEF="ClkA0" cycleInterval="5.0" loop="true" enabled="true" />
+    <PositionInterpolator DEF="AHop0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1 1 1 1.0008 1 1 1.0074 1 1 1.0312 1 1 1.0826 1 1 1.1555 1 1 1.2225 1 1 1.25 1 1 1.2225 1 1 1.1555 1 1 1.0826 1 1 1.0312 1 1 1.0074 1 1 1.0008 1 1 1 1 1 1 1" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="AHop0" toField="set_fraction" />
+    <ROUTE fromNode="AHop0" fromField="value_changed" toNode="Root0_0" toField="scale" />
+    <ROUTE fromNode="AHop0" fromField="value_changed" toNode="Root0_1" toField="scale" />
+    <ROUTE fromNode="AHop0" fromField="value_changed" toNode="Root0_2" toField="scale" />
+    <OrientationInterpolator DEF="ASpin0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0.1531 0 1 0 0.2828 0 1 0 0.3696 0 1 0 0.4 0 1 0 0.3696 0 1 0 0.2828 0 1 0 0.1531 0 1 0 0 0 1 0 -0.1531 0 1 0 -0.2828 0 1 0 -0.3696 0 1 0 -0.4 0 1 0 -0.3696 0 1 0 -0.2828 0 1 0 -0.1531 0 1 0 0" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="ASpin0" toField="set_fraction" />
+    <ROUTE fromNode="ASpin0" fromField="value_changed" toNode="Root0_0" toField="rotation" />
+    <ROUTE fromNode="ASpin0" fromField="value_changed" toNode="Root0_1" toField="rotation" />
+    <ROUTE fromNode="ASpin0" fromField="value_changed" toNode="Root0_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 -0.0002 0 0 1 -0.0091 0 0 1 -0.0853 0 0 1 -0.3625 0 0 1 -0.9582 0 0 1 -1.8034 0 0 1 -2.5813 0 0 1 -2.9 0 0 1 -2.5813 0 0 1 -1.8034 0 0 1 -0.9582 0 0 1 -0.3625 0 0 1 -0.0853 0 0 1 -0.0091 0 0 1 -0.0002 0 0 1 -0" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="AAL0" toField="set_fraction" />
+    <ROUTE fromNode="AAL0" fromField="value_changed" toNode="ArmL0_0" toField="rotation" />
+    <ROUTE fromNode="AAL0" fromField="value_changed" toNode="ArmL0_1" toField="rotation" />
+    <ROUTE fromNode="AAL0" fromField="value_changed" toNode="ArmL0_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAR0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0.0002 0 0 1 0.0091 0 0 1 0.0853 0 0 1 0.3625 0 0 1 0.9582 0 0 1 1.8034 0 0 1 2.5813 0 0 1 2.9 0 0 1 2.5813 0 0 1 1.8034 0 0 1 0.9582 0 0 1 0.3625 0 0 1 0.0853 0 0 1 0.0091 0 0 1 0.0002 0 0 1 0" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="AAR0" toField="set_fraction" />
+    <ROUTE fromNode="AAR0" fromField="value_changed" toNode="ArmR0_0" toField="rotation" />
+    <ROUTE fromNode="AAR0" fromField="value_changed" toNode="ArmR0_1" toField="rotation" />
+    <ROUTE fromNode="AAR0" fromField="value_changed" toNode="ArmR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="AEL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0.0016 1 0 0 -0.0147 1 0 0 -0.0625 1 0 0 -0.1652 1 0 0 -0.3109 1 0 0 -0.4451 1 0 0 -0.5 1 0 0 -0.4451 1 0 0 -0.3109 1 0 0 -0.1652 1 0 0 -0.0625 1 0 0 -0.0147 1 0 0 -0.0016 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="AEL0" toField="set_fraction" />
+    <ROUTE fromNode="AEL0" fromField="value_changed" toNode="ForeL0_0" toField="rotation" />
+    <ROUTE fromNode="AEL0" fromField="value_changed" toNode="ForeR0_0" toField="rotation" />
+    <ROUTE fromNode="AEL0" fromField="value_changed" toNode="ForeL0_1" toField="rotation" />
+    <ROUTE fromNode="AEL0" fromField="value_changed" toNode="ForeR0_1" toField="rotation" />
+    <ROUTE fromNode="AEL0" fromField="value_changed" toNode="ForeL0_2" toField="rotation" />
+    <ROUTE fromNode="AEL0" fromField="value_changed" toNode="ForeR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0 1 0 0 0 1 0 0 0.0011 1 0 0 0.0103 1 0 0 0.0437 1 0 0 0.1157 1 0 0 0.2177 1 0 0 0.3115 1 0 0 0.35 1 0 0 0.3115 1 0 0 0.2177 1 0 0 0.1157 1 0 0 0.0438 1 0 0 0.0103 1 0 0 0.0011 1 0 0 0 1 0 0 0" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="ALL0" toField="set_fraction" />
+    <ROUTE fromNode="ALL0" fromField="value_changed" toNode="LegL0_0" toField="rotation" />
+    <ROUTE fromNode="ALL0" fromField="value_changed" toNode="LegL0_1" toField="rotation" />
+    <ROUTE fromNode="ALL0" fromField="value_changed" toNode="LegL0_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALR0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0 1 0 0 0 1 0 0 0.0011 1 0 0 0.0103 1 0 0 0.0437 1 0 0 0.1157 1 0 0 0.2177 1 0 0 0.3115 1 0 0 0.35 1 0 0 0.3115 1 0 0 0.2177 1 0 0 0.1157 1 0 0 0.0438 1 0 0 0.0103 1 0 0 0.0011 1 0 0 0 1 0 0 0" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="ALR0" toField="set_fraction" />
+    <ROUTE fromNode="ALR0" fromField="value_changed" toNode="LegR0_0" toField="rotation" />
+    <ROUTE fromNode="ALR0" fromField="value_changed" toNode="LegR0_1" toField="rotation" />
+    <ROUTE fromNode="ALR0" fromField="value_changed" toNode="LegR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="AHd0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0.0016 1 0 0 -0.0147 1 0 0 -0.0625 1 0 0 -0.1652 1 0 0 -0.3109 1 0 0 -0.4451 1 0 0 -0.5 1 0 0 -0.4451 1 0 0 -0.3109 1 0 0 -0.1652 1 0 0 -0.0625 1 0 0 -0.0147 1 0 0 -0.0016 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="AHd0" toField="set_fraction" />
+    <ROUTE fromNode="AHd0" fromField="value_changed" toNode="Head0_0" toField="rotation" />
+    <ROUTE fromNode="AHd0" fromField="value_changed" toNode="Head0_1" toField="rotation" />
+    <ROUTE fromNode="AHd0" fromField="value_changed" toNode="Head0_2" toField="rotation" />
+    <ColorInterpolator DEF="ATile0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.018 0.1078 0.12 0.018 0.1078 0.12 0.0184 0.1102 0.1228 0.0219 0.131 0.1459 0.0345 0.2065 0.23 0.0616 0.3689 0.4108 0.1001 0.5992 0.6672 0.1355 0.8112 0.9033 0.15 0.898 1 0.1355 0.8112 0.9033 0.1001 0.5992 0.6672 0.0616 0.3689 0.4108 0.0345 0.2065 0.23 0.0219 0.131 0.1459 0.0184 0.1102 0.1228 0.018 0.1078 0.12 0.018 0.1078 0.12" />
+    <ROUTE fromNode="ClkA0" fromField="fraction_changed" toNode="ATile0" toField="set_fraction" />
+    <ROUTE fromNode="ATile0" fromField="value_changed" toNode="TileMat0_0" toField="baseColor" />
+    <ROUTE fromNode="ATile0" fromField="value_changed" toNode="TileMat0_0" toField="emissiveColor" />
+    <ROUTE fromNode="ATile0" fromField="value_changed" toNode="TileMat0_1" toField="baseColor" />
+    <ROUTE fromNode="ATile0" fromField="value_changed" toNode="TileMat0_1" toField="emissiveColor" />
+    <ROUTE fromNode="ATile0" fromField="value_changed" toNode="TileMat0_2" toField="baseColor" />
+    <ROUTE fromNode="ATile0" fromField="value_changed" toNode="TileMat0_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkA1" cycleInterval="5.0" loop="true" enabled="true" />
+    <PositionInterpolator DEF="AHop1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1.0006 1 1 1 1 1 1 1 1 1 1 1 1.001 1 1 1.0084 1 1 1.0343 1 1 1.0879 1 1 1.1615 1 1 1.2266 1 1 1.2498 1 1 1.2182 1 1 1.1494 1 1 1.0775 1 1 1.0284 1 1 1.0064 1 1 1.0006 1" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="AHop1" toField="set_fraction" />
+    <ROUTE fromNode="AHop1" fromField="value_changed" toNode="Root1_0" toField="scale" />
+    <ROUTE fromNode="AHop1" fromField="value_changed" toNode="Root1_1" toField="scale" />
+    <ROUTE fromNode="AHop1" fromField="value_changed" toNode="Root1_2" toField="scale" />
+    <OrientationInterpolator DEF="ASpin1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 -0.2738 0 1 0 -0.1414 0 1 0 0.0126 0 1 0 0.1646 0 1 0 0.2916 0 1 0 0.3742 0 1 0 0.3998 0 1 0 0.3646 0 1 0 0.2738 0 1 0 0.1414 0 1 0 -0.0126 0 1 0 -0.1646 0 1 0 -0.2916 0 1 0 -0.3742 0 1 0 -0.3998 0 1 0 -0.3646 0 1 0 -0.2738" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="ASpin1" toField="set_fraction" />
+    <ROUTE fromNode="ASpin1" fromField="value_changed" toNode="Root1_0" toField="rotation" />
+    <ROUTE fromNode="ASpin1" fromField="value_changed" toNode="Root1_1" toField="rotation" />
+    <ROUTE fromNode="ASpin1" fromField="value_changed" toNode="Root1_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0.0072 0 0 1 -0.0001 0 0 1 -0 0 0 1 -0.0003 0 0 1 -0.0114 0 0 1 -0.098 0 0 1 -0.3977 0 0 1 -1.0194 0 0 1 -1.8736 0 0 1 -2.6281 0 0 1 -2.8979 0 0 1 -2.5314 0 0 1 -1.7328 0 0 1 -0.8988 0 0 1 -0.3294 0 0 1 -0.0739 0 0 1 -0.0072" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="AAL1" toField="set_fraction" />
+    <ROUTE fromNode="AAL1" fromField="value_changed" toNode="ArmL1_0" toField="rotation" />
+    <ROUTE fromNode="AAL1" fromField="value_changed" toNode="ArmL1_1" toField="rotation" />
+    <ROUTE fromNode="AAL1" fromField="value_changed" toNode="ArmL1_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAR1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0.0072 0 0 1 0.0001 0 0 1 0 0 0 1 0.0003 0 0 1 0.0114 0 0 1 0.098 0 0 1 0.3977 0 0 1 1.0194 0 0 1 1.8736 0 0 1 2.6281 0 0 1 2.8979 0 0 1 2.5314 0 0 1 1.7328 0 0 1 0.8988 0 0 1 0.3294 0 0 1 0.0739 0 0 1 0.0072" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="AAR1" toField="set_fraction" />
+    <ROUTE fromNode="AAR1" fromField="value_changed" toNode="ArmR1_0" toField="rotation" />
+    <ROUTE fromNode="AAR1" fromField="value_changed" toNode="ArmR1_1" toField="rotation" />
+    <ROUTE fromNode="AAR1" fromField="value_changed" toNode="ArmR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="AEL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.0012 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.002 1 0 0 -0.0169 1 0 0 -0.0686 1 0 0 -0.1758 1 0 0 -0.323 1 0 0 -0.4531 1 0 0 -0.4996 1 0 0 -0.4365 1 0 0 -0.2988 1 0 0 -0.155 1 0 0 -0.0568 1 0 0 -0.0127 1 0 0 -0.0012" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="AEL1" toField="set_fraction" />
+    <ROUTE fromNode="AEL1" fromField="value_changed" toNode="ForeL1_0" toField="rotation" />
+    <ROUTE fromNode="AEL1" fromField="value_changed" toNode="ForeR1_0" toField="rotation" />
+    <ROUTE fromNode="AEL1" fromField="value_changed" toNode="ForeL1_1" toField="rotation" />
+    <ROUTE fromNode="AEL1" fromField="value_changed" toNode="ForeR1_1" toField="rotation" />
+    <ROUTE fromNode="AEL1" fromField="value_changed" toNode="ForeL1_2" toField="rotation" />
+    <ROUTE fromNode="AEL1" fromField="value_changed" toNode="ForeR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.0009 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0.0014 1 0 0 0.0118 1 0 0 0.048 1 0 0 0.123 1 0 0 0.2261 1 0 0 0.3172 1 0 0 0.3497 1 0 0 0.3055 1 0 0 0.2091 1 0 0 0.1085 1 0 0 0.0398 1 0 0 0.0089 1 0 0 0.0009" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="ALL1" toField="set_fraction" />
+    <ROUTE fromNode="ALL1" fromField="value_changed" toNode="LegL1_0" toField="rotation" />
+    <ROUTE fromNode="ALL1" fromField="value_changed" toNode="LegL1_1" toField="rotation" />
+    <ROUTE fromNode="ALL1" fromField="value_changed" toNode="LegL1_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALR1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.0009 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0.0014 1 0 0 0.0118 1 0 0 0.048 1 0 0 0.123 1 0 0 0.2261 1 0 0 0.3172 1 0 0 0.3497 1 0 0 0.3055 1 0 0 0.2091 1 0 0 0.1085 1 0 0 0.0398 1 0 0 0.0089 1 0 0 0.0009" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="ALR1" toField="set_fraction" />
+    <ROUTE fromNode="ALR1" fromField="value_changed" toNode="LegR1_0" toField="rotation" />
+    <ROUTE fromNode="ALR1" fromField="value_changed" toNode="LegR1_1" toField="rotation" />
+    <ROUTE fromNode="ALR1" fromField="value_changed" toNode="LegR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="AHd1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.0012 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.002 1 0 0 -0.0169 1 0 0 -0.0686 1 0 0 -0.1758 1 0 0 -0.323 1 0 0 -0.4531 1 0 0 -0.4996 1 0 0 -0.4365 1 0 0 -0.2988 1 0 0 -0.155 1 0 0 -0.0568 1 0 0 -0.0127 1 0 0 -0.0012" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="AHd1" toField="set_fraction" />
+    <ROUTE fromNode="AHd1" fromField="value_changed" toNode="Head1_0" toField="rotation" />
+    <ROUTE fromNode="AHd1" fromField="value_changed" toNode="Head1_1" toField="rotation" />
+    <ROUTE fromNode="AHd1" fromField="value_changed" toNode="Head1_2" toField="rotation" />
+    <ColorInterpolator DEF="ATile1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.0183 0.0879 0.1222 0.018 0.0864 0.12 0.018 0.0863 0.12 0.018 0.0864 0.1201 0.0185 0.0888 0.1235 0.0225 0.1077 0.1497 0.0361 0.1732 0.2407 0.0644 0.3089 0.4293 0.1033 0.4954 0.6885 0.1376 0.6601 0.9175 0.1499 0.719 0.9993 0.1332 0.639 0.8882 0.0969 0.4647 0.6458 0.0589 0.2826 0.3927 0.033 0.1583 0.22 0.0214 0.1025 0.1424 0.0183 0.0879 0.1222" />
+    <ROUTE fromNode="ClkA1" fromField="fraction_changed" toNode="ATile1" toField="set_fraction" />
+    <ROUTE fromNode="ATile1" fromField="value_changed" toNode="TileMat1_0" toField="baseColor" />
+    <ROUTE fromNode="ATile1" fromField="value_changed" toNode="TileMat1_0" toField="emissiveColor" />
+    <ROUTE fromNode="ATile1" fromField="value_changed" toNode="TileMat1_1" toField="baseColor" />
+    <ROUTE fromNode="ATile1" fromField="value_changed" toNode="TileMat1_1" toField="emissiveColor" />
+    <ROUTE fromNode="ATile1" fromField="value_changed" toNode="TileMat1_2" toField="baseColor" />
+    <ROUTE fromNode="ATile1" fromField="value_changed" toNode="TileMat1_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkA2" cycleInterval="5.0" loop="true" enabled="true" />
+    <PositionInterpolator DEF="AHop2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1.0257 1 1 1.0055 1 1 1.0005 1 1 1 1 1 1 1 1 1 1 1 1.0012 1 1 1.0097 1 1 1.0375 1 1 1.0933 1 1 1.1675 1 1 1.2303 1 1 1.2493 1 1 1.2137 1 1 1.1433 1 1 1.0725 1 1 1.0257 1" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="AHop2" toField="set_fraction" />
+    <ROUTE fromNode="AHop2" fromField="value_changed" toNode="Root2_0" toField="scale" />
+    <ROUTE fromNode="AHop2" fromField="value_changed" toNode="Root2_1" toField="scale" />
+    <ROUTE fromNode="AHop2" fromField="value_changed" toNode="Root2_2" toField="scale" />
+    <OrientationInterpolator DEF="ASpin2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 -0.3992 0 1 0 -0.3592 0 1 0 -0.2645 0 1 0 -0.1296 0 1 0 0.0251 0 1 0 0.176 0 1 0 0.3 0 1 0 0.3784 0 1 0 0.3992 0 1 0 0.3592 0 1 0 0.2645 0 1 0 0.1296 0 1 0 -0.0251 0 1 0 -0.176 0 1 0 -0.3 0 1 0 -0.3784 0 1 0 -0.3992" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="ASpin2" toField="set_fraction" />
+    <ROUTE fromNode="ASpin2" fromField="value_changed" toNode="Root2_0" toField="rotation" />
+    <ROUTE fromNode="ASpin2" fromField="value_changed" toNode="Root2_1" toField="rotation" />
+    <ROUTE fromNode="ASpin2" fromField="value_changed" toNode="Root2_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0.2984 0 0 1 -0.0637 0 0 1 -0.0057 0 0 1 -0.0001 0 0 1 -0 0 0 1 -0.0004 0 0 1 -0.0141 0 0 1 -0.112 0 0 1 -0.4352 0 0 1 -1.0823 0 0 1 -1.9431 0 0 1 -2.6717 0 0 1 -2.8914 0 0 1 -2.4787 0 0 1 -1.6621 0 0 1 -0.8412 0 0 1 -0.2984" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="AAL2" toField="set_fraction" />
+    <ROUTE fromNode="AAL2" fromField="value_changed" toNode="ArmL2_0" toField="rotation" />
+    <ROUTE fromNode="AAL2" fromField="value_changed" toNode="ArmL2_1" toField="rotation" />
+    <ROUTE fromNode="AAL2" fromField="value_changed" toNode="ArmL2_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAR2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0.2984 0 0 1 0.0637 0 0 1 0.0057 0 0 1 0.0001 0 0 1 0 0 0 1 0.0004 0 0 1 0.0141 0 0 1 0.112 0 0 1 0.4352 0 0 1 1.0823 0 0 1 1.9431 0 0 1 2.6717 0 0 1 2.8914 0 0 1 2.4787 0 0 1 1.6621 0 0 1 0.8412 0 0 1 0.2984" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="AAR2" toField="set_fraction" />
+    <ROUTE fromNode="AAR2" fromField="value_changed" toNode="ArmR2_0" toField="rotation" />
+    <ROUTE fromNode="AAR2" fromField="value_changed" toNode="ArmR2_1" toField="rotation" />
+    <ROUTE fromNode="AAR2" fromField="value_changed" toNode="ArmR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="AEL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.0515 1 0 0 -0.011 1 0 0 -0.001 1 0 0 -0 1 0 0 -0 1 0 0 -0.0001 1 0 0 -0.0024 1 0 0 -0.0193 1 0 0 -0.075 1 0 0 -0.1866 1 0 0 -0.335 1 0 0 -0.4606 1 0 0 -0.4985 1 0 0 -0.4274 1 0 0 -0.2866 1 0 0 -0.145 1 0 0 -0.0515" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="AEL2" toField="set_fraction" />
+    <ROUTE fromNode="AEL2" fromField="value_changed" toNode="ForeL2_0" toField="rotation" />
+    <ROUTE fromNode="AEL2" fromField="value_changed" toNode="ForeR2_0" toField="rotation" />
+    <ROUTE fromNode="AEL2" fromField="value_changed" toNode="ForeL2_1" toField="rotation" />
+    <ROUTE fromNode="AEL2" fromField="value_changed" toNode="ForeR2_1" toField="rotation" />
+    <ROUTE fromNode="AEL2" fromField="value_changed" toNode="ForeL2_2" toField="rotation" />
+    <ROUTE fromNode="AEL2" fromField="value_changed" toNode="ForeR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.036 1 0 0 0.0077 1 0 0 0.0007 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0.0017 1 0 0 0.0135 1 0 0 0.0525 1 0 0 0.1306 1 0 0 0.2345 1 0 0 0.3225 1 0 0 0.349 1 0 0 0.2991 1 0 0 0.2006 1 0 0 0.1015 1 0 0 0.036" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="ALL2" toField="set_fraction" />
+    <ROUTE fromNode="ALL2" fromField="value_changed" toNode="LegL2_0" toField="rotation" />
+    <ROUTE fromNode="ALL2" fromField="value_changed" toNode="LegL2_1" toField="rotation" />
+    <ROUTE fromNode="ALL2" fromField="value_changed" toNode="LegL2_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALR2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.036 1 0 0 0.0077 1 0 0 0.0007 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0.0017 1 0 0 0.0135 1 0 0 0.0525 1 0 0 0.1306 1 0 0 0.2345 1 0 0 0.3225 1 0 0 0.349 1 0 0 0.2991 1 0 0 0.2006 1 0 0 0.1015 1 0 0 0.036" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="ALR2" toField="set_fraction" />
+    <ROUTE fromNode="ALR2" fromField="value_changed" toNode="LegR2_0" toField="rotation" />
+    <ROUTE fromNode="ALR2" fromField="value_changed" toNode="LegR2_1" toField="rotation" />
+    <ROUTE fromNode="ALR2" fromField="value_changed" toNode="LegR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="AHd2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.0515 1 0 0 -0.011 1 0 0 -0.001 1 0 0 -0 1 0 0 -0 1 0 0 -0.0001 1 0 0 -0.0024 1 0 0 -0.0193 1 0 0 -0.075 1 0 0 -0.1866 1 0 0 -0.335 1 0 0 -0.4606 1 0 0 -0.4985 1 0 0 -0.4274 1 0 0 -0.2866 1 0 0 -0.145 1 0 0 -0.0515" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="AHd2" toField="set_fraction" />
+    <ROUTE fromNode="AHd2" fromField="value_changed" toNode="Head2_0" toField="rotation" />
+    <ROUTE fromNode="AHd2" fromField="value_changed" toNode="Head2_1" toField="rotation" />
+    <ROUTE fromNode="AHd2" fromField="value_changed" toNode="Head2_2" toField="rotation" />
+    <ColorInterpolator DEF="ATile2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.0316 0.1139 0.2106 0.0209 0.0754 0.1393 0.0183 0.0658 0.1217 0.018 0.0649 0.12 0.018 0.0649 0.12 0.018 0.065 0.1201 0.0186 0.0672 0.1243 0.0231 0.0833 0.154 0.0378 0.1364 0.252 0.0673 0.2426 0.4484 0.1064 0.3839 0.7096 0.1396 0.5035 0.9307 0.1496 0.5396 0.9974 0.1308 0.4718 0.8721 0.0937 0.3378 0.6244 0.0563 0.203 0.3753 0.0316 0.1139 0.2106" />
+    <ROUTE fromNode="ClkA2" fromField="fraction_changed" toNode="ATile2" toField="set_fraction" />
+    <ROUTE fromNode="ATile2" fromField="value_changed" toNode="TileMat2_0" toField="baseColor" />
+    <ROUTE fromNode="ATile2" fromField="value_changed" toNode="TileMat2_0" toField="emissiveColor" />
+    <ROUTE fromNode="ATile2" fromField="value_changed" toNode="TileMat2_1" toField="baseColor" />
+    <ROUTE fromNode="ATile2" fromField="value_changed" toNode="TileMat2_1" toField="emissiveColor" />
+    <ROUTE fromNode="ATile2" fromField="value_changed" toNode="TileMat2_2" toField="baseColor" />
+    <ROUTE fromNode="ATile2" fromField="value_changed" toNode="TileMat2_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkA3" cycleInterval="5.0" loop="true" enabled="true" />
+    <PositionInterpolator DEF="AHop3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1.1372 1 1 1.0677 1 1 1.0232 1 1 1.0047 1 1 1.0004 1 1 1 1 1 1 1 1 1 1 1 1.0015 1 1 1.011 1 1 1.0409 1 1 1.0988 1 1 1.1734 1 1 1.2338 1 1 1.2483 1 1 1.2089 1 1 1.1372 1" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="AHop3" toField="set_fraction" />
+    <ROUTE fromNode="AHop3" fromField="value_changed" toNode="Root3_0" toField="scale" />
+    <ROUTE fromNode="AHop3" fromField="value_changed" toNode="Root3_1" toField="scale" />
+    <ROUTE fromNode="AHop3" fromField="value_changed" toNode="Root3_2" toField="scale" />
+    <OrientationInterpolator DEF="ASpin3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 -0.3082 0 1 0 -0.3823 0 1 0 -0.3982 0 1 0 -0.3535 0 1 0 -0.255 0 1 0 -0.1176 0 1 0 0.0376 0 1 0 0.1872 0 1 0 0.3082 0 1 0 0.3823 0 1 0 0.3982 0 1 0 0.3535 0 1 0 0.255 0 1 0 0.1176 0 1 0 -0.0376 0 1 0 -0.1872 0 1 0 -0.3082" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="ASpin3" toField="set_fraction" />
+    <ROUTE fromNode="ASpin3" fromField="value_changed" toNode="Root3_0" toField="rotation" />
+    <ROUTE fromNode="ASpin3" fromField="value_changed" toNode="Root3_1" toField="rotation" />
+    <ROUTE fromNode="ASpin3" fromField="value_changed" toNode="Root3_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.5914 0 0 1 -0.7855 0 0 1 -0.2695 0 0 1 -0.0546 0 0 1 -0.0044 0 0 1 -0 0 0 1 -0 0 0 1 -0.0006 0 0 1 -0.0173 0 0 1 -0.1275 0 0 1 -0.4748 0 0 1 -1.1466 0 0 1 -2.0119 0 0 1 -2.7119 0 0 1 -2.8807 0 0 1 -2.4232 0 0 1 -1.5914" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="AAL3" toField="set_fraction" />
+    <ROUTE fromNode="AAL3" fromField="value_changed" toNode="ArmL3_0" toField="rotation" />
+    <ROUTE fromNode="AAL3" fromField="value_changed" toNode="ArmL3_1" toField="rotation" />
+    <ROUTE fromNode="AAL3" fromField="value_changed" toNode="ArmL3_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAR3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.5914 0 0 1 0.7855 0 0 1 0.2695 0 0 1 0.0546 0 0 1 0.0044 0 0 1 0 0 0 1 0 0 0 1 0.0006 0 0 1 0.0173 0 0 1 0.1275 0 0 1 0.4748 0 0 1 1.1466 0 0 1 2.0119 0 0 1 2.7119 0 0 1 2.8807 0 0 1 2.4232 0 0 1 1.5914" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="AAR3" toField="set_fraction" />
+    <ROUTE fromNode="AAR3" fromField="value_changed" toNode="ArmR3_0" toField="rotation" />
+    <ROUTE fromNode="AAR3" fromField="value_changed" toNode="ArmR3_1" toField="rotation" />
+    <ROUTE fromNode="AAR3" fromField="value_changed" toNode="ArmR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="AEL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.2744 1 0 0 -0.1354 1 0 0 -0.0465 1 0 0 -0.0094 1 0 0 -0.0008 1 0 0 -0 1 0 0 -0 1 0 0 -0.0001 1 0 0 -0.003 1 0 0 -0.022 1 0 0 -0.0819 1 0 0 -0.1977 1 0 0 -0.3469 1 0 0 -0.4676 1 0 0 -0.4967 1 0 0 -0.4178 1 0 0 -0.2744" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="AEL3" toField="set_fraction" />
+    <ROUTE fromNode="AEL3" fromField="value_changed" toNode="ForeL3_0" toField="rotation" />
+    <ROUTE fromNode="AEL3" fromField="value_changed" toNode="ForeR3_0" toField="rotation" />
+    <ROUTE fromNode="AEL3" fromField="value_changed" toNode="ForeL3_1" toField="rotation" />
+    <ROUTE fromNode="AEL3" fromField="value_changed" toNode="ForeR3_1" toField="rotation" />
+    <ROUTE fromNode="AEL3" fromField="value_changed" toNode="ForeL3_2" toField="rotation" />
+    <ROUTE fromNode="AEL3" fromField="value_changed" toNode="ForeR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.1921 1 0 0 0.0948 1 0 0 0.0325 1 0 0 0.0066 1 0 0 0.0005 1 0 0 0 1 0 0 0 1 0 0 0.0001 1 0 0 0.0021 1 0 0 0.0154 1 0 0 0.0573 1 0 0 0.1384 1 0 0 0.2428 1 0 0 0.3273 1 0 0 0.3477 1 0 0 0.2925 1 0 0 0.1921" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="ALL3" toField="set_fraction" />
+    <ROUTE fromNode="ALL3" fromField="value_changed" toNode="LegL3_0" toField="rotation" />
+    <ROUTE fromNode="ALL3" fromField="value_changed" toNode="LegL3_1" toField="rotation" />
+    <ROUTE fromNode="ALL3" fromField="value_changed" toNode="LegL3_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALR3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.1921 1 0 0 0.0948 1 0 0 0.0325 1 0 0 0.0066 1 0 0 0.0005 1 0 0 0 1 0 0 0 1 0 0 0.0001 1 0 0 0.0021 1 0 0 0.0154 1 0 0 0.0573 1 0 0 0.1384 1 0 0 0.2428 1 0 0 0.3273 1 0 0 0.3477 1 0 0 0.2925 1 0 0 0.1921" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="ALR3" toField="set_fraction" />
+    <ROUTE fromNode="ALR3" fromField="value_changed" toNode="LegR3_0" toField="rotation" />
+    <ROUTE fromNode="ALR3" fromField="value_changed" toNode="LegR3_1" toField="rotation" />
+    <ROUTE fromNode="ALR3" fromField="value_changed" toNode="LegR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="AHd3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.2744 1 0 0 -0.1354 1 0 0 -0.0465 1 0 0 -0.0094 1 0 0 -0.0008 1 0 0 -0 1 0 0 -0 1 0 0 -0.0001 1 0 0 -0.003 1 0 0 -0.022 1 0 0 -0.0819 1 0 0 -0.1977 1 0 0 -0.3469 1 0 0 -0.4676 1 0 0 -0.4967 1 0 0 -0.4178 1 0 0 -0.2744" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="AHd3" toField="set_fraction" />
+    <ROUTE fromNode="AHd3" fromField="value_changed" toNode="Head3_0" toField="rotation" />
+    <ROUTE fromNode="AHd3" fromField="value_changed" toNode="Head3_1" toField="rotation" />
+    <ROUTE fromNode="AHd3" fromField="value_changed" toNode="Head3_2" toField="rotation" />
+    <ColorInterpolator DEF="ATile3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.0904 0.2186 0.6029 0.0538 0.1299 0.3584 0.0303 0.0731 0.2018 0.0205 0.0495 0.1366 0.0182 0.044 0.1213 0.018 0.0435 0.12 0.018 0.0435 0.12 0.018 0.0436 0.1202 0.0188 0.0454 0.1252 0.0238 0.0575 0.1587 0.0396 0.0957 0.2641 0.0702 0.1696 0.4679 0.1096 0.2648 0.7305 0.1414 0.3418 0.9429 0.1491 0.3604 0.9942 0.1283 0.3101 0.8553 0.0904 0.2186 0.6029" />
+    <ROUTE fromNode="ClkA3" fromField="fraction_changed" toNode="ATile3" toField="set_fraction" />
+    <ROUTE fromNode="ATile3" fromField="value_changed" toNode="TileMat3_0" toField="baseColor" />
+    <ROUTE fromNode="ATile3" fromField="value_changed" toNode="TileMat3_0" toField="emissiveColor" />
+    <ROUTE fromNode="ATile3" fromField="value_changed" toNode="TileMat3_1" toField="baseColor" />
+    <ROUTE fromNode="ATile3" fromField="value_changed" toNode="TileMat3_1" toField="emissiveColor" />
+    <ROUTE fromNode="ATile3" fromField="value_changed" toNode="TileMat3_2" toField="baseColor" />
+    <ROUTE fromNode="ATile3" fromField="value_changed" toNode="TileMat3_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkA4" cycleInterval="5.0" loop="true" enabled="true" />
+    <PositionInterpolator DEF="AHop4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1.2471 1 1 1.2039 1 1 1.1311 1 1 1.0631 1 1 1.0209 1 1 1.004 1 1 1.0003 1 1 1 1 1 1 1 1 1.0001 1 1 1.0018 1 1 1.0125 1 1 1.0445 1 1 1.1045 1 1 1.1793 1 1 1.2369 1 1 1.2471 1" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="AHop4" toField="set_fraction" />
+    <ROUTE fromNode="AHop4" fromField="value_changed" toNode="Root4_0" toField="scale" />
+    <ROUTE fromNode="AHop4" fromField="value_changed" toNode="Root4_1" toField="scale" />
+    <ROUTE fromNode="AHop4" fromField="value_changed" toNode="Root4_2" toField="scale" />
+    <OrientationInterpolator DEF="ASpin4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 -0.0501 0 1 0 -0.1982 0 1 0 -0.3161 0 1 0 -0.3858 0 1 0 -0.3968 0 1 0 -0.3475 0 1 0 -0.2452 0 1 0 -0.1055 0 1 0 0.0501 0 1 0 0.1982 0 1 0 0.3161 0 1 0 0.3858 0 1 0 0.3968 0 1 0 0.3475 0 1 0 0.2452 0 1 0 0.1055 0 1 0 -0.0501" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="ASpin4" toField="set_fraction" />
+    <ROUTE fromNode="ASpin4" fromField="value_changed" toNode="Root4_0" toField="rotation" />
+    <ROUTE fromNode="ASpin4" fromField="value_changed" toNode="Root4_1" toField="rotation" />
+    <ROUTE fromNode="ASpin4" fromField="value_changed" toNode="Root4_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -2.8658 0 0 1 -2.3653 0 0 1 -1.521 0 0 1 -0.7318 0 0 1 -0.2426 0 0 1 -0.0466 0 0 1 -0.0033 0 0 1 -0 0 0 1 -0 0 0 1 -0.0008 0 0 1 -0.021 0 0 1 -0.1446 0 0 1 -0.5166 0 0 1 -1.2124 0 0 1 -2.0796 0 0 1 -2.7485 0 0 1 -2.8658" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="AAL4" toField="set_fraction" />
+    <ROUTE fromNode="AAL4" fromField="value_changed" toNode="ArmL4_0" toField="rotation" />
+    <ROUTE fromNode="AAL4" fromField="value_changed" toNode="ArmL4_1" toField="rotation" />
+    <ROUTE fromNode="AAL4" fromField="value_changed" toNode="ArmL4_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAR4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 2.8658 0 0 1 2.3653 0 0 1 1.521 0 0 1 0.7318 0 0 1 0.2426 0 0 1 0.0466 0 0 1 0.0033 0 0 1 0 0 0 1 0 0 0 1 0.0008 0 0 1 0.021 0 0 1 0.1446 0 0 1 0.5166 0 0 1 1.2124 0 0 1 2.0796 0 0 1 2.7485 0 0 1 2.8658" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="AAR4" toField="set_fraction" />
+    <ROUTE fromNode="AAR4" fromField="value_changed" toNode="ArmR4_0" toField="rotation" />
+    <ROUTE fromNode="AAR4" fromField="value_changed" toNode="ArmR4_1" toField="rotation" />
+    <ROUTE fromNode="AAR4" fromField="value_changed" toNode="ArmR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="AEL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4941 1 0 0 -0.4078 1 0 0 -0.2622 1 0 0 -0.1262 1 0 0 -0.0418 1 0 0 -0.008 1 0 0 -0.0006 1 0 0 -0 1 0 0 -0 1 0 0 -0.0001 1 0 0 -0.0036 1 0 0 -0.0249 1 0 0 -0.0891 1 0 0 -0.209 1 0 0 -0.3586 1 0 0 -0.4739 1 0 0 -0.4941" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="AEL4" toField="set_fraction" />
+    <ROUTE fromNode="AEL4" fromField="value_changed" toNode="ForeL4_0" toField="rotation" />
+    <ROUTE fromNode="AEL4" fromField="value_changed" toNode="ForeR4_0" toField="rotation" />
+    <ROUTE fromNode="AEL4" fromField="value_changed" toNode="ForeL4_1" toField="rotation" />
+    <ROUTE fromNode="AEL4" fromField="value_changed" toNode="ForeR4_1" toField="rotation" />
+    <ROUTE fromNode="AEL4" fromField="value_changed" toNode="ForeL4_2" toField="rotation" />
+    <ROUTE fromNode="AEL4" fromField="value_changed" toNode="ForeR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.3459 1 0 0 0.2855 1 0 0 0.1836 1 0 0 0.0883 1 0 0 0.0293 1 0 0 0.0056 1 0 0 0.0004 1 0 0 0 1 0 0 0 1 0 0 0.0001 1 0 0 0.0025 1 0 0 0.0175 1 0 0 0.0623 1 0 0 0.1463 1 0 0 0.251 1 0 0 0.3317 1 0 0 0.3459" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="ALL4" toField="set_fraction" />
+    <ROUTE fromNode="ALL4" fromField="value_changed" toNode="LegL4_0" toField="rotation" />
+    <ROUTE fromNode="ALL4" fromField="value_changed" toNode="LegL4_1" toField="rotation" />
+    <ROUTE fromNode="ALL4" fromField="value_changed" toNode="LegL4_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALR4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.3459 1 0 0 0.2855 1 0 0 0.1836 1 0 0 0.0883 1 0 0 0.0293 1 0 0 0.0056 1 0 0 0.0004 1 0 0 0 1 0 0 0 1 0 0 0.0001 1 0 0 0.0025 1 0 0 0.0175 1 0 0 0.0623 1 0 0 0.1463 1 0 0 0.251 1 0 0 0.3317 1 0 0 0.3459" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="ALR4" toField="set_fraction" />
+    <ROUTE fromNode="ALR4" fromField="value_changed" toNode="LegR4_0" toField="rotation" />
+    <ROUTE fromNode="ALR4" fromField="value_changed" toNode="LegR4_1" toField="rotation" />
+    <ROUTE fromNode="ALR4" fromField="value_changed" toNode="LegR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="AHd4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4941 1 0 0 -0.4078 1 0 0 -0.2622 1 0 0 -0.1262 1 0 0 -0.0418 1 0 0 -0.008 1 0 0 -0.0006 1 0 0 -0 1 0 0 -0 1 0 0 -0.0001 1 0 0 -0.0036 1 0 0 -0.0249 1 0 0 -0.0891 1 0 0 -0.209 1 0 0 -0.3586 1 0 0 -0.4739 1 0 0 -0.4941" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="AHd4" toField="set_fraction" />
+    <ROUTE fromNode="AHd4" fromField="value_changed" toNode="Head4_0" toField="rotation" />
+    <ROUTE fromNode="AHd4" fromField="value_changed" toNode="Head4_1" toField="rotation" />
+    <ROUTE fromNode="AHd4" fromField="value_changed" toNode="Head4_2" toField="rotation" />
+    <ColorInterpolator DEF="ATile4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.1484 0.1821 0.9896 0.1257 0.1541 0.8377 0.0872 0.107 0.5816 0.0513 0.0629 0.3421 0.029 0.0356 0.1936 0.0201 0.0247 0.1341 0.0182 0.0223 0.121 0.018 0.0221 0.12 0.018 0.0221 0.12 0.018 0.0221 0.1202 0.019 0.0233 0.1264 0.0246 0.0302 0.1639 0.0415 0.0509 0.2768 0.0732 0.0898 0.4879 0.1127 0.1382 0.7511 0.1431 0.1755 0.954 0.1484 0.1821 0.9896" />
+    <ROUTE fromNode="ClkA4" fromField="fraction_changed" toNode="ATile4" toField="set_fraction" />
+    <ROUTE fromNode="ATile4" fromField="value_changed" toNode="TileMat4_0" toField="baseColor" />
+    <ROUTE fromNode="ATile4" fromField="value_changed" toNode="TileMat4_0" toField="emissiveColor" />
+    <ROUTE fromNode="ATile4" fromField="value_changed" toNode="TileMat4_1" toField="baseColor" />
+    <ROUTE fromNode="ATile4" fromField="value_changed" toNode="TileMat4_1" toField="emissiveColor" />
+    <ROUTE fromNode="ATile4" fromField="value_changed" toNode="TileMat4_2" toField="baseColor" />
+    <ROUTE fromNode="ATile4" fromField="value_changed" toNode="TileMat4_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkA5" cycleInterval="5.0" loop="true" enabled="true" />
+    <PositionInterpolator DEF="AHop5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1.185 1 1 1.2398 1 1 1.2454 1 1 1.1987 1 1 1.1251 1 1 1.0586 1 1 1.0188 1 1 1.0034 1 1 1.0002 1 1 1 1 1 1 1 1 1.0001 1 1 1.0022 1 1 1.0141 1 1 1.0483 1 1 1.1103 1 1 1.185 1" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="AHop5" toField="set_fraction" />
+    <ROUTE fromNode="AHop5" fromField="value_changed" toNode="Root5_0" toField="scale" />
+    <ROUTE fromNode="AHop5" fromField="value_changed" toNode="Root5_1" toField="scale" />
+    <ROUTE fromNode="AHop5" fromField="value_changed" toNode="Root5_2" toField="scale" />
+    <OrientationInterpolator DEF="ASpin5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0.2351 0 1 0 0.0934 0 1 0 -0.0626 0 1 0 -0.209 0 1 0 -0.3236 0 1 0 -0.3889 0 1 0 -0.3951 0 1 0 -0.3411 0 1 0 -0.2351 0 1 0 -0.0934 0 1 0 0.0626 0 1 0 0.209 0 1 0 0.3236 0 1 0 0.3889 0 1 0 0.3951 0 1 0 0.3411 0 1 0 0.2351" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="ASpin5" toField="set_fraction" />
+    <ROUTE fromNode="ASpin5" fromField="value_changed" toNode="Root5_0" toField="rotation" />
+    <ROUTE fromNode="ASpin5" fromField="value_changed" toNode="Root5_1" toField="rotation" />
+    <ROUTE fromNode="ASpin5" fromField="value_changed" toNode="Root5_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -2.146 0 0 1 -2.7815 0 0 1 -2.8468 0 0 1 -2.3051 0 0 1 -1.4511 0 0 1 -0.6802 0 0 1 -0.2176 0 0 1 -0.0395 0 0 1 -0.0025 0 0 1 -0 0 0 1 -0 0 0 1 -0.0012 0 0 1 -0.0254 0 0 1 -0.1633 0 0 1 -0.5606 0 0 1 -1.2793 0 0 1 -2.146" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="AAL5" toField="set_fraction" />
+    <ROUTE fromNode="AAL5" fromField="value_changed" toNode="ArmL5_0" toField="rotation" />
+    <ROUTE fromNode="AAL5" fromField="value_changed" toNode="ArmL5_1" toField="rotation" />
+    <ROUTE fromNode="AAL5" fromField="value_changed" toNode="ArmL5_2" toField="rotation" />
+    <OrientationInterpolator DEF="AAR5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 2.146 0 0 1 2.7815 0 0 1 2.8468 0 0 1 2.3051 0 0 1 1.4511 0 0 1 0.6802 0 0 1 0.2176 0 0 1 0.0395 0 0 1 0.0025 0 0 1 0 0 0 1 0 0 0 1 0.0012 0 0 1 0.0254 0 0 1 0.1633 0 0 1 0.5606 0 0 1 1.2793 0 0 1 2.146" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="AAR5" toField="set_fraction" />
+    <ROUTE fromNode="AAR5" fromField="value_changed" toNode="ArmR5_0" toField="rotation" />
+    <ROUTE fromNode="AAR5" fromField="value_changed" toNode="ArmR5_1" toField="rotation" />
+    <ROUTE fromNode="AAR5" fromField="value_changed" toNode="ArmR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="AEL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.37 1 0 0 -0.4796 1 0 0 -0.4908 1 0 0 -0.3974 1 0 0 -0.2502 1 0 0 -0.1173 1 0 0 -0.0375 1 0 0 -0.0068 1 0 0 -0.0004 1 0 0 -0 1 0 0 -0 1 0 0 -0.0002 1 0 0 -0.0044 1 0 0 -0.0282 1 0 0 -0.0967 1 0 0 -0.2206 1 0 0 -0.37" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="AEL5" toField="set_fraction" />
+    <ROUTE fromNode="AEL5" fromField="value_changed" toNode="ForeL5_0" toField="rotation" />
+    <ROUTE fromNode="AEL5" fromField="value_changed" toNode="ForeR5_0" toField="rotation" />
+    <ROUTE fromNode="AEL5" fromField="value_changed" toNode="ForeL5_1" toField="rotation" />
+    <ROUTE fromNode="AEL5" fromField="value_changed" toNode="ForeR5_1" toField="rotation" />
+    <ROUTE fromNode="AEL5" fromField="value_changed" toNode="ForeL5_2" toField="rotation" />
+    <ROUTE fromNode="AEL5" fromField="value_changed" toNode="ForeR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.259 1 0 0 0.3357 1 0 0 0.3436 1 0 0 0.2782 1 0 0 0.1751 1 0 0 0.0821 1 0 0 0.0263 1 0 0 0.0048 1 0 0 0.0003 1 0 0 0 1 0 0 0 1 0 0 0.0001 1 0 0 0.0031 1 0 0 0.0197 1 0 0 0.0677 1 0 0 0.1544 1 0 0 0.259" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="ALL5" toField="set_fraction" />
+    <ROUTE fromNode="ALL5" fromField="value_changed" toNode="LegL5_0" toField="rotation" />
+    <ROUTE fromNode="ALL5" fromField="value_changed" toNode="LegL5_1" toField="rotation" />
+    <ROUTE fromNode="ALL5" fromField="value_changed" toNode="LegL5_2" toField="rotation" />
+    <OrientationInterpolator DEF="ALR5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 0.259 1 0 0 0.3357 1 0 0 0.3436 1 0 0 0.2782 1 0 0 0.1751 1 0 0 0.0821 1 0 0 0.0263 1 0 0 0.0048 1 0 0 0.0003 1 0 0 0 1 0 0 0 1 0 0 0.0001 1 0 0 0.0031 1 0 0 0.0197 1 0 0 0.0677 1 0 0 0.1544 1 0 0 0.259" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="ALR5" toField="set_fraction" />
+    <ROUTE fromNode="ALR5" fromField="value_changed" toNode="LegR5_0" toField="rotation" />
+    <ROUTE fromNode="ALR5" fromField="value_changed" toNode="LegR5_1" toField="rotation" />
+    <ROUTE fromNode="ALR5" fromField="value_changed" toNode="LegR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="AHd5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.37 1 0 0 -0.4796 1 0 0 -0.4908 1 0 0 -0.3974 1 0 0 -0.2502 1 0 0 -0.1173 1 0 0 -0.0375 1 0 0 -0.0068 1 0 0 -0.0004 1 0 0 -0 1 0 0 -0 1 0 0 -0.0002 1 0 0 -0.0044 1 0 0 -0.0282 1 0 0 -0.0967 1 0 0 -0.2206 1 0 0 -0.37" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="AHd5" toField="set_fraction" />
+    <ROUTE fromNode="AHd5" fromField="value_changed" toNode="Head5_0" toField="rotation" />
+    <ROUTE fromNode="AHd5" fromField="value_changed" toNode="Head5_1" toField="rotation" />
+    <ROUTE fromNode="AHd5" fromField="value_changed" toNode="Head5_2" toField="rotation" />
+    <ColorInterpolator DEF="ATile5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.2271 0.1157 0.7712 0.2839 0.1446 0.964 0.2897 0.1476 0.9838 0.2413 0.1229 0.8195 0.165 0.084 0.5603 0.0961 0.049 0.3264 0.0548 0.0279 0.186 0.0389 0.0198 0.132 0.0356 0.0181 0.1208 0.0353 0.018 0.12 0.0353 0.018 0.12 0.0354 0.0181 0.1204 0.0376 0.0192 0.1277 0.0499 0.0254 0.1695 0.0854 0.0435 0.2901 0.1497 0.0762 0.5082 0.2271 0.1157 0.7712" />
+    <ROUTE fromNode="ClkA5" fromField="fraction_changed" toNode="ATile5" toField="set_fraction" />
+    <ROUTE fromNode="ATile5" fromField="value_changed" toNode="TileMat5_0" toField="baseColor" />
+    <ROUTE fromNode="ATile5" fromField="value_changed" toNode="TileMat5_0" toField="emissiveColor" />
+    <ROUTE fromNode="ATile5" fromField="value_changed" toNode="TileMat5_1" toField="baseColor" />
+    <ROUTE fromNode="ATile5" fromField="value_changed" toNode="TileMat5_1" toField="emissiveColor" />
+    <ROUTE fromNode="ATile5" fromField="value_changed" toNode="TileMat5_2" toField="baseColor" />
+    <ROUTE fromNode="ATile5" fromField="value_changed" toNode="TileMat5_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkB0" cycleInterval="2.4" loop="true" enabled="false" />
+    <PositionInterpolator DEF="BHop0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BHop0" toField="set_fraction" />
+    <ROUTE fromNode="BHop0" fromField="value_changed" toNode="Root0_0" toField="scale" />
+    <ROUTE fromNode="BHop0" fromField="value_changed" toNode="Root0_1" toField="scale" />
+    <ROUTE fromNode="BHop0" fromField="value_changed" toNode="Root0_2" toField="scale" />
+    <OrientationInterpolator DEF="BSpin0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0.1913 0 1 0 0.3536 0 1 0 0.4619 0 1 0 0.5 0 1 0 0.4619 0 1 0 0.3536 0 1 0 0.1913 0 1 0 0 0 1 0 -0.1913 0 1 0 -0.3536 0 1 0 -0.4619 0 1 0 -0.5 0 1 0 -0.4619 0 1 0 -0.3536 0 1 0 -0.1913 0 1 0 0" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BSpin0" toField="set_fraction" />
+    <ROUTE fromNode="BSpin0" fromField="value_changed" toNode="Root0_0" toField="rotation" />
+    <ROUTE fromNode="BSpin0" fromField="value_changed" toNode="Root0_1" toField="rotation" />
+    <ROUTE fromNode="BSpin0" fromField="value_changed" toNode="Root0_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.5 0 0 1 -2.074 0 0 1 -2.5607 0 0 1 -2.8858 0 0 1 -3 0 0 1 -2.8858 0 0 1 -2.5607 0 0 1 -2.074 0 0 1 -1.5 0 0 1 -0.926 0 0 1 -0.4393 0 0 1 -0.1142 0 0 1 -0 0 0 1 -0.1142 0 0 1 -0.4393 0 0 1 -0.926 0 0 1 -1.5" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BAL0" toField="set_fraction" />
+    <ROUTE fromNode="BAL0" fromField="value_changed" toNode="ArmL0_0" toField="rotation" />
+    <ROUTE fromNode="BAL0" fromField="value_changed" toNode="ArmL0_1" toField="rotation" />
+    <ROUTE fromNode="BAL0" fromField="value_changed" toNode="ArmL0_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAR0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.5 0 0 1 0.926 0 0 1 0.4393 0 0 1 0.1142 0 0 1 0 0 0 1 0.1142 0 0 1 0.4393 0 0 1 0.926 0 0 1 1.5 0 0 1 2.074 0 0 1 2.5607 0 0 1 2.8858 0 0 1 3 0 0 1 2.8858 0 0 1 2.5607 0 0 1 2.074 0 0 1 1.5" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BAR0" toField="set_fraction" />
+    <ROUTE fromNode="BAR0" fromField="value_changed" toNode="ArmR0_0" toField="rotation" />
+    <ROUTE fromNode="BAR0" fromField="value_changed" toNode="ArmR0_1" toField="rotation" />
+    <ROUTE fromNode="BAR0" fromField="value_changed" toNode="ArmR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="BEL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BEL0" toField="set_fraction" />
+    <ROUTE fromNode="BEL0" fromField="value_changed" toNode="ForeL0_0" toField="rotation" />
+    <ROUTE fromNode="BEL0" fromField="value_changed" toNode="ForeR0_0" toField="rotation" />
+    <ROUTE fromNode="BEL0" fromField="value_changed" toNode="ForeL0_1" toField="rotation" />
+    <ROUTE fromNode="BEL0" fromField="value_changed" toNode="ForeR0_1" toField="rotation" />
+    <ROUTE fromNode="BEL0" fromField="value_changed" toNode="ForeL0_2" toField="rotation" />
+    <ROUTE fromNode="BEL0" fromField="value_changed" toNode="ForeR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BLL0" toField="set_fraction" />
+    <ROUTE fromNode="BLL0" fromField="value_changed" toNode="LegL0_0" toField="rotation" />
+    <ROUTE fromNode="BLL0" fromField="value_changed" toNode="LegL0_1" toField="rotation" />
+    <ROUTE fromNode="BLL0" fromField="value_changed" toNode="LegL0_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLR0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BLR0" toField="set_fraction" />
+    <ROUTE fromNode="BLR0" fromField="value_changed" toNode="LegR0_0" toField="rotation" />
+    <ROUTE fromNode="BLR0" fromField="value_changed" toNode="LegR0_1" toField="rotation" />
+    <ROUTE fromNode="BLR0" fromField="value_changed" toNode="LegR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="BHd0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 -0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 0" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BHd0" toField="set_fraction" />
+    <ROUTE fromNode="BHd0" fromField="value_changed" toNode="Head0_0" toField="rotation" />
+    <ROUTE fromNode="BHd0" fromField="value_changed" toNode="Head0_1" toField="rotation" />
+    <ROUTE fromNode="BHd0" fromField="value_changed" toNode="Head0_2" toField="rotation" />
+    <ColorInterpolator DEF="BTile0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0.15 0.813 0.7611 0.1142 0.6188 0.34 0.051 0.2764 0.1389 0.0208 0.1129 0.12 0.018 0.0976 0.1389 0.0208 0.1129 0.34 0.051 0.2764 0.7611 0.1142 0.6188 1 0.15 0.813 0.7611 0.1142 0.6188 0.34 0.051 0.2764 0.1389 0.0208 0.1129 0.12 0.018 0.0976 0.1389 0.0208 0.1129 0.34 0.051 0.2764 0.7611 0.1142 0.6188 1 0.15 0.813" />
+    <ROUTE fromNode="ClkB0" fromField="fraction_changed" toNode="BTile0" toField="set_fraction" />
+    <ROUTE fromNode="BTile0" fromField="value_changed" toNode="TileMat0_0" toField="baseColor" />
+    <ROUTE fromNode="BTile0" fromField="value_changed" toNode="TileMat0_0" toField="emissiveColor" />
+    <ROUTE fromNode="BTile0" fromField="value_changed" toNode="TileMat0_1" toField="baseColor" />
+    <ROUTE fromNode="BTile0" fromField="value_changed" toNode="TileMat0_1" toField="emissiveColor" />
+    <ROUTE fromNode="BTile0" fromField="value_changed" toNode="TileMat0_2" toField="baseColor" />
+    <ROUTE fromNode="BTile0" fromField="value_changed" toNode="TileMat0_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkB1" cycleInterval="2.4" loop="true" enabled="false" />
+    <PositionInterpolator DEF="BHop1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BHop1" toField="set_fraction" />
+    <ROUTE fromNode="BHop1" fromField="value_changed" toNode="Root1_0" toField="scale" />
+    <ROUTE fromNode="BHop1" fromField="value_changed" toNode="Root1_1" toField="scale" />
+    <ROUTE fromNode="BHop1" fromField="value_changed" toNode="Root1_2" toField="scale" />
+    <OrientationInterpolator DEF="BSpin1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 -0.1913 0 1 0 -0.3536 0 1 0 -0.4619 0 1 0 -0.5 0 1 0 -0.4619 0 1 0 -0.3536 0 1 0 -0.1913 0 1 0 0 0 1 0 0.1913 0 1 0 0.3536 0 1 0 0.4619 0 1 0 0.5 0 1 0 0.4619 0 1 0 0.3536 0 1 0 0.1913 0 1 0 0" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BSpin1" toField="set_fraction" />
+    <ROUTE fromNode="BSpin1" fromField="value_changed" toNode="Root1_0" toField="rotation" />
+    <ROUTE fromNode="BSpin1" fromField="value_changed" toNode="Root1_1" toField="rotation" />
+    <ROUTE fromNode="BSpin1" fromField="value_changed" toNode="Root1_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.5 0 0 1 -0.926 0 0 1 -0.4393 0 0 1 -0.1142 0 0 1 -0 0 0 1 -0.1142 0 0 1 -0.4393 0 0 1 -0.926 0 0 1 -1.5 0 0 1 -2.074 0 0 1 -2.5607 0 0 1 -2.8858 0 0 1 -3 0 0 1 -2.8858 0 0 1 -2.5607 0 0 1 -2.074 0 0 1 -1.5" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BAL1" toField="set_fraction" />
+    <ROUTE fromNode="BAL1" fromField="value_changed" toNode="ArmL1_0" toField="rotation" />
+    <ROUTE fromNode="BAL1" fromField="value_changed" toNode="ArmL1_1" toField="rotation" />
+    <ROUTE fromNode="BAL1" fromField="value_changed" toNode="ArmL1_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAR1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.5 0 0 1 2.074 0 0 1 2.5607 0 0 1 2.8858 0 0 1 3 0 0 1 2.8858 0 0 1 2.5607 0 0 1 2.074 0 0 1 1.5 0 0 1 0.926 0 0 1 0.4393 0 0 1 0.1142 0 0 1 0 0 0 1 0.1142 0 0 1 0.4393 0 0 1 0.926 0 0 1 1.5" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BAR1" toField="set_fraction" />
+    <ROUTE fromNode="BAR1" fromField="value_changed" toNode="ArmR1_0" toField="rotation" />
+    <ROUTE fromNode="BAR1" fromField="value_changed" toNode="ArmR1_1" toField="rotation" />
+    <ROUTE fromNode="BAR1" fromField="value_changed" toNode="ArmR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="BEL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BEL1" toField="set_fraction" />
+    <ROUTE fromNode="BEL1" fromField="value_changed" toNode="ForeL1_0" toField="rotation" />
+    <ROUTE fromNode="BEL1" fromField="value_changed" toNode="ForeR1_0" toField="rotation" />
+    <ROUTE fromNode="BEL1" fromField="value_changed" toNode="ForeL1_1" toField="rotation" />
+    <ROUTE fromNode="BEL1" fromField="value_changed" toNode="ForeR1_1" toField="rotation" />
+    <ROUTE fromNode="BEL1" fromField="value_changed" toNode="ForeL1_2" toField="rotation" />
+    <ROUTE fromNode="BEL1" fromField="value_changed" toNode="ForeR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BLL1" toField="set_fraction" />
+    <ROUTE fromNode="BLL1" fromField="value_changed" toNode="LegL1_0" toField="rotation" />
+    <ROUTE fromNode="BLL1" fromField="value_changed" toNode="LegL1_1" toField="rotation" />
+    <ROUTE fromNode="BLL1" fromField="value_changed" toNode="LegL1_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLR1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BLR1" toField="set_fraction" />
+    <ROUTE fromNode="BLR1" fromField="value_changed" toNode="LegR1_0" toField="rotation" />
+    <ROUTE fromNode="BLR1" fromField="value_changed" toNode="LegR1_1" toField="rotation" />
+    <ROUTE fromNode="BLR1" fromField="value_changed" toNode="LegR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="BHd1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 -0" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BHd1" toField="set_fraction" />
+    <ROUTE fromNode="BHd1" fromField="value_changed" toNode="Head1_0" toField="rotation" />
+    <ROUTE fromNode="BHd1" fromField="value_changed" toNode="Head1_1" toField="rotation" />
+    <ROUTE fromNode="BHd1" fromField="value_changed" toNode="Head1_2" toField="rotation" />
+    <ColorInterpolator DEF="BTile1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0.15 0.6345 0.7611 0.1142 0.4829 0.34 0.051 0.2157 0.1389 0.0208 0.0881 0.12 0.018 0.0761 0.1389 0.0208 0.0881 0.34 0.051 0.2157 0.7611 0.1142 0.4829 1 0.15 0.6345 0.7611 0.1142 0.4829 0.34 0.051 0.2157 0.1389 0.0208 0.0881 0.12 0.018 0.0761 0.1389 0.0208 0.0881 0.34 0.051 0.2157 0.7611 0.1142 0.4829 1 0.15 0.6345" />
+    <ROUTE fromNode="ClkB1" fromField="fraction_changed" toNode="BTile1" toField="set_fraction" />
+    <ROUTE fromNode="BTile1" fromField="value_changed" toNode="TileMat1_0" toField="baseColor" />
+    <ROUTE fromNode="BTile1" fromField="value_changed" toNode="TileMat1_0" toField="emissiveColor" />
+    <ROUTE fromNode="BTile1" fromField="value_changed" toNode="TileMat1_1" toField="baseColor" />
+    <ROUTE fromNode="BTile1" fromField="value_changed" toNode="TileMat1_1" toField="emissiveColor" />
+    <ROUTE fromNode="BTile1" fromField="value_changed" toNode="TileMat1_2" toField="baseColor" />
+    <ROUTE fromNode="BTile1" fromField="value_changed" toNode="TileMat1_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkB2" cycleInterval="2.4" loop="true" enabled="false" />
+    <PositionInterpolator DEF="BHop2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BHop2" toField="set_fraction" />
+    <ROUTE fromNode="BHop2" fromField="value_changed" toNode="Root2_0" toField="scale" />
+    <ROUTE fromNode="BHop2" fromField="value_changed" toNode="Root2_1" toField="scale" />
+    <ROUTE fromNode="BHop2" fromField="value_changed" toNode="Root2_2" toField="scale" />
+    <OrientationInterpolator DEF="BSpin2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0.1913 0 1 0 0.3536 0 1 0 0.4619 0 1 0 0.5 0 1 0 0.4619 0 1 0 0.3536 0 1 0 0.1913 0 1 0 0 0 1 0 -0.1913 0 1 0 -0.3536 0 1 0 -0.4619 0 1 0 -0.5 0 1 0 -0.4619 0 1 0 -0.3536 0 1 0 -0.1913 0 1 0 0" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BSpin2" toField="set_fraction" />
+    <ROUTE fromNode="BSpin2" fromField="value_changed" toNode="Root2_0" toField="rotation" />
+    <ROUTE fromNode="BSpin2" fromField="value_changed" toNode="Root2_1" toField="rotation" />
+    <ROUTE fromNode="BSpin2" fromField="value_changed" toNode="Root2_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.5 0 0 1 -2.074 0 0 1 -2.5607 0 0 1 -2.8858 0 0 1 -3 0 0 1 -2.8858 0 0 1 -2.5607 0 0 1 -2.074 0 0 1 -1.5 0 0 1 -0.926 0 0 1 -0.4393 0 0 1 -0.1142 0 0 1 -0 0 0 1 -0.1142 0 0 1 -0.4393 0 0 1 -0.926 0 0 1 -1.5" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BAL2" toField="set_fraction" />
+    <ROUTE fromNode="BAL2" fromField="value_changed" toNode="ArmL2_0" toField="rotation" />
+    <ROUTE fromNode="BAL2" fromField="value_changed" toNode="ArmL2_1" toField="rotation" />
+    <ROUTE fromNode="BAL2" fromField="value_changed" toNode="ArmL2_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAR2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.5 0 0 1 0.926 0 0 1 0.4393 0 0 1 0.1142 0 0 1 0 0 0 1 0.1142 0 0 1 0.4393 0 0 1 0.926 0 0 1 1.5 0 0 1 2.074 0 0 1 2.5607 0 0 1 2.8858 0 0 1 3 0 0 1 2.8858 0 0 1 2.5607 0 0 1 2.074 0 0 1 1.5" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BAR2" toField="set_fraction" />
+    <ROUTE fromNode="BAR2" fromField="value_changed" toNode="ArmR2_0" toField="rotation" />
+    <ROUTE fromNode="BAR2" fromField="value_changed" toNode="ArmR2_1" toField="rotation" />
+    <ROUTE fromNode="BAR2" fromField="value_changed" toNode="ArmR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="BEL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BEL2" toField="set_fraction" />
+    <ROUTE fromNode="BEL2" fromField="value_changed" toNode="ForeL2_0" toField="rotation" />
+    <ROUTE fromNode="BEL2" fromField="value_changed" toNode="ForeR2_0" toField="rotation" />
+    <ROUTE fromNode="BEL2" fromField="value_changed" toNode="ForeL2_1" toField="rotation" />
+    <ROUTE fromNode="BEL2" fromField="value_changed" toNode="ForeR2_1" toField="rotation" />
+    <ROUTE fromNode="BEL2" fromField="value_changed" toNode="ForeL2_2" toField="rotation" />
+    <ROUTE fromNode="BEL2" fromField="value_changed" toNode="ForeR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BLL2" toField="set_fraction" />
+    <ROUTE fromNode="BLL2" fromField="value_changed" toNode="LegL2_0" toField="rotation" />
+    <ROUTE fromNode="BLL2" fromField="value_changed" toNode="LegL2_1" toField="rotation" />
+    <ROUTE fromNode="BLL2" fromField="value_changed" toNode="LegL2_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLR2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BLR2" toField="set_fraction" />
+    <ROUTE fromNode="BLR2" fromField="value_changed" toNode="LegR2_0" toField="rotation" />
+    <ROUTE fromNode="BLR2" fromField="value_changed" toNode="LegR2_1" toField="rotation" />
+    <ROUTE fromNode="BLR2" fromField="value_changed" toNode="LegR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="BHd2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 -0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 0" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BHd2" toField="set_fraction" />
+    <ROUTE fromNode="BHd2" fromField="value_changed" toNode="Head2_0" toField="rotation" />
+    <ROUTE fromNode="BHd2" fromField="value_changed" toNode="Head2_1" toField="rotation" />
+    <ROUTE fromNode="BHd2" fromField="value_changed" toNode="Head2_2" toField="rotation" />
+    <ColorInterpolator DEF="BTile2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0.15 0.456 0.7611 0.1142 0.3471 0.34 0.051 0.155 0.1389 0.0208 0.0633 0.12 0.018 0.0547 0.1389 0.0208 0.0633 0.34 0.051 0.155 0.7611 0.1142 0.3471 1 0.15 0.456 0.7611 0.1142 0.3471 0.34 0.051 0.155 0.1389 0.0208 0.0633 0.12 0.018 0.0547 0.1389 0.0208 0.0633 0.34 0.051 0.155 0.7611 0.1142 0.3471 1 0.15 0.456" />
+    <ROUTE fromNode="ClkB2" fromField="fraction_changed" toNode="BTile2" toField="set_fraction" />
+    <ROUTE fromNode="BTile2" fromField="value_changed" toNode="TileMat2_0" toField="baseColor" />
+    <ROUTE fromNode="BTile2" fromField="value_changed" toNode="TileMat2_0" toField="emissiveColor" />
+    <ROUTE fromNode="BTile2" fromField="value_changed" toNode="TileMat2_1" toField="baseColor" />
+    <ROUTE fromNode="BTile2" fromField="value_changed" toNode="TileMat2_1" toField="emissiveColor" />
+    <ROUTE fromNode="BTile2" fromField="value_changed" toNode="TileMat2_2" toField="baseColor" />
+    <ROUTE fromNode="BTile2" fromField="value_changed" toNode="TileMat2_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkB3" cycleInterval="2.4" loop="true" enabled="false" />
+    <PositionInterpolator DEF="BHop3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BHop3" toField="set_fraction" />
+    <ROUTE fromNode="BHop3" fromField="value_changed" toNode="Root3_0" toField="scale" />
+    <ROUTE fromNode="BHop3" fromField="value_changed" toNode="Root3_1" toField="scale" />
+    <ROUTE fromNode="BHop3" fromField="value_changed" toNode="Root3_2" toField="scale" />
+    <OrientationInterpolator DEF="BSpin3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 -0.1913 0 1 0 -0.3536 0 1 0 -0.4619 0 1 0 -0.5 0 1 0 -0.4619 0 1 0 -0.3536 0 1 0 -0.1913 0 1 0 0 0 1 0 0.1913 0 1 0 0.3536 0 1 0 0.4619 0 1 0 0.5 0 1 0 0.4619 0 1 0 0.3536 0 1 0 0.1913 0 1 0 0" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BSpin3" toField="set_fraction" />
+    <ROUTE fromNode="BSpin3" fromField="value_changed" toNode="Root3_0" toField="rotation" />
+    <ROUTE fromNode="BSpin3" fromField="value_changed" toNode="Root3_1" toField="rotation" />
+    <ROUTE fromNode="BSpin3" fromField="value_changed" toNode="Root3_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.5 0 0 1 -0.926 0 0 1 -0.4393 0 0 1 -0.1142 0 0 1 -0 0 0 1 -0.1142 0 0 1 -0.4393 0 0 1 -0.926 0 0 1 -1.5 0 0 1 -2.074 0 0 1 -2.5607 0 0 1 -2.8858 0 0 1 -3 0 0 1 -2.8858 0 0 1 -2.5607 0 0 1 -2.074 0 0 1 -1.5" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BAL3" toField="set_fraction" />
+    <ROUTE fromNode="BAL3" fromField="value_changed" toNode="ArmL3_0" toField="rotation" />
+    <ROUTE fromNode="BAL3" fromField="value_changed" toNode="ArmL3_1" toField="rotation" />
+    <ROUTE fromNode="BAL3" fromField="value_changed" toNode="ArmL3_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAR3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.5 0 0 1 2.074 0 0 1 2.5607 0 0 1 2.8858 0 0 1 3 0 0 1 2.8858 0 0 1 2.5607 0 0 1 2.074 0 0 1 1.5 0 0 1 0.926 0 0 1 0.4393 0 0 1 0.1142 0 0 1 0 0 0 1 0.1142 0 0 1 0.4393 0 0 1 0.926 0 0 1 1.5" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BAR3" toField="set_fraction" />
+    <ROUTE fromNode="BAR3" fromField="value_changed" toNode="ArmR3_0" toField="rotation" />
+    <ROUTE fromNode="BAR3" fromField="value_changed" toNode="ArmR3_1" toField="rotation" />
+    <ROUTE fromNode="BAR3" fromField="value_changed" toNode="ArmR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="BEL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BEL3" toField="set_fraction" />
+    <ROUTE fromNode="BEL3" fromField="value_changed" toNode="ForeL3_0" toField="rotation" />
+    <ROUTE fromNode="BEL3" fromField="value_changed" toNode="ForeR3_0" toField="rotation" />
+    <ROUTE fromNode="BEL3" fromField="value_changed" toNode="ForeL3_1" toField="rotation" />
+    <ROUTE fromNode="BEL3" fromField="value_changed" toNode="ForeR3_1" toField="rotation" />
+    <ROUTE fromNode="BEL3" fromField="value_changed" toNode="ForeL3_2" toField="rotation" />
+    <ROUTE fromNode="BEL3" fromField="value_changed" toNode="ForeR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BLL3" toField="set_fraction" />
+    <ROUTE fromNode="BLL3" fromField="value_changed" toNode="LegL3_0" toField="rotation" />
+    <ROUTE fromNode="BLL3" fromField="value_changed" toNode="LegL3_1" toField="rotation" />
+    <ROUTE fromNode="BLL3" fromField="value_changed" toNode="LegL3_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLR3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BLR3" toField="set_fraction" />
+    <ROUTE fromNode="BLR3" fromField="value_changed" toNode="LegR3_0" toField="rotation" />
+    <ROUTE fromNode="BLR3" fromField="value_changed" toNode="LegR3_1" toField="rotation" />
+    <ROUTE fromNode="BLR3" fromField="value_changed" toNode="LegR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="BHd3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 -0" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BHd3" toField="set_fraction" />
+    <ROUTE fromNode="BHd3" fromField="value_changed" toNode="Head3_0" toField="rotation" />
+    <ROUTE fromNode="BHd3" fromField="value_changed" toNode="Head3_1" toField="rotation" />
+    <ROUTE fromNode="BHd3" fromField="value_changed" toNode="Head3_2" toField="rotation" />
+    <ColorInterpolator DEF="BTile3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0.15 0.2775 0.7611 0.1142 0.2112 0.34 0.051 0.0944 0.1389 0.0208 0.0385 0.12 0.018 0.0333 0.1389 0.0208 0.0385 0.34 0.051 0.0944 0.7611 0.1142 0.2112 1 0.15 0.2775 0.7611 0.1142 0.2112 0.34 0.051 0.0944 0.1389 0.0208 0.0385 0.12 0.018 0.0333 0.1389 0.0208 0.0385 0.34 0.051 0.0944 0.7611 0.1142 0.2112 1 0.15 0.2775" />
+    <ROUTE fromNode="ClkB3" fromField="fraction_changed" toNode="BTile3" toField="set_fraction" />
+    <ROUTE fromNode="BTile3" fromField="value_changed" toNode="TileMat3_0" toField="baseColor" />
+    <ROUTE fromNode="BTile3" fromField="value_changed" toNode="TileMat3_0" toField="emissiveColor" />
+    <ROUTE fromNode="BTile3" fromField="value_changed" toNode="TileMat3_1" toField="baseColor" />
+    <ROUTE fromNode="BTile3" fromField="value_changed" toNode="TileMat3_1" toField="emissiveColor" />
+    <ROUTE fromNode="BTile3" fromField="value_changed" toNode="TileMat3_2" toField="baseColor" />
+    <ROUTE fromNode="BTile3" fromField="value_changed" toNode="TileMat3_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkB4" cycleInterval="2.4" loop="true" enabled="false" />
+    <PositionInterpolator DEF="BHop4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BHop4" toField="set_fraction" />
+    <ROUTE fromNode="BHop4" fromField="value_changed" toNode="Root4_0" toField="scale" />
+    <ROUTE fromNode="BHop4" fromField="value_changed" toNode="Root4_1" toField="scale" />
+    <ROUTE fromNode="BHop4" fromField="value_changed" toNode="Root4_2" toField="scale" />
+    <OrientationInterpolator DEF="BSpin4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0.1913 0 1 0 0.3536 0 1 0 0.4619 0 1 0 0.5 0 1 0 0.4619 0 1 0 0.3536 0 1 0 0.1913 0 1 0 0 0 1 0 -0.1913 0 1 0 -0.3536 0 1 0 -0.4619 0 1 0 -0.5 0 1 0 -0.4619 0 1 0 -0.3536 0 1 0 -0.1913 0 1 0 0" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BSpin4" toField="set_fraction" />
+    <ROUTE fromNode="BSpin4" fromField="value_changed" toNode="Root4_0" toField="rotation" />
+    <ROUTE fromNode="BSpin4" fromField="value_changed" toNode="Root4_1" toField="rotation" />
+    <ROUTE fromNode="BSpin4" fromField="value_changed" toNode="Root4_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.5 0 0 1 -2.074 0 0 1 -2.5607 0 0 1 -2.8858 0 0 1 -3 0 0 1 -2.8858 0 0 1 -2.5607 0 0 1 -2.074 0 0 1 -1.5 0 0 1 -0.926 0 0 1 -0.4393 0 0 1 -0.1142 0 0 1 -0 0 0 1 -0.1142 0 0 1 -0.4393 0 0 1 -0.926 0 0 1 -1.5" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BAL4" toField="set_fraction" />
+    <ROUTE fromNode="BAL4" fromField="value_changed" toNode="ArmL4_0" toField="rotation" />
+    <ROUTE fromNode="BAL4" fromField="value_changed" toNode="ArmL4_1" toField="rotation" />
+    <ROUTE fromNode="BAL4" fromField="value_changed" toNode="ArmL4_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAR4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.5 0 0 1 0.926 0 0 1 0.4393 0 0 1 0.1142 0 0 1 0 0 0 1 0.1142 0 0 1 0.4393 0 0 1 0.926 0 0 1 1.5 0 0 1 2.074 0 0 1 2.5607 0 0 1 2.8858 0 0 1 3 0 0 1 2.8858 0 0 1 2.5607 0 0 1 2.074 0 0 1 1.5" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BAR4" toField="set_fraction" />
+    <ROUTE fromNode="BAR4" fromField="value_changed" toNode="ArmR4_0" toField="rotation" />
+    <ROUTE fromNode="BAR4" fromField="value_changed" toNode="ArmR4_1" toField="rotation" />
+    <ROUTE fromNode="BAR4" fromField="value_changed" toNode="ArmR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="BEL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BEL4" toField="set_fraction" />
+    <ROUTE fromNode="BEL4" fromField="value_changed" toNode="ForeL4_0" toField="rotation" />
+    <ROUTE fromNode="BEL4" fromField="value_changed" toNode="ForeR4_0" toField="rotation" />
+    <ROUTE fromNode="BEL4" fromField="value_changed" toNode="ForeL4_1" toField="rotation" />
+    <ROUTE fromNode="BEL4" fromField="value_changed" toNode="ForeR4_1" toField="rotation" />
+    <ROUTE fromNode="BEL4" fromField="value_changed" toNode="ForeL4_2" toField="rotation" />
+    <ROUTE fromNode="BEL4" fromField="value_changed" toNode="ForeR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BLL4" toField="set_fraction" />
+    <ROUTE fromNode="BLL4" fromField="value_changed" toNode="LegL4_0" toField="rotation" />
+    <ROUTE fromNode="BLL4" fromField="value_changed" toNode="LegL4_1" toField="rotation" />
+    <ROUTE fromNode="BLL4" fromField="value_changed" toNode="LegL4_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLR4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BLR4" toField="set_fraction" />
+    <ROUTE fromNode="BLR4" fromField="value_changed" toNode="LegR4_0" toField="rotation" />
+    <ROUTE fromNode="BLR4" fromField="value_changed" toNode="LegR4_1" toField="rotation" />
+    <ROUTE fromNode="BLR4" fromField="value_changed" toNode="LegR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="BHd4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 -0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 0" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BHd4" toField="set_fraction" />
+    <ROUTE fromNode="BHd4" fromField="value_changed" toNode="Head4_0" toField="rotation" />
+    <ROUTE fromNode="BHd4" fromField="value_changed" toNode="Head4_1" toField="rotation" />
+    <ROUTE fromNode="BHd4" fromField="value_changed" toNode="Head4_2" toField="rotation" />
+    <ColorInterpolator DEF="BTile4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0.201 0.15 0.7611 0.153 0.1142 0.34 0.0683 0.051 0.1389 0.0279 0.0208 0.12 0.0241 0.018 0.1389 0.0279 0.0208 0.34 0.0683 0.051 0.7611 0.153 0.1142 1 0.201 0.15 0.7611 0.153 0.1142 0.34 0.0683 0.051 0.1389 0.0279 0.0208 0.12 0.0241 0.018 0.1389 0.0279 0.0208 0.34 0.0683 0.051 0.7611 0.153 0.1142 1 0.201 0.15" />
+    <ROUTE fromNode="ClkB4" fromField="fraction_changed" toNode="BTile4" toField="set_fraction" />
+    <ROUTE fromNode="BTile4" fromField="value_changed" toNode="TileMat4_0" toField="baseColor" />
+    <ROUTE fromNode="BTile4" fromField="value_changed" toNode="TileMat4_0" toField="emissiveColor" />
+    <ROUTE fromNode="BTile4" fromField="value_changed" toNode="TileMat4_1" toField="baseColor" />
+    <ROUTE fromNode="BTile4" fromField="value_changed" toNode="TileMat4_1" toField="emissiveColor" />
+    <ROUTE fromNode="BTile4" fromField="value_changed" toNode="TileMat4_2" toField="baseColor" />
+    <ROUTE fromNode="BTile4" fromField="value_changed" toNode="TileMat4_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkB5" cycleInterval="2.4" loop="true" enabled="false" />
+    <PositionInterpolator DEF="BHop5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1 1 1.0161 1 1 1.055 1 1 1.0939 1 1 1.11 1 1 1.0939 1 1 1.055 1 1 1.0161 1 1 1 1" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BHop5" toField="set_fraction" />
+    <ROUTE fromNode="BHop5" fromField="value_changed" toNode="Root5_0" toField="scale" />
+    <ROUTE fromNode="BHop5" fromField="value_changed" toNode="Root5_1" toField="scale" />
+    <ROUTE fromNode="BHop5" fromField="value_changed" toNode="Root5_2" toField="scale" />
+    <OrientationInterpolator DEF="BSpin5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 -0.1913 0 1 0 -0.3536 0 1 0 -0.4619 0 1 0 -0.5 0 1 0 -0.4619 0 1 0 -0.3536 0 1 0 -0.1913 0 1 0 0 0 1 0 0.1913 0 1 0 0.3536 0 1 0 0.4619 0 1 0 0.5 0 1 0 0.4619 0 1 0 0.3536 0 1 0 0.1913 0 1 0 0" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BSpin5" toField="set_fraction" />
+    <ROUTE fromNode="BSpin5" fromField="value_changed" toNode="Root5_0" toField="rotation" />
+    <ROUTE fromNode="BSpin5" fromField="value_changed" toNode="Root5_1" toField="rotation" />
+    <ROUTE fromNode="BSpin5" fromField="value_changed" toNode="Root5_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.5 0 0 1 -0.926 0 0 1 -0.4393 0 0 1 -0.1142 0 0 1 -0 0 0 1 -0.1142 0 0 1 -0.4393 0 0 1 -0.926 0 0 1 -1.5 0 0 1 -2.074 0 0 1 -2.5607 0 0 1 -2.8858 0 0 1 -3 0 0 1 -2.8858 0 0 1 -2.5607 0 0 1 -2.074 0 0 1 -1.5" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BAL5" toField="set_fraction" />
+    <ROUTE fromNode="BAL5" fromField="value_changed" toNode="ArmL5_0" toField="rotation" />
+    <ROUTE fromNode="BAL5" fromField="value_changed" toNode="ArmL5_1" toField="rotation" />
+    <ROUTE fromNode="BAL5" fromField="value_changed" toNode="ArmL5_2" toField="rotation" />
+    <OrientationInterpolator DEF="BAR5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.5 0 0 1 2.074 0 0 1 2.5607 0 0 1 2.8858 0 0 1 3 0 0 1 2.8858 0 0 1 2.5607 0 0 1 2.074 0 0 1 1.5 0 0 1 0.926 0 0 1 0.4393 0 0 1 0.1142 0 0 1 0 0 0 1 0.1142 0 0 1 0.4393 0 0 1 0.926 0 0 1 1.5" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BAR5" toField="set_fraction" />
+    <ROUTE fromNode="BAR5" fromField="value_changed" toNode="ArmR5_0" toField="rotation" />
+    <ROUTE fromNode="BAR5" fromField="value_changed" toNode="ArmR5_1" toField="rotation" />
+    <ROUTE fromNode="BAR5" fromField="value_changed" toNode="ArmR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="BEL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4 1 0 0 -0.6828 1 0 0 -0.8 1 0 0 -0.6828 1 0 0 -0.4 1 0 0 -0.1172 1 0 0 -0 1 0 0 -0.1172 1 0 0 -0.4" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BEL5" toField="set_fraction" />
+    <ROUTE fromNode="BEL5" fromField="value_changed" toNode="ForeL5_0" toField="rotation" />
+    <ROUTE fromNode="BEL5" fromField="value_changed" toNode="ForeR5_0" toField="rotation" />
+    <ROUTE fromNode="BEL5" fromField="value_changed" toNode="ForeL5_1" toField="rotation" />
+    <ROUTE fromNode="BEL5" fromField="value_changed" toNode="ForeR5_1" toField="rotation" />
+    <ROUTE fromNode="BEL5" fromField="value_changed" toNode="ForeL5_2" toField="rotation" />
+    <ROUTE fromNode="BEL5" fromField="value_changed" toNode="ForeR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BLL5" toField="set_fraction" />
+    <ROUTE fromNode="BLL5" fromField="value_changed" toNode="LegL5_0" toField="rotation" />
+    <ROUTE fromNode="BLL5" fromField="value_changed" toNode="LegL5_1" toField="rotation" />
+    <ROUTE fromNode="BLL5" fromField="value_changed" toNode="LegL5_2" toField="rotation" />
+    <OrientationInterpolator DEF="BLR5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0 1 0 0 -0.3444 1 0 0 -0.6364 1 0 0 -0.8315 1 0 0 -0.9 1 0 0 -0.8315 1 0 0 -0.6364 1 0 0 -0.3444 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0 1 0 0 -0" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BLR5" toField="set_fraction" />
+    <ROUTE fromNode="BLR5" fromField="value_changed" toNode="LegR5_0" toField="rotation" />
+    <ROUTE fromNode="BLR5" fromField="value_changed" toNode="LegR5_1" toField="rotation" />
+    <ROUTE fromNode="BLR5" fromField="value_changed" toNode="LegR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="BHd5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 0 0 0 1 0.2475 0 0 1 0.35 0 0 1 0.2475 0 0 1 0 0 0 1 -0.2475 0 0 1 -0.35 0 0 1 -0.2475 0 0 1 -0" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BHd5" toField="set_fraction" />
+    <ROUTE fromNode="BHd5" fromField="value_changed" toNode="Head5_0" toField="rotation" />
+    <ROUTE fromNode="BHd5" fromField="value_changed" toNode="Head5_1" toField="rotation" />
+    <ROUTE fromNode="BHd5" fromField="value_changed" toNode="Head5_2" toField="rotation" />
+    <ColorInterpolator DEF="BTile5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0.3795 0.15 0.7611 0.2888 0.1142 0.34 0.129 0.051 0.1389 0.0527 0.0208 0.12 0.0455 0.018 0.1389 0.0527 0.0208 0.34 0.129 0.051 0.7611 0.2888 0.1142 1 0.3795 0.15 0.7611 0.2888 0.1142 0.34 0.129 0.051 0.1389 0.0527 0.0208 0.12 0.0455 0.018 0.1389 0.0527 0.0208 0.34 0.129 0.051 0.7611 0.2888 0.1142 1 0.3795 0.15" />
+    <ROUTE fromNode="ClkB5" fromField="fraction_changed" toNode="BTile5" toField="set_fraction" />
+    <ROUTE fromNode="BTile5" fromField="value_changed" toNode="TileMat5_0" toField="baseColor" />
+    <ROUTE fromNode="BTile5" fromField="value_changed" toNode="TileMat5_0" toField="emissiveColor" />
+    <ROUTE fromNode="BTile5" fromField="value_changed" toNode="TileMat5_1" toField="baseColor" />
+    <ROUTE fromNode="BTile5" fromField="value_changed" toNode="TileMat5_1" toField="emissiveColor" />
+    <ROUTE fromNode="BTile5" fromField="value_changed" toNode="TileMat5_2" toField="baseColor" />
+    <ROUTE fromNode="BTile5" fromField="value_changed" toNode="TileMat5_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkC0" cycleInterval="6.0" loop="true" enabled="false" />
+    <PositionInterpolator DEF="CHop0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1.0563 1 1 1.1065 1 1 1.1455 1 1 1.169 1 1 1.1746 1 1 1.1617 1 1 1.1316 1 1 1.0875 1 1 1.0341 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CHop0" toField="set_fraction" />
+    <ROUTE fromNode="CHop0" fromField="value_changed" toNode="Root0_0" toField="scale" />
+    <ROUTE fromNode="CHop0" fromField="value_changed" toNode="Root0_1" toField="scale" />
+    <ROUTE fromNode="CHop0" fromField="value_changed" toNode="Root0_2" toField="scale" />
+    <OrientationInterpolator DEF="CSpin0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0.1903 0 1 0 0.7045 0 1 0 1.4573 0 1 0 2.3635 0 1 0 3.3378 0 1 0 4.2951 0 1 0 5.1502 0 1 0 5.8178 0 1 0 6.2126 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 0" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CSpin0" toField="set_fraction" />
+    <ROUTE fromNode="CSpin0" fromField="value_changed" toNode="Root0_0" toField="rotation" />
+    <ROUTE fromNode="CSpin0" fromField="value_changed" toNode="Root0_1" toField="rotation" />
+    <ROUTE fromNode="CSpin0" fromField="value_changed" toNode="Root0_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.4 0 0 1 -1.6828 0 0 1 -1.8 0 0 1 -1.6828 0 0 1 -1.4 0 0 1 -1.1172 0 0 1 -1 0 0 1 -1.1172 0 0 1 -1.4 0 0 1 -1.6828 0 0 1 -1.8 0 0 1 -1.6828 0 0 1 -1.4 0 0 1 -1.1172 0 0 1 -1 0 0 1 -1.1172 0 0 1 -1.4" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CAL0" toField="set_fraction" />
+    <ROUTE fromNode="CAL0" fromField="value_changed" toNode="ArmL0_0" toField="rotation" />
+    <ROUTE fromNode="CAL0" fromField="value_changed" toNode="ArmL0_1" toField="rotation" />
+    <ROUTE fromNode="CAL0" fromField="value_changed" toNode="ArmL0_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAR0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.4 0 0 1 1.6828 0 0 1 1.8 0 0 1 1.6828 0 0 1 1.4 0 0 1 1.1172 0 0 1 1 0 0 1 1.1172 0 0 1 1.4 0 0 1 1.6828 0 0 1 1.8 0 0 1 1.6828 0 0 1 1.4 0 0 1 1.1172 0 0 1 1 0 0 1 1.1172 0 0 1 1.4" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CAR0" toField="set_fraction" />
+    <ROUTE fromNode="CAR0" fromField="value_changed" toNode="ArmR0_0" toField="rotation" />
+    <ROUTE fromNode="CAR0" fromField="value_changed" toNode="ArmR0_1" toField="rotation" />
+    <ROUTE fromNode="CAR0" fromField="value_changed" toNode="ArmR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="CEL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CEL0" toField="set_fraction" />
+    <ROUTE fromNode="CEL0" fromField="value_changed" toNode="ForeL0_0" toField="rotation" />
+    <ROUTE fromNode="CEL0" fromField="value_changed" toNode="ForeR0_0" toField="rotation" />
+    <ROUTE fromNode="CEL0" fromField="value_changed" toNode="ForeL0_1" toField="rotation" />
+    <ROUTE fromNode="CEL0" fromField="value_changed" toNode="ForeR0_1" toField="rotation" />
+    <ROUTE fromNode="CEL0" fromField="value_changed" toNode="ForeL0_2" toField="rotation" />
+    <ROUTE fromNode="CEL0" fromField="value_changed" toNode="ForeR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLL0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 -0.1125 0 0 1 -0.2131 0 0 1 -0.291 0 0 1 -0.3381 0 0 1 -0.3493 0 0 1 -0.3234 0 0 1 -0.2631 0 0 1 -0.175 0 0 1 -0.0683 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CLL0" toField="set_fraction" />
+    <ROUTE fromNode="CLL0" fromField="value_changed" toNode="LegL0_0" toField="rotation" />
+    <ROUTE fromNode="CLL0" fromField="value_changed" toNode="LegL0_1" toField="rotation" />
+    <ROUTE fromNode="CLL0" fromField="value_changed" toNode="LegL0_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLR0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0.1125 0 0 1 0.2131 0 0 1 0.291 0 0 1 0.3381 0 0 1 0.3493 0 0 1 0.3234 0 0 1 0.2631 0 0 1 0.175 0 0 1 0.0683 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CLR0" toField="set_fraction" />
+    <ROUTE fromNode="CLR0" fromField="value_changed" toNode="LegR0_0" toField="rotation" />
+    <ROUTE fromNode="CLR0" fromField="value_changed" toNode="LegR0_1" toField="rotation" />
+    <ROUTE fromNode="CLR0" fromField="value_changed" toNode="LegR0_2" toField="rotation" />
+    <OrientationInterpolator DEF="CHd0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 -0 0 1 0 -0.1135 0 1 0 -0.3886 0 1 0 -0.5961 0 1 0 -0.4212 0 1 0 0.117 0 1 0 0.5485 0 1 0 0.5434 0 1 0 0.2693 0 1 0 0.0423 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 -0" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CHd0" toField="set_fraction" />
+    <ROUTE fromNode="CHd0" fromField="value_changed" toNode="Head0_0" toField="rotation" />
+    <ROUTE fromNode="CHd0" fromField="value_changed" toNode="Head0_1" toField="rotation" />
+    <ROUTE fromNode="CHd0" fromField="value_changed" toNode="Head0_2" toField="rotation" />
+    <ColorInterpolator DEF="CTile0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.0384 0.12 0.018 0.0675 0.2109 0.0316 0.1428 0.4461 0.0669 0.2331 0.7284 0.1093 0.3011 0.9411 0.1412 0.3188 0.9962 0.1494 0.2788 0.8711 0.1307 0.1976 0.6174 0.0926 0.1088 0.34 0.051 0.0491 0.1535 0.023 0.0384 0.12 0.018 0.0384 0.12 0.018 0.0384 0.12 0.018 0.0384 0.12 0.018 0.0384 0.12 0.018 0.0384 0.12 0.018 0.0384 0.12 0.018" />
+    <ROUTE fromNode="ClkC0" fromField="fraction_changed" toNode="CTile0" toField="set_fraction" />
+    <ROUTE fromNode="CTile0" fromField="value_changed" toNode="TileMat0_0" toField="baseColor" />
+    <ROUTE fromNode="CTile0" fromField="value_changed" toNode="TileMat0_0" toField="emissiveColor" />
+    <ROUTE fromNode="CTile0" fromField="value_changed" toNode="TileMat0_1" toField="baseColor" />
+    <ROUTE fromNode="CTile0" fromField="value_changed" toNode="TileMat0_1" toField="emissiveColor" />
+    <ROUTE fromNode="CTile0" fromField="value_changed" toNode="TileMat0_2" toField="baseColor" />
+    <ROUTE fromNode="CTile0" fromField="value_changed" toNode="TileMat0_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkC1" cycleInterval="6.0" loop="true" enabled="false" />
+    <PositionInterpolator DEF="CHop1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1 1 1 1.0228 1 1 1.0774 1 1 1.1237 1 1 1.157 1 1 1.1735 1 1 1.1716 1 1 1.1516 1 1 1.1154 1 1 1.067 1 1 1.0114 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CHop1" toField="set_fraction" />
+    <ROUTE fromNode="CHop1" fromField="value_changed" toNode="Root1_0" toField="scale" />
+    <ROUTE fromNode="CHop1" fromField="value_changed" toNode="Root1_1" toField="scale" />
+    <ROUTE fromNode="CHop1" fromField="value_changed" toNode="Root1_2" toField="scale" />
+    <OrientationInterpolator DEF="CSpin1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 6.2832 0 1 0 6.2832 0 1 0 0.0318 0 1 0 0.3619 0 1 0 0.9817 0 1 0 1.8061 0 1 0 2.7498 0 1 0 3.7276 0 1 0 4.6542 0 1 0 5.4445 0 1 0 6.0132 0 1 0 6.2751 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CSpin1" toField="set_fraction" />
+    <ROUTE fromNode="CSpin1" fromField="value_changed" toNode="Root1_0" toField="rotation" />
+    <ROUTE fromNode="CSpin1" fromField="value_changed" toNode="Root1_1" toField="rotation" />
+    <ROUTE fromNode="CSpin1" fromField="value_changed" toNode="Root1_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.0196 0 0 1 -1.2184 0 0 1 -1.5236 0 0 1 -1.7564 0 0 1 -1.7804 0 0 1 -1.5816 0 0 1 -1.2764 0 0 1 -1.0436 0 0 1 -1.0196 0 0 1 -1.2184 0 0 1 -1.5236 0 0 1 -1.7564 0 0 1 -1.7804 0 0 1 -1.5816 0 0 1 -1.2764 0 0 1 -1.0436 0 0 1 -1.0196" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CAL1" toField="set_fraction" />
+    <ROUTE fromNode="CAL1" fromField="value_changed" toNode="ArmL1_0" toField="rotation" />
+    <ROUTE fromNode="CAL1" fromField="value_changed" toNode="ArmL1_1" toField="rotation" />
+    <ROUTE fromNode="CAL1" fromField="value_changed" toNode="ArmL1_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAR1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.0196 0 0 1 1.2184 0 0 1 1.5236 0 0 1 1.7564 0 0 1 1.7804 0 0 1 1.5816 0 0 1 1.2764 0 0 1 1.0436 0 0 1 1.0196 0 0 1 1.2184 0 0 1 1.5236 0 0 1 1.7564 0 0 1 1.7804 0 0 1 1.5816 0 0 1 1.2764 0 0 1 1.0436 0 0 1 1.0196" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CAR1" toField="set_fraction" />
+    <ROUTE fromNode="CAR1" fromField="value_changed" toNode="ArmR1_0" toField="rotation" />
+    <ROUTE fromNode="CAR1" fromField="value_changed" toNode="ArmR1_1" toField="rotation" />
+    <ROUTE fromNode="CAR1" fromField="value_changed" toNode="ArmR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="CEL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CEL1" toField="set_fraction" />
+    <ROUTE fromNode="CEL1" fromField="value_changed" toNode="ForeL1_0" toField="rotation" />
+    <ROUTE fromNode="CEL1" fromField="value_changed" toNode="ForeR1_0" toField="rotation" />
+    <ROUTE fromNode="CEL1" fromField="value_changed" toNode="ForeL1_1" toField="rotation" />
+    <ROUTE fromNode="CEL1" fromField="value_changed" toNode="ForeR1_1" toField="rotation" />
+    <ROUTE fromNode="CEL1" fromField="value_changed" toNode="ForeL1_2" toField="rotation" />
+    <ROUTE fromNode="CEL1" fromField="value_changed" toNode="ForeR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLL1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 -0 0 0 1 -0.0457 0 0 1 -0.1548 0 0 1 -0.2475 0 0 1 -0.3139 0 0 1 -0.347 0 0 1 -0.3433 0 0 1 -0.3031 0 0 1 -0.2308 0 0 1 -0.1339 0 0 1 -0.0229 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CLL1" toField="set_fraction" />
+    <ROUTE fromNode="CLL1" fromField="value_changed" toNode="LegL1_0" toField="rotation" />
+    <ROUTE fromNode="CLL1" fromField="value_changed" toNode="LegL1_1" toField="rotation" />
+    <ROUTE fromNode="CLL1" fromField="value_changed" toNode="LegL1_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLR1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 0.0457 0 0 1 0.1548 0 0 1 0.2475 0 0 1 0.3139 0 0 1 0.347 0 0 1 0.3433 0 0 1 0.3031 0 0 1 0.2308 0 0 1 0.1339 0 0 1 0.0229 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CLR1" toField="set_fraction" />
+    <ROUTE fromNode="CLR1" fromField="value_changed" toNode="LegR1_0" toField="rotation" />
+    <ROUTE fromNode="CLR1" fromField="value_changed" toNode="LegR1_1" toField="rotation" />
+    <ROUTE fromNode="CLR1" fromField="value_changed" toNode="LegR1_2" toField="rotation" />
+    <OrientationInterpolator DEF="CHd1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0 0 1 0 -0.0191 0 1 0 -0.2124 0 1 0 -0.4989 0 1 0 -0.5835 0 1 0 -0.2291 0 1 0 0.3318 0 1 0 0.599 0 1 0 0.4463 0 1 0 0.16 0 1 0 0.0048 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CHd1" toField="set_fraction" />
+    <ROUTE fromNode="CHd1" fromField="value_changed" toNode="Head1_0" toField="rotation" />
+    <ROUTE fromNode="CHd1" fromField="value_changed" toNode="Head1_1" toField="rotation" />
+    <ROUTE fromNode="CHd1" fromField="value_changed" toNode="Head1_2" toField="rotation" />
+    <ColorInterpolator DEF="CTile1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.018 0.12 0.019 0.018 0.12 0.019 0.0202 0.135 0.0214 0.0438 0.2921 0.0463 0.084 0.56 0.0888 0.1242 0.8279 0.1312 0.1478 0.985 0.1561 0.145 0.9665 0.1532 0.117 0.78 0.1236 0.0754 0.5026 0.0797 0.0373 0.2489 0.0394 0.0186 0.1238 0.0196 0.018 0.12 0.019 0.018 0.12 0.019 0.018 0.12 0.019 0.018 0.12 0.019 0.018 0.12 0.019" />
+    <ROUTE fromNode="ClkC1" fromField="fraction_changed" toNode="CTile1" toField="set_fraction" />
+    <ROUTE fromNode="CTile1" fromField="value_changed" toNode="TileMat1_0" toField="baseColor" />
+    <ROUTE fromNode="CTile1" fromField="value_changed" toNode="TileMat1_0" toField="emissiveColor" />
+    <ROUTE fromNode="CTile1" fromField="value_changed" toNode="TileMat1_1" toField="baseColor" />
+    <ROUTE fromNode="CTile1" fromField="value_changed" toNode="TileMat1_1" toField="emissiveColor" />
+    <ROUTE fromNode="CTile1" fromField="value_changed" toNode="TileMat1_2" toField="baseColor" />
+    <ROUTE fromNode="CTile1" fromField="value_changed" toNode="TileMat1_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkC2" cycleInterval="6.0" loop="true" enabled="false" />
+    <PositionInterpolator DEF="CHop2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1 1 1 1 1 1 1 1 1 1.0453 1 1 1.0972 1 1 1.1388 1 1 1.1657 1 1 1.175 1 1 1.1657 1 1 1.1388 1 1 1.0972 1 1 1.0453 1 1 1 1 1 1 1 1 1 1 1 1 1" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CHop2" toField="set_fraction" />
+    <ROUTE fromNode="CHop2" fromField="value_changed" toNode="Root2_0" toField="scale" />
+    <ROUTE fromNode="CHop2" fromField="value_changed" toNode="Root2_1" toField="scale" />
+    <ROUTE fromNode="CHop2" fromField="value_changed" toNode="Root2_2" toField="scale" />
+    <OrientationInterpolator DEF="CSpin2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 0.1236 0 1 0 0.5798 0 1 0 1.2917 0 1 0 2.174 0 1 0 3.1416 0 1 0 4.1091 0 1 0 4.9915 0 1 0 5.7033 0 1 0 6.1596 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CSpin2" toField="set_fraction" />
+    <ROUTE fromNode="CSpin2" fromField="value_changed" toNode="Root2_0" toField="rotation" />
+    <ROUTE fromNode="CSpin2" fromField="value_changed" toNode="Root2_1" toField="rotation" />
+    <ROUTE fromNode="CSpin2" fromField="value_changed" toNode="Root2_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.1649 0 0 1 -1.0049 0 0 1 -1.0764 0 0 1 -1.3374 0 0 1 -1.6351 0 0 1 -1.7951 0 0 1 -1.7236 0 0 1 -1.4626 0 0 1 -1.1649 0 0 1 -1.0049 0 0 1 -1.0764 0 0 1 -1.3374 0 0 1 -1.6351 0 0 1 -1.7951 0 0 1 -1.7236 0 0 1 -1.4626 0 0 1 -1.1649" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CAL2" toField="set_fraction" />
+    <ROUTE fromNode="CAL2" fromField="value_changed" toNode="ArmL2_0" toField="rotation" />
+    <ROUTE fromNode="CAL2" fromField="value_changed" toNode="ArmL2_1" toField="rotation" />
+    <ROUTE fromNode="CAL2" fromField="value_changed" toNode="ArmL2_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAR2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.1649 0 0 1 1.0049 0 0 1 1.0764 0 0 1 1.3374 0 0 1 1.6351 0 0 1 1.7951 0 0 1 1.7236 0 0 1 1.4626 0 0 1 1.1649 0 0 1 1.0049 0 0 1 1.0764 0 0 1 1.3374 0 0 1 1.6351 0 0 1 1.7951 0 0 1 1.7236 0 0 1 1.4626 0 0 1 1.1649" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CAR2" toField="set_fraction" />
+    <ROUTE fromNode="CAR2" fromField="value_changed" toNode="ArmR2_0" toField="rotation" />
+    <ROUTE fromNode="CAR2" fromField="value_changed" toNode="ArmR2_1" toField="rotation" />
+    <ROUTE fromNode="CAR2" fromField="value_changed" toNode="ArmR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="CEL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CEL2" toField="set_fraction" />
+    <ROUTE fromNode="CEL2" fromField="value_changed" toNode="ForeL2_0" toField="rotation" />
+    <ROUTE fromNode="CEL2" fromField="value_changed" toNode="ForeR2_0" toField="rotation" />
+    <ROUTE fromNode="CEL2" fromField="value_changed" toNode="ForeL2_1" toField="rotation" />
+    <ROUTE fromNode="CEL2" fromField="value_changed" toNode="ForeR2_1" toField="rotation" />
+    <ROUTE fromNode="CEL2" fromField="value_changed" toNode="ForeL2_2" toField="rotation" />
+    <ROUTE fromNode="CEL2" fromField="value_changed" toNode="ForeR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLL2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0.0906 0 0 1 -0.1944 0 0 1 -0.2777 0 0 1 -0.3314 0 0 1 -0.35 0 0 1 -0.3314 0 0 1 -0.2777 0 0 1 -0.1944 0 0 1 -0.0906 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CLL2" toField="set_fraction" />
+    <ROUTE fromNode="CLL2" fromField="value_changed" toNode="LegL2_0" toField="rotation" />
+    <ROUTE fromNode="CLL2" fromField="value_changed" toNode="LegL2_1" toField="rotation" />
+    <ROUTE fromNode="CLL2" fromField="value_changed" toNode="LegL2_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLR2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0.0906 0 0 1 0.1944 0 0 1 0.2777 0 0 1 0.3314 0 0 1 0.35 0 0 1 0.3314 0 0 1 0.2777 0 0 1 0.1944 0 0 1 0.0906 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CLR2" toField="set_fraction" />
+    <ROUTE fromNode="CLR2" fromField="value_changed" toNode="LegR2_0" toField="rotation" />
+    <ROUTE fromNode="CLR2" fromField="value_changed" toNode="LegR2_1" toField="rotation" />
+    <ROUTE fromNode="CLR2" fromField="value_changed" toNode="LegR2_2" toField="rotation" />
+    <OrientationInterpolator DEF="CHd2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 -0.074 0 1 0 -0.3287 0 1 0 -0.5768 0 1 0 -0.4941 0 1 0 -0 0 1 0 0.4941 0 1 0 0.5768 0 1 0 0.3287 0 1 0 0.074 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CHd2" toField="set_fraction" />
+    <ROUTE fromNode="CHd2" fromField="value_changed" toNode="Head2_0" toField="rotation" />
+    <ROUTE fromNode="CHd2" fromField="value_changed" toNode="Head2_1" toField="rotation" />
+    <ROUTE fromNode="CHd2" fromField="value_changed" toNode="Head2_2" toField="rotation" />
+    <ColorInterpolator DEF="CTile2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.018 0.12 0.0404 0.018 0.12 0.0404 0.018 0.12 0.0404 0.018 0.12 0.0404 0.0268 0.1789 0.0603 0.0587 0.3916 0.132 0.1011 0.6739 0.2271 0.1364 0.9091 0.3064 0.15 1 0.337 0.1364 0.9091 0.3064 0.1011 0.6739 0.2271 0.0587 0.3916 0.132 0.0268 0.1789 0.0603 0.018 0.12 0.0404 0.018 0.12 0.0404 0.018 0.12 0.0404 0.018 0.12 0.0404" />
+    <ROUTE fromNode="ClkC2" fromField="fraction_changed" toNode="CTile2" toField="set_fraction" />
+    <ROUTE fromNode="CTile2" fromField="value_changed" toNode="TileMat2_0" toField="baseColor" />
+    <ROUTE fromNode="CTile2" fromField="value_changed" toNode="TileMat2_0" toField="emissiveColor" />
+    <ROUTE fromNode="CTile2" fromField="value_changed" toNode="TileMat2_1" toField="baseColor" />
+    <ROUTE fromNode="CTile2" fromField="value_changed" toNode="TileMat2_1" toField="emissiveColor" />
+    <ROUTE fromNode="CTile2" fromField="value_changed" toNode="TileMat2_2" toField="baseColor" />
+    <ROUTE fromNode="CTile2" fromField="value_changed" toNode="TileMat2_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkC3" cycleInterval="6.0" loop="true" enabled="false" />
+    <PositionInterpolator DEF="CHop3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1.0114 1 1 1.067 1 1 1.1154 1 1 1.1516 1 1 1.1716 1 1 1.1735 1 1 1.157 1 1 1.1237 1 1 1.0774 1 1 1.0228 1 1 1 1 1 1 1" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CHop3" toField="set_fraction" />
+    <ROUTE fromNode="CHop3" fromField="value_changed" toNode="Root3_0" toField="scale" />
+    <ROUTE fromNode="CHop3" fromField="value_changed" toNode="Root3_1" toField="scale" />
+    <ROUTE fromNode="CHop3" fromField="value_changed" toNode="Root3_2" toField="scale" />
+    <OrientationInterpolator DEF="CSpin3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 0.0081 0 1 0 0.27 0 1 0 0.8387 0 1 0 1.629 0 1 0 2.5556 0 1 0 3.5334 0 1 0 4.4771 0 1 0 5.3014 0 1 0 5.9213 0 1 0 6.2514 0 1 0 6.2832 0 1 0 6.2832" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CSpin3" toField="set_fraction" />
+    <ROUTE fromNode="CSpin3" fromField="value_changed" toNode="Root3_0" toField="rotation" />
+    <ROUTE fromNode="CSpin3" fromField="value_changed" toNode="Root3_1" toField="rotation" />
+    <ROUTE fromNode="CSpin3" fromField="value_changed" toNode="Root3_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.6351 0 0 1 -1.3374 0 0 1 -1.0764 0 0 1 -1.0049 0 0 1 -1.1649 0 0 1 -1.4626 0 0 1 -1.7236 0 0 1 -1.7951 0 0 1 -1.6351 0 0 1 -1.3374 0 0 1 -1.0764 0 0 1 -1.0049 0 0 1 -1.1649 0 0 1 -1.4626 0 0 1 -1.7236 0 0 1 -1.7951 0 0 1 -1.6351" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CAL3" toField="set_fraction" />
+    <ROUTE fromNode="CAL3" fromField="value_changed" toNode="ArmL3_0" toField="rotation" />
+    <ROUTE fromNode="CAL3" fromField="value_changed" toNode="ArmL3_1" toField="rotation" />
+    <ROUTE fromNode="CAL3" fromField="value_changed" toNode="ArmL3_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAR3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.6351 0 0 1 1.3374 0 0 1 1.0764 0 0 1 1.0049 0 0 1 1.1649 0 0 1 1.4626 0 0 1 1.7236 0 0 1 1.7951 0 0 1 1.6351 0 0 1 1.3374 0 0 1 1.0764 0 0 1 1.0049 0 0 1 1.1649 0 0 1 1.4626 0 0 1 1.7236 0 0 1 1.7951 0 0 1 1.6351" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CAR3" toField="set_fraction" />
+    <ROUTE fromNode="CAR3" fromField="value_changed" toNode="ArmR3_0" toField="rotation" />
+    <ROUTE fromNode="CAR3" fromField="value_changed" toNode="ArmR3_1" toField="rotation" />
+    <ROUTE fromNode="CAR3" fromField="value_changed" toNode="ArmR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="CEL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CEL3" toField="set_fraction" />
+    <ROUTE fromNode="CEL3" fromField="value_changed" toNode="ForeL3_0" toField="rotation" />
+    <ROUTE fromNode="CEL3" fromField="value_changed" toNode="ForeR3_0" toField="rotation" />
+    <ROUTE fromNode="CEL3" fromField="value_changed" toNode="ForeL3_1" toField="rotation" />
+    <ROUTE fromNode="CEL3" fromField="value_changed" toNode="ForeR3_1" toField="rotation" />
+    <ROUTE fromNode="CEL3" fromField="value_changed" toNode="ForeL3_2" toField="rotation" />
+    <ROUTE fromNode="CEL3" fromField="value_changed" toNode="ForeR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLL3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0.0229 0 0 1 -0.1339 0 0 1 -0.2308 0 0 1 -0.3031 0 0 1 -0.3433 0 0 1 -0.347 0 0 1 -0.3139 0 0 1 -0.2475 0 0 1 -0.1548 0 0 1 -0.0457 0 0 1 -0 0 0 1 -0" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CLL3" toField="set_fraction" />
+    <ROUTE fromNode="CLL3" fromField="value_changed" toNode="LegL3_0" toField="rotation" />
+    <ROUTE fromNode="CLL3" fromField="value_changed" toNode="LegL3_1" toField="rotation" />
+    <ROUTE fromNode="CLL3" fromField="value_changed" toNode="LegL3_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLR3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0.0229 0 0 1 0.1339 0 0 1 0.2308 0 0 1 0.3031 0 0 1 0.3433 0 0 1 0.347 0 0 1 0.3139 0 0 1 0.2475 0 0 1 0.1548 0 0 1 0.0457 0 0 1 0 0 0 1 0" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CLR3" toField="set_fraction" />
+    <ROUTE fromNode="CLR3" fromField="value_changed" toNode="LegR3_0" toField="rotation" />
+    <ROUTE fromNode="CLR3" fromField="value_changed" toNode="LegR3_1" toField="rotation" />
+    <ROUTE fromNode="CLR3" fromField="value_changed" toNode="LegR3_2" toField="rotation" />
+    <OrientationInterpolator DEF="CHd3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 -0.0048 0 1 0 -0.16 0 1 0 -0.4463 0 1 0 -0.599 0 1 0 -0.3318 0 1 0 0.2291 0 1 0 0.5835 0 1 0 0.4989 0 1 0 0.2124 0 1 0 0.0191 0 1 0 0 0 1 0 0" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CHd3" toField="set_fraction" />
+    <ROUTE fromNode="CHd3" fromField="value_changed" toNode="Head3_0" toField="rotation" />
+    <ROUTE fromNode="CHd3" fromField="value_changed" toNode="Head3_1" toField="rotation" />
+    <ROUTE fromNode="CHd3" fromField="value_changed" toNode="Head3_2" toField="rotation" />
+    <ColorInterpolator DEF="CTile3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.018 0.12 0.0619 0.018 0.12 0.0619 0.018 0.12 0.0619 0.018 0.12 0.0619 0.018 0.12 0.0619 0.0186 0.1238 0.0638 0.0373 0.2489 0.1283 0.0754 0.5026 0.2591 0.117 0.78 0.4021 0.145 0.9665 0.4982 0.1478 0.985 0.5078 0.1242 0.8279 0.4268 0.084 0.56 0.2887 0.0438 0.2921 0.1506 0.0202 0.135 0.0696 0.018 0.12 0.0619 0.018 0.12 0.0619" />
+    <ROUTE fromNode="ClkC3" fromField="fraction_changed" toNode="CTile3" toField="set_fraction" />
+    <ROUTE fromNode="CTile3" fromField="value_changed" toNode="TileMat3_0" toField="baseColor" />
+    <ROUTE fromNode="CTile3" fromField="value_changed" toNode="TileMat3_0" toField="emissiveColor" />
+    <ROUTE fromNode="CTile3" fromField="value_changed" toNode="TileMat3_1" toField="baseColor" />
+    <ROUTE fromNode="CTile3" fromField="value_changed" toNode="TileMat3_1" toField="emissiveColor" />
+    <ROUTE fromNode="CTile3" fromField="value_changed" toNode="TileMat3_2" toField="baseColor" />
+    <ROUTE fromNode="CTile3" fromField="value_changed" toNode="TileMat3_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkC4" cycleInterval="6.0" loop="true" enabled="false" />
+    <PositionInterpolator DEF="CHop4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1.0341 1 1 1.0875 1 1 1.1316 1 1 1.1617 1 1 1.1746 1 1 1.169 1 1 1.1455 1 1 1.1065 1 1 1.0563 1 1 1 1" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CHop4" toField="set_fraction" />
+    <ROUTE fromNode="CHop4" fromField="value_changed" toNode="Root4_0" toField="scale" />
+    <ROUTE fromNode="CHop4" fromField="value_changed" toNode="Root4_1" toField="scale" />
+    <ROUTE fromNode="CHop4" fromField="value_changed" toNode="Root4_2" toField="scale" />
+    <OrientationInterpolator DEF="CSpin4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 0.0706 0 1 0 0.4654 0 1 0 1.133 0 1 0 1.988 0 1 0 2.9454 0 1 0 3.9197 0 1 0 4.8259 0 1 0 5.5787 0 1 0 6.0929 0 1 0 6.2832" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CSpin4" toField="set_fraction" />
+    <ROUTE fromNode="CSpin4" fromField="value_changed" toNode="Root4_0" toField="rotation" />
+    <ROUTE fromNode="CSpin4" fromField="value_changed" toNode="Root4_1" toField="rotation" />
+    <ROUTE fromNode="CSpin4" fromField="value_changed" toNode="Root4_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.7804 0 0 1 -1.7564 0 0 1 -1.5236 0 0 1 -1.2184 0 0 1 -1.0196 0 0 1 -1.0436 0 0 1 -1.2764 0 0 1 -1.5816 0 0 1 -1.7804 0 0 1 -1.7564 0 0 1 -1.5236 0 0 1 -1.2184 0 0 1 -1.0196 0 0 1 -1.0436 0 0 1 -1.2764 0 0 1 -1.5816 0 0 1 -1.7804" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CAL4" toField="set_fraction" />
+    <ROUTE fromNode="CAL4" fromField="value_changed" toNode="ArmL4_0" toField="rotation" />
+    <ROUTE fromNode="CAL4" fromField="value_changed" toNode="ArmL4_1" toField="rotation" />
+    <ROUTE fromNode="CAL4" fromField="value_changed" toNode="ArmL4_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAR4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.7804 0 0 1 1.7564 0 0 1 1.5236 0 0 1 1.2184 0 0 1 1.0196 0 0 1 1.0436 0 0 1 1.2764 0 0 1 1.5816 0 0 1 1.7804 0 0 1 1.7564 0 0 1 1.5236 0 0 1 1.2184 0 0 1 1.0196 0 0 1 1.0436 0 0 1 1.2764 0 0 1 1.5816 0 0 1 1.7804" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CAR4" toField="set_fraction" />
+    <ROUTE fromNode="CAR4" fromField="value_changed" toNode="ArmR4_0" toField="rotation" />
+    <ROUTE fromNode="CAR4" fromField="value_changed" toNode="ArmR4_1" toField="rotation" />
+    <ROUTE fromNode="CAR4" fromField="value_changed" toNode="ArmR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="CEL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CEL4" toField="set_fraction" />
+    <ROUTE fromNode="CEL4" fromField="value_changed" toNode="ForeL4_0" toField="rotation" />
+    <ROUTE fromNode="CEL4" fromField="value_changed" toNode="ForeR4_0" toField="rotation" />
+    <ROUTE fromNode="CEL4" fromField="value_changed" toNode="ForeL4_1" toField="rotation" />
+    <ROUTE fromNode="CEL4" fromField="value_changed" toNode="ForeR4_1" toField="rotation" />
+    <ROUTE fromNode="CEL4" fromField="value_changed" toNode="ForeL4_2" toField="rotation" />
+    <ROUTE fromNode="CEL4" fromField="value_changed" toNode="ForeR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLL4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0.0683 0 0 1 -0.175 0 0 1 -0.2631 0 0 1 -0.3234 0 0 1 -0.3493 0 0 1 -0.3381 0 0 1 -0.291 0 0 1 -0.2131 0 0 1 -0.1125 0 0 1 -0" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CLL4" toField="set_fraction" />
+    <ROUTE fromNode="CLL4" fromField="value_changed" toNode="LegL4_0" toField="rotation" />
+    <ROUTE fromNode="CLL4" fromField="value_changed" toNode="LegL4_1" toField="rotation" />
+    <ROUTE fromNode="CLL4" fromField="value_changed" toNode="LegL4_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLR4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0.0683 0 0 1 0.175 0 0 1 0.2631 0 0 1 0.3234 0 0 1 0.3493 0 0 1 0.3381 0 0 1 0.291 0 0 1 0.2131 0 0 1 0.1125 0 0 1 0" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CLR4" toField="set_fraction" />
+    <ROUTE fromNode="CLR4" fromField="value_changed" toNode="LegR4_0" toField="rotation" />
+    <ROUTE fromNode="CLR4" fromField="value_changed" toNode="LegR4_1" toField="rotation" />
+    <ROUTE fromNode="CLR4" fromField="value_changed" toNode="LegR4_2" toField="rotation" />
+    <OrientationInterpolator DEF="CHd4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 -0.0423 0 1 0 -0.2693 0 1 0 -0.5434 0 1 0 -0.5485 0 1 0 -0.117 0 1 0 0.4212 0 1 0 0.5961 0 1 0 0.3886 0 1 0 0.1135 0 1 0 0" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CHd4" toField="set_fraction" />
+    <ROUTE fromNode="CHd4" fromField="value_changed" toNode="Head4_0" toField="rotation" />
+    <ROUTE fromNode="CHd4" fromField="value_changed" toNode="Head4_1" toField="rotation" />
+    <ROUTE fromNode="CHd4" fromField="value_changed" toNode="Head4_2" toField="rotation" />
+    <ColorInterpolator DEF="CTile4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.018 0.12 0.0833 0.018 0.12 0.0833 0.018 0.12 0.0833 0.018 0.12 0.0833 0.018 0.12 0.0833 0.018 0.12 0.0833 0.018 0.12 0.0833 0.023 0.1535 0.1065 0.051 0.34 0.236 0.0926 0.6174 0.4285 0.1307 0.8711 0.6046 0.1494 0.9962 0.6914 0.1412 0.9411 0.6531 0.1093 0.7284 0.5055 0.0669 0.4461 0.3096 0.0316 0.2109 0.1464 0.018 0.12 0.0833" />
+    <ROUTE fromNode="ClkC4" fromField="fraction_changed" toNode="CTile4" toField="set_fraction" />
+    <ROUTE fromNode="CTile4" fromField="value_changed" toNode="TileMat4_0" toField="baseColor" />
+    <ROUTE fromNode="CTile4" fromField="value_changed" toNode="TileMat4_0" toField="emissiveColor" />
+    <ROUTE fromNode="CTile4" fromField="value_changed" toNode="TileMat4_1" toField="baseColor" />
+    <ROUTE fromNode="CTile4" fromField="value_changed" toNode="TileMat4_1" toField="emissiveColor" />
+    <ROUTE fromNode="CTile4" fromField="value_changed" toNode="TileMat4_2" toField="baseColor" />
+    <ROUTE fromNode="CTile4" fromField="value_changed" toNode="TileMat4_2" toField="emissiveColor" />
+    <TimeSensor DEF="ClkC5" cycleInterval="6.0" loop="true" enabled="false" />
+    <PositionInterpolator DEF="CHop5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 1.0875 1 1 1.0341 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1.0563 1 1 1.1065 1 1 1.1455 1 1 1.169 1 1 1.1746 1 1 1.1617 1 1 1.1316 1 1 1.0875 1" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CHop5" toField="set_fraction" />
+    <ROUTE fromNode="CHop5" fromField="value_changed" toNode="Root5_0" toField="scale" />
+    <ROUTE fromNode="CHop5" fromField="value_changed" toNode="Root5_1" toField="scale" />
+    <ROUTE fromNode="CHop5" fromField="value_changed" toNode="Root5_2" toField="scale" />
+    <OrientationInterpolator DEF="CSpin5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 5.8178 0 1 0 6.2126 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 6.2832 0 1 0 0 0 1 0 0.1903 0 1 0 0.7045 0 1 0 1.4573 0 1 0 2.3635 0 1 0 3.3378 0 1 0 4.2951 0 1 0 5.1502 0 1 0 5.8178" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CSpin5" toField="set_fraction" />
+    <ROUTE fromNode="CSpin5" fromField="value_changed" toNode="Root5_0" toField="rotation" />
+    <ROUTE fromNode="CSpin5" fromField="value_changed" toNode="Root5_1" toField="rotation" />
+    <ROUTE fromNode="CSpin5" fromField="value_changed" toNode="Root5_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -1.4 0 0 1 -1.6828 0 0 1 -1.8 0 0 1 -1.6828 0 0 1 -1.4 0 0 1 -1.1172 0 0 1 -1 0 0 1 -1.1172 0 0 1 -1.4 0 0 1 -1.6828 0 0 1 -1.8 0 0 1 -1.6828 0 0 1 -1.4 0 0 1 -1.1172 0 0 1 -1 0 0 1 -1.1172 0 0 1 -1.4" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CAL5" toField="set_fraction" />
+    <ROUTE fromNode="CAL5" fromField="value_changed" toNode="ArmL5_0" toField="rotation" />
+    <ROUTE fromNode="CAL5" fromField="value_changed" toNode="ArmL5_1" toField="rotation" />
+    <ROUTE fromNode="CAL5" fromField="value_changed" toNode="ArmL5_2" toField="rotation" />
+    <OrientationInterpolator DEF="CAR5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 1.4 0 0 1 1.6828 0 0 1 1.8 0 0 1 1.6828 0 0 1 1.4 0 0 1 1.1172 0 0 1 1 0 0 1 1.1172 0 0 1 1.4 0 0 1 1.6828 0 0 1 1.8 0 0 1 1.6828 0 0 1 1.4 0 0 1 1.1172 0 0 1 1 0 0 1 1.1172 0 0 1 1.4" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CAR5" toField="set_fraction" />
+    <ROUTE fromNode="CAR5" fromField="value_changed" toNode="ArmR5_0" toField="rotation" />
+    <ROUTE fromNode="CAR5" fromField="value_changed" toNode="ArmR5_1" toField="rotation" />
+    <ROUTE fromNode="CAR5" fromField="value_changed" toNode="ArmR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="CEL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25 1 0 0 -0.25" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CEL5" toField="set_fraction" />
+    <ROUTE fromNode="CEL5" fromField="value_changed" toNode="ForeL5_0" toField="rotation" />
+    <ROUTE fromNode="CEL5" fromField="value_changed" toNode="ForeR5_0" toField="rotation" />
+    <ROUTE fromNode="CEL5" fromField="value_changed" toNode="ForeL5_1" toField="rotation" />
+    <ROUTE fromNode="CEL5" fromField="value_changed" toNode="ForeR5_1" toField="rotation" />
+    <ROUTE fromNode="CEL5" fromField="value_changed" toNode="ForeL5_2" toField="rotation" />
+    <ROUTE fromNode="CEL5" fromField="value_changed" toNode="ForeR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLL5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 -0.175 0 0 1 -0.0683 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0 0 0 1 -0.1125 0 0 1 -0.2131 0 0 1 -0.291 0 0 1 -0.3381 0 0 1 -0.3493 0 0 1 -0.3234 0 0 1 -0.2631 0 0 1 -0.175" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CLL5" toField="set_fraction" />
+    <ROUTE fromNode="CLL5" fromField="value_changed" toNode="LegL5_0" toField="rotation" />
+    <ROUTE fromNode="CLL5" fromField="value_changed" toNode="LegL5_1" toField="rotation" />
+    <ROUTE fromNode="CLL5" fromField="value_changed" toNode="LegL5_2" toField="rotation" />
+    <OrientationInterpolator DEF="CLR5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 0 1 0.175 0 0 1 0.0683 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0.1125 0 0 1 0.2131 0 0 1 0.291 0 0 1 0.3381 0 0 1 0.3493 0 0 1 0.3234 0 0 1 0.2631 0 0 1 0.175" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CLR5" toField="set_fraction" />
+    <ROUTE fromNode="CLR5" fromField="value_changed" toNode="LegR5_0" toField="rotation" />
+    <ROUTE fromNode="CLR5" fromField="value_changed" toNode="LegR5_1" toField="rotation" />
+    <ROUTE fromNode="CLR5" fromField="value_changed" toNode="LegR5_2" toField="rotation" />
+    <OrientationInterpolator DEF="CHd5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 1 0 0.2693 0 1 0 0.0423 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 -0 0 1 0 -0.1135 0 1 0 -0.3886 0 1 0 -0.5961 0 1 0 -0.4212 0 1 0 0.117 0 1 0 0.5485 0 1 0 0.5434 0 1 0 0.2693" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CHd5" toField="set_fraction" />
+    <ROUTE fromNode="CHd5" fromField="value_changed" toNode="Head5_0" toField="rotation" />
+    <ROUTE fromNode="CHd5" fromField="value_changed" toNode="Head5_1" toField="rotation" />
+    <ROUTE fromNode="CHd5" fromField="value_changed" toNode="Head5_2" toField="rotation" />
+    <ColorInterpolator DEF="CTile5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.051 0.34 0.2966 0.023 0.1535 0.1339 0.018 0.12 0.1047 0.018 0.12 0.1047 0.018 0.12 0.1047 0.018 0.12 0.1047 0.018 0.12 0.1047 0.018 0.12 0.1047 0.018 0.12 0.1047 0.0316 0.2109 0.184 0.0669 0.4461 0.3892 0.1093 0.7284 0.6355 0.1412 0.9411 0.8211 0.1494 0.9962 0.8692 0.1307 0.8711 0.7601 0.0926 0.6174 0.5387 0.051 0.34 0.2966" />
+    <ROUTE fromNode="ClkC5" fromField="fraction_changed" toNode="CTile5" toField="set_fraction" />
+    <ROUTE fromNode="CTile5" fromField="value_changed" toNode="TileMat5_0" toField="baseColor" />
+    <ROUTE fromNode="CTile5" fromField="value_changed" toNode="TileMat5_0" toField="emissiveColor" />
+    <ROUTE fromNode="CTile5" fromField="value_changed" toNode="TileMat5_1" toField="baseColor" />
+    <ROUTE fromNode="CTile5" fromField="value_changed" toNode="TileMat5_1" toField="emissiveColor" />
+    <ROUTE fromNode="CTile5" fromField="value_changed" toNode="TileMat5_2" toField="baseColor" />
+    <ROUTE fromNode="CTile5" fromField="value_changed" toNode="TileMat5_2" toField="emissiveColor" />
+    <BooleanFilter DEF="PressA" />
+    <BooleanFilter DEF="OffA" />
+    <ROUTE fromNode="TouchA" fromField="isActive" toNode="PressA" toField="set_boolean" />
+    <ROUTE fromNode="PressA" fromField="inputTrue" toNode="OffA" toField="set_boolean" />
+    <ROUTE fromNode="PressA" fromField="inputTrue" toNode="ClkA0" toField="enabled" />
+    <ROUTE fromNode="PressA" fromField="inputTrue" toNode="ClkA1" toField="enabled" />
+    <ROUTE fromNode="PressA" fromField="inputTrue" toNode="ClkA2" toField="enabled" />
+    <ROUTE fromNode="PressA" fromField="inputTrue" toNode="ClkA3" toField="enabled" />
+    <ROUTE fromNode="PressA" fromField="inputTrue" toNode="ClkA4" toField="enabled" />
+    <ROUTE fromNode="PressA" fromField="inputTrue" toNode="ClkA5" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkB0" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkB1" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkB2" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkB3" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkB4" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkB5" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkC0" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkC1" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkC2" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkC3" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkC4" toField="enabled" />
+    <ROUTE fromNode="OffA" fromField="inputNegate" toNode="ClkC5" toField="enabled" />
+    <BooleanFilter DEF="PressB" />
+    <BooleanFilter DEF="OffB" />
+    <ROUTE fromNode="TouchB" fromField="isActive" toNode="PressB" toField="set_boolean" />
+    <ROUTE fromNode="PressB" fromField="inputTrue" toNode="OffB" toField="set_boolean" />
+    <ROUTE fromNode="PressB" fromField="inputTrue" toNode="ClkB0" toField="enabled" />
+    <ROUTE fromNode="PressB" fromField="inputTrue" toNode="ClkB1" toField="enabled" />
+    <ROUTE fromNode="PressB" fromField="inputTrue" toNode="ClkB2" toField="enabled" />
+    <ROUTE fromNode="PressB" fromField="inputTrue" toNode="ClkB3" toField="enabled" />
+    <ROUTE fromNode="PressB" fromField="inputTrue" toNode="ClkB4" toField="enabled" />
+    <ROUTE fromNode="PressB" fromField="inputTrue" toNode="ClkB5" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkA0" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkA1" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkA2" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkA3" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkA4" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkA5" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkC0" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkC1" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkC2" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkC3" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkC4" toField="enabled" />
+    <ROUTE fromNode="OffB" fromField="inputNegate" toNode="ClkC5" toField="enabled" />
+    <BooleanFilter DEF="PressC" />
+    <BooleanFilter DEF="OffC" />
+    <ROUTE fromNode="TouchC" fromField="isActive" toNode="PressC" toField="set_boolean" />
+    <ROUTE fromNode="PressC" fromField="inputTrue" toNode="OffC" toField="set_boolean" />
+    <ROUTE fromNode="PressC" fromField="inputTrue" toNode="ClkC0" toField="enabled" />
+    <ROUTE fromNode="PressC" fromField="inputTrue" toNode="ClkC1" toField="enabled" />
+    <ROUTE fromNode="PressC" fromField="inputTrue" toNode="ClkC2" toField="enabled" />
+    <ROUTE fromNode="PressC" fromField="inputTrue" toNode="ClkC3" toField="enabled" />
+    <ROUTE fromNode="PressC" fromField="inputTrue" toNode="ClkC4" toField="enabled" />
+    <ROUTE fromNode="PressC" fromField="inputTrue" toNode="ClkC5" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkA0" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkA1" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkA2" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkA3" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkA4" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkA5" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkB0" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkB1" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkB2" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkB3" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkB4" toField="enabled" />
+    <ROUTE fromNode="OffC" fromField="inputNegate" toNode="ClkB5" toField="enabled" />
+  </Scene>
+</X3D>
