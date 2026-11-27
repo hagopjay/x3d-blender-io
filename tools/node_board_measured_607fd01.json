@@ -1,0 +1,1736 @@
+{
+ "instrument": {
+  "blender": "5.3.0",
+  "python": "3.13.18",
+  "validator": "lxml XMLSchema over x3d-4.0.xsd (x3d-4.1.xsd for a version=\"4.1\" file)",
+  "tool": "tools/node_board_probe.py",
+  "fixtures_invalid": {
+   "tests/behaviour/pick-fallback/probe-pick-fallback.x3d": [
+    "<string>:1108:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Coordinate': This element is not expected."
+   ],
+   "tests/behaviour/probe-pick-geometry.x3d": [
+    "<string>:746:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Coordinate': This element is not expected."
+   ],
+   "tests/behaviour/probe-pick.x3d": [
+    "<string>:2852:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Box': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, LineSet, IndexedLineSet, Anchor ).",
+    "<string>:2853:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedLineSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, PointSet, Anchor, Billboard ).",
+    "<string>:2854:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedFaceSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, Box, Cone, Cylinder )."
+   ]
+  }
+ },
+ "nodes": {
+  "AcousticProperties": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Analyser": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Anchor": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "Appearance": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d"
+   ]
+  },
+  "Arc2D": {
+   "read": "builds",
+   "read_evidence": "curves +1, materials +1, objects +1",
+   "written": "no"
+  },
+  "ArcClose2D": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "AudioClip": {
+   "read": "none",
+   "read_evidence": "import failed: RuntimeError: Error: Python: Traceback (most recent call last):\n  File \"/tmp/node_board_fi52s0lx/io_scene_x3d/__init__.py\", line 205, in execute\n    result = import_x3d.load(context, **keywords)\n  Fil",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/probe-load.x3d",
+    "tests/behaviour/probe-loadlive.x3d",
+    "tests/behaviour/wired-media.x3d"
+   ]
+  },
+  "AudioDestination": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Background": {
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_background']",
+   "written": "observed",
+   "written_by": [
+    "docs/brag/poc1/stars-view.x3d",
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d"
+   ]
+  },
+  "BallJoint": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Billboard": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "BiquadFilter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "BlendedVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "BooleanFilter": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:BooleanFilter",
+    "tests/behaviour/counter.x3d",
+    "tests/behaviour/demos/gallery-01-pendulum-wave/gallery-01-pendulum-wave.x3d"
+   ]
+  },
+  "BooleanSequencer": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:BooleanSequencer",
+    "tests/behaviour/demos/gallery-05-spin-the-planet-v2/gallery-05-spin-the-planet-v2.x3d",
+    "tests/behaviour/demos/gallery-05-spin-the-planet/gallery-05-spin-the-planet.x3d"
+   ]
+  },
+  "BooleanToggle": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:BooleanToggle",
+    "tests/behaviour/counter.x3d",
+    "tests/behaviour/demos/gallery-02-disco-floor/gallery-02-disco-floor.x3d"
+   ]
+  },
+  "BooleanTrigger": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:BooleanTrigger",
+    "tests/behaviour/probe-loadlive.x3d",
+    "tests/behaviour/probe.x3d"
+   ]
+  },
+  "BoundaryEnhancementVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "BoundedPhysicsModel": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Box": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d",
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "docs/showcase/scenes/annotation.x3d"
+   ]
+  },
+  "BufferAudioSource": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "CADAssembly": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "CADFace": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "CADLayer": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "CADPart": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "CartoonVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ChannelMerger": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ChannelSelector": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ChannelSplitter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Circle2D": {
+   "read": "builds",
+   "read_evidence": "curves +1, materials +1, objects +1",
+   "written": "writable"
+  },
+  "ClipPlane": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "CollidableOffset": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "CollidableShape": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Collision": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/probe-world.x3d",
+    "tests/behaviour/wired-collision.x3d"
+   ]
+  },
+  "CollisionCollection": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/wired-collision.x3d"
+   ]
+  },
+  "CollisionSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:CollisionSensor",
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/behaviour/wired-collision.x3d"
+   ]
+  },
+  "CollisionSpace": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Color": {
+   "read": "builds",
+   "read_evidence": "materials changed",
+   "written": "writable"
+  },
+  "ColorChaser": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:ColorChaser",
+    "tests/behaviour/demos/workbench/workbench.x3d"
+   ]
+  },
+  "ColorDamper": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:ColorDamper",
+    "tests/behaviour/probe.x3d"
+   ]
+  },
+  "ColorInterpolator": {
+   "read": "graph",
+   "read_evidence": "behaviour graph: node_groups changed",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:ColorInterpolator",
+    "tests/behaviour/demos/gallery-01-pendulum-wave/gallery-01-pendulum-wave.x3d",
+    "tests/behaviour/demos/gallery-02-disco-floor/gallery-02-disco-floor.x3d"
+   ]
+  },
+  "ColorRGBA": {
+   "read": "builds",
+   "read_evidence": "materials changed",
+   "written": "observed",
+   "written_by": [
+    "docs/brag/showpieces/lumen/lumen.x3d",
+    "docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d",
+    "docs/showcase/scenes/quaternion-wxyz.x3d"
+   ]
+  },
+  "ComposedCubeMapTexture": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ComposedShader": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "no"
+  },
+  "ComposedTexture3D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ComposedVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Cone": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/geolod-no-origin.x3d",
+    "docs/showcase/scenes/geolod-origin.x3d",
+    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d"
+   ]
+  },
+  "ConeEmitter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Contact": {
+   "read": "unprobed",
+   "read_evidence": "the object model gives no parent that accepts it",
+   "written": "no"
+  },
+  "Contour2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ContourPolyline2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Convolver": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Coordinate": {
+   "read": "builds",
+   "read_evidence": "meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d"
+   ]
+  },
+  "CoordinateChaser": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:CoordinateChaser",
+    "tests/behaviour/probe-list-followers.x3d"
+   ]
+  },
+  "CoordinateDamper": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:CoordinateDamper",
+    "tests/behaviour/probe-list-followers.x3d"
+   ]
+  },
+  "CoordinateDouble": {
+   "read": "builds",
+   "read_evidence": "meshes +1, objects +1",
+   "written": "no"
+  },
+  "CoordinateInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:CoordinateInterpolator",
+    "tests/behaviour/probe-coord.x3d",
+    "tests/behaviour/probe-list-followers.x3d"
+   ]
+  },
+  "CoordinateInterpolator2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:CoordinateInterpolator2D",
+    "tests/behaviour/probe-coord.x3d",
+    "tests/behaviour/probe-list-followers.x3d"
+   ]
+  },
+  "Cylinder": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d",
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "docs/showcase/scenes/annotation.x3d"
+   ]
+  },
+  "CylinderSensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:CylinderSensor",
+    "tests/behaviour/demos/workbench/workbench.x3d",
+    "tests/behaviour/probe-drag.x3d"
+   ]
+  },
+  "DISEntityManager": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "DISEntityTypeMapping": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Delay": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "DirectionalLight": {
+   "read": "builds",
+   "read_evidence": "lights +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d",
+    "docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d"
+   ]
+  },
+  "Disk2D": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "DoubleAxisHingeJoint": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "DynamicsCompressor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "EaseInEaseOut": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:EaseInEaseOut",
+    "tests/behaviour/probe-spline.x3d"
+   ]
+  },
+  "EdgeEnhancementVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ElevationGrid": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "EspduTransform": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ExplosionEmitter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Extrusion": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "FillProperties": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "FloatVertexAttribute": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Fog": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "FogCoordinate": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "FontStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ForcePhysicsModel": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Gain": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "GeneratedCubeMapTexture": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "GeoCoordinate": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "GeoElevationGrid": {
+   "read": "builds",
+   "read_evidence": "materials +2",
+   "written": "no"
+  },
+  "GeoLOD": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "GeoLocation": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "GeoMetadata": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "GeoOrigin": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "GeoPositionInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:GeoPositionInterpolator",
+    "tests/behaviour/probe-geo.x3d",
+    "tests/behaviour/wired-geo.x3d"
+   ]
+  },
+  "GeoProximitySensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:GeoProximitySensor",
+    "tests/behaviour/probe-geo.x3d",
+    "tests/behaviour/wired-geo.x3d"
+   ]
+  },
+  "GeoTouchSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:GeoTouchSensor",
+    "tests/behaviour/probe-geo-touch.x3d",
+    "tests/behaviour/wired-geo.x3d"
+   ]
+  },
+  "GeoTransform": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "GeoViewpoint": {
+   "read": "builds",
+   "read_evidence": "cameras +1, objects +1",
+   "written": "no"
+  },
+  "Group": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "observed",
+   "written_by": [
+    "tests/suite:x3d_suite_crease.x3d",
+    "tests/suite:x3d_suite_main.x3d",
+    "tests/suite:x3d_suite_x41.x3d"
+   ]
+  },
+  "HAnimDisplacer": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "HAnimHumanoid": {
+   "read": "builds",
+   "read_evidence": "armatures +1, materials -2, meshes -1, objects changed",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/probe-hanim.x3d",
+    "tests/plants/schematron-missing-component.x3d",
+    "tests/suite:x3d_suite_crease.x3d"
+   ]
+  },
+  "HAnimJoint": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/probe-hanim.x3d",
+    "tests/plants/schematron-missing-component.x3d",
+    "tests/suite:x3d_suite_crease.x3d"
+   ]
+  },
+  "HAnimMotion": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "HAnimSegment": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "HAnimSite": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "ImageCubeMapTexture": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ImageTexture": {
+   "read": "builds",
+   "read_evidence": "images +2, materials changed",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/stilllife-x3d40.x3d",
+    "tests/behaviour/demos/orrery/orrery.x3d",
+    "tests/behaviour/probe-load.x3d"
+   ]
+  },
+  "ImageTexture3D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "IndexedFaceSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d"
+   ]
+  },
+  "IndexedLineSet": {
+   "read": "builds",
+   "read_evidence": "curves +1, materials +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
+    "docs/showcase/scenes/nurbs-weights.x3d",
+    "tests/behaviour/wired-pick.x3d"
+   ]
+  },
+  "IndexedQuadSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "IndexedTriangleFanSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "IndexedTriangleSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "IndexedTriangleStripSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "Inline": {
+   "read": "builds",
+   "read_evidence": "objects +1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/xite_gltf_inline_poc.x3d",
+    "demo/investor_poc/xite_gltf_multi_inline_poc.x3d",
+    "demo/investor_poc/xite_whopper_inline_poc.x3d"
+   ]
+  },
+  "IntegerSequencer": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:IntegerSequencer",
+    "tests/behaviour/probe-shader.x3d",
+    "tests/behaviour/probe-switch.x3d"
+   ]
+  },
+  "IntegerTrigger": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:IntegerTrigger",
+    "tests/behaviour/demos/piano/piano.x3d",
+    "tests/behaviour/probe.x3d"
+   ]
+  },
+  "IsoSurfaceVolumeData": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "KeySensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:KeySensor",
+    "tests/behaviour/demos/piano/piano.x3d"
+   ]
+  },
+  "LOD": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "Layer": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "LayerSet": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "Layout": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "LayoutGroup": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "LayoutLayer": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "LinePickSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:LinePickSensor",
+    "tests/behaviour/wired-pick.x3d"
+   ]
+  },
+  "LineProperties": {
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_line_width']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
+    "docs/showcase/scenes/nurbs-weights.x3d"
+   ]
+  },
+  "LineSet": {
+   "read": "builds",
+   "read_evidence": "curves +1, materials +1, objects +1",
+   "written": "no"
+  },
+  "ListenerPointSource": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "LoadSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:LoadSensor",
+    "tests/behaviour/probe-load.x3d",
+    "tests/behaviour/probe-loadlive.x3d"
+   ]
+  },
+  "LocalFog": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Material": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "docs/showcase/scenes/annotation.x3d",
+    "docs/showcase/scenes/ellipsoid-earth.x3d"
+   ]
+  },
+  "Matrix3VertexAttribute": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Matrix4VertexAttribute": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "MetadataBoolean": {
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_scene_metadata']",
+   "written": "no"
+  },
+  "MetadataDouble": {
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_scene_metadata']",
+   "written": "no"
+  },
+  "MetadataFloat": {
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_scene_metadata']",
+   "written": "no"
+  },
+  "MetadataInteger": {
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_scene_metadata']",
+   "written": "no"
+  },
+  "MetadataSet": {
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_scene_metadata']",
+   "written": "writable"
+  },
+  "MetadataString": {
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_scene_metadata']",
+   "written": "no"
+  },
+  "MicrophoneSource": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "MotorJoint": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "MovieTexture": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "MultiTexture": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "MultiTextureCoordinate": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "MultiTextureTransform": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "NavigationInfo": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "demo/investor_poc/xite_gltf_inline_poc.x3d",
+    "demo/investor_poc/xite_gltf_multi_inline_poc.x3d"
+   ]
+  },
+  "Normal": {
+   "read": "builds",
+   "read_evidence": "meshes changed",
+   "written": "observed",
+   "written_by": [
+    "tests/suite:x3d_suite_main.x3d"
+   ]
+  },
+  "NormalInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:NormalInterpolator",
+    "tests/behaviour/probe-coord.x3d"
+   ]
+  },
+  "NurbsCurve": {
+   "read": "builds",
+   "read_evidence": "materials +2",
+   "written": "no"
+  },
+  "NurbsCurve2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "NurbsOrientationInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "NurbsPatchSurface": {
+   "read": "builds",
+   "read_evidence": "materials +2",
+   "written": "no"
+  },
+  "NurbsPositionInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "NurbsSet": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "NurbsSurfaceInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "NurbsSweptSurface": {
+   "read": "builds",
+   "read_evidence": "materials +2",
+   "written": "no"
+  },
+  "NurbsSwungSurface": {
+   "read": "builds",
+   "read_evidence": "materials +2",
+   "written": "no"
+  },
+  "NurbsTextureCoordinate": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "NurbsTrimmedSurface": {
+   "read": "builds",
+   "read_evidence": "materials +2",
+   "written": "no"
+  },
+  "OpacityMapVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "OrientationChaser": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:OrientationChaser",
+    "tests/behaviour/demos/gallery-05-spin-the-planet-v2/gallery-05-spin-the-planet-v2.x3d",
+    "tests/behaviour/demos/gallery-05-spin-the-planet/gallery-05-spin-the-planet.x3d"
+   ]
+  },
+  "OrientationDamper": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:OrientationDamper",
+    "tests/behaviour/probe.x3d"
+   ]
+  },
+  "OrientationInterpolator": {
+   "read": "builds",
+   "read_evidence": "actions +1, scenes changed",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:OrientationInterpolator",
+    "docs/showcase/scenes/repair-0-written.x3d",
+    "docs/showcase/scenes/repair-1-validator.x3d"
+   ]
+  },
+  "OrthoViewpoint": {
+   "read": "builds",
+   "read_evidence": "cameras +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/golden/cameras.c14n.x3d",
+    "tests/suite:x3d_suite_crease.x3d",
+    "tests/suite:x3d_suite_main.x3d"
+   ]
+  },
+  "OscillatorSource": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "PackagedShader": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "no"
+  },
+  "ParticleSystem": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "PeriodicWave": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "PhysicalMaterial": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d"
+   ]
+  },
+  "PickableGroup": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "PixelTexture": {
+   "read": "builds",
+   "read_evidence": "images +1, materials changed",
+   "written": "no"
+  },
+  "PixelTexture3D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "PlaneSensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PlaneSensor",
+    "tests/behaviour/demos/gallery-04-jellyfish-swarm/gallery-04-jellyfish-swarm.x3d",
+    "tests/behaviour/demos/gallery-15-bead-puppet/gallery-15-bead-puppet.x3d"
+   ]
+  },
+  "PointEmitter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "PointLight": {
+   "read": "builds",
+   "read_evidence": "lights +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d",
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "docs/showcase/scenes/annotation.x3d"
+   ]
+  },
+  "PointPickSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PointPickSensor",
+    "tests/behaviour/wired-pick.x3d"
+   ]
+  },
+  "PointProperties": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "PointSet": {
+   "read": "builds",
+   "read_evidence": "materials +1, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
+    "docs/showcase/scenes/nurbs-weights.x3d",
+    "docs/showcase/scenes/quaternion-wxyz.x3d"
+   ]
+  },
+  "Polyline2D": {
+   "read": "builds",
+   "read_evidence": "curves +1, materials +1, objects +1",
+   "written": "no"
+  },
+  "PolylineEmitter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Polypoint2D": {
+   "read": "builds",
+   "read_evidence": "materials +1, meshes +1, objects +1",
+   "written": "no"
+  },
+  "PositionChaser": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PositionChaser",
+    "tests/behaviour/demos/gallery-04-jellyfish-swarm/gallery-04-jellyfish-swarm.x3d",
+    "tests/behaviour/demos/gallery-08-spirograph-chain/gallery-08-spirograph-chain.x3d"
+   ]
+  },
+  "PositionChaser2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PositionChaser2D",
+    "tests/behaviour/demos/orrery/orrery.x3d"
+   ]
+  },
+  "PositionDamper": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PositionDamper",
+    "tests/behaviour/probe.x3d",
+    "tests/behaviour/snake.x3d"
+   ]
+  },
+  "PositionDamper2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PositionDamper2D",
+    "tests/behaviour/probe-spline.x3d"
+   ]
+  },
+  "PositionInterpolator": {
+   "read": "builds",
+   "read_evidence": "actions +1, scenes changed",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PositionInterpolator",
+    "tests/behaviour/demos/gallery-02-disco-floor/gallery-02-disco-floor.x3d",
+    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d"
+   ]
+  },
+  "PositionInterpolator2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PositionInterpolator2D",
+    "tests/behaviour/demos/orrery/orrery.x3d",
+    "tests/behaviour/probe-shader.x3d"
+   ]
+  },
+  "PrimitivePickSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:PrimitivePickSensor",
+    "tests/behaviour/wired-pick.x3d"
+   ]
+  },
+  "ProgramShader": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "no"
+  },
+  "ProjectionVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ProtoInstance": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ProximitySensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:ProximitySensor",
+    "tests/behaviour/demos/gallery-06-solar-gauntlet-v2/gallery-06-solar-gauntlet-v2.x3d",
+    "tests/behaviour/demos/gallery-06-solar-gauntlet/gallery-06-solar-gauntlet.x3d"
+   ]
+  },
+  "QuadSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "ReceiverPdu": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Rectangle2D": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "writable"
+  },
+  "RigidBody": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "RigidBodyCollection": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ScalarChaser": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:ScalarChaser",
+    "tests/behaviour/probe.x3d"
+   ]
+  },
+  "ScalarDamper": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:ScalarDamper",
+    "tests/behaviour/probe.x3d"
+   ]
+  },
+  "ScalarInterpolator": {
+   "read": "graph",
+   "read_evidence": "behaviour graph: node_groups changed",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:ScalarInterpolator",
+    "reference/glsl_golden.x3d",
+    "tests/behaviour/demos/piano/piano.x3d"
+   ]
+  },
+  "ScreenFontStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ScreenGroup": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "Script": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:Script",
+    "tests/behaviour/demos/piano/piano.x3d",
+    "tests/behaviour/probe-geo-touch.x3d"
+   ]
+  },
+  "SegmentedVolumeData": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ShadedVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ShaderPart": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "ShaderProgram": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Shape": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d"
+   ]
+  },
+  "SignalPdu": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "SilhouetteEnhancementVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "SingleAxisHingeJoint": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "SliderJoint": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Sound": {
+   "read": "none",
+   "read_evidence": "import failed: RuntimeError: Error: Python: Traceback (most recent call last):\n  File \"/tmp/node_board_fi52s0lx/io_scene_x3d/__init__.py\", line 205, in execute\n    result = import_x3d.load(context, **keywords)\n  Fil",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/wired-media.x3d"
+   ]
+  },
+  "SpatialSound": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Sphere": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d",
+    "docs/showcase/scenes/annotation-standard.x3d"
+   ]
+  },
+  "SphereSensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:SphereSensor",
+    "tests/behaviour/demos/gallery-05-spin-the-planet-v2/gallery-05-spin-the-planet-v2.x3d",
+    "tests/behaviour/demos/gallery-05-spin-the-planet/gallery-05-spin-the-planet.x3d"
+   ]
+  },
+  "SplinePositionInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:SplinePositionInterpolator",
+    "tests/behaviour/probe-spline.x3d"
+   ]
+  },
+  "SplinePositionInterpolator2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:SplinePositionInterpolator2D",
+    "tests/behaviour/probe-spline.x3d"
+   ]
+  },
+  "SplineScalarInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:SplineScalarInterpolator",
+    "tests/behaviour/probe-spline.x3d"
+   ]
+  },
+  "SpotLight": {
+   "read": "builds",
+   "read_evidence": "lights +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/golden/four_lights.c14n.x3d",
+    "tests/suite:x3d_suite_crease.x3d",
+    "tests/suite:x3d_suite_main.x3d"
+   ]
+  },
+  "SquadOrientationInterpolator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:SquadOrientationInterpolator",
+    "tests/behaviour/demos/gallery-09-clockwork-bird/gallery-09-clockwork-bird.x3d",
+    "tests/behaviour/probe-spline.x3d"
+   ]
+  },
+  "StaticGroup": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "StreamAudioDestination": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "StreamAudioSource": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "StringSensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:StringSensor",
+    "tests/behaviour/demos/piano/piano.x3d"
+   ]
+  },
+  "SurfaceEmitter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "Switch": {
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_switch_hidden']",
+   "written": "no"
+  },
+  "TexCoordChaser2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:TexCoordChaser2D",
+    "tests/behaviour/probe-list-followers.x3d"
+   ]
+  },
+  "TexCoordDamper2D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:TexCoordDamper2D",
+    "tests/behaviour/probe-list-followers.x3d"
+   ]
+  },
+  "Text": {
+   "read": "builds",
+   "read_evidence": "curves +1, fonts +1, materials +2, objects +1",
+   "written": "no"
+  },
+  "TextureBackground": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureCoordinate": {
+   "read": "carries",
+   "read_evidence": "meshes props []",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/asterion/asterion.x3d",
+    "docs/brag/showpieces/lumen/lumen.x3d"
+   ]
+  },
+  "TextureCoordinate3D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureCoordinate4D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureCoordinateGenerator": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureProjector": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureProjectorParallel": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureProperties": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureTransform": {
+   "read": "carries",
+   "read_evidence": "meshes props []",
+   "written": "observed",
+   "written_by": [
+    "tests/suite:x3d_suite_crease.x3d",
+    "tests/suite:x3d_suite_main.x3d",
+    "tests/suite:x3d_suite_x41.x3d"
+   ]
+  },
+  "TextureTransform3D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TextureTransformMatrix3D": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TimeSensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:TimeSensor",
+    "docs/showcase/scenes/repair-0-written.x3d",
+    "docs/showcase/scenes/repair-1-validator.x3d"
+   ]
+  },
+  "TimeTrigger": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:TimeTrigger",
+    "tests/behaviour/demos/gallery-01-pendulum-wave/gallery-01-pendulum-wave.x3d",
+    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d"
+   ]
+  },
+  "ToneMappedVolumeStyle": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TouchSensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:TouchSensor",
+    "tests/behaviour/counter.x3d",
+    "tests/behaviour/demos/gallery-01-pendulum-wave/gallery-01-pendulum-wave.x3d"
+   ]
+  },
+  "Transform": {
+   "read": "builds",
+   "read_evidence": "objects changed",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "demo/investor_poc/xite_gltf_inline_poc.x3d",
+    "demo/investor_poc/xite_gltf_multi_inline_poc.x3d"
+   ]
+  },
+  "TransformSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:TransformSensor",
+    "tests/behaviour/probe-world.x3d"
+   ]
+  },
+  "TransmitterPdu": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "TriangleFanSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "TriangleSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "TriangleSet2D": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "TriangleStripSet": {
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "no"
+  },
+  "TwoSidedMaterial": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "no"
+  },
+  "UniversalJoint": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "UnlitMaterial": {
+   "read": "builds",
+   "read_evidence": "materials -1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "docs/brag/showpieces/prismatica/prismatica-aurora-cathedral.x3d",
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d"
+   ]
+  },
+  "Viewpoint": {
+   "read": "builds",
+   "read_evidence": "cameras +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/xite_gltf_inline_poc.x3d",
+    "demo/investor_poc/xite_gltf_multi_inline_poc.x3d",
+    "demo/investor_poc/xite_whopper_inline_poc.x3d"
+   ]
+  },
+  "ViewpointGroup": {
+   "read": "structural",
+   "read_evidence": "children are read, the node itself is not kept",
+   "written": "no"
+  },
+  "Viewport": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "VisibilitySensor": {
+   "read": "reported",
+   "read_evidence": "dropped, with a line in the import loss report",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:VisibilitySensor",
+    "tests/behaviour/probe-world.x3d"
+   ]
+  },
+  "VolumeData": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "VolumeEmitter": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "VolumePickSensor": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "observed",
+   "written_by": [
+    "behaviour_graph:VolumePickSensor",
+    "tests/behaviour/wired-pick.x3d"
+   ]
+  },
+  "WaveShaper": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "WindPhysicsModel": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "no"
+  },
+  "WorldInfo": {
+   "read": "none",
+   "read_evidence": "",
+   "written": "writable"
+  }
+ }
+}

@@ -55,8 +55,8 @@
    "written": "no"
   },
   "AudioClip": {
-   "read": "none",
-   "read_evidence": "import failed: RuntimeError: Error: Python: Traceback (most recent call last):\n  File \"/tmp/node_board_fi52s0lx/io_scene_x3d/__init__.py\", line 205, in execute\n    result = import_x3d.load(context, **keywords)\n  Fil",
+   "read": "builds",
+   "read_evidence": "objects +1, sounds +1, speakers +1",
    "written": "observed",
    "written_by": [
     "tests/behaviour/probe-load.x3d",
@@ -259,7 +259,10 @@
   "Color": {
    "read": "builds",
    "read_evidence": "materials changed",
-   "written": "writable"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/writable_nodes.x3d"
+   ]
   },
   "ColorChaser": {
    "read": "none",
@@ -484,7 +487,10 @@
   "ElevationGrid": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_1.x3d"
+   ]
   },
   "EspduTransform": {
    "read": "none",
@@ -499,7 +505,10 @@
   "Extrusion": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_1.x3d"
+   ]
   },
   "FillProperties": {
    "read": "none",
@@ -524,7 +533,12 @@
   "FontStyle": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "docs/showcase/scenes/annotation.x3d",
+    "docs/showcase/scenes/geolod-no-origin.x3d"
+   ]
   },
   "ForcePhysicsModel": {
    "read": "none",
@@ -866,7 +880,10 @@
   "MetadataDouble": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/writable_nodes.x3d"
+   ]
   },
   "MetadataFloat": {
    "read": "carries",
@@ -876,17 +893,26 @@
   "MetadataInteger": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/writable_nodes.x3d"
+   ]
   },
   "MetadataSet": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "writable"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/writable_nodes.x3d"
+   ]
   },
   "MetadataString": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/writable_nodes.x3d"
+   ]
   },
   "MicrophoneSource": {
    "read": "none",
@@ -1258,7 +1284,11 @@
   "Rectangle2D": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "writable"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_1.x3d",
+    "tests/node_board/writable_nodes.x3d"
+   ]
   },
   "RigidBody": {
    "read": "none",
@@ -1369,8 +1399,8 @@
    "written": "no"
   },
   "Sound": {
-   "read": "none",
-   "read_evidence": "import failed: RuntimeError: Error: Python: Traceback (most recent call last):\n  File \"/tmp/node_board_fi52s0lx/io_scene_x3d/__init__.py\", line 205, in execute\n    result = import_x3d.load(context, **keywords)\n  Fil",
+   "read": "builds",
+   "read_evidence": "objects +1, sounds +1, speakers +1",
    "written": "observed",
    "written_by": [
     "tests/behaviour/wired-media.x3d"
@@ -1503,7 +1533,12 @@
   "Text": {
    "read": "builds",
    "read_evidence": "curves +1, fonts +1, materials +2, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "docs/showcase/scenes/annotation.x3d",
+    "docs/showcase/scenes/geolod-no-origin.x3d"
+   ]
   },
   "TextureBackground": {
    "read": "none",
@@ -1730,7 +1765,10 @@
   "WorldInfo": {
    "read": "none",
    "read_evidence": "",
-   "written": "writable"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/writable_nodes.x3d"
+   ]
   }
  }
 }

@@ -233,6 +233,26 @@ def gaps(data):
     return out
 
 
+BASELINE_JSON = ROOT / "tools" / "node_board_measured_607fd01.json"      # the board before batch 1 (add-on 2.8.0)
+
+
+def moves(data):
+    """Nodes whose read or written rung differs from the 2.8.0 baseline, with their rank among the gaps then."""
+    base = json.loads(BASELINE_JSON.read_text(encoding="utf-8"))["nodes"]
+    before = dict(data)
+    before["measured"] = {"nodes": base}
+    before["rows"] = [dict(r, read=base[r["node"]]["read"], written=base[r["node"]]["written"]) for r in data["rows"]]
+    rank = {g["node"]: i for i, g in enumerate(gaps(before), 1)}
+    out = []
+    for r in data["rows"]:
+        b = base[r["node"]]
+        if (b["read"], b["written"]) != (r["read"], r["written"]):
+            out.append({"node": r["node"], "component": r["component"], "files": r["seen_files"], "rank": rank.get(r["node"]),
+                        "read": (b["read"], r["read"]), "written": (b["written"], r["written"])})
+    out.sort(key=lambda m: (m["rank"] is None, m["rank"] or 0, m["node"]))
+    return out
+
+
 def _mark(flag):
     return "yes" if flag else "-"
 
@@ -285,6 +305,15 @@ def markdown(data=None, top=30):
               "| # | node | component | occurrences | files | cost | score | read |", "|---:|---|---|---:|---:|---:|---:|---|"]
     for i, g in enumerate(ranked[:top], 1):
         lines.append(f"| {i} | {g['node']} | {g['component']} | {g['seen']} | {g['files']} | {g['cost']} | {g['score']} | {g['read']} |")
+    if BASELINE_JSON.is_file():
+        lines += ["", "### Moved since 2.8.0 (607fd01)", "",
+                  "Rung changes against `tools/node_board_measured_607fd01.json`, with the node's rank among the gaps at "
+                  "607fd01. A node's *written* rung moves only when a run of the exporter wrote it and the file validated.", "",
+                  "| node | component | files | rank at 2.8.0 | read | written |", "|---|---|---:|---:|---|---|"]
+        for m in moves(data):
+            lines.append(f"| {m['node']} | {m['component']} | {m['files']} | {m['rank'] or '-'} | "
+                         f"{m['read'][0]} to {m['read'][1] if m['read'][0] != m['read'][1] else 'same'} | "
+                         f"{m['written'][0]} to {m['written'][1] if m['written'][0] != m['written'][1] else 'same'} |")
     lines += ["", "### Every node", "",
               "| node | component | read | written | class | seen | event rungs (wired/sim/judged/played) |",
               "|---|---|---|---|---|---:|---|"]
