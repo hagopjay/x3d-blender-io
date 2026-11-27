@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <meta name="title" content="Gallery 24: marimba played by falling balls" />
+    <meta name="description" content="Ten coloured bars; balls drop from a rail and bounce on them to play a song. Three buttons pick the song; a click on a bar strikes it." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-24-marimba-balls/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.03 0.02 0.09" />
+    <Viewpoint DEF="View" description="Facing the marimba" position="0 4.5 12" orientation="1 0 0 -0.2" />
+    <DirectionalLight direction="0 -1 -0.5" intensity="1.0" />
+    <Transform DEF="Bar0" translation="-5.175 0 0">
+      <TouchSensor DEF="Touch0" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App0"><PhysicalMaterial DEF="Mat0" roughness="0.35" baseColor="1 0.15 0.15" emissiveColor="1 0.15 0.15" /></Appearance><Box size="1 0.28 3.4" /></Shape>
+    </Transform>
+    <Transform DEF="Bar1" translation="-4.025 0 0">
+      <TouchSensor DEF="Touch1" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App1"><PhysicalMaterial DEF="Mat1" roughness="0.35" baseColor="1 0.5325 0.15" emissiveColor="1 0.5325 0.15" /></Appearance><Box size="1 0.28 3.2" /></Shape>
+    </Transform>
+    <Transform DEF="Bar2" translation="-2.875 0 0">
+      <TouchSensor DEF="Touch2" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App2"><PhysicalMaterial DEF="Mat2" roughness="0.35" baseColor="1 0.915 0.15" emissiveColor="1 0.915 0.15" /></Appearance><Box size="1 0.28 3" /></Shape>
+    </Transform>
+    <Transform DEF="Bar3" translation="-1.725 0 0">
+      <TouchSensor DEF="Touch3" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App3"><PhysicalMaterial DEF="Mat3" roughness="0.35" baseColor="0.7025 1 0.15" emissiveColor="0.7025 1 0.15" /></Appearance><Box size="1 0.28 2.8" /></Shape>
+    </Transform>
+    <Transform DEF="Bar4" translation="-0.575 0 0">
+      <TouchSensor DEF="Touch4" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App4"><PhysicalMaterial DEF="Mat4" roughness="0.35" baseColor="0.32 1 0.15" emissiveColor="0.32 1 0.15" /></Appearance><Box size="1 0.28 2.6" /></Shape>
+    </Transform>
+    <Transform DEF="Bar5" translation="0.575 0 0">
+      <TouchSensor DEF="Touch5" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App5"><PhysicalMaterial DEF="Mat5" roughness="0.35" baseColor="0.15 1 0.3625" emissiveColor="0.15 1 0.3625" /></Appearance><Box size="1 0.28 2.4" /></Shape>
+    </Transform>
+    <Transform DEF="Bar6" translation="1.725 0 0">
+      <TouchSensor DEF="Touch6" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App6"><PhysicalMaterial DEF="Mat6" roughness="0.35" baseColor="0.15 1 0.745" emissiveColor="0.15 1 0.745" /></Appearance><Box size="1 0.28 2.2" /></Shape>
+    </Transform>
+    <Transform DEF="Bar7" translation="2.875 0 0">
+      <TouchSensor DEF="Touch7" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App7"><PhysicalMaterial DEF="Mat7" roughness="0.35" baseColor="0.15 0.8725 1" emissiveColor="0.15 0.8725 1" /></Appearance><Box size="1 0.28 2" /></Shape>
+    </Transform>
+    <Transform DEF="Bar8" translation="4.025 0 0">
+      <TouchSensor DEF="Touch8" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App8"><PhysicalMaterial DEF="Mat8" roughness="0.35" baseColor="0.15 0.49 1" emissiveColor="0.15 0.49 1" /></Appearance><Box size="1 0.28 1.8" /></Shape>
+    </Transform>
+    <Transform DEF="Bar9" translation="5.175 0 0">
+      <TouchSensor DEF="Touch9" description="Click: strike this bar" />
+      <Shape><Appearance DEF="App9"><PhysicalMaterial DEF="Mat9" roughness="0.35" baseColor="0.1925 0.15 1" emissiveColor="0.1925 0.15 1" /></Appearance><Box size="1 0.28 1.6" /></Shape>
+    </Transform>
+    <Transform DEF="Ball0" translation="-5.175 6.24 0"><Shape><Appearance USE="App0" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball1" translation="-4.025 6.24 0"><Shape><Appearance USE="App1" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball2" translation="-2.875 6.24 0"><Shape><Appearance USE="App2" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball3" translation="-1.725 6.24 0"><Shape><Appearance USE="App3" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball4" translation="-0.575 6.24 0"><Shape><Appearance USE="App4" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball5" translation="0.575 6.24 0"><Shape><Appearance USE="App5" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball6" translation="1.725 6.24 0"><Shape><Appearance USE="App6" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball7" translation="2.875 6.24 0"><Shape><Appearance USE="App7" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball8" translation="4.025 6.24 0"><Shape><Appearance USE="App8" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Ball9" translation="5.175 6.24 0"><Shape><Appearance USE="App9" /><Sphere radius="0.34" /></Shape></Transform>
+    <Transform DEF="Btn0" translation="-2.6 -0.86 2.7">
+      <TouchSensor DEF="Pick0" description="Click: play song 1" />
+      <Shape><Appearance DEF="BtnApp0"><PhysicalMaterial DEF="BtnMat0" roughness="0.4" baseColor="1 0.8 0.2" emissiveColor="1 0.8 0.2" /></Appearance><Cylinder radius="0.62" height="0.26" /></Shape>
+    </Transform>
+    <Transform DEF="Lamp0" translation="-2.6 -0.45 2.7" visible="true"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform DEF="Btn1" translation="0 -0.86 2.7">
+      <TouchSensor DEF="Pick1" description="Click: play song 2" />
+      <Shape><Appearance DEF="BtnApp1"><PhysicalMaterial DEF="BtnMat1" roughness="0.4" baseColor="0.2 0.9 0.95" emissiveColor="0.2 0.9 0.95" /></Appearance><Cylinder radius="0.62" height="0.26" /></Shape>
+    </Transform>
+    <Transform DEF="Lamp1" translation="0 -0.45 2.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform DEF="Btn2" translation="2.6 -0.86 2.7">
+      <TouchSensor DEF="Pick2" description="Click: play song 3" />
+      <Shape><Appearance DEF="BtnApp2"><PhysicalMaterial DEF="BtnMat2" roughness="0.4" baseColor="0.95 0.3 0.8" emissiveColor="0.95 0.3 0.8" /></Appearance><Cylinder radius="0.62" height="0.26" /></Shape>
+    </Transform>
+    <Transform DEF="Lamp2" translation="2.6 -0.45 2.7" visible="false"><Shape><Appearance><PhysicalMaterial baseColor="1 1 1" emissiveColor="1 1 1" /></Appearance><Sphere radius="0.3" /></Shape></Transform>
+    <Transform DEF="Rail" translation="0 5.8 0"><Shape><Appearance DEF="Wood"><PhysicalMaterial baseColor="0.35 0.2 0.1" emissiveColor="0.12 0.07 0.04" roughness="0.7" /></Appearance><Box size="11.95 0.2 0.7" /></Shape></Transform>
+    <Transform DEF="PostL" translation="-5.775 2.6 -0.5"><Shape><Appearance USE="Wood" /><Cylinder radius="0.12" height="6.4" /></Shape></Transform>
+    <Transform DEF="PostR" translation="5.775 2.6 -0.5"><Shape><Appearance USE="Wood" /><Cylinder radius="0.12" height="6.4" /></Shape></Transform>
+    <Transform DEF="Base" translation="0 -0.3 0"><Shape><Appearance USE="Wood" /><Box size="11.95 0.18 1.3" /></Shape></Transform>
+    <Transform DEF="Floor" translation="0 -1.1 0"><Shape><Appearance><PhysicalMaterial baseColor="0.07 0.06 0.12" emissiveColor="0.03 0.025 0.06" /></Appearance><Box size="30 0.2 14" /></Shape></Transform>
+
+    <TimeTrigger DEF="Rel0" />
+    <TimeSensor DEF="FallClk0" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp0" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="-5.175 6.24 0 -5.175 6.1824 0 -5.175 6.0096 0 -5.175 5.7216 0 -5.175 5.3184 0 -5.175 4.8 0 -5.175 4.1664 0 -5.175 3.4176 0 -5.175 2.5536 0 -5.175 1.5744 0 -5.175 0.48 0" />
+    <BooleanFilter DEF="Land0" />
+    <TimeTrigger DEF="Hit0" />
+    <TimeSensor DEF="BounceClk0" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp0" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="-5.175 0.48 0 -5.175 1.905 0 -5.175 2.38 0 -5.175 1.905 0 -5.175 0.48 0 -5.175 1.08 0 -5.175 1.28 0 -5.175 1.08 0 -5.175 0.48 0 -5.175 0.73 0 -5.175 0.48 0 -5.175 0.48 0 -5.175 1.38 0 -5.175 3.36 0 -5.175 5.34 0 -5.175 6.24 0" />
+    <TimeSensor DEF="BarClk0" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip0" key="0 0.06 0.5 0.8 1" keyValue="-5.175 0 0 -5.175 -0.22 0 -5.175 -0.15 0 -5.175 0.05 0 -5.175 0 0" />
+    <ColorInterpolator DEF="BarGlow0" key="0 0.1 1" keyValue="1 0.15 0.15 1 1 1 1 0.15 0.15" />
+    <ROUTE fromNode="Rel0" fromField="triggerTime" toNode="FallClk0" toField="startTime" />
+    <ROUTE fromNode="FallClk0" fromField="fraction_changed" toNode="FallIp0" toField="set_fraction" />
+    <ROUTE fromNode="FallIp0" fromField="value_changed" toNode="Ball0" toField="translation" />
+    <ROUTE fromNode="FallClk0" fromField="isActive" toNode="Land0" toField="set_boolean" />
+    <ROUTE fromNode="Land0" fromField="inputNegate" toNode="Hit0" toField="set_boolean" />
+    <ROUTE fromNode="Hit0" fromField="triggerTime" toNode="BarClk0" toField="startTime" />
+    <ROUTE fromNode="Hit0" fromField="triggerTime" toNode="BounceClk0" toField="startTime" />
+    <ROUTE fromNode="BounceClk0" fromField="fraction_changed" toNode="BounceIp0" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp0" fromField="value_changed" toNode="Ball0" toField="translation" />
+    <ROUTE fromNode="Touch0" fromField="touchTime" toNode="BarClk0" toField="startTime" />
+    <ROUTE fromNode="BarClk0" fromField="fraction_changed" toNode="BarDip0" toField="set_fraction" />
+    <ROUTE fromNode="BarClk0" fromField="fraction_changed" toNode="BarGlow0" toField="set_fraction" />
+    <ROUTE fromNode="BarDip0" fromField="value_changed" toNode="Bar0" toField="translation" />
+    <ROUTE fromNode="BarGlow0" fromField="value_changed" toNode="Mat0" toField="baseColor" />
+    <ROUTE fromNode="BarGlow0" fromField="value_changed" toNode="Mat0" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel1" />
+    <TimeSensor DEF="FallClk1" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp1" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="-4.025 6.24 0 -4.025 6.1824 0 -4.025 6.0096 0 -4.025 5.7216 0 -4.025 5.3184 0 -4.025 4.8 0 -4.025 4.1664 0 -4.025 3.4176 0 -4.025 2.5536 0 -4.025 1.5744 0 -4.025 0.48 0" />
+    <BooleanFilter DEF="Land1" />
+    <TimeTrigger DEF="Hit1" />
+    <TimeSensor DEF="BounceClk1" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp1" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="-4.025 0.48 0 -4.025 1.905 0 -4.025 2.38 0 -4.025 1.905 0 -4.025 0.48 0 -4.025 1.08 0 -4.025 1.28 0 -4.025 1.08 0 -4.025 0.48 0 -4.025 0.73 0 -4.025 0.48 0 -4.025 0.48 0 -4.025 1.38 0 -4.025 3.36 0 -4.025 5.34 0 -4.025 6.24 0" />
+    <TimeSensor DEF="BarClk1" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip1" key="0 0.06 0.5 0.8 1" keyValue="-4.025 0 0 -4.025 -0.22 0 -4.025 -0.15 0 -4.025 0.05 0 -4.025 0 0" />
+    <ColorInterpolator DEF="BarGlow1" key="0 0.1 1" keyValue="1 0.5325 0.15 1 1 1 1 0.5325 0.15" />
+    <ROUTE fromNode="Rel1" fromField="triggerTime" toNode="FallClk1" toField="startTime" />
+    <ROUTE fromNode="FallClk1" fromField="fraction_changed" toNode="FallIp1" toField="set_fraction" />
+    <ROUTE fromNode="FallIp1" fromField="value_changed" toNode="Ball1" toField="translation" />
+    <ROUTE fromNode="FallClk1" fromField="isActive" toNode="Land1" toField="set_boolean" />
+    <ROUTE fromNode="Land1" fromField="inputNegate" toNode="Hit1" toField="set_boolean" />
+    <ROUTE fromNode="Hit1" fromField="triggerTime" toNode="BarClk1" toField="startTime" />
+    <ROUTE fromNode="Hit1" fromField="triggerTime" toNode="BounceClk1" toField="startTime" />
+    <ROUTE fromNode="BounceClk1" fromField="fraction_changed" toNode="BounceIp1" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp1" fromField="value_changed" toNode="Ball1" toField="translation" />
+    <ROUTE fromNode="Touch1" fromField="touchTime" toNode="BarClk1" toField="startTime" />
+    <ROUTE fromNode="BarClk1" fromField="fraction_changed" toNode="BarDip1" toField="set_fraction" />
+    <ROUTE fromNode="BarClk1" fromField="fraction_changed" toNode="BarGlow1" toField="set_fraction" />
+    <ROUTE fromNode="BarDip1" fromField="value_changed" toNode="Bar1" toField="translation" />
+    <ROUTE fromNode="BarGlow1" fromField="value_changed" toNode="Mat1" toField="baseColor" />
+    <ROUTE fromNode="BarGlow1" fromField="value_changed" toNode="Mat1" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel2" />
+    <TimeSensor DEF="FallClk2" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp2" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="-2.875 6.24 0 -2.875 6.1824 0 -2.875 6.0096 0 -2.875 5.7216 0 -2.875 5.3184 0 -2.875 4.8 0 -2.875 4.1664 0 -2.875 3.4176 0 -2.875 2.5536 0 -2.875 1.5744 0 -2.875 0.48 0" />
+    <BooleanFilter DEF="Land2" />
+    <TimeTrigger DEF="Hit2" />
+    <TimeSensor DEF="BounceClk2" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp2" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="-2.875 0.48 0 -2.875 1.905 0 -2.875 2.38 0 -2.875 1.905 0 -2.875 0.48 0 -2.875 1.08 0 -2.875 1.28 0 -2.875 1.08 0 -2.875 0.48 0 -2.875 0.73 0 -2.875 0.48 0 -2.875 0.48 0 -2.875 1.38 0 -2.875 3.36 0 -2.875 5.34 0 -2.875 6.24 0" />
+    <TimeSensor DEF="BarClk2" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip2" key="0 0.06 0.5 0.8 1" keyValue="-2.875 0 0 -2.875 -0.22 0 -2.875 -0.15 0 -2.875 0.05 0 -2.875 0 0" />
+    <ColorInterpolator DEF="BarGlow2" key="0 0.1 1" keyValue="1 0.915 0.15 1 1 1 1 0.915 0.15" />
+    <ROUTE fromNode="Rel2" fromField="triggerTime" toNode="FallClk2" toField="startTime" />
+    <ROUTE fromNode="FallClk2" fromField="fraction_changed" toNode="FallIp2" toField="set_fraction" />
+    <ROUTE fromNode="FallIp2" fromField="value_changed" toNode="Ball2" toField="translation" />
+    <ROUTE fromNode="FallClk2" fromField="isActive" toNode="Land2" toField="set_boolean" />
+    <ROUTE fromNode="Land2" fromField="inputNegate" toNode="Hit2" toField="set_boolean" />
+    <ROUTE fromNode="Hit2" fromField="triggerTime" toNode="BarClk2" toField="startTime" />
+    <ROUTE fromNode="Hit2" fromField="triggerTime" toNode="BounceClk2" toField="startTime" />
+    <ROUTE fromNode="BounceClk2" fromField="fraction_changed" toNode="BounceIp2" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp2" fromField="value_changed" toNode="Ball2" toField="translation" />
+    <ROUTE fromNode="Touch2" fromField="touchTime" toNode="BarClk2" toField="startTime" />
+    <ROUTE fromNode="BarClk2" fromField="fraction_changed" toNode="BarDip2" toField="set_fraction" />
+    <ROUTE fromNode="BarClk2" fromField="fraction_changed" toNode="BarGlow2" toField="set_fraction" />
+    <ROUTE fromNode="BarDip2" fromField="value_changed" toNode="Bar2" toField="translation" />
+    <ROUTE fromNode="BarGlow2" fromField="value_changed" toNode="Mat2" toField="baseColor" />
+    <ROUTE fromNode="BarGlow2" fromField="value_changed" toNode="Mat2" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel3" />
+    <TimeSensor DEF="FallClk3" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp3" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="-1.725 6.24 0 -1.725 6.1824 0 -1.725 6.0096 0 -1.725 5.7216 0 -1.725 5.3184 0 -1.725 4.8 0 -1.725 4.1664 0 -1.725 3.4176 0 -1.725 2.5536 0 -1.725 1.5744 0 -1.725 0.48 0" />
+    <BooleanFilter DEF="Land3" />
+    <TimeTrigger DEF="Hit3" />
+    <TimeSensor DEF="BounceClk3" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp3" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="-1.725 0.48 0 -1.725 1.905 0 -1.725 2.38 0 -1.725 1.905 0 -1.725 0.48 0 -1.725 1.08 0 -1.725 1.28 0 -1.725 1.08 0 -1.725 0.48 0 -1.725 0.73 0 -1.725 0.48 0 -1.725 0.48 0 -1.725 1.38 0 -1.725 3.36 0 -1.725 5.34 0 -1.725 6.24 0" />
+    <TimeSensor DEF="BarClk3" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip3" key="0 0.06 0.5 0.8 1" keyValue="-1.725 0 0 -1.725 -0.22 0 -1.725 -0.15 0 -1.725 0.05 0 -1.725 0 0" />
+    <ColorInterpolator DEF="BarGlow3" key="0 0.1 1" keyValue="0.7025 1 0.15 1 1 1 0.7025 1 0.15" />
+    <ROUTE fromNode="Rel3" fromField="triggerTime" toNode="FallClk3" toField="startTime" />
+    <ROUTE fromNode="FallClk3" fromField="fraction_changed" toNode="FallIp3" toField="set_fraction" />
+    <ROUTE fromNode="FallIp3" fromField="value_changed" toNode="Ball3" toField="translation" />
+    <ROUTE fromNode="FallClk3" fromField="isActive" toNode="Land3" toField="set_boolean" />
+    <ROUTE fromNode="Land3" fromField="inputNegate" toNode="Hit3" toField="set_boolean" />
+    <ROUTE fromNode="Hit3" fromField="triggerTime" toNode="BarClk3" toField="startTime" />
+    <ROUTE fromNode="Hit3" fromField="triggerTime" toNode="BounceClk3" toField="startTime" />
+    <ROUTE fromNode="BounceClk3" fromField="fraction_changed" toNode="BounceIp3" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp3" fromField="value_changed" toNode="Ball3" toField="translation" />
+    <ROUTE fromNode="Touch3" fromField="touchTime" toNode="BarClk3" toField="startTime" />
+    <ROUTE fromNode="BarClk3" fromField="fraction_changed" toNode="BarDip3" toField="set_fraction" />
+    <ROUTE fromNode="BarClk3" fromField="fraction_changed" toNode="BarGlow3" toField="set_fraction" />
+    <ROUTE fromNode="BarDip3" fromField="value_changed" toNode="Bar3" toField="translation" />
+    <ROUTE fromNode="BarGlow3" fromField="value_changed" toNode="Mat3" toField="baseColor" />
+    <ROUTE fromNode="BarGlow3" fromField="value_changed" toNode="Mat3" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel4" />
+    <TimeSensor DEF="FallClk4" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp4" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="-0.575 6.24 0 -0.575 6.1824 0 -0.575 6.0096 0 -0.575 5.7216 0 -0.575 5.3184 0 -0.575 4.8 0 -0.575 4.1664 0 -0.575 3.4176 0 -0.575 2.5536 0 -0.575 1.5744 0 -0.575 0.48 0" />
+    <BooleanFilter DEF="Land4" />
+    <TimeTrigger DEF="Hit4" />
+    <TimeSensor DEF="BounceClk4" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp4" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="-0.575 0.48 0 -0.575 1.905 0 -0.575 2.38 0 -0.575 1.905 0 -0.575 0.48 0 -0.575 1.08 0 -0.575 1.28 0 -0.575 1.08 0 -0.575 0.48 0 -0.575 0.73 0 -0.575 0.48 0 -0.575 0.48 0 -0.575 1.38 0 -0.575 3.36 0 -0.575 5.34 0 -0.575 6.24 0" />
+    <TimeSensor DEF="BarClk4" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip4" key="0 0.06 0.5 0.8 1" keyValue="-0.575 0 0 -0.575 -0.22 0 -0.575 -0.15 0 -0.575 0.05 0 -0.575 0 0" />
+    <ColorInterpolator DEF="BarGlow4" key="0 0.1 1" keyValue="0.32 1 0.15 1 1 1 0.32 1 0.15" />
+    <ROUTE fromNode="Rel4" fromField="triggerTime" toNode="FallClk4" toField="startTime" />
+    <ROUTE fromNode="FallClk4" fromField="fraction_changed" toNode="FallIp4" toField="set_fraction" />
+    <ROUTE fromNode="FallIp4" fromField="value_changed" toNode="Ball4" toField="translation" />
+    <ROUTE fromNode="FallClk4" fromField="isActive" toNode="Land4" toField="set_boolean" />
+    <ROUTE fromNode="Land4" fromField="inputNegate" toNode="Hit4" toField="set_boolean" />
+    <ROUTE fromNode="Hit4" fromField="triggerTime" toNode="BarClk4" toField="startTime" />
+    <ROUTE fromNode="Hit4" fromField="triggerTime" toNode="BounceClk4" toField="startTime" />
+    <ROUTE fromNode="BounceClk4" fromField="fraction_changed" toNode="BounceIp4" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp4" fromField="value_changed" toNode="Ball4" toField="translation" />
+    <ROUTE fromNode="Touch4" fromField="touchTime" toNode="BarClk4" toField="startTime" />
+    <ROUTE fromNode="BarClk4" fromField="fraction_changed" toNode="BarDip4" toField="set_fraction" />
+    <ROUTE fromNode="BarClk4" fromField="fraction_changed" toNode="BarGlow4" toField="set_fraction" />
+    <ROUTE fromNode="BarDip4" fromField="value_changed" toNode="Bar4" toField="translation" />
+    <ROUTE fromNode="BarGlow4" fromField="value_changed" toNode="Mat4" toField="baseColor" />
+    <ROUTE fromNode="BarGlow4" fromField="value_changed" toNode="Mat4" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel5" />
+    <TimeSensor DEF="FallClk5" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp5" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="0.575 6.24 0 0.575 6.1824 0 0.575 6.0096 0 0.575 5.7216 0 0.575 5.3184 0 0.575 4.8 0 0.575 4.1664 0 0.575 3.4176 0 0.575 2.5536 0 0.575 1.5744 0 0.575 0.48 0" />
+    <BooleanFilter DEF="Land5" />
+    <TimeTrigger DEF="Hit5" />
+    <TimeSensor DEF="BounceClk5" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp5" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="0.575 0.48 0 0.575 1.905 0 0.575 2.38 0 0.575 1.905 0 0.575 0.48 0 0.575 1.08 0 0.575 1.28 0 0.575 1.08 0 0.575 0.48 0 0.575 0.73 0 0.575 0.48 0 0.575 0.48 0 0.575 1.38 0 0.575 3.36 0 0.575 5.34 0 0.575 6.24 0" />
+    <TimeSensor DEF="BarClk5" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip5" key="0 0.06 0.5 0.8 1" keyValue="0.575 0 0 0.575 -0.22 0 0.575 -0.15 0 0.575 0.05 0 0.575 0 0" />
+    <ColorInterpolator DEF="BarGlow5" key="0 0.1 1" keyValue="0.15 1 0.3625 1 1 1 0.15 1 0.3625" />
+    <ROUTE fromNode="Rel5" fromField="triggerTime" toNode="FallClk5" toField="startTime" />
+    <ROUTE fromNode="FallClk5" fromField="fraction_changed" toNode="FallIp5" toField="set_fraction" />
+    <ROUTE fromNode="FallIp5" fromField="value_changed" toNode="Ball5" toField="translation" />
+    <ROUTE fromNode="FallClk5" fromField="isActive" toNode="Land5" toField="set_boolean" />
+    <ROUTE fromNode="Land5" fromField="inputNegate" toNode="Hit5" toField="set_boolean" />
+    <ROUTE fromNode="Hit5" fromField="triggerTime" toNode="BarClk5" toField="startTime" />
+    <ROUTE fromNode="Hit5" fromField="triggerTime" toNode="BounceClk5" toField="startTime" />
+    <ROUTE fromNode="BounceClk5" fromField="fraction_changed" toNode="BounceIp5" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp5" fromField="value_changed" toNode="Ball5" toField="translation" />
+    <ROUTE fromNode="Touch5" fromField="touchTime" toNode="BarClk5" toField="startTime" />
+    <ROUTE fromNode="BarClk5" fromField="fraction_changed" toNode="BarDip5" toField="set_fraction" />
+    <ROUTE fromNode="BarClk5" fromField="fraction_changed" toNode="BarGlow5" toField="set_fraction" />
+    <ROUTE fromNode="BarDip5" fromField="value_changed" toNode="Bar5" toField="translation" />
+    <ROUTE fromNode="BarGlow5" fromField="value_changed" toNode="Mat5" toField="baseColor" />
+    <ROUTE fromNode="BarGlow5" fromField="value_changed" toNode="Mat5" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel6" />
+    <TimeSensor DEF="FallClk6" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp6" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="1.725 6.24 0 1.725 6.1824 0 1.725 6.0096 0 1.725 5.7216 0 1.725 5.3184 0 1.725 4.8 0 1.725 4.1664 0 1.725 3.4176 0 1.725 2.5536 0 1.725 1.5744 0 1.725 0.48 0" />
+    <BooleanFilter DEF="Land6" />
+    <TimeTrigger DEF="Hit6" />
+    <TimeSensor DEF="BounceClk6" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp6" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="1.725 0.48 0 1.725 1.905 0 1.725 2.38 0 1.725 1.905 0 1.725 0.48 0 1.725 1.08 0 1.725 1.28 0 1.725 1.08 0 1.725 0.48 0 1.725 0.73 0 1.725 0.48 0 1.725 0.48 0 1.725 1.38 0 1.725 3.36 0 1.725 5.34 0 1.725 6.24 0" />
+    <TimeSensor DEF="BarClk6" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip6" key="0 0.06 0.5 0.8 1" keyValue="1.725 0 0 1.725 -0.22 0 1.725 -0.15 0 1.725 0.05 0 1.725 0 0" />
+    <ColorInterpolator DEF="BarGlow6" key="0 0.1 1" keyValue="0.15 1 0.745 1 1 1 0.15 1 0.745" />
+    <ROUTE fromNode="Rel6" fromField="triggerTime" toNode="FallClk6" toField="startTime" />
+    <ROUTE fromNode="FallClk6" fromField="fraction_changed" toNode="FallIp6" toField="set_fraction" />
+    <ROUTE fromNode="FallIp6" fromField="value_changed" toNode="Ball6" toField="translation" />
+    <ROUTE fromNode="FallClk6" fromField="isActive" toNode="Land6" toField="set_boolean" />
+    <ROUTE fromNode="Land6" fromField="inputNegate" toNode="Hit6" toField="set_boolean" />
+    <ROUTE fromNode="Hit6" fromField="triggerTime" toNode="BarClk6" toField="startTime" />
+    <ROUTE fromNode="Hit6" fromField="triggerTime" toNode="BounceClk6" toField="startTime" />
+    <ROUTE fromNode="BounceClk6" fromField="fraction_changed" toNode="BounceIp6" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp6" fromField="value_changed" toNode="Ball6" toField="translation" />
+    <ROUTE fromNode="Touch6" fromField="touchTime" toNode="BarClk6" toField="startTime" />
+    <ROUTE fromNode="BarClk6" fromField="fraction_changed" toNode="BarDip6" toField="set_fraction" />
+    <ROUTE fromNode="BarClk6" fromField="fraction_changed" toNode="BarGlow6" toField="set_fraction" />
+    <ROUTE fromNode="BarDip6" fromField="value_changed" toNode="Bar6" toField="translation" />
+    <ROUTE fromNode="BarGlow6" fromField="value_changed" toNode="Mat6" toField="baseColor" />
+    <ROUTE fromNode="BarGlow6" fromField="value_changed" toNode="Mat6" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel7" />
+    <TimeSensor DEF="FallClk7" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp7" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="2.875 6.24 0 2.875 6.1824 0 2.875 6.0096 0 2.875 5.7216 0 2.875 5.3184 0 2.875 4.8 0 2.875 4.1664 0 2.875 3.4176 0 2.875 2.5536 0 2.875 1.5744 0 2.875 0.48 0" />
+    <BooleanFilter DEF="Land7" />
+    <TimeTrigger DEF="Hit7" />
+    <TimeSensor DEF="BounceClk7" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp7" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="2.875 0.48 0 2.875 1.905 0 2.875 2.38 0 2.875 1.905 0 2.875 0.48 0 2.875 1.08 0 2.875 1.28 0 2.875 1.08 0 2.875 0.48 0 2.875 0.73 0 2.875 0.48 0 2.875 0.48 0 2.875 1.38 0 2.875 3.36 0 2.875 5.34 0 2.875 6.24 0" />
+    <TimeSensor DEF="BarClk7" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip7" key="0 0.06 0.5 0.8 1" keyValue="2.875 0 0 2.875 -0.22 0 2.875 -0.15 0 2.875 0.05 0 2.875 0 0" />
+    <ColorInterpolator DEF="BarGlow7" key="0 0.1 1" keyValue="0.15 0.8725 1 1 1 1 0.15 0.8725 1" />
+    <ROUTE fromNode="Rel7" fromField="triggerTime" toNode="FallClk7" toField="startTime" />
+    <ROUTE fromNode="FallClk7" fromField="fraction_changed" toNode="FallIp7" toField="set_fraction" />
+    <ROUTE fromNode="FallIp7" fromField="value_changed" toNode="Ball7" toField="translation" />
+    <ROUTE fromNode="FallClk7" fromField="isActive" toNode="Land7" toField="set_boolean" />
+    <ROUTE fromNode="Land7" fromField="inputNegate" toNode="Hit7" toField="set_boolean" />
+    <ROUTE fromNode="Hit7" fromField="triggerTime" toNode="BarClk7" toField="startTime" />
+    <ROUTE fromNode="Hit7" fromField="triggerTime" toNode="BounceClk7" toField="startTime" />
+    <ROUTE fromNode="BounceClk7" fromField="fraction_changed" toNode="BounceIp7" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp7" fromField="value_changed" toNode="Ball7" toField="translation" />
+    <ROUTE fromNode="Touch7" fromField="touchTime" toNode="BarClk7" toField="startTime" />
+    <ROUTE fromNode="BarClk7" fromField="fraction_changed" toNode="BarDip7" toField="set_fraction" />
+    <ROUTE fromNode="BarClk7" fromField="fraction_changed" toNode="BarGlow7" toField="set_fraction" />
+    <ROUTE fromNode="BarDip7" fromField="value_changed" toNode="Bar7" toField="translation" />
+    <ROUTE fromNode="BarGlow7" fromField="value_changed" toNode="Mat7" toField="baseColor" />
+    <ROUTE fromNode="BarGlow7" fromField="value_changed" toNode="Mat7" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel8" />
+    <TimeSensor DEF="FallClk8" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp8" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="4.025 6.24 0 4.025 6.1824 0 4.025 6.0096 0 4.025 5.7216 0 4.025 5.3184 0 4.025 4.8 0 4.025 4.1664 0 4.025 3.4176 0 4.025 2.5536 0 4.025 1.5744 0 4.025 0.48 0" />
+    <BooleanFilter DEF="Land8" />
+    <TimeTrigger DEF="Hit8" />
+    <TimeSensor DEF="BounceClk8" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp8" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="4.025 0.48 0 4.025 1.905 0 4.025 2.38 0 4.025 1.905 0 4.025 0.48 0 4.025 1.08 0 4.025 1.28 0 4.025 1.08 0 4.025 0.48 0 4.025 0.73 0 4.025 0.48 0 4.025 0.48 0 4.025 1.38 0 4.025 3.36 0 4.025 5.34 0 4.025 6.24 0" />
+    <TimeSensor DEF="BarClk8" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip8" key="0 0.06 0.5 0.8 1" keyValue="4.025 0 0 4.025 -0.22 0 4.025 -0.15 0 4.025 0.05 0 4.025 0 0" />
+    <ColorInterpolator DEF="BarGlow8" key="0 0.1 1" keyValue="0.15 0.49 1 1 1 1 0.15 0.49 1" />
+    <ROUTE fromNode="Rel8" fromField="triggerTime" toNode="FallClk8" toField="startTime" />
+    <ROUTE fromNode="FallClk8" fromField="fraction_changed" toNode="FallIp8" toField="set_fraction" />
+    <ROUTE fromNode="FallIp8" fromField="value_changed" toNode="Ball8" toField="translation" />
+    <ROUTE fromNode="FallClk8" fromField="isActive" toNode="Land8" toField="set_boolean" />
+    <ROUTE fromNode="Land8" fromField="inputNegate" toNode="Hit8" toField="set_boolean" />
+    <ROUTE fromNode="Hit8" fromField="triggerTime" toNode="BarClk8" toField="startTime" />
+    <ROUTE fromNode="Hit8" fromField="triggerTime" toNode="BounceClk8" toField="startTime" />
+    <ROUTE fromNode="BounceClk8" fromField="fraction_changed" toNode="BounceIp8" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp8" fromField="value_changed" toNode="Ball8" toField="translation" />
+    <ROUTE fromNode="Touch8" fromField="touchTime" toNode="BarClk8" toField="startTime" />
+    <ROUTE fromNode="BarClk8" fromField="fraction_changed" toNode="BarDip8" toField="set_fraction" />
+    <ROUTE fromNode="BarClk8" fromField="fraction_changed" toNode="BarGlow8" toField="set_fraction" />
+    <ROUTE fromNode="BarDip8" fromField="value_changed" toNode="Bar8" toField="translation" />
+    <ROUTE fromNode="BarGlow8" fromField="value_changed" toNode="Mat8" toField="baseColor" />
+    <ROUTE fromNode="BarGlow8" fromField="value_changed" toNode="Mat8" toField="emissiveColor" />
+    <TimeTrigger DEF="Rel9" />
+    <TimeSensor DEF="FallClk9" cycleInterval="0.45" />
+    <PositionInterpolator DEF="FallIp9" key="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1" keyValue="5.175 6.24 0 5.175 6.1824 0 5.175 6.0096 0 5.175 5.7216 0 5.175 5.3184 0 5.175 4.8 0 5.175 4.1664 0 5.175 3.4176 0 5.175 2.5536 0 5.175 1.5744 0 5.175 0.48 0" />
+    <BooleanFilter DEF="Land9" />
+    <TimeTrigger DEF="Hit9" />
+    <TimeSensor DEF="BounceClk9" cycleInterval="1.5" />
+    <PositionInterpolator DEF="BounceIp9" key="0 0.05 0.1 0.15 0.2 0.235 0.27 0.305 0.34 0.39 0.44 0.75 0.8125 0.875 0.9375 1" keyValue="5.175 0.48 0 5.175 1.905 0 5.175 2.38 0 5.175 1.905 0 5.175 0.48 0 5.175 1.08 0 5.175 1.28 0 5.175 1.08 0 5.175 0.48 0 5.175 0.73 0 5.175 0.48 0 5.175 0.48 0 5.175 1.38 0 5.175 3.36 0 5.175 5.34 0 5.175 6.24 0" />
+    <TimeSensor DEF="BarClk9" cycleInterval="1.6" />
+    <PositionInterpolator DEF="BarDip9" key="0 0.06 0.5 0.8 1" keyValue="5.175 0 0 5.175 -0.22 0 5.175 -0.15 0 5.175 0.05 0 5.175 0 0" />
+    <ColorInterpolator DEF="BarGlow9" key="0 0.1 1" keyValue="0.1925 0.15 1 1 1 1 0.1925 0.15 1" />
+    <ROUTE fromNode="Rel9" fromField="triggerTime" toNode="FallClk9" toField="startTime" />
+    <ROUTE fromNode="FallClk9" fromField="fraction_changed" toNode="FallIp9" toField="set_fraction" />
+    <ROUTE fromNode="FallIp9" fromField="value_changed" toNode="Ball9" toField="translation" />
+    <ROUTE fromNode="FallClk9" fromField="isActive" toNode="Land9" toField="set_boolean" />
+    <ROUTE fromNode="Land9" fromField="inputNegate" toNode="Hit9" toField="set_boolean" />
+    <ROUTE fromNode="Hit9" fromField="triggerTime" toNode="BarClk9" toField="startTime" />
+    <ROUTE fromNode="Hit9" fromField="triggerTime" toNode="BounceClk9" toField="startTime" />
+    <ROUTE fromNode="BounceClk9" fromField="fraction_changed" toNode="BounceIp9" toField="set_fraction" />
+    <ROUTE fromNode="BounceIp9" fromField="value_changed" toNode="Ball9" toField="translation" />
+    <ROUTE fromNode="Touch9" fromField="touchTime" toNode="BarClk9" toField="startTime" />
+    <ROUTE fromNode="BarClk9" fromField="fraction_changed" toNode="BarDip9" toField="set_fraction" />
+    <ROUTE fromNode="BarClk9" fromField="fraction_changed" toNode="BarGlow9" toField="set_fraction" />
+    <ROUTE fromNode="BarDip9" fromField="value_changed" toNode="Bar9" toField="translation" />
+    <ROUTE fromNode="BarGlow9" fromField="value_changed" toNode="Mat9" toField="baseColor" />
+    <ROUTE fromNode="BarGlow9" fromField="value_changed" toNode="Mat9" toField="emissiveColor" />
+    <TimeSensor DEF="Song0" cycleInterval="8.5" loop="true" enabled="true" />
+    <BooleanSequencer DEF="Drop0_0" key="0 0.0176 0.6765 0.7118 1" keyValue="false true false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_0" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_0" fromField="value_changed" toNode="Rel0" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_1" key="0 0.0706 1" keyValue="false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_1" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_1" fromField="value_changed" toNode="Rel1" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_2" key="0 0.1235 1" keyValue="false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_2" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_2" fromField="value_changed" toNode="Rel2" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_3" key="0 0.1765 1" keyValue="false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_3" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_3" fromField="value_changed" toNode="Rel3" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_4" key="0 0.2294 0.6765 0.7118 1" keyValue="false true false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_4" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_4" fromField="value_changed" toNode="Rel4" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_5" key="0 0.2823 1" keyValue="false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_5" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_5" fromField="value_changed" toNode="Rel5" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_6" key="0 0.3353 1" keyValue="false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_6" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_6" fromField="value_changed" toNode="Rel6" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_7" key="0 0.3882 1" keyValue="false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_7" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_7" fromField="value_changed" toNode="Rel7" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_8" key="0 0.4412 0.6765 0.7118 1" keyValue="false true false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_8" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_8" fromField="value_changed" toNode="Rel8" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop0_9" key="0 0.4941 1" keyValue="false true true" />
+    <ROUTE fromNode="Song0" fromField="fraction_changed" toNode="Drop0_9" toField="set_fraction" />
+    <ROUTE fromNode="Drop0_9" fromField="value_changed" toNode="Rel9" toField="set_boolean" />
+    <TimeSensor DEF="Song1" cycleInterval="6.75" loop="true" enabled="false" />
+    <BooleanSequencer DEF="Drop1_0" key="0 0.637 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_0" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_0" fromField="value_changed" toNode="Rel0" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_1" key="0 0.5852 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_1" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_1" fromField="value_changed" toNode="Rel1" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_2" key="0 0.4444 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_2" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_2" fromField="value_changed" toNode="Rel2" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_3" key="0 0.3037 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_3" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_3" fromField="value_changed" toNode="Rel3" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_4" key="0 0.163 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_4" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_4" fromField="value_changed" toNode="Rel4" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_5" key="0 0.0222 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_5" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_5" fromField="value_changed" toNode="Rel5" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_6" key="0 0.0741 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_6" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_6" fromField="value_changed" toNode="Rel6" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_7" key="0 0.2148 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_7" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_7" fromField="value_changed" toNode="Rel7" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_8" key="0 0.3556 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_8" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_8" fromField="value_changed" toNode="Rel8" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop1_9" key="0 0.4963 1" keyValue="false true true" />
+    <ROUTE fromNode="Song1" fromField="fraction_changed" toNode="Drop1_9" toField="set_fraction" />
+    <ROUTE fromNode="Drop1_9" fromField="value_changed" toNode="Rel9" toField="set_boolean" />
+    <TimeSensor DEF="Song2" cycleInterval="7.75" loop="true" enabled="false" />
+    <BooleanSequencer DEF="Drop2_0" key="0 0.0193 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_0" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_0" fromField="value_changed" toNode="Rel0" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_1" key="0 0.6839 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_1" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_1" fromField="value_changed" toNode="Rel1" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_2" key="0 0.1355 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_2" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_2" fromField="value_changed" toNode="Rel2" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_3" key="0 0.6323 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_3" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_3" fromField="value_changed" toNode="Rel3" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_4" key="0 0.2387 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_4" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_4" fromField="value_changed" toNode="Rel4" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_5" key="0 0.5806 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_5" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_5" fromField="value_changed" toNode="Rel5" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_6" key="0 0.329 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_6" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_6" fromField="value_changed" toNode="Rel6" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_7" key="0 0.529 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_7" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_7" fromField="value_changed" toNode="Rel7" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_8" key="0 0.4064 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_8" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_8" fromField="value_changed" toNode="Rel8" toField="set_boolean" />
+    <BooleanSequencer DEF="Drop2_9" key="0 0.471 1" keyValue="false true true" />
+    <ROUTE fromNode="Song2" fromField="fraction_changed" toNode="Drop2_9" toField="set_fraction" />
+    <ROUTE fromNode="Drop2_9" fromField="value_changed" toNode="Rel9" toField="set_boolean" />
+    <BooleanFilter DEF="Press0" />
+    <BooleanFilter DEF="Off0" />
+    <TimeTrigger DEF="Restart0" />
+    <ROUTE fromNode="Pick0" fromField="isActive" toNode="Press0" toField="set_boolean" />
+    <ROUTE fromNode="Press0" fromField="inputTrue" toNode="Restart0" toField="set_boolean" />
+    <ROUTE fromNode="Restart0" fromField="triggerTime" toNode="Song0" toField="startTime" />
+    <BooleanFilter DEF="Go0" />
+    <ROUTE fromNode="Press0" fromField="inputTrue" toNode="Go0" toField="set_boolean" />
+    <ROUTE fromNode="Go0" fromField="inputTrue" toNode="Song0" toField="enabled" />
+    <ROUTE fromNode="Press0" fromField="inputTrue" toNode="Lamp0" toField="visible" />
+    <ROUTE fromNode="Press0" fromField="inputTrue" toNode="Off0" toField="set_boolean" />
+    <ROUTE fromNode="Off0" fromField="inputNegate" toNode="Song1" toField="enabled" />
+    <ROUTE fromNode="Off0" fromField="inputNegate" toNode="Lamp1" toField="visible" />
+    <ROUTE fromNode="Off0" fromField="inputNegate" toNode="Song2" toField="enabled" />
+    <ROUTE fromNode="Off0" fromField="inputNegate" toNode="Lamp2" toField="visible" />
+    <BooleanFilter DEF="Press1" />
+    <BooleanFilter DEF="Off1" />
+    <TimeTrigger DEF="Restart1" />
+    <ROUTE fromNode="Pick1" fromField="isActive" toNode="Press1" toField="set_boolean" />
+    <ROUTE fromNode="Press1" fromField="inputTrue" toNode="Restart1" toField="set_boolean" />
+    <ROUTE fromNode="Restart1" fromField="triggerTime" toNode="Song1" toField="startTime" />
+    <BooleanFilter DEF="Go1" />
+    <ROUTE fromNode="Press1" fromField="inputTrue" toNode="Go1" toField="set_boolean" />
+    <ROUTE fromNode="Go1" fromField="inputTrue" toNode="Song1" toField="enabled" />
+    <ROUTE fromNode="Press1" fromField="inputTrue" toNode="Lamp1" toField="visible" />
+    <ROUTE fromNode="Press1" fromField="inputTrue" toNode="Off1" toField="set_boolean" />
+    <ROUTE fromNode="Off1" fromField="inputNegate" toNode="Song0" toField="enabled" />
+    <ROUTE fromNode="Off1" fromField="inputNegate" toNode="Lamp0" toField="visible" />
+    <ROUTE fromNode="Off1" fromField="inputNegate" toNode="Song2" toField="enabled" />
+    <ROUTE fromNode="Off1" fromField="inputNegate" toNode="Lamp2" toField="visible" />
+    <BooleanFilter DEF="Press2" />
+    <BooleanFilter DEF="Off2" />
+    <TimeTrigger DEF="Restart2" />
+    <ROUTE fromNode="Pick2" fromField="isActive" toNode="Press2" toField="set_boolean" />
+    <ROUTE fromNode="Press2" fromField="inputTrue" toNode="Restart2" toField="set_boolean" />
+    <ROUTE fromNode="Restart2" fromField="triggerTime" toNode="Song2" toField="startTime" />
+    <BooleanFilter DEF="Go2" />
+    <ROUTE fromNode="Press2" fromField="inputTrue" toNode="Go2" toField="set_boolean" />
+    <ROUTE fromNode="Go2" fromField="inputTrue" toNode="Song2" toField="enabled" />
+    <ROUTE fromNode="Press2" fromField="inputTrue" toNode="Lamp2" toField="visible" />
+    <ROUTE fromNode="Press2" fromField="inputTrue" toNode="Off2" toField="set_boolean" />
+    <ROUTE fromNode="Off2" fromField="inputNegate" toNode="Song0" toField="enabled" />
+    <ROUTE fromNode="Off2" fromField="inputNegate" toNode="Lamp0" toField="visible" />
+    <ROUTE fromNode="Off2" fromField="inputNegate" toNode="Song1" toField="enabled" />
+    <ROUTE fromNode="Off2" fromField="inputNegate" toNode="Lamp1" toField="visible" />
+  </Scene>
+</X3D>

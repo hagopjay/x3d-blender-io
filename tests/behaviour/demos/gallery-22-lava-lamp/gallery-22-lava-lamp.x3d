@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" profile="Immersive" version="4.0" xsi:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="EventUtilities" level="1" />
+    <component name="Followers" level="1" />
+    <meta name="title" content="Gallery 22: lava lamp" />
+    <meta name="description" content="Seven blobs rise and sink in a glass tank; HEAT, COOL and COLOUR buttons." />
+    <meta name="generator" content="tests/behaviour/demos/gallery-22-lava-lamp/build.py" />
+    <meta name="license" content="GPL-3.0-or-later" />
+  </head>
+  <Scene>
+    <NavigationInfo type="&quot;NONE&quot;" headlight="false" />
+    <Background skyColor="0.01 0.01 0.025" />
+    <Viewpoint DEF="View" description="Front" position="0 5.2 17" orientation="1 0 0 -0.09" />
+    <DirectionalLight direction="0 -0.3 -1" intensity="0.5" />
+    <Transform translation="0 -0.06 0"><Shape><Appearance><PhysicalMaterial  baseColor="0.03 0.03 0.04" metallic="0" roughness="0.9" /></Appearance><Cylinder radius="14" height="0.12" /></Shape></Transform>
+<Transform translation="1.950 4.600 0.000"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="1.379 4.600 1.379"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="0.000 4.600 1.950"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="-1.379 4.600 1.379"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="-1.950 4.600 0.000"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="-1.379 4.600 -1.379"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="-0.000 4.600 -1.950"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="1.379 4.600 -1.379"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Cylinder radius="0.04" height="7.00" /></Shape></Transform><Transform translation="1.913 1.1 0.380" rotation="0 1 0 -1.7671"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.621 1.1 1.083" rotation="0 1 0 -2.1598"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.083 1.1 1.621" rotation="0 1 0 -2.5525"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="0.380 1.1 1.913" rotation="0 1 0 -2.9452"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-0.380 1.1 1.913" rotation="0 1 0 -3.3379"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.083 1.1 1.621" rotation="0 1 0 -3.7306"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.621 1.1 1.083" rotation="0 1 0 -4.1233"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.913 1.1 0.380" rotation="0 1 0 -4.5160"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.913 1.1 -0.380" rotation="0 1 0 -4.9087"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.621 1.1 -1.083" rotation="0 1 0 -5.3014"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.083 1.1 -1.621" rotation="0 1 0 -5.6941"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-0.380 1.1 -1.913" rotation="0 1 0 -6.0868"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="0.380 1.1 -1.913" rotation="0 1 0 -6.4795"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.083 1.1 -1.621" rotation="0 1 0 -6.8722"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.621 1.1 -1.083" rotation="0 1 0 -7.2649"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.913 1.1 -0.380" rotation="0 1 0 -7.6576"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.913 8.1 0.380" rotation="0 1 0 -1.7671"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.621 8.1 1.083" rotation="0 1 0 -2.1598"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.083 8.1 1.621" rotation="0 1 0 -2.5525"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="0.380 8.1 1.913" rotation="0 1 0 -2.9452"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-0.380 8.1 1.913" rotation="0 1 0 -3.3379"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.083 8.1 1.621" rotation="0 1 0 -3.7306"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.621 8.1 1.083" rotation="0 1 0 -4.1233"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.913 8.1 0.380" rotation="0 1 0 -4.5160"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.913 8.1 -0.380" rotation="0 1 0 -4.9087"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.621 8.1 -1.083" rotation="0 1 0 -5.3014"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-1.083 8.1 -1.621" rotation="0 1 0 -5.6941"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="-0.380 8.1 -1.913" rotation="0 1 0 -6.0868"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="0.380 8.1 -1.913" rotation="0 1 0 -6.4795"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.083 8.1 -1.621" rotation="0 1 0 -6.8722"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.621 8.1 -1.083" rotation="0 1 0 -7.2649"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform><Transform translation="1.913 8.1 -0.380" rotation="0 1 0 -7.6576"><Shape><Appearance><PhysicalMaterial  baseColor="0.6 0.75 0.8" emissiveColor="0.15 0.2 0.22" metallic="0" roughness="0.1" /></Appearance><Box size="0.791 0.07 0.07" /></Shape></Transform>
+    <Transform translation="0 0.45 0"><Shape><Appearance><PhysicalMaterial  baseColor="0.08 0.08 0.1" metallic="1" roughness="0.45" /></Appearance><Cylinder radius="2.5" height="0.9" /></Shape></Transform>
+    <Transform translation="0 0.95 0"><Shape><Appearance><PhysicalMaterial  baseColor="0.9 0.6 0.2" metallic="1" roughness="0.3" /></Appearance><Cylinder radius="2.1" height="0.2" /></Shape></Transform>
+    <Transform translation="0 8.4 0"><Shape><Appearance><PhysicalMaterial  baseColor="0.08 0.08 0.1" metallic="1" roughness="0.45" /></Appearance><Cylinder radius="2.1" height="0.5" /></Shape></Transform>
+    <Transform translation="0 9.35 0"><Shape><Appearance><PhysicalMaterial  baseColor="0.9 0.6 0.2" metallic="1" roughness="0.3" /></Appearance><Cone bottomRadius="1.5" height="1.4" /></Shape></Transform>
+    <Transform DEF="Bulb" translation="0 1.5 0"><Shape><Appearance><PhysicalMaterial DEF="BulbPaint" baseColor="1 0.25 0.1" emissiveColor="1 0.25 0.1" metallic="0" roughness="0.2" /></Appearance><Sphere radius="0.35" /></Shape></Transform>
+    <Transform DEF="Pool" translation="0 0.03 0"><Shape><Appearance><PhysicalMaterial DEF="PoolPaint" baseColor="0.28 0.07 0.028" emissiveColor="0.28 0.07 0.028" metallic="0"  /></Appearance><Cylinder radius="4.4" height="0.04" /></Shape></Transform>
+    <Transform DEF="Halo" translation="0 4.8 -3.5" rotation="1 0 0 1.5708"><Shape><Appearance><PhysicalMaterial DEF="HaloPaint" baseColor="0.28 0.07 0.028" emissiveColor="0.28 0.07 0.028" metallic="0"  /></Appearance><Cylinder radius="4.6" height="0.05" /></Shape></Transform>
+    <PointLight DEF="Lamp" location="0 1.5 0" color="1 0.25 0.1" intensity="400" radius="14" />
+    <Transform DEF="Blob0" translation="0 2 0.5896" scale="1.118 0.8 1.118">
+      <Shape><Appearance><PhysicalMaterial DEF="Paint0" baseColor="1 0.25 0.1" emissiveColor="1 0.25 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.62" /></Shape>
+    </Transform>
+    <Transform DEF="Drop0" translation="0 2 0.5896">
+      <Shape><Appearance><PhysicalMaterial DEF="DropPaint0" baseColor="1 0.25 0.1" emissiveColor="1 0.25 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.13" /></Shape>
+    </Transform>
+    <Transform DEF="Blob1" translation="-0.5958 6.9425 -0.027" scale="0.9812 1.0386 0.9812">
+      <Shape><Appearance><PhysicalMaterial DEF="Paint1" baseColor="1 0.6 0.1" emissiveColor="1 0.6 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.5" /></Shape>
+    </Transform>
+    <Transform DEF="Drop1" translation="-0.5958 6.9425 -0.027">
+      <Shape><Appearance><PhysicalMaterial DEF="DropPaint1" baseColor="1 0.6 0.1" emissiveColor="1 0.6 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.13" /></Shape>
+    </Transform>
+    <Transform DEF="Blob2" translation="0.1548 2.9789 -0.5794" scale="0.9017 1.23 0.9017">
+      <Shape><Appearance><PhysicalMaterial DEF="Paint2" baseColor="1 0.2 0.5" emissiveColor="1 0.2 0.5" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.7" /></Shape>
+    </Transform>
+    <Transform DEF="Drop2" translation="0.1548 2.9789 -0.5794">
+      <Shape><Appearance><PhysicalMaterial DEF="DropPaint2" baseColor="1 0.2 0.5" emissiveColor="1 0.2 0.5" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.13" /></Shape>
+    </Transform>
+    <Transform DEF="Blob3" translation="0.0543 5.1786 0.2872" scale="0.8651 1.3362 0.8651">
+      <Shape><Appearance><PhysicalMaterial DEF="Paint3" baseColor="1 0.85 0.3" emissiveColor="1 0.85 0.3" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.45" /></Shape>
+    </Transform>
+    <Transform DEF="Drop3" translation="0.0543 5.1786 0.2872">
+      <Shape><Appearance><PhysicalMaterial DEF="DropPaint3" baseColor="1 0.85 0.3" emissiveColor="1 0.85 0.3" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.13" /></Shape>
+    </Transform>
+    <Transform DEF="Blob4" translation="0.5805 5.1786 -0.5364" scale="0.8651 1.3362 0.8651">
+      <Shape><Appearance><PhysicalMaterial DEF="Paint4" baseColor="1 0.25 0.1" emissiveColor="1 0.25 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.56" /></Shape>
+    </Transform>
+    <Transform DEF="Drop4" translation="0.5805 5.1786 -0.5364">
+      <Shape><Appearance><PhysicalMaterial DEF="DropPaint4" baseColor="1 0.25 0.1" emissiveColor="1 0.25 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.13" /></Shape>
+    </Transform>
+    <Transform DEF="Blob5" translation="0.5851 2.9789 0.5028" scale="0.9017 1.23 0.9017">
+      <Shape><Appearance><PhysicalMaterial DEF="Paint5" baseColor="1 0.6 0.1" emissiveColor="1 0.6 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.66" /></Shape>
+    </Transform>
+    <Transform DEF="Drop5" translation="0.5851 2.9789 0.5028">
+      <Shape><Appearance><PhysicalMaterial DEF="DropPaint5" baseColor="1 0.6 0.1" emissiveColor="1 0.6 0.1" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.13" /></Shape>
+    </Transform>
+    <Transform DEF="Blob6" translation="-0.1091 6.9425 -0.3366" scale="0.9812 1.0386 0.9812">
+      <Shape><Appearance><PhysicalMaterial DEF="Paint6" baseColor="1 0.2 0.5" emissiveColor="1 0.2 0.5" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.4" /></Shape>
+    </Transform>
+    <Transform DEF="Drop6" translation="-0.1091 6.9425 -0.3366">
+      <Shape><Appearance><PhysicalMaterial DEF="DropPaint6" baseColor="1 0.2 0.5" emissiveColor="1 0.2 0.5" metallic="0" roughness="0.12" /></Appearance><Sphere radius="0.13" /></Shape>
+    </Transform>
+    <Transform translation="0 0.45 5.6"><Shape><Appearance><PhysicalMaterial  baseColor="0.08 0.08 0.1" metallic="1" roughness="0.45" /></Appearance><Box size="8.4 0.9 2.4" /></Shape></Transform>
+    <Transform DEF="HeatBtn" translation="-2.6 1.1 5.6">
+      <TouchSensor DEF="HeatTouch" description="Heat" />
+      <Shape><Appearance><PhysicalMaterial  baseColor="1 0.2 0.1" emissiveColor="1 0.2 0.1" metallic="0" roughness="0.25" /></Appearance><Cylinder radius="0.6" height="0.4" /></Shape>
+    </Transform>
+    <Transform DEF="HeatLamp" translation="-2.6 1.55 4.85" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 0.5 0.2" emissiveColor="1 0.5 0.2" metallic="0"  /></Appearance><Sphere radius="0.2" /></Shape></Transform>
+    <Transform DEF="CoolBtn" translation="0 1.1 5.6">
+      <TouchSensor DEF="CoolTouch" description="Cool" />
+      <Shape><Appearance><PhysicalMaterial  baseColor="0.15 0.5 1" emissiveColor="0.15 0.5 1" metallic="0" roughness="0.25" /></Appearance><Cylinder radius="0.6" height="0.4" /></Shape>
+    </Transform>
+    <Transform DEF="CoolLamp" translation="0 1.55 4.85"><Shape><Appearance><PhysicalMaterial  baseColor="0.4 0.9 1" emissiveColor="0.4 0.9 1" metallic="0"  /></Appearance><Sphere radius="0.2" /></Shape></Transform>
+    <Transform DEF="ColourBtn" translation="2.6 1.1 5.6">
+      <TouchSensor DEF="ColourTouch" description="Colour" />
+      <Shape><Appearance><PhysicalMaterial DEF="ColourPaint" baseColor="1 0.25 0.1" emissiveColor="1 0.25 0.1" metallic="0" roughness="0.25" /></Appearance><Cylinder radius="0.6" height="0.4" /></Shape>
+    </Transform>
+    <Transform DEF="ColourLamp" translation="2.6 1.55 4.85"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" metallic="0"  /></Appearance><Sphere radius="0.2" /></Shape></Transform>
+    <Transform DEF="ColourSpark" translation="2.6 1.9 5.6" visible="false"><Shape><Appearance><PhysicalMaterial  baseColor="1 1 1" emissiveColor="1 1 1" metallic="0"  /></Appearance><Sphere radius="0.14" /></Shape></Transform>
+    <TimeSensor DEF="Slow0" cycleInterval="23" loop="true" />
+    <TimeSensor DEF="Fast0" cycleInterval="5" loop="true" enabled="false" />
+    <PositionInterpolator DEF="Path0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0 2 0.5896 0.2256 2.1979 0.4169 0.4169 2.7615 0 0.5447 3.605 -0.4169 0.5896 4.6 -0.5896 0.5447 5.595 -0.4169 0.4169 6.4385 -0 0.2256 7.0021 0.4169 0 7.2 0.5896 -0.2256 7.0021 0.4169 -0.4169 6.4385 0 -0.5447 5.595 -0.4169 -0.5896 4.6 -0.5896 -0.5447 3.605 -0.4169 -0.4169 2.7615 -0 -0.2256 2.1979 0.4169 -0 2 0.5896" />
+    <PositionInterpolator DEF="Squish0" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="1.118 0.8 1.118 0.9948 1.0105 0.9948 0.9171 1.1889 0.9171 0.8743 1.3081 0.8743 0.8607 1.35 0.8607 0.8743 1.3081 0.8743 0.9171 1.1889 0.9171 0.9948 1.0105 0.9948 1.118 0.8 1.118 0.9948 1.0105 0.9948 0.9171 1.1889 0.9171 0.8743 1.3081 0.8743 0.8607 1.35 0.8607 0.8743 1.3081 0.8743 0.9171 1.1889 0.9171 0.9948 1.0105 0.9948 1.118 0.8 1.118" />
+    <PositionChaser DEF="Glide0" duration="1.6" initialDestination="0 2 0.5896" initialValue="0 2 0.5896" />
+    <PositionChaser DEF="Soft0" duration="0.9" initialDestination="1.118 0.8 1.118" initialValue="1.118 0.8 1.118" />
+    <PositionChaser DEF="Trail0" duration="2.6" initialDestination="0 2 0.5896" initialValue="0 2 0.5896" />
+    <ColorChaser DEF="Skin0" duration="2.2" initialDestination="1 0.25 0.1" initialValue="1 0.25 0.1" />
+    <ROUTE fromNode="Slow0" fromField="fraction_changed" toNode="Path0" toField="set_fraction" />
+    <ROUTE fromNode="Slow0" fromField="fraction_changed" toNode="Squish0" toField="set_fraction" />
+    <ROUTE fromNode="Fast0" fromField="fraction_changed" toNode="Path0" toField="set_fraction" />
+    <ROUTE fromNode="Fast0" fromField="fraction_changed" toNode="Squish0" toField="set_fraction" />
+    <ROUTE fromNode="Path0" fromField="value_changed" toNode="Glide0" toField="set_destination" />
+    <ROUTE fromNode="Squish0" fromField="value_changed" toNode="Soft0" toField="set_destination" />
+    <ROUTE fromNode="Glide0" fromField="value_changed" toNode="Blob0" toField="translation" />
+    <ROUTE fromNode="Soft0" fromField="value_changed" toNode="Blob0" toField="scale" />
+    <ROUTE fromNode="Glide0" fromField="value_changed" toNode="Trail0" toField="set_destination" />
+    <ROUTE fromNode="Trail0" fromField="value_changed" toNode="Drop0" toField="translation" />
+    <ROUTE fromNode="Skin0" fromField="value_changed" toNode="Paint0" toField="baseColor" />
+    <ROUTE fromNode="Skin0" fromField="value_changed" toNode="Paint0" toField="emissiveColor" />
+    <ROUTE fromNode="Skin0" fromField="value_changed" toNode="DropPaint0" toField="baseColor" />
+    <ROUTE fromNode="Skin0" fromField="value_changed" toNode="DropPaint0" toField="emissiveColor" />
+    <TimeSensor DEF="Slow1" cycleInterval="29" loop="true" />
+    <TimeSensor DEF="Fast1" cycleInterval="7" loop="true" enabled="false" />
+    <PositionInterpolator DEF="Path1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="-0.5958 6.9425 -0.027 -0.4784 7.1959 -0.2548 -0.0807 7.0541 -0.4438 0.3642 6.5387 -0.5652 0.5958 5.7281 -0.6006 0.4784 4.7458 -0.5446 0.0807 3.7413 -0.4056 -0.3642 2.8675 -0.2049 -0.5958 2.2575 0.027 -0.4784 2.0041 0.2548 -0.0807 2.1459 0.4438 0.3642 2.6613 0.5652 0.5958 3.4719 0.6006 0.4784 4.4542 0.5446 0.0807 5.4587 0.4056 -0.3642 6.3325 0.2049 -0.5958 6.9425 -0.027" />
+    <PositionInterpolator DEF="Squish1" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.9812 1.0386 0.9812 1.0971 0.8308 1.0971 1.0093 0.9817 1.0093 0.9259 1.1665 0.9259 0.8786 1.2955 0.8786 0.8609 1.3491 0.8609 0.8707 1.3191 0.8707 0.9091 1.2101 0.9091 0.9812 1.0386 0.9812 1.0971 0.8308 1.0971 1.0093 0.9817 1.0093 0.9259 1.1665 0.9259 0.8786 1.2955 0.8786 0.8609 1.3491 0.8609 0.8707 1.3191 0.8707 0.9091 1.2101 0.9091 0.9812 1.0386 0.9812" />
+    <PositionChaser DEF="Glide1" duration="1.6" initialDestination="-0.5958 6.9425 -0.027" initialValue="-0.5958 6.9425 -0.027" />
+    <PositionChaser DEF="Soft1" duration="0.9" initialDestination="0.9812 1.0386 0.9812" initialValue="0.9812 1.0386 0.9812" />
+    <PositionChaser DEF="Trail1" duration="2.6" initialDestination="-0.5958 6.9425 -0.027" initialValue="-0.5958 6.9425 -0.027" />
+    <ColorChaser DEF="Skin1" duration="2.2" initialDestination="1 0.6 0.1" initialValue="1 0.6 0.1" />
+    <ROUTE fromNode="Slow1" fromField="fraction_changed" toNode="Path1" toField="set_fraction" />
+    <ROUTE fromNode="Slow1" fromField="fraction_changed" toNode="Squish1" toField="set_fraction" />
+    <ROUTE fromNode="Fast1" fromField="fraction_changed" toNode="Path1" toField="set_fraction" />
+    <ROUTE fromNode="Fast1" fromField="fraction_changed" toNode="Squish1" toField="set_fraction" />
+    <ROUTE fromNode="Path1" fromField="value_changed" toNode="Glide1" toField="set_destination" />
+    <ROUTE fromNode="Squish1" fromField="value_changed" toNode="Soft1" toField="set_destination" />
+    <ROUTE fromNode="Glide1" fromField="value_changed" toNode="Blob1" toField="translation" />
+    <ROUTE fromNode="Soft1" fromField="value_changed" toNode="Blob1" toField="scale" />
+    <ROUTE fromNode="Glide1" fromField="value_changed" toNode="Trail1" toField="set_destination" />
+    <ROUTE fromNode="Trail1" fromField="value_changed" toNode="Drop1" toField="translation" />
+    <ROUTE fromNode="Skin1" fromField="value_changed" toNode="Paint1" toField="baseColor" />
+    <ROUTE fromNode="Skin1" fromField="value_changed" toNode="Paint1" toField="emissiveColor" />
+    <ROUTE fromNode="Skin1" fromField="value_changed" toNode="DropPaint1" toField="baseColor" />
+    <ROUTE fromNode="Skin1" fromField="value_changed" toNode="DropPaint1" toField="emissiveColor" />
+    <TimeSensor DEF="Slow2" cycleInterval="31" loop="true" />
+    <TimeSensor DEF="Fast2" cycleInterval="11" loop="true" enabled="false" />
+    <PositionInterpolator DEF="Path2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.1548 2.9789 -0.5794 -0.0716 2.3244 -0.5153 -0.2871 2.0163 -0.3728 -0.4589 2.1016 -0.1736 -0.5608 2.5672 0.0521 -0.5773 3.3423 0.2699 -0.506 4.3089 0.4466 -0.3576 5.3198 0.5553 -0.1548 6.2211 0.5794 0.0716 6.8756 0.5153 0.2871 7.1837 0.3728 0.4589 7.0984 0.1736 0.5608 6.6328 -0.0521 0.5773 5.8577 -0.2699 0.506 4.8911 -0.4466 0.3576 3.8802 -0.5553 0.1548 2.9789 -0.5794" />
+    <PositionInterpolator DEF="Squish2" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.9017 1.23 0.9017 0.9685 1.066 0.9685 1.0773 0.8616 1.0773 1.0248 0.9523 1.0248 0.9354 1.1429 0.9354 0.8834 1.2814 0.8834 0.8618 1.3465 0.8618 0.8676 1.3285 0.8676 0.9017 1.23 0.9017 0.9685 1.066 0.9685 1.0773 0.8616 1.0773 1.0248 0.9523 1.0248 0.9354 1.1429 0.9354 0.8834 1.2814 0.8834 0.8618 1.3465 0.8618 0.8676 1.3285 0.8676 0.9017 1.23 0.9017" />
+    <PositionChaser DEF="Glide2" duration="1.6" initialDestination="0.1548 2.9789 -0.5794" initialValue="0.1548 2.9789 -0.5794" />
+    <PositionChaser DEF="Soft2" duration="0.9" initialDestination="0.9017 1.23 0.9017" initialValue="0.9017 1.23 0.9017" />
+    <PositionChaser DEF="Trail2" duration="2.6" initialDestination="0.1548 2.9789 -0.5794" initialValue="0.1548 2.9789 -0.5794" />
+    <ColorChaser DEF="Skin2" duration="2.2" initialDestination="1 0.2 0.5" initialValue="1 0.2 0.5" />
+    <ROUTE fromNode="Slow2" fromField="fraction_changed" toNode="Path2" toField="set_fraction" />
+    <ROUTE fromNode="Slow2" fromField="fraction_changed" toNode="Squish2" toField="set_fraction" />
+    <ROUTE fromNode="Fast2" fromField="fraction_changed" toNode="Path2" toField="set_fraction" />
+    <ROUTE fromNode="Fast2" fromField="fraction_changed" toNode="Squish2" toField="set_fraction" />
+    <ROUTE fromNode="Path2" fromField="value_changed" toNode="Glide2" toField="set_destination" />
+    <ROUTE fromNode="Squish2" fromField="value_changed" toNode="Soft2" toField="set_destination" />
+    <ROUTE fromNode="Glide2" fromField="value_changed" toNode="Blob2" toField="translation" />
+    <ROUTE fromNode="Soft2" fromField="value_changed" toNode="Blob2" toField="scale" />
+    <ROUTE fromNode="Glide2" fromField="value_changed" toNode="Trail2" toField="set_destination" />
+    <ROUTE fromNode="Trail2" fromField="value_changed" toNode="Drop2" toField="translation" />
+    <ROUTE fromNode="Skin2" fromField="value_changed" toNode="Paint2" toField="baseColor" />
+    <ROUTE fromNode="Skin2" fromField="value_changed" toNode="Paint2" toField="emissiveColor" />
+    <ROUTE fromNode="Skin2" fromField="value_changed" toNode="DropPaint2" toField="baseColor" />
+    <ROUTE fromNode="Skin2" fromField="value_changed" toNode="DropPaint2" toField="emissiveColor" />
+    <TimeSensor DEF="Slow3" cycleInterval="37" loop="true" />
+    <TimeSensor DEF="Fast3" cycleInterval="13" loop="true" enabled="false" />
+    <PositionInterpolator DEF="Path3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.0543 5.1786 0.2872 -0.3885 6.1045 -0.3832 -0.6037 6.8015 -0.5805 -0.4653 7.1633 -0.0611 -0.0543 7.1348 0.5338 0.3885 6.7205 0.4696 0.6037 5.9833 -0.1743 0.4653 5.0355 -0.603 0.0543 4.0214 -0.2872 -0.3885 3.0955 0.3832 -0.6037 2.3985 0.5805 -0.4653 2.0367 0.0611 -0.0543 2.0652 -0.5338 0.3885 2.4795 -0.4696 0.6037 3.2167 0.1743 0.4653 4.1645 0.603 0.0543 5.1786 0.2872" />
+    <PositionInterpolator DEF="Squish3" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.8651 1.3362 0.8651 0.8949 1.2486 0.8949 0.9567 1.0926 0.9567 1.0587 0.8921 1.0587 1.0412 0.9224 1.0412 0.9456 1.1183 0.9456 0.8889 1.2657 0.8889 0.8632 1.3422 0.8632 0.8651 1.3362 0.8651 0.8949 1.2486 0.8949 0.9567 1.0926 0.9567 1.0587 0.8921 1.0587 1.0412 0.9224 1.0412 0.9456 1.1183 0.9456 0.8889 1.2657 0.8889 0.8632 1.3422 0.8632 0.8651 1.3362 0.8651" />
+    <PositionChaser DEF="Glide3" duration="1.6" initialDestination="0.0543 5.1786 0.2872" initialValue="0.0543 5.1786 0.2872" />
+    <PositionChaser DEF="Soft3" duration="0.9" initialDestination="0.8651 1.3362 0.8651" initialValue="0.8651 1.3362 0.8651" />
+    <PositionChaser DEF="Trail3" duration="2.6" initialDestination="0.0543 5.1786 0.2872" initialValue="0.0543 5.1786 0.2872" />
+    <ColorChaser DEF="Skin3" duration="2.2" initialDestination="1 0.85 0.3" initialValue="1 0.85 0.3" />
+    <ROUTE fromNode="Slow3" fromField="fraction_changed" toNode="Path3" toField="set_fraction" />
+    <ROUTE fromNode="Slow3" fromField="fraction_changed" toNode="Squish3" toField="set_fraction" />
+    <ROUTE fromNode="Fast3" fromField="fraction_changed" toNode="Path3" toField="set_fraction" />
+    <ROUTE fromNode="Fast3" fromField="fraction_changed" toNode="Squish3" toField="set_fraction" />
+    <ROUTE fromNode="Path3" fromField="value_changed" toNode="Glide3" toField="set_destination" />
+    <ROUTE fromNode="Squish3" fromField="value_changed" toNode="Soft3" toField="set_destination" />
+    <ROUTE fromNode="Glide3" fromField="value_changed" toNode="Blob3" toField="translation" />
+    <ROUTE fromNode="Soft3" fromField="value_changed" toNode="Blob3" toField="scale" />
+    <ROUTE fromNode="Glide3" fromField="value_changed" toNode="Trail3" toField="set_destination" />
+    <ROUTE fromNode="Trail3" fromField="value_changed" toNode="Drop3" toField="translation" />
+    <ROUTE fromNode="Skin3" fromField="value_changed" toNode="Paint3" toField="baseColor" />
+    <ROUTE fromNode="Skin3" fromField="value_changed" toNode="Paint3" toField="emissiveColor" />
+    <ROUTE fromNode="Skin3" fromField="value_changed" toNode="DropPaint3" toField="baseColor" />
+    <ROUTE fromNode="Skin3" fromField="value_changed" toNode="DropPaint3" toField="emissiveColor" />
+    <TimeSensor DEF="Slow4" cycleInterval="41" loop="true" />
+    <TimeSensor DEF="Fast4" cycleInterval="17" loop="true" enabled="false" />
+    <PositionInterpolator DEF="Path4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.5805 5.1786 -0.5364 0.587 4.1645 -0.444 0.5041 3.2167 0.1966 0.3445 2.4795 0.5945 0.1325 2.0652 0.2583 -0.0997 2.0367 -0.3967 -0.3168 2.3985 -0.562 -0.4856 3.0955 -0.0334 -0.5805 4.0214 0.5364 -0.587 5.0355 0.444 -0.5041 5.9833 -0.1966 -0.3445 6.7205 -0.5945 -0.1325 7.1348 -0.2583 0.0997 7.1633 0.3967 0.3168 6.8015 0.562 0.4856 6.1045 0.0334 0.5805 5.1786 -0.5364" />
+    <PositionInterpolator DEF="Squish4" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.8651 1.3362 0.8651 0.8632 1.3422 0.8632 0.8889 1.2657 0.8889 0.9456 1.1183 0.9456 1.0412 0.9224 1.0412 1.0587 0.8921 1.0587 0.9567 1.0926 0.9567 0.8949 1.2486 0.8949 0.8651 1.3362 0.8651 0.8632 1.3422 0.8632 0.8889 1.2657 0.8889 0.9456 1.1183 0.9456 1.0412 0.9224 1.0412 1.0587 0.8921 1.0587 0.9567 1.0926 0.9567 0.8949 1.2486 0.8949 0.8651 1.3362 0.8651" />
+    <PositionChaser DEF="Glide4" duration="1.6" initialDestination="0.5805 5.1786 -0.5364" initialValue="0.5805 5.1786 -0.5364" />
+    <PositionChaser DEF="Soft4" duration="0.9" initialDestination="0.8651 1.3362 0.8651" initialValue="0.8651 1.3362 0.8651" />
+    <PositionChaser DEF="Trail4" duration="2.6" initialDestination="0.5805 5.1786 -0.5364" initialValue="0.5805 5.1786 -0.5364" />
+    <ColorChaser DEF="Skin4" duration="2.2" initialDestination="1 0.25 0.1" initialValue="1 0.25 0.1" />
+    <ROUTE fromNode="Slow4" fromField="fraction_changed" toNode="Path4" toField="set_fraction" />
+    <ROUTE fromNode="Slow4" fromField="fraction_changed" toNode="Squish4" toField="set_fraction" />
+    <ROUTE fromNode="Fast4" fromField="fraction_changed" toNode="Path4" toField="set_fraction" />
+    <ROUTE fromNode="Fast4" fromField="fraction_changed" toNode="Squish4" toField="set_fraction" />
+    <ROUTE fromNode="Path4" fromField="value_changed" toNode="Glide4" toField="set_destination" />
+    <ROUTE fromNode="Squish4" fromField="value_changed" toNode="Soft4" toField="set_destination" />
+    <ROUTE fromNode="Glide4" fromField="value_changed" toNode="Blob4" toField="translation" />
+    <ROUTE fromNode="Soft4" fromField="value_changed" toNode="Blob4" toField="scale" />
+    <ROUTE fromNode="Glide4" fromField="value_changed" toNode="Trail4" toField="set_destination" />
+    <ROUTE fromNode="Trail4" fromField="value_changed" toNode="Drop4" toField="translation" />
+    <ROUTE fromNode="Skin4" fromField="value_changed" toNode="Paint4" toField="baseColor" />
+    <ROUTE fromNode="Skin4" fromField="value_changed" toNode="Paint4" toField="emissiveColor" />
+    <ROUTE fromNode="Skin4" fromField="value_changed" toNode="DropPaint4" toField="baseColor" />
+    <ROUTE fromNode="Skin4" fromField="value_changed" toNode="DropPaint4" toField="emissiveColor" />
+    <TimeSensor DEF="Slow5" cycleInterval="43" loop="true" />
+    <TimeSensor DEF="Fast5" cycleInterval="19" loop="true" enabled="false" />
+    <PositionInterpolator DEF="Path5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.5851 2.9789 0.5028 0.2482 3.8802 0.3495 -0.3951 4.8911 0.1431 -0.5506 5.8577 -0.0851 -0.0263 6.6328 -0.3004 0.5305 7.0984 -0.4699 0.4323 7.1837 -0.5679 -0.1996 6.8756 -0.5794 -0.5851 6.2211 -0.5028 -0.2482 5.3198 -0.3495 0.3951 4.3089 -0.1431 0.5506 3.3423 0.0851 0.0263 2.5672 0.3004 -0.5305 2.1016 0.4699 -0.4323 2.0163 0.5679 0.1996 2.3244 0.5794 0.5851 2.9789 0.5028" />
+    <PositionInterpolator DEF="Squish5" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.9017 1.23 0.9017 0.8676 1.3285 0.8676 0.8618 1.3465 0.8618 0.8834 1.2814 0.8834 0.9354 1.1429 0.9354 1.0248 0.9523 1.0248 1.0773 0.8616 1.0773 0.9685 1.066 0.9685 0.9017 1.23 0.9017 0.8676 1.3285 0.8676 0.8618 1.3465 0.8618 0.8834 1.2814 0.8834 0.9354 1.1429 0.9354 1.0248 0.9523 1.0248 1.0773 0.8616 1.0773 0.9685 1.066 0.9685 0.9017 1.23 0.9017" />
+    <PositionChaser DEF="Glide5" duration="1.6" initialDestination="0.5851 2.9789 0.5028" initialValue="0.5851 2.9789 0.5028" />
+    <PositionChaser DEF="Soft5" duration="0.9" initialDestination="0.9017 1.23 0.9017" initialValue="0.9017 1.23 0.9017" />
+    <PositionChaser DEF="Trail5" duration="2.6" initialDestination="0.5851 2.9789 0.5028" initialValue="0.5851 2.9789 0.5028" />
+    <ColorChaser DEF="Skin5" duration="2.2" initialDestination="1 0.6 0.1" initialValue="1 0.6 0.1" />
+    <ROUTE fromNode="Slow5" fromField="fraction_changed" toNode="Path5" toField="set_fraction" />
+    <ROUTE fromNode="Slow5" fromField="fraction_changed" toNode="Squish5" toField="set_fraction" />
+    <ROUTE fromNode="Fast5" fromField="fraction_changed" toNode="Path5" toField="set_fraction" />
+    <ROUTE fromNode="Fast5" fromField="fraction_changed" toNode="Squish5" toField="set_fraction" />
+    <ROUTE fromNode="Path5" fromField="value_changed" toNode="Glide5" toField="set_destination" />
+    <ROUTE fromNode="Squish5" fromField="value_changed" toNode="Soft5" toField="set_destination" />
+    <ROUTE fromNode="Glide5" fromField="value_changed" toNode="Blob5" toField="translation" />
+    <ROUTE fromNode="Soft5" fromField="value_changed" toNode="Blob5" toField="scale" />
+    <ROUTE fromNode="Glide5" fromField="value_changed" toNode="Trail5" toField="set_destination" />
+    <ROUTE fromNode="Trail5" fromField="value_changed" toNode="Drop5" toField="translation" />
+    <ROUTE fromNode="Skin5" fromField="value_changed" toNode="Paint5" toField="baseColor" />
+    <ROUTE fromNode="Skin5" fromField="value_changed" toNode="Paint5" toField="emissiveColor" />
+    <ROUTE fromNode="Skin5" fromField="value_changed" toNode="DropPaint5" toField="baseColor" />
+    <ROUTE fromNode="Skin5" fromField="value_changed" toNode="DropPaint5" toField="emissiveColor" />
+    <TimeSensor DEF="Slow6" cycleInterval="47" loop="true" />
+    <TimeSensor DEF="Fast6" cycleInterval="23" loop="true" enabled="false" />
+    <PositionInterpolator DEF="Path6" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="-0.1091 6.9425 -0.3366 0.348 6.3325 -0.5986 0.6012 5.4587 -0.5099 0.5022 4.4542 -0.1226 0.1091 3.4719 0.3366 -0.348 2.6613 0.5986 -0.6012 2.1459 0.5099 -0.5022 2.0041 0.1226 -0.1091 2.2575 -0.3366 0.348 2.8675 -0.5986 0.6012 3.7413 -0.5099 0.5022 4.7458 -0.1226 0.1091 5.7281 0.3366 -0.348 6.5387 0.5986 -0.6012 7.0541 0.5099 -0.5022 7.1959 0.1226 -0.1091 6.9425 -0.3366" />
+    <PositionInterpolator DEF="Squish6" key="0 0.0625 0.125 0.1875 0.25 0.3125 0.375 0.4375 0.5 0.5625 0.625 0.6875 0.75 0.8125 0.875 0.9375 1" keyValue="0.9812 1.0386 0.9812 0.9091 1.2101 0.9091 0.8707 1.3191 0.8707 0.8609 1.3491 0.8609 0.8786 1.2955 0.8786 0.9259 1.1665 0.9259 1.0093 0.9817 1.0093 1.0971 0.8308 1.0971 0.9812 1.0386 0.9812 0.9091 1.2101 0.9091 0.8707 1.3191 0.8707 0.8609 1.3491 0.8609 0.8786 1.2955 0.8786 0.9259 1.1665 0.9259 1.0093 0.9817 1.0093 1.0971 0.8308 1.0971 0.9812 1.0386 0.9812" />
+    <PositionChaser DEF="Glide6" duration="1.6" initialDestination="-0.1091 6.9425 -0.3366" initialValue="-0.1091 6.9425 -0.3366" />
+    <PositionChaser DEF="Soft6" duration="0.9" initialDestination="0.9812 1.0386 0.9812" initialValue="0.9812 1.0386 0.9812" />
+    <PositionChaser DEF="Trail6" duration="2.6" initialDestination="-0.1091 6.9425 -0.3366" initialValue="-0.1091 6.9425 -0.3366" />
+    <ColorChaser DEF="Skin6" duration="2.2" initialDestination="1 0.2 0.5" initialValue="1 0.2 0.5" />
+    <ROUTE fromNode="Slow6" fromField="fraction_changed" toNode="Path6" toField="set_fraction" />
+    <ROUTE fromNode="Slow6" fromField="fraction_changed" toNode="Squish6" toField="set_fraction" />
+    <ROUTE fromNode="Fast6" fromField="fraction_changed" toNode="Path6" toField="set_fraction" />
+    <ROUTE fromNode="Fast6" fromField="fraction_changed" toNode="Squish6" toField="set_fraction" />
+    <ROUTE fromNode="Path6" fromField="value_changed" toNode="Glide6" toField="set_destination" />
+    <ROUTE fromNode="Squish6" fromField="value_changed" toNode="Soft6" toField="set_destination" />
+    <ROUTE fromNode="Glide6" fromField="value_changed" toNode="Blob6" toField="translation" />
+    <ROUTE fromNode="Soft6" fromField="value_changed" toNode="Blob6" toField="scale" />
+    <ROUTE fromNode="Glide6" fromField="value_changed" toNode="Trail6" toField="set_destination" />
+    <ROUTE fromNode="Trail6" fromField="value_changed" toNode="Drop6" toField="translation" />
+    <ROUTE fromNode="Skin6" fromField="value_changed" toNode="Paint6" toField="baseColor" />
+    <ROUTE fromNode="Skin6" fromField="value_changed" toNode="Paint6" toField="emissiveColor" />
+    <ROUTE fromNode="Skin6" fromField="value_changed" toNode="DropPaint6" toField="baseColor" />
+    <ROUTE fromNode="Skin6" fromField="value_changed" toNode="DropPaint6" toField="emissiveColor" />
+    <ColorChaser DEF="BackTone" duration="2.2" initialDestination="0.28 0.07 0.028" initialValue="0.28 0.07 0.028" />
+    <ColorChaser DEF="LampTone" duration="2.2" initialDestination="1 0.25 0.1" initialValue="1 0.25 0.1" />
+    <TimeSensor DEF="PalClock0" cycleInterval="13" loop="true" enabled="true" />
+    <ColorInterpolator DEF="Mix0_0" key="0 0.25 0.5 0.75 1" keyValue="1 0.25 0.1 1 0.6 0.1 1 0.2 0.5 1 0.85 0.3 1 0.25 0.1" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Mix0_0" toField="set_fraction" />
+    <ROUTE fromNode="Mix0_0" fromField="value_changed" toNode="Skin0" toField="set_destination" />
+    <ColorInterpolator DEF="Mix0_1" key="0 0.25 0.5 0.75 1" keyValue="1 0.6 0.1 1 0.2 0.5 1 0.85 0.3 1 0.25 0.1 1 0.6 0.1" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Mix0_1" toField="set_fraction" />
+    <ROUTE fromNode="Mix0_1" fromField="value_changed" toNode="Skin1" toField="set_destination" />
+    <ColorInterpolator DEF="Mix0_2" key="0 0.25 0.5 0.75 1" keyValue="1 0.2 0.5 1 0.85 0.3 1 0.25 0.1 1 0.6 0.1 1 0.2 0.5" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Mix0_2" toField="set_fraction" />
+    <ROUTE fromNode="Mix0_2" fromField="value_changed" toNode="Skin2" toField="set_destination" />
+    <ColorInterpolator DEF="Mix0_3" key="0 0.25 0.5 0.75 1" keyValue="1 0.85 0.3 1 0.25 0.1 1 0.6 0.1 1 0.2 0.5 1 0.85 0.3" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Mix0_3" toField="set_fraction" />
+    <ROUTE fromNode="Mix0_3" fromField="value_changed" toNode="Skin3" toField="set_destination" />
+    <ColorInterpolator DEF="Mix0_4" key="0 0.25 0.5 0.75 1" keyValue="1 0.25 0.1 1 0.6 0.1 1 0.2 0.5 1 0.85 0.3 1 0.25 0.1" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Mix0_4" toField="set_fraction" />
+    <ROUTE fromNode="Mix0_4" fromField="value_changed" toNode="Skin4" toField="set_destination" />
+    <ColorInterpolator DEF="Mix0_5" key="0 0.25 0.5 0.75 1" keyValue="1 0.6 0.1 1 0.2 0.5 1 0.85 0.3 1 0.25 0.1 1 0.6 0.1" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Mix0_5" toField="set_fraction" />
+    <ROUTE fromNode="Mix0_5" fromField="value_changed" toNode="Skin5" toField="set_destination" />
+    <ColorInterpolator DEF="Mix0_6" key="0 0.25 0.5 0.75 1" keyValue="1 0.2 0.5 1 0.85 0.3 1 0.25 0.1 1 0.6 0.1 1 0.2 0.5" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Mix0_6" toField="set_fraction" />
+    <ROUTE fromNode="Mix0_6" fromField="value_changed" toNode="Skin6" toField="set_destination" />
+    <ColorInterpolator DEF="Tone0" key="0 0.25 0.5 0.75 1" keyValue="1 0.25 0.1 1 0.85 0.3 1 0.2 0.5 1 0.6 0.1 1 0.25 0.1" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Tone0" toField="set_fraction" />
+    <ROUTE fromNode="Tone0" fromField="value_changed" toNode="LampTone" toField="set_destination" />
+    <ColorInterpolator DEF="Dim0" key="0 0.25 0.5 0.75 1" keyValue="0.28 0.07 0.028 0.28 0.238 0.084 0.28 0.056 0.14 0.28 0.168 0.028 0.28 0.07 0.028" />
+    <ROUTE fromNode="PalClock0" fromField="fraction_changed" toNode="Dim0" toField="set_fraction" />
+    <ROUTE fromNode="Dim0" fromField="value_changed" toNode="BackTone" toField="set_destination" />
+    <TimeSensor DEF="PalClock1" cycleInterval="13" loop="true" enabled="false" />
+    <ColorInterpolator DEF="Mix1_0" key="0 0.25 0.5 0.75 1" keyValue="0.1 0.6 1 0.1 0.95 0.8 0.5 0.3 1 0.25 0.8 1 0.1 0.6 1" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Mix1_0" toField="set_fraction" />
+    <ROUTE fromNode="Mix1_0" fromField="value_changed" toNode="Skin0" toField="set_destination" />
+    <ColorInterpolator DEF="Mix1_1" key="0 0.25 0.5 0.75 1" keyValue="0.1 0.95 0.8 0.5 0.3 1 0.25 0.8 1 0.1 0.6 1 0.1 0.95 0.8" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Mix1_1" toField="set_fraction" />
+    <ROUTE fromNode="Mix1_1" fromField="value_changed" toNode="Skin1" toField="set_destination" />
+    <ColorInterpolator DEF="Mix1_2" key="0 0.25 0.5 0.75 1" keyValue="0.5 0.3 1 0.25 0.8 1 0.1 0.6 1 0.1 0.95 0.8 0.5 0.3 1" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Mix1_2" toField="set_fraction" />
+    <ROUTE fromNode="Mix1_2" fromField="value_changed" toNode="Skin2" toField="set_destination" />
+    <ColorInterpolator DEF="Mix1_3" key="0 0.25 0.5 0.75 1" keyValue="0.25 0.8 1 0.1 0.6 1 0.1 0.95 0.8 0.5 0.3 1 0.25 0.8 1" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Mix1_3" toField="set_fraction" />
+    <ROUTE fromNode="Mix1_3" fromField="value_changed" toNode="Skin3" toField="set_destination" />
+    <ColorInterpolator DEF="Mix1_4" key="0 0.25 0.5 0.75 1" keyValue="0.1 0.6 1 0.1 0.95 0.8 0.5 0.3 1 0.25 0.8 1 0.1 0.6 1" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Mix1_4" toField="set_fraction" />
+    <ROUTE fromNode="Mix1_4" fromField="value_changed" toNode="Skin4" toField="set_destination" />
+    <ColorInterpolator DEF="Mix1_5" key="0 0.25 0.5 0.75 1" keyValue="0.1 0.95 0.8 0.5 0.3 1 0.25 0.8 1 0.1 0.6 1 0.1 0.95 0.8" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Mix1_5" toField="set_fraction" />
+    <ROUTE fromNode="Mix1_5" fromField="value_changed" toNode="Skin5" toField="set_destination" />
+    <ColorInterpolator DEF="Mix1_6" key="0 0.25 0.5 0.75 1" keyValue="0.5 0.3 1 0.25 0.8 1 0.1 0.6 1 0.1 0.95 0.8 0.5 0.3 1" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Mix1_6" toField="set_fraction" />
+    <ROUTE fromNode="Mix1_6" fromField="value_changed" toNode="Skin6" toField="set_destination" />
+    <ColorInterpolator DEF="Tone1" key="0 0.25 0.5 0.75 1" keyValue="0.1 0.6 1 0.25 0.8 1 0.5 0.3 1 0.1 0.95 0.8 0.1 0.6 1" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Tone1" toField="set_fraction" />
+    <ROUTE fromNode="Tone1" fromField="value_changed" toNode="LampTone" toField="set_destination" />
+    <ColorInterpolator DEF="Dim1" key="0 0.25 0.5 0.75 1" keyValue="0.028 0.168 0.28 0.07 0.224 0.28 0.14 0.084 0.28 0.028 0.266 0.224 0.028 0.168 0.28" />
+    <ROUTE fromNode="PalClock1" fromField="fraction_changed" toNode="Dim1" toField="set_fraction" />
+    <ROUTE fromNode="Dim1" fromField="value_changed" toNode="BackTone" toField="set_destination" />
+    <TimeSensor DEF="PalClock2" cycleInterval="13" loop="true" enabled="false" />
+    <ColorInterpolator DEF="Mix2_0" key="0 0.25 0.5 0.75 1" keyValue="0.5 1 0.15 0.1 1 0.5 1 1 0.2 0.2 0.9 0.25 0.5 1 0.15" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Mix2_0" toField="set_fraction" />
+    <ROUTE fromNode="Mix2_0" fromField="value_changed" toNode="Skin0" toField="set_destination" />
+    <ColorInterpolator DEF="Mix2_1" key="0 0.25 0.5 0.75 1" keyValue="0.1 1 0.5 1 1 0.2 0.2 0.9 0.25 0.5 1 0.15 0.1 1 0.5" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Mix2_1" toField="set_fraction" />
+    <ROUTE fromNode="Mix2_1" fromField="value_changed" toNode="Skin1" toField="set_destination" />
+    <ColorInterpolator DEF="Mix2_2" key="0 0.25 0.5 0.75 1" keyValue="1 1 0.2 0.2 0.9 0.25 0.5 1 0.15 0.1 1 0.5 1 1 0.2" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Mix2_2" toField="set_fraction" />
+    <ROUTE fromNode="Mix2_2" fromField="value_changed" toNode="Skin2" toField="set_destination" />
+    <ColorInterpolator DEF="Mix2_3" key="0 0.25 0.5 0.75 1" keyValue="0.2 0.9 0.25 0.5 1 0.15 0.1 1 0.5 1 1 0.2 0.2 0.9 0.25" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Mix2_3" toField="set_fraction" />
+    <ROUTE fromNode="Mix2_3" fromField="value_changed" toNode="Skin3" toField="set_destination" />
+    <ColorInterpolator DEF="Mix2_4" key="0 0.25 0.5 0.75 1" keyValue="0.5 1 0.15 0.1 1 0.5 1 1 0.2 0.2 0.9 0.25 0.5 1 0.15" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Mix2_4" toField="set_fraction" />
+    <ROUTE fromNode="Mix2_4" fromField="value_changed" toNode="Skin4" toField="set_destination" />
+    <ColorInterpolator DEF="Mix2_5" key="0 0.25 0.5 0.75 1" keyValue="0.1 1 0.5 1 1 0.2 0.2 0.9 0.25 0.5 1 0.15 0.1 1 0.5" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Mix2_5" toField="set_fraction" />
+    <ROUTE fromNode="Mix2_5" fromField="value_changed" toNode="Skin5" toField="set_destination" />
+    <ColorInterpolator DEF="Mix2_6" key="0 0.25 0.5 0.75 1" keyValue="1 1 0.2 0.2 0.9 0.25 0.5 1 0.15 0.1 1 0.5 1 1 0.2" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Mix2_6" toField="set_fraction" />
+    <ROUTE fromNode="Mix2_6" fromField="value_changed" toNode="Skin6" toField="set_destination" />
+    <ColorInterpolator DEF="Tone2" key="0 0.25 0.5 0.75 1" keyValue="0.5 1 0.15 0.2 0.9 0.25 1 1 0.2 0.1 1 0.5 0.5 1 0.15" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Tone2" toField="set_fraction" />
+    <ROUTE fromNode="Tone2" fromField="value_changed" toNode="LampTone" toField="set_destination" />
+    <ColorInterpolator DEF="Dim2" key="0 0.25 0.5 0.75 1" keyValue="0.14 0.28 0.042 0.056 0.252 0.07 0.28 0.28 0.056 0.028 0.28 0.14 0.14 0.28 0.042" />
+    <ROUTE fromNode="PalClock2" fromField="fraction_changed" toNode="Dim2" toField="set_fraction" />
+    <ROUTE fromNode="Dim2" fromField="value_changed" toNode="BackTone" toField="set_destination" />
+    <TimeSensor DEF="PalClock3" cycleInterval="13" loop="true" enabled="false" />
+    <ColorInterpolator DEF="Mix3_0" key="0 0.25 0.5 0.75 1" keyValue="1 0.4 0.8 0.7 0.4 1 1 0.75 0.9 0.5 0.6 1 1 0.4 0.8" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Mix3_0" toField="set_fraction" />
+    <ROUTE fromNode="Mix3_0" fromField="value_changed" toNode="Skin0" toField="set_destination" />
+    <ColorInterpolator DEF="Mix3_1" key="0 0.25 0.5 0.75 1" keyValue="0.7 0.4 1 1 0.75 0.9 0.5 0.6 1 1 0.4 0.8 0.7 0.4 1" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Mix3_1" toField="set_fraction" />
+    <ROUTE fromNode="Mix3_1" fromField="value_changed" toNode="Skin1" toField="set_destination" />
+    <ColorInterpolator DEF="Mix3_2" key="0 0.25 0.5 0.75 1" keyValue="1 0.75 0.9 0.5 0.6 1 1 0.4 0.8 0.7 0.4 1 1 0.75 0.9" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Mix3_2" toField="set_fraction" />
+    <ROUTE fromNode="Mix3_2" fromField="value_changed" toNode="Skin2" toField="set_destination" />
+    <ColorInterpolator DEF="Mix3_3" key="0 0.25 0.5 0.75 1" keyValue="0.5 0.6 1 1 0.4 0.8 0.7 0.4 1 1 0.75 0.9 0.5 0.6 1" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Mix3_3" toField="set_fraction" />
+    <ROUTE fromNode="Mix3_3" fromField="value_changed" toNode="Skin3" toField="set_destination" />
+    <ColorInterpolator DEF="Mix3_4" key="0 0.25 0.5 0.75 1" keyValue="1 0.4 0.8 0.7 0.4 1 1 0.75 0.9 0.5 0.6 1 1 0.4 0.8" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Mix3_4" toField="set_fraction" />
+    <ROUTE fromNode="Mix3_4" fromField="value_changed" toNode="Skin4" toField="set_destination" />
+    <ColorInterpolator DEF="Mix3_5" key="0 0.25 0.5 0.75 1" keyValue="0.7 0.4 1 1 0.75 0.9 0.5 0.6 1 1 0.4 0.8 0.7 0.4 1" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Mix3_5" toField="set_fraction" />
+    <ROUTE fromNode="Mix3_5" fromField="value_changed" toNode="Skin5" toField="set_destination" />
+    <ColorInterpolator DEF="Mix3_6" key="0 0.25 0.5 0.75 1" keyValue="1 0.75 0.9 0.5 0.6 1 1 0.4 0.8 0.7 0.4 1 1 0.75 0.9" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Mix3_6" toField="set_fraction" />
+    <ROUTE fromNode="Mix3_6" fromField="value_changed" toNode="Skin6" toField="set_destination" />
+    <ColorInterpolator DEF="Tone3" key="0 0.25 0.5 0.75 1" keyValue="1 0.4 0.8 0.5 0.6 1 1 0.75 0.9 0.7 0.4 1 1 0.4 0.8" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Tone3" toField="set_fraction" />
+    <ROUTE fromNode="Tone3" fromField="value_changed" toNode="LampTone" toField="set_destination" />
+    <ColorInterpolator DEF="Dim3" key="0 0.25 0.5 0.75 1" keyValue="0.28 0.112 0.224 0.14 0.168 0.28 0.28 0.21 0.252 0.196 0.112 0.28 0.28 0.112 0.224" />
+    <ROUTE fromNode="PalClock3" fromField="fraction_changed" toNode="Dim3" toField="set_fraction" />
+    <ROUTE fromNode="Dim3" fromField="value_changed" toNode="BackTone" toField="set_destination" />
+    <ROUTE fromNode="LampTone" fromField="value_changed" toNode="BulbPaint" toField="baseColor" />
+    <ROUTE fromNode="LampTone" fromField="value_changed" toNode="BulbPaint" toField="emissiveColor" />
+    <ROUTE fromNode="LampTone" fromField="value_changed" toNode="ColourPaint" toField="baseColor" />
+    <ROUTE fromNode="LampTone" fromField="value_changed" toNode="ColourPaint" toField="emissiveColor" />
+    <ROUTE fromNode="BackTone" fromField="value_changed" toNode="PoolPaint" toField="baseColor" />
+    <ROUTE fromNode="BackTone" fromField="value_changed" toNode="PoolPaint" toField="emissiveColor" />
+    <ROUTE fromNode="BackTone" fromField="value_changed" toNode="HaloPaint" toField="baseColor" />
+    <ROUTE fromNode="BackTone" fromField="value_changed" toNode="HaloPaint" toField="emissiveColor" />
+    <ROUTE fromNode="LampTone" fromField="value_changed" toNode="Lamp" toField="color" />
+    <BooleanFilter DEF="HeatF" />
+    <ROUTE fromNode="HeatTouch" fromField="isActive" toNode="HeatF" toField="set_boolean" />
+    <BooleanFilter DEF="CoolF" />
+    <ROUTE fromNode="CoolTouch" fromField="isActive" toNode="CoolF" toField="set_boolean" />
+    <BooleanFilter DEF="ColourF" />
+    <ROUTE fromNode="ColourTouch" fromField="isActive" toNode="ColourF" toField="set_boolean" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="Fast0" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="Slow0" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="Slow0" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="Fast0" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="Fast1" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="Slow1" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="Slow1" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="Fast1" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="Fast2" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="Slow2" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="Slow2" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="Fast2" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="Fast3" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="Slow3" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="Slow3" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="Fast3" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="Fast4" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="Slow4" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="Slow4" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="Fast4" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="Fast5" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="Slow5" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="Slow5" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="Fast5" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="Fast6" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="Slow6" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="Slow6" toField="enabled" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="Fast6" toField="enabled" />
+    <ROUTE fromNode="HeatF" fromField="inputTrue" toNode="HeatLamp" toField="visible" />
+    <ROUTE fromNode="CoolF" fromField="inputFalse" toNode="HeatLamp" toField="visible" />
+    <ROUTE fromNode="CoolF" fromField="inputTrue" toNode="CoolLamp" toField="visible" />
+    <ROUTE fromNode="HeatF" fromField="inputFalse" toNode="CoolLamp" toField="visible" />
+    <BooleanToggle DEF="Spark" />
+    <ROUTE fromNode="ColourF" fromField="inputTrue" toNode="Spark" toField="set_boolean" />
+    <ROUTE fromNode="Spark" fromField="toggle_changed" toNode="ColourSpark" toField="visible" />
+    <BooleanSequencer DEF="Step0" key="0 0.25 0.5 0.75" keyValue="false false false true" />
+    <ROUTE fromNode="ColourF" fromField="inputTrue" toNode="Step0" toField="next" />
+    <ROUTE fromNode="Step0" fromField="value_changed" toNode="PalClock0" toField="enabled" />
+    <BooleanSequencer DEF="Step1" key="0 0.25 0.5 0.75" keyValue="true false false false" />
+    <ROUTE fromNode="ColourF" fromField="inputTrue" toNode="Step1" toField="next" />
+    <ROUTE fromNode="Step1" fromField="value_changed" toNode="PalClock1" toField="enabled" />
+    <BooleanSequencer DEF="Step2" key="0 0.25 0.5 0.75" keyValue="false true false false" />
+    <ROUTE fromNode="ColourF" fromField="inputTrue" toNode="Step2" toField="next" />
+    <ROUTE fromNode="Step2" fromField="value_changed" toNode="PalClock2" toField="enabled" />
+    <BooleanSequencer DEF="Step3" key="0 0.25 0.5 0.75" keyValue="false false true false" />
+    <ROUTE fromNode="ColourF" fromField="inputTrue" toNode="Step3" toField="next" />
+    <ROUTE fromNode="Step3" fromField="value_changed" toNode="PalClock3" toField="enabled" />
+  </Scene>
+</X3D>
