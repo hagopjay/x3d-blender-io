@@ -225,12 +225,19 @@
   "CollidableOffset": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_6.x3d"
+   ]
   },
   "CollidableShape": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d"
+   ]
   },
   "Collision": {
    "read": "structural",
@@ -246,7 +253,9 @@
    "read_evidence": "",
    "written": "observed",
    "written_by": [
-    "tests/behaviour/wired-collision.x3d"
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/behaviour/wired-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d"
    ]
   },
   "CollisionSensor": {
@@ -746,7 +755,10 @@
   "IndexedTriangleFanSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "IndexedTriangleSet": {
    "read": "builds",
@@ -759,7 +771,10 @@
   "IndexedTriangleStripSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "Inline": {
    "read": "builds",
@@ -1256,8 +1271,8 @@
    "written": "observed",
    "written_by": [
     "behaviour_graph:PositionInterpolator",
-    "tests/behaviour/demos/gallery-02-disco-floor/gallery-02-disco-floor.x3d",
-    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d"
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/behaviour/demos/gallery-02-disco-floor/gallery-02-disco-floor.x3d"
    ]
   },
   "PositionInterpolator2D": {
@@ -1326,12 +1341,20 @@
   "RigidBody": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d"
+   ]
   },
   "RigidBodyCollection": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_rigid_world']",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d"
+   ]
   },
   "ScalarChaser": {
    "read": "none",
@@ -1422,9 +1445,12 @@
    "written": "no"
   },
   "SingleAxisHingeJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_6.x3d"
+   ]
   },
   "SliderJoint": {
    "read": "none",
@@ -1704,12 +1730,18 @@
   "TriangleFanSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "TriangleSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "TriangleSet2D": {
    "read": "builds",
@@ -1719,7 +1751,10 @@
   "TriangleStripSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "TwoSidedMaterial": {
    "read": "builds",
