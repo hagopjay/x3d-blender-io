@@ -256,6 +256,12 @@ def make_cases(out: Path, port: int) -> list[dict]:
     add("r2r_ifs_cull_huge", "replay", "an IndexedFaceSet on the vertex-cull path with an index past the points",
         _x3d(shape("IndexedFaceSet", "creaseAngle='1' coordIndex='0 2147483638 2 3 -1'",
                    f"<Coordinate point='{grid}'/>")))
+    # the weekly run (28 Nov 2026)
+    add("r2r_sound_oscillator", "replay", "a Sound on an OscillatorSource, and an empty Sound (AttributeError)",
+        _x3d(f"<Sound><OscillatorSource frequency='440'/></Sound><Sound/>{QUAD}"))
+    add("r2r_extrusion_one_point", "replay", "Extrusions whose crossSection is all one point, or one point",
+        _x3d("<Shape><Extrusion crossSection='0 0 0 0 0 0' spine='0 0 0 0 1 0'/></Shape>"
+             "<Shape><Extrusion crossSection='1 1' spine='0 0 0 0 1 0'/></Shape>"))
 
     rows = []
     for name, family, why, data in cases:

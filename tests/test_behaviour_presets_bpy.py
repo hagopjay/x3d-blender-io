@@ -155,12 +155,13 @@ class PresetsToGraphTests(unittest.TestCase):
         nodes_before, routes_before = self._behaviour_of_presets(before)
         nodes_after, routes_after = self._behaviour_of_presets(after)
         types = sorted(key[0] for key in nodes_before if key[0] != "target")
+        # one PositionInterpolator for the Door's position; 2.9.0 also wrote a scale one (SI_Door) for float32 noise
+        # in the scale of a turning Door, which the sampler now reads as still (chaos round 4, 2.9.1)
         self.assertEqual(types, sorted(["BooleanFilter", "OrientationInterpolator", "PositionInterpolator",
-                                        "PositionInterpolator", "ProximitySensor", "TimeSensor", "TouchSensor",
-                                        "TouchSensor"]))
+                                        "ProximitySensor", "TimeSensor", "TouchSensor", "TouchSensor"]))
         self.assertEqual(nodes_before, nodes_after)
         self.assertEqual(routes_before, routes_after)
-        self.assertEqual(len(routes_after), 10)
+        self.assertEqual(len(routes_after), 8)   # 10 with the noise scale interpolator's two ROUTEs (2.9.0)
         # the converted file must not write the behaviour twice
         self.assertEqual(after.count(b"<TouchSensor"), 2)
         self.assertEqual(after.count(b"<ProximitySensor"), 1)

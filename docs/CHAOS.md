@@ -271,3 +271,34 @@ giving the default. The X3D 4 writer was already gated.
 itself. Five of the six live rules were one fault each; the sixth (MetadataBoolean) was also explained, at Suspected,
 by a second rule on the same single file ("a USE before its DEF"), which the fix closed too. One file behind a rule is
 not enough to tell which of its features is the cause; the engine said so by grading it Suspected.
+
+## Fourth round (2.9.1, 28 Nov 2026): the receipt-to-rule weekly run
+
+The engine's weekly run (x3d.loom #240, `runs/r2r-weekly-20261128/`) replayed every kept rule on 2.9.0 against 2,300
+real files. Nothing regressed from 2.7.4, and it found four old defects, all Confirmed on 2.9.0 and 2.7.4. 2.9.1
+fixes them; tests are in `tests/test_chaos_round4_bpy.py`.
+
+| Defect | 2.9.0 | 2.9.1 |
+|---|---|---|
+| A Sound whose source is an OscillatorSource, or an empty `<Sound/>` (real file: x3d.loom `x3d.threejs/bridge/fixtures/Sound.x3d`) | AttributeError in `importAudio`: the url was read before the None check | a speaker with no sound, and a warning naming the source that is not imported |
+| An Extrusion whose crossSection points are all equal (real file: x3d.ml `obj-05.x3d`, written by a language model), or one point | ZeroDivisionError / TypeError | skipped with a warning (it sweeps no surface); a flat cap no longer divides by zero |
+| Animation export: every object sampled at every frame, the parent inverted once per child per frame, and float32 noise read as motion | x3d.loom `0-0-feel-lab.x3d` (67 KB, 5 interpolators) exported as 45.5 MB in 36 s | 1.6 MB in 5 s (bpy 5.3.0, Confirmed) |
+| A bold or italic Text entered edit mode, and each mode switch evaluated every text | `segment-sphere.x3d` (646 Text, 2 bold) imported in 23 s here (43 s in the weekly run) | 3.1 s (Confirmed) |
+
+The export now samples only an object that can move: it, or an ancestor between it and its exported parent, has an
+action, NLA tracks, drivers, constraints or a rigid body (or its parent moves it through a bone or vertex). It inverts
+each parent once per frame, and a channel within float32 noise (relative 1e-6, absolute 1e-7) of its first value is
+still. One test changed for this: the behaviour-presets acceptance test expected a scale interpolator on a turning
+Door, which was float32 noise in its scale.
+
+**Tried and not kept**: thinning keys that the interpolators reproduce from their neighbours (lerp, slerp) took the
+same level to 0.66 MB, but it broke the round-trip fixed point: the re-export picked slightly different keys (the
+suite's orbiting child, 108 then 105 values). A thinning that is a fixed point is listed for a later round.
+
+| Run (bpy 5.3.0 unless named) | 2.9.1 |
+|---|---|
+| The two real crash files (Sound.x3d, obj-05.x3d), each under a 6 GB limit | 2 of 2 crash on 2.9.0, 0 of 2 on 2.9.1 (Confirmed) |
+| Hostile files, with 2 new `replay` cases for the two crashes | 0 of 75 (Confirmed) |
+| Scene chaos rng 7, 11, 23 (per-op 2) | 0 gated of 46 each (Confirmed) |
+| Full bpy test suite with strict validation | 1,709 tests OK (Confirmed) |
+| Export suite on Blender 5.2.2: conformance, fixed point with the first-trip budget, invariants, mapping check | 148 of 148; PASS; PASS; PASS (Confirmed) |

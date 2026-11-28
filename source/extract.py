@@ -1021,7 +1021,9 @@ def canonical_axis_angle(axis, angle) -> tuple[float, float, float, float]:
 def _matrix_transform(matrix) -> IRTransform:
     # an axis of length 0 too: Blender's decompose() makes up its direction, so a scale='0 1 1' Transform's rotation
     # moved by 0.04 rad per round trip (chaos round 2.7.3); _decompose64 rebuilds it from the other two axes
-    if any(s > _DECOMPOSE_FLOAT32_LIMIT or s < 1.0 / _DECOMPOSE_FLOAT32_LIMIT for s in axis_scales(matrix)):
+    # column lengths in plain Python: numpy's norm on one 3x3 was a third of a 495,600-sample animation export
+    scales = [math.hypot(matrix[0][c], matrix[1][c], matrix[2][c]) for c in range(3)]
+    if any(s > _DECOMPOSE_FLOAT32_LIMIT or s < 1.0 / _DECOMPOSE_FLOAT32_LIMIT for s in scales):
         loc, rot, scale = _decompose64(matrix)
     else:
         loc, rot, scale = matrix.decompose()
@@ -1427,6 +1429,37 @@ def bind_first(instances, camera_name) -> bool:
     return False
 
 
+_STILL_REL, _STILL_ABS = 1e-6, 1e-7   # float32 noise, the same bound scene chaos calls float32-noise
+
+
+def _close(a, b) -> bool:
+    return all(math.isclose(x, y, rel_tol=_STILL_REL, abs_tol=_STILL_ABS) for x, y in zip(a, b))
+
+
+def _moves_itself(obj) -> bool:
+    """An action, NLA tracks, drivers, constraints or a rigid body: something can change this object's transform."""
+    animation = getattr(obj, "animation_data", None)
+    if animation is not None and (animation.action is not None or len(animation.drivers) or len(animation.nla_tracks)):
+        return True
+    return bool(len(getattr(obj, "constraints", ())) or getattr(obj, "rigid_body", None) is not None)
+
+
+def _can_move(obj, exported_parent, use_hierarchy) -> bool:
+    """The written transform can change. Without the hierarchy the world transform is written, so any ancestor
+    counts. With it the transform relative to the exported parent is written: an ancestor between the two (one
+    that is not exported) counts, and so does the exported parent through a bone or vertex parent."""
+    seen = 0
+    while obj is not None and seen < 100000:
+        if _moves_itself(obj):
+            return True
+        if use_hierarchy and exported_parent is not None and obj.parent is exported_parent \
+                and getattr(obj, "parent_type", "OBJECT") == "OBJECT":
+            return False
+        obj = obj.parent
+        seen += 1
+    return False
+
+
 def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, frame_step=1, armatures=()):
     """Sample every exported object's local transform per frame.
 
@@ -1449,14 +1482,22 @@ def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, f
     frames = list(range(frame_start, frame_end + 1, step))
     if frames[-1] != frame_end:
         frames.append(frame_end)
-    samples: dict[str, list] = {name: [] for name in objects_by_name}
+    # Only an object that can move is sampled: 2.9.0 sampled every object at every frame and inverted the parent's
+    # world matrix once per child per frame, so a 67 KB level with 5 interpolators exported as 45.5 MB with 497
+    # interpolators in 49 s, and eight real scenes gave no export in 60 s (receipt-to-rule weekly run, 28 Nov 2026).
+    candidates = {name: pair for name, pair in objects_by_name.items() if _can_move(pair[0], pair[1], use_hierarchy)}
+    samples: dict[str, list] = {name: [] for name in candidates}
     try:
         for frame in frames:
             scene.frame_set(frame)
-            for name, (obj, parent) in objects_by_name.items():
+            inverses = {}   # one inverse per parent per frame
+            for name, (obj, parent) in candidates.items():
                 matrix = obj.matrix_world
                 if use_hierarchy and parent is not None:
-                    matrix = inverted64(parent.matrix_world, parent.name) @ matrix
+                    inverse = inverses.get(parent.name)
+                    if inverse is None:
+                        inverse = inverses[parent.name] = inverted64(parent.matrix_world, parent.name)
+                    matrix = inverse @ matrix
                 elif global_matrix is not None:
                     matrix = global_matrix @ matrix
                 samples[name].append(_matrix_transform(matrix))
@@ -1469,9 +1510,11 @@ def _sample_animation(scene, objects_by_name, *, use_hierarchy, global_matrix, f
     animations = list(joint_animations)
     for name, transforms in samples.items():
         first = transforms[0]
-        moving = any(t.translation != first.translation for t in transforms)
-        rotating = any(t.rotation_axis_angle != first.rotation_axis_angle for t in transforms)
-        scaling = any(t.scale != first.scale for t in transforms)
+        # within float32 noise is still: matrix_world @ inverse rounds differently each frame, so an exact != called
+        # every child of a moving parent "moving"
+        moving = any(not _close(t.translation, first.translation) for t in transforms)
+        rotating = any(not _close(t.rotation_axis_angle, first.rotation_axis_angle) for t in transforms)
+        scaling = any(not _close(t.scale, first.scale) for t in transforms)
         if not (moving or rotating or scaling):
             continue
         animations.append(
