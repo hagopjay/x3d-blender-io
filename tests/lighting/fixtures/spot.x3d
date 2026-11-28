@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile='Interchange' version='4.0'>
+  <head>
+    <meta name='title' content='lighting probe: spot'/>
+    <meta name='description' content='a tilted SpotLight, beamWidth 0.25, cutOffAngle 0.5, coloured: spot_i, linear in the angle'/>
+    <meta name='generator' content='tools/lighting_oracle.py'/>
+  </head>
+  <Scene>
+    <NavigationInfo headlight='false'/>
+    <Background skyColor='0 0 0'/>
+    <Viewpoint position='0 0 4' fieldOfView='0.785398' description='probe'/>
+    <SpotLight location='0 0 2' direction='0.2 0 -1' beamWidth='0.25' cutOffAngle='0.5' color='1 0.8 0.5'/>
+    <Shape>
+      <Appearance>
+        <Material diffuseColor='0.8 0.8 0.8'/>
+      </Appearance>
+      <IndexedFaceSet solid='false' coordIndex='0 1 2 3 -1'>
+        <Coordinate point='-2 -2 0 2 -2 0 2 2 0 -2 2 0'/>
+        <Normal vector='0 0 1 0 0 1 0 0 1 0 0 1'/>
+      </IndexedFaceSet>
+    </Shape>
+  </Scene>
+</X3D>

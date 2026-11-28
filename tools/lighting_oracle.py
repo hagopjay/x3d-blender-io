@@ -1,0 +1,257 @@
+# SPDX-FileCopyrightText: 2026 HagopJay
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""The X3D 4.0 Phong lighting model as plain numpy: the referee for tools/lighting_judge.py.
+
+    python tools/lighting_oracle.py --write-fixtures        (writes tests/lighting/fixtures/<scene>.x3d)
+    python tools/lighting_oracle.py SCENE [--reading linear|display] [--curve srgb|pow22] > picture.json
+
+Each probe scene is one lit 4 x 4 quad at z = 0, facing +z, seen from a Viewpoint at (0, 0, 4) with fieldOfView pi / 4
+on a square canvas, so every pixel's surface point, normal and view vector are known exactly. The oracle evaluates, at
+each pixel centre, X3D 4.0 (ISO/IEC 19775-1:2023) 17.2.2.5 Phong lighting model, term by term:
+
+    fragmentColor  = emissiveParameter + sum_i lightContribution_i                (no fog, no occlusion texture)
+    lightContribution_i = on_i x lightColor_i x attenuation_i x spot_i x (ambient_i + diffuse_i + specular_i)
+    ambient_i  = ambientIntensity_i x (Material.ambientIntensity x diffuseColor)
+    diffuse_i  = intensity_i x diffuseColor x (N . L)
+    specular_i = intensity_i x specularColor x (N . normalize(L + V)) ^ (shininess x 128)
+    attenuation_i = 1 / max(c1 + c2 d + c3 d^2, 1);  on_i = 0 beyond radius;  "." clamped to >= 0
+    spot_i = 0 from cutOffAngle out, 1 within beamWidth, (angle - cutOffAngle) / (beamWidth - cutOffAngle) between
+             (beamWidth clamped to cutOffAngle)
+
+The spec says nothing about colour spaces (X3D 4.0 17.2.2 and 12 Shape component never mention gamma or sRGB; Don
+Brutzman, x3d-public, 27 Nov 2020: "The X3D specification is silent about gamma correction"). So the oracle has two
+readings: 'linear' decodes every colour (Material and light colours) from sRGB, lights, and encodes the clamped sum
+for the display (X3DOM's default, gammaCorrectionDefault "linear"); 'display' runs the equations on the file's
+numbers and shows the clamped sum as it is (the classic OpenGL way). And two curves for the decoding: 'srgb' (the
+IEC 61966-2-1 piecewise curve Blender uses) and 'pow22' (x^2.2, X_ITE 16.8.1's and X3DOM 1.8.3's).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import sys
+from pathlib import Path
+
+import numpy as np
+
+SIZE = 64                       # pixels per side
+EYE = np.array((0.0, 0.0, 4.0))
+FIELD_OF_VIEW = 0.785398        # X3D's default, on the smaller (here: both) side
+
+# One probe scene per term of the lighting equation. Lights are X3D fields; 'material' is a Phong Material's.
+SCENES = {
+    "directional": {
+        "what": "a DirectionalLight alone: N . L is the same everywhere, so the picture is one colour (the colour space)",
+        "lights": [{"type": "DirectionalLight", "direction": (-0.3, -0.4, -1.0), "intensity": 0.9}],
+        "material": {"diffuseColor": (0.8, 0.6, 0.4)},
+    },
+    "point-attenuation": {
+        "what": "a PointLight with attenuation 1 0.5 0.25: X3D's falloff (not 1/d^2) and N . L across the quad",
+        "lights": [{"type": "PointLight", "location": (0.5, 0.3, 1.0), "attenuation": (1.0, 0.5, 0.25)}],
+        "material": {"diffuseColor": (0.7, 0.7, 0.7)},
+    },
+    "point-radius": {
+        "what": "a PointLight with radius 1.2 at 0.8 above the quad: on_i, a lit disc with a hard edge",
+        "lights": [{"type": "PointLight", "location": (0.0, 0.0, 0.8), "radius": 1.2, "intensity": 0.8}],
+        "material": {"diffuseColor": (0.9, 0.5, 0.3)},
+    },
+    "spot": {
+        "what": "a tilted SpotLight, beamWidth 0.25, cutOffAngle 0.5, coloured: spot_i, linear in the angle",
+        "lights": [{"type": "SpotLight", "location": (0.0, 0.0, 2.0), "direction": (0.2, 0.0, -1.0),
+                    "beamWidth": 0.25, "cutOffAngle": 0.5, "color": (1.0, 0.8, 0.5)}],
+        "material": {"diffuseColor": (0.8, 0.8, 0.8)},
+    },
+    "specular": {
+        "what": "a PointLight and a shiny Material (shininess 0.3, so exponent 38.4): the Blinn-Phong highlight",
+        "lights": [{"type": "PointLight", "location": (0.6, 0.6, 1.5)}],
+        "material": {"diffuseColor": (0.2, 0.2, 0.5), "specularColor": (0.9, 0.9, 0.9), "shininess": 0.3},
+    },
+    "ambient-emissive": {
+        "what": "ambientIntensity on two lights (the PointLight's ambient is attenuated, 0 1 0) and an emissiveColor",
+        "lights": [{"type": "DirectionalLight", "direction": (0.0, 0.0, -1.0), "intensity": 0.3, "ambientIntensity": 0.6},
+                   {"type": "PointLight", "location": (-0.8, 0.0, 0.5), "intensity": 0.4, "ambientIntensity": 0.5,
+                    "attenuation": (0.0, 1.0, 0.0)}],
+        "material": {"ambientIntensity": 0.5, "diffuseColor": (0.6, 0.3, 0.8), "emissiveColor": (0.1, 0.2, 0.0)},
+    },
+    "two-lights": {
+        "what": "a red PointLight of 1.5 and a blue DirectionalLight with a specular Material: the sum, and the clamp",
+        "lights": [{"type": "PointLight", "location": (-0.7, 0.0, 0.6), "color": (1.0, 0.2, 0.1), "intensity": 1.5},
+                   {"type": "DirectionalLight", "direction": (0.5, 0.0, -1.0), "color": (0.2, 0.3, 1.0),
+                    "intensity": 0.8}],
+        "material": {"diffuseColor": (0.9, 0.9, 0.9), "specularColor": (0.5, 0.5, 0.5), "shininess": 0.1},
+    },
+}
+
+LIGHT_DEFAULTS = {"intensity": 1.0, "ambientIntensity": 0.0, "color": (1.0, 1.0, 1.0), "attenuation": (1.0, 0.0, 0.0),
+                  "radius": 100.0, "beamWidth": math.pi * 3.0 / 16.0, "cutOffAngle": math.pi / 2.0,
+                  "direction": (0.0, 0.0, -1.0), "location": (0.0, 0.0, 0.0)}
+MATERIAL_DEFAULTS = {"ambientIntensity": 0.2, "diffuseColor": (0.8, 0.8, 0.8), "emissiveColor": (0.0, 0.0, 0.0),
+                     "shininess": 0.2, "specularColor": (0.0, 0.0, 0.0), "transparency": 0.0}   # X3D 4.0 12.4.5
+
+
+def decode(value, curve):
+    value = np.clip(np.asarray(value, dtype=float), 0.0, None)
+    if curve == "pow22":
+        return value ** 2.2
+    return np.where(value <= 0.04045, value / 12.92, ((value + 0.055) / 1.055) ** 2.4)
+
+
+def encode(value, curve):
+    value = np.clip(np.asarray(value, dtype=float), 0.0, 1.0)
+    if curve == "pow22":
+        return value ** (1.0 / 2.2)
+    return np.where(value <= 0.0031308, 12.92 * value, 1.055 * value ** (1.0 / 2.4) - 0.055)
+
+
+def surface(size=SIZE):
+    """Each pixel centre's point on the quad (size, size, 3), row 0 at the top, and the view vector V there."""
+    half = math.tan(FIELD_OF_VIEW / 2.0)
+    centres = (np.arange(size) + 0.5) / size * 2.0 - 1.0
+    x, y = np.meshgrid(centres * half, -centres * half)
+    direction = np.stack((x, y, -np.ones_like(x)), axis=-1)
+    point = EYE + direction * EYE[2]          # the ray meets z = 0 at t = 4
+    view = EYE - point
+    view /= np.linalg.norm(view, axis=-1, keepdims=True)
+    return point, view
+
+
+def light_fields(light):
+    fields = dict(LIGHT_DEFAULTS)
+    fields.update(light)
+    return fields
+
+
+def evaluate(scene, reading="linear", curve="srgb", size=SIZE):
+    """(picture, on): the display value of every pixel in [0, 1] (size, size, 3), and which lights reach it
+    (size, size, lights), for the jump mask."""
+    spec = SCENES[scene] if isinstance(scene, str) else scene
+    material = dict(MATERIAL_DEFAULTS)
+    material.update(spec["material"])
+
+    def work(colour):
+        return decode(colour, curve) if reading == "linear" else np.asarray(colour, dtype=float)
+
+    point, view = surface(size)
+    normal = np.array((0.0, 0.0, 1.0))
+    diffuse, specular = work(material["diffuseColor"]), work(material["specularColor"])
+    total = np.broadcast_to(work(material["emissiveColor"]), point.shape).copy()
+    reached = []
+    for light in spec["lights"]:
+        fields = light_fields(light)
+        kind = fields["type"]
+        if kind == "DirectionalLight":
+            towards = -np.array(fields["direction"], dtype=float)
+            towards = np.broadcast_to(towards / np.linalg.norm(towards), point.shape)
+            distance = np.zeros(point.shape[:2])
+        else:
+            offset = np.array(fields["location"], dtype=float) - point
+            distance = np.linalg.norm(offset, axis=-1)
+            towards = offset / distance[..., None]
+        on = np.ones(point.shape[:2])
+        attenuation = np.ones(point.shape[:2])
+        spot = np.ones(point.shape[:2])
+        if kind != "DirectionalLight":
+            radius = fields["radius"]
+            on = np.where((radius < 0.0) | (distance <= radius), 1.0, 0.0)
+            c1, c2, c3 = fields["attenuation"]
+            attenuation = 1.0 / np.maximum(c1 + c2 * distance + c3 * distance * distance, 1.0)
+        if kind == "SpotLight":
+            axis = np.array(fields["direction"], dtype=float)
+            axis /= np.linalg.norm(axis)
+            angle = np.arccos(np.clip(-(towards @ axis), -1.0, 1.0))
+            cut_off = fields["cutOffAngle"]
+            beam = min(fields["beamWidth"], cut_off)
+            between = (angle - cut_off) / (beam - cut_off) if beam < cut_off else np.zeros_like(angle)
+            spot = np.where(angle >= cut_off, 0.0, np.where(angle <= beam, 1.0, between))
+        n_dot_l = np.maximum(towards @ normal, 0.0)
+        half = towards + view
+        half /= np.linalg.norm(half, axis=-1, keepdims=True)
+        n_dot_h = np.maximum(half @ normal, 0.0)
+        ambient = fields["ambientIntensity"] * material["ambientIntensity"] * diffuse
+        terms = (ambient + fields["intensity"] * diffuse * n_dot_l[..., None]
+                 + fields["intensity"] * specular * (n_dot_h ** (material["shininess"] * 128.0))[..., None])
+        total += (on * attenuation * spot)[..., None] * work(fields["color"]) * terms
+        reached.append(on)
+    picture = encode(total, curve) if reading == "linear" else np.clip(total, 0.0, 1.0)
+    return picture, np.stack(reached, axis=-1)
+
+
+def jump_mask(on):
+    """True where a pixel or one of its 8 neighbours is reached by a different set of lights (a radius edge)."""
+    keep = np.ones(on.shape[:2], dtype=bool)
+    padded = np.pad(on, ((1, 1), (1, 1), (0, 0)), mode="edge")
+    rows, cols = on.shape[:2]
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            neighbour = padded[1 + dy:1 + dy + rows, 1 + dx:1 + dx + cols]
+            keep &= (neighbour == on).all(axis=-1)
+    return ~keep
+
+
+def _vec(values):
+    return " ".join(f"{float(v):g}" for v in values)
+
+
+def fixture(scene):
+    """The probe scene as an X3D 4.0 file: no headlight, a black background, the quad with explicit normals."""
+    spec = SCENES[scene]
+    lights = []
+    for light in spec["lights"]:
+        fields = {key: value for key, value in light.items() if key != "type"}
+        attributes = " ".join(f"{key}='{_vec(value) if isinstance(value, (tuple, list)) else f'{value:g}'}'"
+                              for key, value in fields.items())
+        lights.append(f"    <{light['type']} {attributes}/>")
+    material = " ".join(f"{key}='{_vec(value) if isinstance(value, (tuple, list)) else f'{value:g}'}'"
+                        for key, value in spec["material"].items())
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile='Interchange' version='4.0'>
+  <head>
+    <meta name='title' content='lighting probe: {scene}'/>
+    <meta name='description' content='{spec["what"]}'/>
+    <meta name='generator' content='tools/lighting_oracle.py'/>
+  </head>
+  <Scene>
+    <NavigationInfo headlight='false'/>
+    <Background skyColor='0 0 0'/>
+    <Viewpoint position='0 0 4' fieldOfView='{FIELD_OF_VIEW:g}' description='probe'/>
+{chr(10).join(lights)}
+    <Shape>
+      <Appearance>
+        <Material {material}/>
+      </Appearance>
+      <IndexedFaceSet solid='false' coordIndex='0 1 2 3 -1'>
+        <Coordinate point='-2 -2 0 2 -2 0 2 2 0 -2 2 0'/>
+        <Normal vector='0 0 1 0 0 1 0 0 1 0 0 1'/>
+      </IndexedFaceSet>
+    </Shape>
+  </Scene>
+</X3D>
+"""
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("scene", nargs="?")
+    parser.add_argument("--reading", default="linear", choices=("linear", "display"))
+    parser.add_argument("--curve", default="srgb", choices=("srgb", "pow22"))
+    parser.add_argument("--write-fixtures", action="store_true")
+    args = parser.parse_args()
+    if args.write_fixtures:
+        folder = Path(__file__).resolve().parents[1] / "tests" / "lighting" / "fixtures"
+        folder.mkdir(parents=True, exist_ok=True)
+        for scene in SCENES:
+            (folder / f"{scene}.x3d").write_text(fixture(scene), encoding="utf-8")
+            print(folder / f"{scene}.x3d")
+        return
+    picture, on = evaluate(args.scene, args.reading, args.curve)
+    json.dump({"scene": args.scene, "reading": args.reading, "curve": args.curve, "size": SIZE,
+               "levels": np.round(picture * 255.0, 3).tolist(), "jump": jump_mask(on).tolist()}, sys.stdout)
+
+
+if __name__ == "__main__":
+    main()
