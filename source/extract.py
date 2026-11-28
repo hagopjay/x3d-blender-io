@@ -55,6 +55,14 @@ SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
 SOLID_PROPERTY = "x3d_solid"
 # A line set's LineProperties linewidthScaleFactor, kept on the object by the importer (Blender draws no line width).
 LINE_WIDTH_PROPERTY = "x3d_line_width"
+# A point set's PointProperties fields (JSON, numbers), kept on the object by the importer (Blender draws no point size).
+POINT_PROPERTIES_PROPERTY = "x3d_point_properties"
+POINT_PROPERTIES_DEFAULTS = {"attenuation": [1.0, 0.0, 0.0], "pointSizeMaxValue": 1.0, "pointSizeMinValue": 1.0,
+                             "pointSizeScaleFactor": 1.0}
+# A CoordinateDouble's point text as the file wrote it, one token per component in the mesh's (or curve's) vertex order
+# (JSON list), kept by the importer only when every vertex is that point read to float32; the export writes a
+# CoordinateDouble with those tokens for every vertex that still has exactly that float32 value.
+COORDINATE_DOUBLE_PROPERTY = "x3d_coordinate_double"
 INLINE_URL_PROPERTY = "x3d_inline_url"
 INLINE_SOURCE_PROPERTY = "x3d_inline_source"
 # Where each Inline asset was found at import: the placeholder empty's ``session_uid`` -> absolute path. Kept in this
@@ -244,6 +252,31 @@ def _line_width(obj):
     except (AttributeError, TypeError, ValueError):
         return None
     return width if math.isfinite(width) and width >= 0.0 else None
+
+
+def _point_properties(obj):
+    """The PointProperties fields the import kept on a point object ({name: number or [3 numbers]}), else None."""
+    try:
+        fields = json.loads(obj.get(POINT_PROPERTIES_PROPERTY) or "null")
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if not isinstance(fields, dict):
+        return None
+    out = {}
+    for name, default in POINT_PROPERTIES_DEFAULTS.items():
+        value = fields.get(name)
+        try:
+            if isinstance(default, list):
+                value = [float(v) for v in value] if value is not None else None
+                ok = value is not None and len(value) == 3 and all(math.isfinite(v) and v >= 0.0 for v in value)
+            else:
+                value = float(value) if value is not None else None
+                ok = value is not None and math.isfinite(value) and value >= 0.0
+        except (TypeError, ValueError):
+            ok = False
+        if ok:
+            out[name] = value
+    return out or None
 
 
 def _session_uid(obj):
@@ -673,15 +706,54 @@ TRIANGLE_SET_NODES = ("IndexedTriangleSet", "TriangleSet", "TriangleFanSet", "Tr
                       "IndexedTriangleFanSet", "IndexedTriangleStripSet")
 
 
+# the quad-set nodes a mesh is written back as while every face is a quad (node board batch 8)
+QUAD_SET_NODES = ("QuadSet", "IndexedQuadSet")
+
+
+def _coordinate_double_tokens(geometry, tokens):
+    """The CoordinateDouble point text for ``geometry``'s coordinates, one (x, y, z) token triple per coordinate, or
+    None unless every coordinate is still exactly its point read to float32 (COORDINATE_DOUBLE_PROPERTY)."""
+    import struct
+    if not tokens or geometry.skin_coord_def or geometry.morph_keys or not geometry.coord \
+            or len(geometry.orig_vertex_index) != len(geometry.coord):
+        return None
+    out = []
+    try:
+        for point, vertex in zip(geometry.coord, geometry.orig_vertex_index):
+            triple = tuple(str(t) for t in tokens[3 * vertex:3 * vertex + 3])
+            if len(triple) != 3 or any(not math.isfinite(float(t))
+                                       or struct.unpack("f", struct.pack("f", float(t)))[0] != float(v)
+                                       for t, v in zip(triple, point)):
+                return None
+            out.append(triple)
+    except (TypeError, ValueError, OverflowError, struct.error):
+        return None
+    return out
+
+
 def mark_triangle_sets(geometries, mesh, use_triangulate):
-    """Flag face geometries for a triangle set: the export triangulates (an IndexedTriangleSet), or the mesh came from
-    one of TRIANGLE_SET_NODES (that node)."""
-    node = mesh.get(GEOMETRY_NODE_PROPERTY) if mesh is not None and hasattr(mesh, "get") else None
-    node = node if node in TRIANGLE_SET_NODES else None
+    """Name the node each geometry is written back as: for faces, a triangle set when the export triangulates (an
+    IndexedTriangleSet) or the mesh came from one of TRIANGLE_SET_NODES (that node), or the quad set it came from
+    (QUAD_SET_NODES); for lines, a LineSet when it came from one. ``mesh`` is the object's data (a curve's too).
+    Also keeps the CoordinateDouble text the import recorded, for the coordinates that still match it."""
+    get = getattr(mesh, "get", None) if mesh is not None else None
+    tag = get(GEOMETRY_NODE_PROPERTY) if get is not None else None
+    node = tag if tag in TRIANGLE_SET_NODES or tag in QUAD_SET_NODES else None
+    tokens = None
+    raw = get(COORDINATE_DOUBLE_PROPERTY) if get is not None else None
+    if raw:
+        try:
+            tokens = json.loads(raw)
+        except (TypeError, ValueError):
+            tokens = None
+        tokens = tokens if isinstance(tokens, list) else None
     for geometry in geometries:
-        if not geometry.is_lines and not geometry.is_points:
-            geometry.triangle_set = bool(use_triangulate or node)
+        if geometry.is_lines:
+            geometry.geometry_node = "LineSet" if tag == "LineSet" else None
+        elif not geometry.is_points:
+            geometry.triangle_set = bool(use_triangulate or (node in TRIANGLE_SET_NODES))
             geometry.geometry_node = node
+        geometry.coord_double = _coordinate_double_tokens(geometry, tokens)
     return geometries
 
 
@@ -1907,7 +1979,7 @@ def extract_scene(
                         use_normals=use_normals,
                         recorded_solid=obj.data.get(SOLID_PROPERTY) if obj.type == "MESH" else None,
                     )
-                    mark_triangle_sets(geometries, obj.data if obj.type == "MESH" else None, use_triangulate)
+                    mark_triangle_sets(geometries, obj.data, use_triangulate)   # a curve's data names a LineSet
                 else:
                     geometries = []
             finally:
@@ -2095,6 +2167,7 @@ def extract_scene(
             instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
             instance.metadata = object_metadata(obj.get(METADATA_PROPERTY))
             instance.line_width = _line_width(obj)
+            instance.point_properties = _point_properties(obj)
             # Geometry Nodes (and particle) instances; vertex/face instancing instances child objects, which are
             # written as objects of their own
             # (only for meshes: a curve, surface or text object's own evaluated mesh is listed as an instance of it, and

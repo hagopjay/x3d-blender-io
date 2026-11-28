@@ -105,6 +105,9 @@ class IRMeshGeometry:
     # TriangleFanSet, TriangleStripSet, IndexedTriangleFanSet or IndexedTriangleStripSet), written back as that node
     # while every face is a triangle; None writes an IndexedTriangleSet when ``triangle_set`` is set.
     geometry_node: str | None = None
+    # The CoordinateDouble point text for each coordinate (x, y, z tokens), when the import read one and every
+    # coordinate still has exactly that value in float32: written as a CoordinateDouble, else a Coordinate.
+    coord_double: list[tuple[str, str, str]] | None = None
 
 
 @dataclass
@@ -380,6 +383,9 @@ class IRInstance:
     visible: bool = True
     # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
     line_width: float | None = None
+    # PointProperties fields of the instance's point geometry, kept by the import ({field: value}); written as a
+    # PointProperties in its Appearance.
+    point_properties: dict | None = None
     # Name of an IRScene.collections entry this Empty instances (Blender "Collection" instance); written as a Group that
     # is DEF'd at its first use and USE'd after, so N linked copies cost N Transforms, not N copies of the content.
     collection_name: str | None = None

@@ -288,6 +288,31 @@
       "round_trip": "unmeasured",
       "note": "x3d_geometry on the mesh; written back while every face is a triangle, the strips (index, -1 after each) read off the mesh's triangles, else as an IndexedFaceSet (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
     },
+    "LineSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the curve or line mesh; written back with vertexCount read off the object's own polylines (each polyline's vertices in turn), so an edited curve still matches; an untagged line object is an IndexedLineSet as before (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "QuadSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a quad, its arrays in corner order (no index), else as an IndexedFaceSet; a skinned or shape-keyed mesh writes an IndexedQuadSet; declares CADGeometry 1 (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedQuadSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a quad, else as an IndexedFaceSet; declares CADGeometry 1 (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CoordinateDouble": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_coordinate_double on the mesh or curve (the file's point text) when its vertices are the file's points one to one at unit scale; written with those tokens while every coordinate still equals its token in float32, else a Coordinate from the mesh (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "PointProperties": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_point_properties on the point object (JSON numbers), written in the point shape's Appearance; declares Shape 5; Blender draws no point size (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
     "PixelTexture": {
       "import": "yes",
       "round_trip": "unmeasured",

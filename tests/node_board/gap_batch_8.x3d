@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <meta name="title" content="Node board gap batch 8: LineSet, PointProperties, CoordinateDouble, QuadSet and IndexedQuadSet written back"/>
+    <meta name="description" content="Two LineSets (one plain, one with a colour per vertex), a PointSet with PointProperties, a QuadSet with texture coordinates and an IndexedQuadSet on a CoordinateDouble whose points have more digits than float32 keeps. The export must write each node back."/>
+  </head>
+  <Scene>
+    <Transform DEF="Lines" translation="-4 0 0">
+      <Shape>
+        <Appearance><Material emissiveColor="1 1 0"/></Appearance>
+        <LineSet vertexCount="3 2">
+          <Coordinate point="0 0 0 1 1 0 2 0 0 0 -1 0 2 -1 0"/>
+        </LineSet>
+      </Shape>
+    </Transform>
+    <Transform DEF="ColourLines" translation="-2 0 0">
+      <Shape>
+        <Appearance><Material emissiveColor="1 1 1"/></Appearance>
+        <LineSet vertexCount="4">
+          <Coordinate point="0 0 0 0 1 0 1 1 0 1 0 0"/>
+          <Color color="1 0 0 0 1 0 0 0 1 1 1 0"/>
+        </LineSet>
+      </Shape>
+    </Transform>
+    <Transform DEF="Points" translation="0 0 0">
+      <Shape>
+        <Appearance>
+          <Material emissiveColor="0 1 1"/>
+          <PointProperties attenuation="1 0.5 0" pointSizeMaxValue="8" pointSizeMinValue="2" pointSizeScaleFactor="4"/>
+        </Appearance>
+        <PointSet>
+          <Coordinate point="0 0 0 0.5 0.5 0 1 0 0"/>
+        </PointSet>
+      </Shape>
+    </Transform>
+    <Transform DEF="Quads" translation="2 0 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.8 0.3 0.3"/></Appearance>
+        <QuadSet solid="false">
+          <Coordinate point="0 0 0 1 0 0 1 1 0 0 1 0 1 0 0 2 0 0 2 1 0 1 1 0"/>
+          <TextureCoordinate point="0 0 0.5 0 0.5 1 0 1 0.5 0 1 0 1 1 0.5 1"/>
+        </QuadSet>
+      </Shape>
+    </Transform>
+    <Transform DEF="IndexedQuads" translation="4 0 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.3 0.3 0.8"/></Appearance>
+        <IndexedQuadSet index="0 1 2 3 1 4 5 2">
+          <CoordinateDouble point="0.1234567890123 0 0 1.0000000001 0 0 1.0000000001 1.25 0 0.1234567890123 1.25 0 2.5000000000001 0 0 2.5000000000001 1.25 0"/>
+        </IndexedQuadSet>
+      </Shape>
+    </Transform>
+    <Viewpoint description="Front" position="0 0.5 10"/>
+  </Scene>
+</X3D>

@@ -23,7 +23,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, POINT_PROPERTIES_PROPERTY, COORDINATE_DOUBLE_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY, VISIBLE_FALSE_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
@@ -3148,6 +3148,7 @@ def importMesh_LineSet(geom, ancestry):
         made = _coloured_line_mesh("LineSet", polylines)
         if made is not None:
             set_point_colours(made[0], made[1], kind)
+            made[0]["x3d_geometry"] = "LineSet"     # written back as one by the X3D 4.0 export (node board batch 8)
             made[0].update()
             return made[0]
     elif kind:
@@ -3169,6 +3170,7 @@ def importMesh_LineSet(geom, ancestry):
                 yield 0
         sp.points.foreach_set('co', [x for x in points()])
         b += n
+    bpycurve["x3d_geometry"] = "LineSet"     # written back as one by the X3D 4.0 export (node board batch 8)
     return bpycurve
 
 
@@ -4347,6 +4349,67 @@ def position_signature(bpymesh):
     return [count, len(bpymesh.polygons), round(weighted, 5)]
 
 
+def _float32(value):
+    import struct
+    return struct.unpack("f", struct.pack("f", value))[0]
+
+
+def _data_points(bpydata):
+    """The vertex positions of a mesh, or the points of a curve's splines in order (its evaluated mesh's vertices)."""
+    if isinstance(bpydata, bpy.types.Mesh):
+        flat = [0.0] * (3 * len(bpydata.vertices))
+        bpydata.vertices.foreach_get("co", flat)
+        return flat
+    if isinstance(bpydata, bpy.types.Curve):
+        flat = []
+        for spline in bpydata.splines:
+            if spline.type != 'POLY':
+                return None
+            for point in spline.points:
+                flat.extend(point.co[:3])
+        return flat
+    return None
+
+
+def mark_coordinate_double(bpydata, geom):
+    """Keep a CoordinateDouble's point text on ``bpydata`` (COORDINATE_DOUBLE_PROPERTY) when its vertices are the file's
+    points one to one, in order, at unit scale: then the export can write the doubles back for the vertices nobody has
+    moved. Anything else (a face set that culled its points, a USE of the coordinates elsewhere, another scale) keeps
+    nothing and the export writes a Coordinate, as before."""
+    coord = _coordinate_of(geom)
+    if coord is None or coord.getRealNode().getSpec() != 'CoordinateDouble' or conversion_scale != 1.0:
+        return
+    text = _attribute_raw(coord, 'point')
+    if not text:
+        return
+    tokens = text.replace(',', ' ').split()
+    flat = _data_points(bpydata)
+    if flat is None or len(tokens) != len(flat) or not flat:
+        return
+    try:
+        if any(_float32(float(token)) != value for token, value in zip(tokens, flat)):
+            return
+    except ValueError:
+        return
+    bpydata[COORDINATE_DOUBLE_PROPERTY] = json.dumps(tokens)
+
+
+def point_properties_fields(node, ancestry):
+    """A PointProperties node's fields as numbers ({} when all are the X3D defaults), for POINT_PROPERTIES_PROPERTY."""
+    from .extract import POINT_PROPERTIES_DEFAULTS
+    fields = {}
+    for name, default in POINT_PROPERTIES_DEFAULTS.items():
+        if isinstance(default, list):
+            value = [float(v) for v in node.getFieldAsArray(name, 0, ancestry)]
+            value = value if len(value) == 3 and all(math.isfinite(v) for v in value) else default
+        else:
+            value = node.getFieldAsFloat(name, default, ancestry)
+            value = float(value) if value is not None and math.isfinite(value) else default
+        if value != default:
+            fields[name] = value
+    return fields
+
+
 def mark_primitive(bpymesh, geom, ancestry, node_type, **fields):
     """Remember the primitive node behind ``bpymesh`` (see PRIMITIVE_PROPERTY)."""
     import json
@@ -4666,6 +4729,7 @@ def _quad_mesh(name, geom, ancestry, index=None):
     bpymesh.polygons.add(count)
     bpymesh.polygons.foreach_set("loop_start", range(0, 4 * count, 4))
     bpymesh.polygons.foreach_set("vertices", [v for q in quads for v in q])
+    bpymesh["x3d_geometry"] = name     # QuadSet or IndexedQuadSet, written back as one by the X3D 4.0 export (batch 8)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -6214,6 +6278,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if isinstance(bpydata, bpy.types.Mesh) and geom_spec not in LINE_POINT_SPECS:
             # the file's solid for the export to write back (D14): a classic Material's surface stays two-sided in Blender
             bpydata[SOLID_PROPERTY] = geometry_solid(geom, ancestry)
+        if shared is None:
+            mark_coordinate_double(bpydata, geom)
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
@@ -6222,6 +6288,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata), source=bpymat)
             line_properties = appr.getChildBySpec('LineProperties') if appr is not None else None
             line_width = line_properties.getFieldAsFloat('linewidthScaleFactor', None, ancestry) if line_properties else None
+            point_properties = appr.getChildBySpec('PointProperties') if appr is not None else None
+            point_properties = point_properties_fields(point_properties, ancestry) if point_properties else None
 
         # There are no geometry importers that can legally return
         # no object.  It's either a bpy object, or an exception
@@ -6247,6 +6315,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         tag_x3d_identity(node.blendObject, node, ancestry)
         if geom_spec in LINE_POINT_SPECS and line_width is not None and node.blendObject is not None:
             node.blendObject[LINE_WIDTH_PROPERTY] = line_width   # Blender draws no line width; the 4.0 export writes it back
+        if geom_spec in LINE_POINT_SPECS and point_properties and node.blendObject is not None:
+            # Blender draws no point size either: kept as a custom property the 4.0 export writes back (batch 8)
+            node.blendObject[POINT_PROPERTIES_PROPERTY] = json.dumps(point_properties, sort_keys=True)
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False

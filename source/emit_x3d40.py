@@ -402,15 +402,33 @@ def _material_xml(material, material_def, indent, *, output_dir=None, defs=None)
     return f"{indent}<{tag} {' '.join(attrs)} />\n"
 
 
-def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK, line_width=None):
+_POINT_PROPERTY_ORDER = ("attenuation", "pointSizeMaxValue", "pointSizeMinValue", "pointSizeScaleFactor")
+
+
+def _point_properties_attrs(fields):
+    """A PointProperties' attributes, in a fixed order; the values are sizes and factors, not lengths."""
+    attrs = []
+    for name in _POINT_PROPERTY_ORDER:
+        if name in fields:
+            value = fields[name]
+            text = " ".join(_fmt_short(v) for v in value) if isinstance(value, list) else _fmt_short(value)
+            attrs.append(f'{name}="{text}"')
+    return attrs
+
+
+def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK, line_width=None,
+                    point_properties=None):
     """The Appearance of ``material``. ``line_width`` (a LineProperties linewidthScaleFactor) gives the line shapes of
     that width an Appearance of their own, with the material written again without a DEF, since a LineProperties is part
-    of the Appearance a shape shares."""
+    of the Appearance a shape shares; ``point_properties`` (PointProperties fields) does the same for point shapes."""
     key = material.name if line_width is None else f"{material.name}@lw{_fmt_short(line_width)}"
+    point_attrs = _point_properties_attrs(point_properties) if point_properties else []
+    if point_attrs:
+        key = f"{key}@pp{'_'.join(point_attrs)}"
     app_def = defs.get("appearance", key, "APP_")
     if not defs.first_use("appearance", key):
         return f'{indent}<Appearance USE="{app_def}" />\n'
-    material_def = defs.get("material", material.name, "MA_") if line_width is None else None
+    material_def = defs.get("material", material.name, "MA_") if line_width is None and not point_attrs else None
     attrs = [f'DEF="{app_def}"']
     if material.alpha_mode == "BLEND":
         attrs.append('alphaMode="BLEND"')
@@ -430,6 +448,8 @@ def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look:
     xml.append(_texture_transform_xml(material, indent + "  "))
     if line_width is not None:
         xml.append(f'{indent}  <LineProperties linewidthScaleFactor="{_fmt_short(line_width)}" />\n')
+    if point_attrs:
+        xml.append(f'{indent}  <PointProperties {" ".join(point_attrs)} />\n')
     xml.append(f"{indent}</Appearance>\n")
     return "".join(xml)
 
@@ -451,8 +471,7 @@ def _default_appearance_xml(indent, look: _Look = _PLAIN_LOOK):
 
 def _point_set_xml(geometry, geometry_def, indent):
     """A vertices-only mesh: a PointSet with one Color / ColorRGBA per point when it has POINT colours."""
-    xml = [f'{indent}<PointSet DEF="{geometry_def}">\n',
-           f'{indent}  <Coordinate point="{" ".join(_fmt3_length(point) for point in geometry.coord)}" />\n']
+    xml = [f'{indent}<PointSet DEF="{geometry_def}">\n', _coordinate_xml(geometry, indent + "  ")]
     if geometry.color and len(geometry.color) == len(geometry.coord):
         if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
             values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
@@ -464,23 +483,68 @@ def _point_set_xml(geometry, geometry_def, indent):
     return "".join(xml)
 
 
-def _triangle_index(coord_index):
-    """The IndexedTriangleSet ``index`` for an IndexedFaceSet ``coordIndex`` whose every face is a triangle, else None."""
+def _triangle_index(coord_index, sides=3):
+    """The IndexedTriangleSet ``index`` for an IndexedFaceSet ``coordIndex`` whose every face is a triangle, else None
+    (``sides=4``: the IndexedQuadSet ``index`` when every face is a quad)."""
     out, face = [], []
     for i in coord_index:
         if i < 0:
             if face:
-                if len(face) != 3:
+                if len(face) != sides:
                     return None
                 out.extend(face)
             face = []
         else:
             face.append(i)
     if face:
-        if len(face) != 3:
+        if len(face) != sides:
             return None
         out.extend(face)
     return out or None
+
+
+def _quad_set_layout(geometry):
+    """(node, attrs, order) for a mesh read from a QuadSet or IndexedQuadSet while every face is still a quad, else
+    None (the caller writes a triangle or face set). A QuadSet carries its arrays in corner order (no index), so a
+    skinned or shape-keyed mesh writes an IndexedQuadSet."""
+    node = getattr(geometry, "geometry_node", None)
+    if node not in ("QuadSet", "IndexedQuadSet"):
+        return None
+    quads = _triangle_index(geometry.coord_index, sides=4)
+    if not quads:
+        return None
+    if node == "QuadSet" and not (geometry.skin_coord_def or geometry.morph_keys):
+        return node, [], quads
+    return "IndexedQuadSet", [f'index="{_fmt_ints(quads)}"'], None
+
+
+def _line_set_layout(geometry):
+    """(vertexCount, order) for line geometry read from a LineSet: each polyline's vertices one after the other, so
+    the arrays follow the mesh's own polylines whatever was edited, else None (an IndexedLineSet)."""
+    if getattr(geometry, "geometry_node", None) != "LineSet" or geometry.skin_coord_def or geometry.morph_keys:
+        return None
+    counts, order, run = [], [], []
+    for i in list(geometry.coord_index) + [-1]:
+        if i < 0:
+            if len(run) >= 2:
+                counts.append(len(run))
+                order.extend(run)
+            elif run:
+                return None
+            run = []
+        else:
+            run.append(i)
+    return (counts, order) if counts else None
+
+
+def _coordinate_xml(geometry, indent, order=None):
+    """The Coordinate of ``geometry``, or a CoordinateDouble with the file's own point text while every coordinate
+    still has exactly its value (``geometry.coord_double``, checked by the extractor)."""
+    double = getattr(geometry, "coord_double", None)
+    if double and len(double) == len(geometry.coord):
+        text = " ".join(" ".join(triple) for triple in _in_order(double, order))
+        return f'{indent}<CoordinateDouble point="{text}" />\n'
+    return f'{indent}<Coordinate point="{_fmt_points(_in_order(geometry.coord, order))}" />\n'
 
 
 def _fan_strip_runs(triangles, strip):
@@ -517,13 +581,15 @@ def _fan_strip_runs(triangles, strip):
 # a triangle set without an index carries its arrays in corner order, so it cannot share a Coordinate by USE (a skin)
 # or have its points moved by a CoordinateInterpolator written for the shared vertices (shape keys)
 _UNINDEXED_SETS = ("TriangleSet", "TriangleFanSet", "TriangleStripSet")
+_TRIANGLE_SETS = _UNINDEXED_SETS + ("IndexedTriangleSet", "IndexedTriangleFanSet", "IndexedTriangleStripSet")
 
 
 def _triangle_set_layout(geometry, triangles):
     """(node, attrs, order) for a mesh whose every face is a triangle: the node it is written as (the one the import
     read it from, ``geometry.geometry_node``, else an IndexedTriangleSet), its index or count attributes, and for a
     set without an index the vertex order its arrays are written in (None: the arrays as they are)."""
-    node = getattr(geometry, "geometry_node", None) or "IndexedTriangleSet"
+    node = getattr(geometry, "geometry_node", None)
+    node = node if node in _TRIANGLE_SETS else "IndexedTriangleSet"
     if node in _UNINDEXED_SETS and (geometry.skin_coord_def or geometry.morph_keys):
         node = "IndexedTriangleSet"
     runs = None
@@ -550,28 +616,32 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     geometry_def = defs.get("geometry", geometry.name, "ME_")
     triangles = _triangle_index(geometry.coord_index) if (
         getattr(geometry, "triangle_set", False) and not geometry.is_points and not geometry.is_lines) else None
-    layout = _triangle_set_layout(geometry, triangles) if triangles else None
-    node = "PointSet" if geometry.is_points else "IndexedLineSet" if geometry.is_lines else \
+    layout = None if geometry.is_points or geometry.is_lines else _quad_set_layout(geometry)
+    if layout is None and triangles:
+        layout = _triangle_set_layout(geometry, triangles)
+    lines = _line_set_layout(geometry) if geometry.is_lines else None
+    node = "PointSet" if geometry.is_points else ("LineSet" if lines else "IndexedLineSet") if geometry.is_lines else \
         layout[0] if layout else "IndexedFaceSet"
     if not defs.first_use("geometry", geometry.name):
         return f'{indent}<{node} USE="{geometry_def}" />\n'
     if geometry.is_points:
         return _point_set_xml(geometry, geometry_def, indent)
     if geometry.is_lines:
-        xml = [
-            f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n',
-            f'{indent}  <Coordinate point="{_fmt_points(geometry.coord)}" />\n',
-        ]
+        # a LineSet (from one: vertexCount, each polyline's vertices in turn) or an IndexedLineSet
+        order = lines[1] if lines else None
+        head = f'vertexCount="{_fmt_ints(lines[0])}"' if lines else f'coordIndex="{_fmt_ints(geometry.coord_index)}"'
+        xml = [f'{indent}<{node} DEF="{geometry_def}" {head}>\n', _coordinate_xml(geometry, indent + "  ", order)]
         if geometry.color and len(geometry.color) == len(geometry.coord):
             # one colour per vertex, which X3D draws in place of the material's emissiveColor (a Color node: colorIndex
             # follows coordIndex); ColorRGBA only when an alpha is below 1
-            if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
-                values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
+            colors = _in_order(geometry.color, order)
+            if any(len(color) > 3 and color[3] < 1.0 for color in colors):
+                values = " ".join(_fmt4(_unit_rgba(color)) for color in colors)
                 xml.append(f'{indent}  <ColorRGBA color="{values}" />\n')
             else:
-                values = " ".join(_fmt3(_sfcolor(color[:3])) for color in geometry.color)
+                values = " ".join(_fmt3(_sfcolor(color[:3])) for color in colors)
                 xml.append(f'{indent}  <Color color="{values}" />\n')
-        xml.append(f"{indent}</IndexedLineSet>\n")
+        xml.append(f"{indent}</{node}>\n")
         return "".join(xml)
     order = None
     if layout:
@@ -596,7 +666,7 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
             f'point="{_fmt_points(geometry.morph_states[0])}" />\n'
         )
     else:
-        xml.append(f'{indent}  <Coordinate point="{_fmt_points(_in_order(geometry.coord, order))}" />\n')
+        xml.append(_coordinate_xml(geometry, indent + "  ", order))
     if geometry.normal:
         vectors = _in_order(geometry.normal, order)
         xml.append(f'{indent}  <Normal vector="{" ".join(_fmt3(vector) for vector in vectors)}" />\n')
@@ -998,9 +1068,10 @@ def _shapes_xml(instance, geometries, materials, defs: _DefNames, indent, *, out
         material = materials.get(shape.material_name) if shape.material_name else None
         geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
         line_width = instance.line_width if geometry is not None and geometry.is_lines else None
+        point_properties = instance.point_properties if geometry is not None and geometry.is_points else None
         if material is not None:
             xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look,
-                                       line_width=line_width))
+                                       line_width=line_width, point_properties=point_properties))
         else:
             xml.append(_default_appearance_xml(indent + "    ", look))
         if geometry is not None:
@@ -1673,9 +1744,16 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
         shapes = list(instance.iter_shapes())
         humanoid = humanoids.get(instance.humanoid_name)
         if shapes or (humanoid is not None and humanoid.skin_shapes):
-            components["Shape"] = 2
+            components["Shape"] = max(2, components.get("Shape", 0))
         if any(shape.geometry_name not in geometries and shape.geometry_hint == "Circle2D" for shape in shapes):
             components["Geometry2D"] = 2
+        written = [geometries[shape.geometry_name] for shape in shapes if shape.geometry_name in geometries]
+        # QuadSet / IndexedQuadSet (node board batch 8) are CADGeometry level 1, PointProperties Shape level 5: neither
+        # is in Immersive
+        if any(_quad_set_layout(geometry) is not None for geometry in written):
+            components["CADGeometry"] = 1
+        if instance.point_properties and any(geometry.is_points for geometry in written):
+            components["Shape"] = 5
         # GeoLocation, GeoLOD and GeoElevationGrid written back (node board batch 3): Geospatial level 1, not in Immersive
         if any(str(entry.get("node", "")).startswith("Geo") for entry in instance.group_chain or ()) or any(
                 (shape.primitive or {}).get("node") == "GeoElevationGrid" for shape in shapes):
