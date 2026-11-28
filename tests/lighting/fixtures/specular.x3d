@@ -3,7 +3,7 @@
 <X3D profile='Interchange' version='4.0'>
   <head>
     <meta name='title' content='lighting probe: specular'/>
-    <meta name='description' content='a PointLight and a shiny Material (shininess 0.3, so exponent 38.4): the Blinn-Phong highlight'/>
+    <meta name='description' content="a PointLight and a shiny Material (shininess 0.3, so exponent 38.4): the Blinn-Phong highlight"/>
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>

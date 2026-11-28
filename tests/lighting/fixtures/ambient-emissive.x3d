@@ -3,7 +3,7 @@
 <X3D profile='Interchange' version='4.0'>
   <head>
     <meta name='title' content='lighting probe: ambient-emissive'/>
-    <meta name='description' content='ambientIntensity on two lights (the PointLight's ambient is attenuated, 0 1 0) and an emissiveColor'/>
+    <meta name='description' content="ambientIntensity on two lights (the PointLight's ambient is attenuated, 0 1 0) and an emissiveColor"/>
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>

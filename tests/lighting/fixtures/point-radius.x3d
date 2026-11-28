@@ -3,7 +3,7 @@
 <X3D profile='Interchange' version='4.0'>
   <head>
     <meta name='title' content='lighting probe: point-radius'/>
-    <meta name='description' content='a PointLight with radius 1.2 at 0.8 above the quad: on_i, a lit disc with a hard edge'/>
+    <meta name='description' content="a PointLight with radius 1.2 at 0.8 above the quad: on_i, a lit disc with a hard edge"/>
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>

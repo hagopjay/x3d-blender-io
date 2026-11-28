@@ -3,7 +3,7 @@
 <X3D profile='Interchange' version='4.0'>
   <head>
     <meta name='title' content='lighting probe: two-lights'/>
-    <meta name='description' content='a red PointLight of 1.5 and a blue DirectionalLight with a specular Material: the sum, and the clamp'/>
+    <meta name='description' content="a red PointLight of 1.5 and a blue DirectionalLight with a specular Material: the sum, and the clamp"/>
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>

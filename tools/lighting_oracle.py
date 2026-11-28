@@ -35,6 +35,7 @@ import json
 import math
 import sys
 from pathlib import Path
+from xml.sax.saxutils import quoteattr
 
 import numpy as np
 
@@ -212,7 +213,7 @@ def fixture(scene):
 <X3D profile='Interchange' version='4.0'>
   <head>
     <meta name='title' content='lighting probe: {scene}'/>
-    <meta name='description' content='{spec["what"]}'/>
+    <meta name='description' content={quoteattr(spec["what"])}/>
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>

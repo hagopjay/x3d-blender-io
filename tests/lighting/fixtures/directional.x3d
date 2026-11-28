@@ -3,7 +3,7 @@
 <X3D profile='Interchange' version='4.0'>
   <head>
     <meta name='title' content='lighting probe: directional'/>
-    <meta name='description' content='a DirectionalLight alone: N . L is the same everywhere, so the picture is one colour (the colour space)'/>
+    <meta name='description' content="a DirectionalLight alone: N . L is the same everywhere, so the picture is one colour (the colour space)"/>
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>

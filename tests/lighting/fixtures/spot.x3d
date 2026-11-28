@@ -3,7 +3,7 @@
 <X3D profile='Interchange' version='4.0'>
   <head>
     <meta name='title' content='lighting probe: spot'/>
-    <meta name='description' content='a tilted SpotLight, beamWidth 0.25, cutOffAngle 0.5, coloured: spot_i, linear in the angle'/>
+    <meta name='description' content="a tilted SpotLight, beamWidth 0.25, cutOffAngle 0.5, coloured: spot_i, linear in the angle"/>
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>
