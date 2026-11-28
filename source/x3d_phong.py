@@ -55,7 +55,25 @@ def resolve(value):
         raw = os.environ.get("BLENDER_X3D_LIGHTING", "").strip().upper()
     raw = {"LINEAR": "LINEAR_VALUES", "X3DOM": "LINEAR_VALUES", "ON": "LINEAR_VALUES", "X_ITE": "DISPLAY",
            "XITE": "DISPLAY", "SRGB": "SRGB_DECODED"}.get(raw, raw)
-    return raw if raw in READINGS else None
+    if raw not in READINGS:
+        return None
+    if not available():
+        # Blender before 5.3 has no Material Lighting nodes: an import that asked for the option would stop at the first
+        # node group (measured on 5.1.2: "Node type ShaderNodeLightEvaluation undefined"). Import without it instead.
+        import logging
+        logging.getLogger(__name__).warning("X3D lighting needs Blender 5.3 or later (Material Lighting nodes); "
+                                            "this import goes on without it")
+        return None
+    return raw
+
+
+def available():
+    """True when this Blender has the Material Lighting nodes the X3D Phong and Physical groups are made of (5.3)."""
+    try:
+        import bpy
+    except ImportError:
+        return False
+    return hasattr(bpy.types, "ShaderNodeLightEvaluation")
 
 
 def srgb_to_linear(value):

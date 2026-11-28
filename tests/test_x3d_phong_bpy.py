@@ -29,6 +29,17 @@ try:
 except Exception:  # pragma: no cover - plain Python
     HAVE_BPY = False
 
+# the node groups are made of Blender 5.3's Material Lighting nodes, and the ladder renders in EEVEE and reads the image
+# with Pillow: the Blender 4.5, 5.1 and 5.2 headless jobs skip (the import then goes on without the option, see
+# test_import_without_the_nodes_goes_on), and so does a Python without Pillow or without a GL context for EEVEE
+try:
+    import PIL  # noqa: F401
+    HAVE_PIL = True
+except Exception:  # pragma: no cover
+    HAVE_PIL = False
+HAVE_NODES = HAVE_BPY and hasattr(bpy.types, "ShaderNodeLightEvaluation")
+CAN_RENDER = HAVE_NODES and HAVE_PIL
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 FIXTURES = ROOT / "tests" / "lighting" / "fixtures"
@@ -46,7 +57,7 @@ def _render(scene_name, option, engine="BLENDER_EEVEE"):
     return np.asarray(Image.open(out).convert("RGB"))
 
 
-@unittest.skipUnless(HAVE_BPY, "bpy not importable")
+@unittest.skipUnless(CAN_RENDER, "needs Blender 5.3 (Material Lighting nodes) and Pillow")
 class Ladder(unittest.TestCase):
     """Each committed probe scene, in each reading, against the oracle (gates blender_linear_values, blender_display,
     blender_exact)."""
@@ -88,7 +99,7 @@ class Ladder(unittest.TestCase):
                     self.assertLessEqual(result["p99"], gate["p99_max"], result)
 
 
-@unittest.skipUnless(HAVE_BPY, "bpy not importable")
+@unittest.skipUnless(CAN_RENDER, "needs Blender 5.3 (Material Lighting nodes) and Pillow")
 class WrongTwin(unittest.TestCase):
     """The default import must miss the oracle on falloff and cone scenes, or the probes catch nothing."""
 
@@ -114,7 +125,7 @@ class WrongTwin(unittest.TestCase):
                 self.assertGreaterEqual(result["mean"], gate["mean_min"], result)
 
 
-@unittest.skipUnless(HAVE_BPY, "bpy not importable")
+@unittest.skipUnless(HAVE_NODES, "needs Blender 5.3 (Material Lighting nodes)")
 class Import(unittest.TestCase):
     """What the option makes, and what it leaves alone."""
 
@@ -184,6 +195,20 @@ class Import(unittest.TestCase):
     def test_no_headlight_when_the_file_turns_it_off(self):
         scene = self.load("two-lights", "LINEAR_VALUES")
         self.assertFalse(any(ob.get("x3d_phong_headlight") for ob in scene.objects))
+
+
+@unittest.skipUnless(HAVE_BPY and not HAVE_NODES, "this Blender has the Material Lighting nodes")
+class WithoutTheNodes(unittest.TestCase):
+    """Blender before 5.3: asking for X3D lighting must not stop the import (it stopped at the first node group)."""
+
+    def test_import_without_the_nodes_goes_on(self):
+        import lighting_blender_record as recorder
+        recorder._register()
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        fixture = sorted(FIXTURES.glob("*.x3d"))[0]
+        self.assertEqual(bpy.ops.import_scene.x3d(filepath=str(fixture), x3d_lighting="LINEAR_VALUES"), {"FINISHED"})
+        self.assertTrue(any(ob.type == "MESH" for ob in bpy.data.objects))
+        self.assertFalse(any(ob.get("x3d_phong_headlight") for ob in bpy.data.objects))
 
 
 if __name__ == "__main__":
