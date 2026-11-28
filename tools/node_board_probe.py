@@ -10,7 +10,7 @@ READ. For every concrete node of X3DUOM 4.0 the probe builds a small file that h
 it sit (found from the object model's acceptableNodeTypes: Scene -> Shape -> Appearance -> Material, and so on), imports it
 with the add-on's operator, and imports the same file without the node (the control). The difference between the two
 Blender states is the node's effect: ``builds`` when Blender data differ (objects, meshes, materials, lights, cameras,
-worlds, actions, images, curves, node trees, point clouds, volumes, speakers, particle systems), ``carries`` when only custom
+worlds, actions, images, curves, node trees, point clouds, volumes, speakers, particle systems, shape keys), ``carries`` when only custom
 properties, text blocks or collections of kept XML differ, ``none`` when nothing differs. A node whose chain the object model
 cannot give is ``unprobed``.
 
@@ -98,8 +98,25 @@ def _animated(node, key_value, field, target, out="value_changed", fraction="set
     return TIMER + MOVER, TIMER + MOVER + body + routes
 
 
+def _humanoid(joint_inner="", humanoid_inner="", skin=False):
+    """An HAnimHumanoid with one joint (``joint_inner`` inside it), and a one-triangle skin when ``skin``."""
+    weights = ' skinCoordIndex="0 1 2" skinCoordWeight="1 1 1"' if skin else ""
+    body = (f'<HAnimJoint DEF="J" name="HumanoidRoot" containerField="skeleton"{weights}>{joint_inner}</HAnimJoint>'
+            + humanoid_inner)
+    if skin:
+        body += (f'<Coordinate DEF="SC" containerField="skinCoord" point="{TRI}"/><Shape containerField="skin">'
+                 '<IndexedFaceSet coordIndex="0 1 2 -1"><Coordinate USE="SC"/></IndexedFaceSet></Shape>')
+    return f'<HAnimHumanoid name="H">{body}</HAnimHumanoid>'
+
+
 # Whole files for the nodes that do nothing alone: (control, test).
+# The HAnim parts (node board batch 11) are measured inside a humanoid, where HAnim gives them their effect: a segment
+# and a site outside one are plain grouping nodes, a motion and a displacer outside one do nothing.
 OVERRIDES = {
+    "HAnimSegment": (_humanoid(), _humanoid('<HAnimSegment name="S"><Shape><Box/></Shape></HAnimSegment>')),
+    "HAnimSite": (_humanoid('<HAnimSegment name="S"/>'), _humanoid('<HAnimSegment name="S"><HAnimSite name="P" translation="0 1 0"/></HAnimSegment>')),
+    "HAnimMotion": (_humanoid(), _humanoid(humanoid_inner='<HAnimMotion name="M" joints="HumanoidRoot" channels="1 Xrotation" values="0 1" containerField="motions"/>')),
+    "HAnimDisplacer": (_humanoid(skin=True), _humanoid('<HAnimDisplacer name="D" coordIndex="0" displacements="0 0 1" weight="1"/>', skin=True)),
     "Transform": (BOX, '<Transform translation="1 2 3" rotation="0 1 0 1">' + BOX + "</Transform>"),
     "Shape": ("", BOX),
     "Appearance": (BOX, "<Shape><Box/><Appearance><Material diffuseColor=\"1 0 0\"/></Appearance></Shape>"),
@@ -207,7 +224,7 @@ def fingerprint(bpy):
         return sorted(k for k in idb.keys() if not k.startswith("_"))
     for coll in ("objects", "meshes", "materials", "lights", "cameras", "worlds", "actions", "images", "curves",
                  "node_groups", "collections", "speakers", "pointclouds", "volumes", "armatures", "lattices",
-                 "particles", "texts", "fonts", "grease_pencils", "sounds", "movieclips", "scenes"):
+                 "particles", "texts", "fonts", "grease_pencils", "sounds", "movieclips", "scenes", "shape_keys"):
         if not hasattr(d, coll):
             continue
         items = []
@@ -231,6 +248,8 @@ def fingerprint(bpy):
                 row.update(f=len(list(_fcurves(idb))))
             elif coll == "node_groups":
                 row.update(nodes=_tree(idb))
+            elif coll == "shape_keys":
+                row.update(k=[(k.name, round(k.value, 4)) for k in idb.key_blocks])
             elif coll == "texts":
                 row.update(len=len(idb.as_string()))
             elif coll == "scenes":
