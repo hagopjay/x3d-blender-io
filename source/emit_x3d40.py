@@ -60,6 +60,58 @@ def _nmtoken(name: str, fallback: str = "Node") -> str:
     return _NMTOKEN_BAD.sub("_", (name or "").strip()) or fallback
 
 
+class _Carried:
+    """The carried XML of a scene, checked once before anything is named: every DEF in it is reserved (so the writer's
+    own names avoid them), and an item that USEs a name no carried item DEFs (it would dangle) is left out. A carried
+    node under a USE'd Transform comes once per copy: the first copy is written, a later one becomes a USE of its DEF."""
+
+    def __init__(self, ir_scene, defs, diagnostics):
+        import xml.etree.ElementTree as ElementTree
+        self.ok, self.written = {}, set()
+        texts = [x for instance in ir_scene.iter_instances() for x in instance.carried] + list(ir_scene.carried_root)
+        parsed = {}
+        for text in texts:
+            try:
+                parsed[text] = ElementTree.fromstring(text)
+            except ElementTree.ParseError:
+                diagnostics.append("A carried node is not well-formed XML; left out.")
+        named = {e.get("DEF") for root in parsed.values() for e in root.iter() if e.get("DEF")}
+        for text, root in parsed.items():
+            missing = {e.get("USE") for e in root.iter() if e.get("USE")} - named
+            if missing:
+                diagnostics.append(f"Carried {root.tag} uses {', '.join(sorted(missing))}, which no carried node defines; "
+                                   "left out (it would dangle).")
+                continue
+            self.ok[text] = (root.tag, root.get("DEF"), {e.get("DEF") for e in root.iter() if e.get("DEF")})
+        for name in named:
+            defs.reserve(name)
+        self.routes = [r for r in getattr(ir_scene, "carried_routes", []) if all(
+            end in named for end in re.findall(r'(?:fromNode|toNode)="([^"]*)"', r))]
+
+    def yield_to(self, nodes_xml, routes_xml):
+        """The behaviour graph keeps some scene nodes in place itself (a ROUTE's end it has no Blender object for) and
+        writes their ROUTEs: those are not written a second time from the carried copy."""
+        taken = set(re.findall(r'\bDEF="([^"]+)"', nodes_xml))
+        self.ok = {text: info for text, info in self.ok.items() if not (info[1] and info[1] in taken)}
+        ends = re.compile(r'fromNode="([^"]*)"\s+fromField="([^"]*)"\s+toNode="([^"]*)"\s+toField="([^"]*)"')
+        written = set(ends.findall(routes_xml))
+        self.routes = [r for r in self.routes if not set(ends.findall(r)) & written]
+
+    def xml(self, texts, indent):
+        out = []
+        for text in texts:
+            if text not in self.ok:
+                continue
+            tag, top_def, its_defs = self.ok[text]
+            if its_defs & self.written:
+                if top_def and top_def in self.written:
+                    out.append(f'{indent}<{tag} USE="{top_def}" />\n')
+                continue
+            self.written |= its_defs
+            out.append(f"{indent}{text}\n")
+        return "".join(out)
+
+
 class _DefNames:
     """Allocate unique DEF names per IR object key and track first use."""
 
@@ -95,6 +147,10 @@ class _DefNames:
             length += 4
         self._sidecars[name] = digest
         return name
+
+    def reserve(self, name: str) -> None:
+        """A name written as it is (a carried node's DEF): the writer's own names avoid it."""
+        self._used.add(name)
 
     def first_use(self, kind: str, key: str) -> bool:
         lookup = (kind, key)
@@ -1313,6 +1369,9 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
                              splats=splats, version=version, look=look, collections=collections)
     xml.append(_grouped_xml([(child, _own_groups(child, instance.group_chain or [])) for child in instance.children],
                             write_child, defs, indent + "  "))
+    carried = getattr(defs, "carried", None)
+    if carried is not None and instance.carried:
+        xml.append(carried.xml(instance.carried, indent + "  "))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
 
@@ -1932,7 +1991,10 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     for name, level in _components(ir_scene, version, look):
         write(f'    <component name="{name}" level="{level}" />\n')
     defs = _DefNames()
+    defs.carried = _Carried(ir_scene, defs, diagnostics)       # before anything is named: carried DEFs are reserved
     behaviour = _behaviour_emission(ir_scene, defs, diagnostics, "    ")
+    if behaviour is not None:
+        defs.carried.yield_to("".join(behaviour.root), "".join(behaviour.routes))
     for name, content in head_meta(ir_scene.metadata, generator, diagnostics):
         write(_meta(name, content))
     if receipt_meta:
@@ -1965,6 +2027,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     plain = [instance for instance in ir_scene.instances if instance.rigid_body is None and instance.rigid_joint is None]
     write(_grouped_xml([(instance, _own_groups(instance, [])) for instance in plain], write_root, defs, "    "))
     write(_rigid_bodies_xml(ir_scene, geometries, materials, defs, "    ", output_dir=output_dir, look=look))
+    write(defs.carried.xml(ir_scene.carried_root, "    "))
+    write("".join(f"    {route}\n" for route in defs.carried.routes))
     write(_animation_xml(ir_scene, defs, "    "))
     write(_interaction_xml(ir_scene, defs, "    "))
     if behaviour is not None:

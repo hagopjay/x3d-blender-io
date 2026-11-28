@@ -28,9 +28,12 @@
    "written": "no"
   },
   "Analyser": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Anchor": {
    "read": "structural",
@@ -68,9 +71,12 @@
    ]
   },
   "AudioDestination": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Background": {
    "read": "carries",
@@ -100,9 +106,12 @@
    ]
   },
   "BiquadFilter": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "BlendedVolumeStyle": {
    "read": "none",
@@ -170,9 +179,12 @@
    ]
   },
   "BufferAudioSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "CADAssembly": {
    "read": "structural",
@@ -180,8 +192,8 @@
    "written": "no"
   },
   "CADFace": {
-   "read": "none",
-   "read_evidence": "",
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
    "written": "no"
   },
   "CADLayer": {
@@ -200,19 +212,28 @@
    "written": "no"
   },
   "ChannelMerger": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "ChannelSelector": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "ChannelSplitter": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Circle2D": {
    "read": "builds",
@@ -220,9 +241,13 @@
    "written": "writable"
   },
   "ClipPlane": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "CollidableOffset": {
    "read": "none",
@@ -375,9 +400,12 @@
    "written": "no"
   },
   "Convolver": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Coordinate": {
    "read": "builds",
@@ -466,9 +494,12 @@
    "written": "no"
   },
   "Delay": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "DirectionalLight": {
    "read": "builds",
@@ -494,9 +525,12 @@
    ]
   },
   "DynamicsCompressor": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "EaseInEaseOut": {
    "read": "none",
@@ -578,9 +612,13 @@
    "written": "no"
   },
   "Gain": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "GeneratedCubeMapTexture": {
    "read": "none",
@@ -621,9 +659,12 @@
    ]
   },
   "GeoMetadata": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "GeoOrigin": {
    "read": "none",
@@ -738,7 +779,10 @@
   "ImageTexture3D": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d"
+   ]
   },
   "IndexedFaceSet": {
    "read": "builds",
@@ -823,9 +867,12 @@
    ]
   },
   "IsoSurfaceVolumeData": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "KeySensor": {
    "read": "reported",
@@ -857,8 +904,8 @@
    "written": "no"
   },
   "Layout": {
-   "read": "none",
-   "read_evidence": "",
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
    "written": "no"
   },
   "LayoutGroup": {
@@ -900,9 +947,12 @@
    ]
   },
   "ListenerPointSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "LoadSensor": {
    "read": "none",
@@ -915,9 +965,13 @@
    ]
   },
   "LocalFog": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Material": {
    "read": "builds",
@@ -988,9 +1042,12 @@
    ]
   },
   "MicrophoneSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "MotorJoint": {
    "read": "none",
@@ -1055,9 +1112,12 @@
    "written": "no"
   },
   "NurbsOrientationInterpolator": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsPatchSurface": {
    "read": "builds",
@@ -1065,19 +1125,28 @@
    "written": "no"
   },
   "NurbsPositionInterpolator": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsSet": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsSurfaceInterpolator": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsSweptSurface": {
    "read": "builds",
@@ -1142,9 +1211,13 @@
    ]
   },
   "OscillatorSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "PackagedShader": {
    "read": "builds",
@@ -1152,13 +1225,17 @@
    "written": "no"
   },
   "ParticleSystem": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "PeriodicWave": {
-   "read": "none",
-   "read_evidence": "",
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
    "written": "no"
   },
   "PhysicalMaterial": {
@@ -1172,9 +1249,12 @@
    ]
   },
   "PickableGroup": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "PixelTexture": {
    "read": "builds",
@@ -1204,7 +1284,10 @@
   "PointEmitter": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d"
+   ]
   },
   "PointLight": {
    "read": "builds",
@@ -1443,9 +1526,12 @@
    ]
   },
   "SegmentedVolumeData": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "ShadedVolumeStyle": {
    "read": "none",
@@ -1507,9 +1593,12 @@
    ]
   },
   "SpatialSound": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Sphere": {
    "read": "builds",
@@ -1583,14 +1672,20 @@
    "written": "no"
   },
   "StreamAudioDestination": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "StreamAudioSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "StringSensor": {
    "read": "reported",
@@ -1678,14 +1773,20 @@
    "written": "no"
   },
   "TextureProjector": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "TextureProjectorParallel": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "TextureProperties": {
    "read": "none",
@@ -1842,8 +1943,8 @@
    "written": "no"
   },
   "Viewport": {
-   "read": "none",
-   "read_evidence": "",
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
    "written": "no"
   },
   "VisibilitySensor": {
@@ -1856,9 +1957,13 @@
    ]
   },
   "VolumeData": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "VolumeEmitter": {
    "read": "none",
@@ -1875,9 +1980,13 @@
    ]
   },
   "WaveShaper": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "WindPhysicsModel": {
    "read": "none",

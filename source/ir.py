@@ -417,6 +417,9 @@ class IRInstance:
     # A Blender HINGE rigid body constraint written as a SingleAxisHingeJoint: anchor and axis in X3D space, limits,
     # the two bodies' object names, the fields kept as written. Its empty is not written as a Transform.
     rigid_joint: dict | None = None
+    # Nodes the import had no handler for, kept as the file wrote them (``x3d_carried``): XML texts written back inside
+    # this object's Transform, after its children. Blender does nothing with them.
+    carried: list[str] = field(default_factory=list)
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -515,6 +518,9 @@ class IRScene:
     # The scene's rigid body world, written as a RigidBodyCollection: gravity (X3D space), iterations, and the fields
     # and CollisionCollection the import kept as written. None when no object is written as a RigidBody.
     rigid_world: dict | None = None
+    # Carried nodes at the scene's top level, and ROUTEs between carried nodes (XML texts, as the file wrote them).
+    carried_root: list[str] = field(default_factory=list)
+    carried_routes: list[str] = field(default_factory=list)
     # Metadata of imported hosts with no Blender counterpart; WorldInfo ones are written, the rest reported.
     metadata_hosts: list[IRMetadataHost] = field(default_factory=list)
     # Blender's rigid body world as plain data (physics_export.extract); written as a RigidBodyCollection.

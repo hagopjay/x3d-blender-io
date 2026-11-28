@@ -8848,6 +8848,92 @@ def _frame_rotation(z, x):
     return Matrix((x, y, z)).transposed()
 
 
+# -- carry: nodes the import has no handler for, kept as written and written back in place ------------------------------
+# X3D child nodes the import otherwise drops without a trace (node board read rung "none"): Sound and its audio graph,
+# volume data, particle systems, layering, texture projectors, NURBS interpolators... Blender does nothing with them;
+# their XML, exactly as the file wrote it, rides on the object of their nearest Transform (or the scene) and the X3D 4.0
+# export writes it back there. A node a later batch builds natively leaves this list. DIS is left out on purpose: another
+# agent is bringing it natively.
+CARRIED_PROPERTY = "x3d_carried"            # JSON list of XML texts, on an object or the scene
+CARRIED_ROUTES_PROPERTY = "x3d_carried_routes"   # on the scene: ROUTEs between carried nodes
+CARRY_SPECS = frozenset((
+    'Analyser', 'AudioDestination', 'BiquadFilter', 'BufferAudioSource', 'CADFace', 'ChannelMerger', 'ChannelSelector',
+    'ChannelSplitter', 'ClipPlane', 'Convolver', 'Delay',
+    'DynamicsCompressor', 'Gain', 'GeoMetadata', 'IsoSurfaceVolumeData', 'Layout',
+    'ListenerPointSource', 'LocalFog', 'MicrophoneSource', 'NurbsOrientationInterpolator', 'NurbsPositionInterpolator',
+    'NurbsSet', 'NurbsSurfaceInterpolator', 'OscillatorSource', 'ParticleSystem', 'PeriodicWave', 'PickableGroup',
+    'SegmentedVolumeData', 'SpatialSound', 'StreamAudioDestination', 'StreamAudioSource',
+    'TextureProjector', 'TextureProjectorParallel', 'Viewport', 'VolumeData', 'WaveShaper'))
+# what the import builds: a subtree holding any of these is not carried (it would be written twice)
+CARRY_BLOCKERS = frozenset(('Shape', 'Inline', 'HAnimHumanoid', 'Viewpoint', 'OrthoViewpoint', 'GeoViewpoint',
+                            'PointLight', 'SpotLight', 'DirectionalLight', 'Transform', 'GaussianSplats'))
+CARRY_PASS_THROUGH = frozenset(('Group', 'StaticGroup'))     # between a carried node and its Transform
+
+
+def find_carried(all_nodes):
+    """[(node, ancestry, xml)] for the nodes to carry, and the ids of every node inside them (the import skips those)."""
+    items, inside, tops = [], set(), set()
+    for node, ancestry in all_nodes:          # depth first: a node's ancestors come before it
+        if any(id(a) in tops for a in ancestry):
+            inside.add(id(node))
+            continue
+        if node.getSpec() not in CARRY_SPECS:
+            continue
+        element = getattr(node, "x3dNode", None)
+        if element is None:                      # the classic VRML encoding: no XML to keep
+            continue
+        top = next((i for i in range(len(ancestry) - 1, -1, -1) if ancestry[i].getSpec() == 'Transform'), None)
+        between = ancestry[(top + 1) if top is not None else 0:]
+        if any(a.getSpec() not in CARRY_PASS_THROUGH and a.getSpec() not in ('X3D', 'Scene', None) for a in between):
+            continue                             # under a node the writer dissolves or rebuilds: no place to put it
+        if any(e.tagName in CARRY_BLOCKERS for e in element.getElementsByTagName('*')):
+            continue
+        items.append((node, ancestry, element.toxml()))
+        inside.add(id(node))
+        tops.add(id(node))
+    return items, inside
+
+
+def place_carried(items, bpyscene):
+    """Each carried node's XML onto its nearest Transform's object (the one made for that ancestry), else the scene.
+    ROUTEs between carried nodes are kept with them; one with a single carried end is reported, not guessed at."""
+    import json
+    if not items:
+        return
+    for node, ancestry, xml in items:
+        top = next((i for i in range(len(ancestry) - 1, -1, -1) if ancestry[i].getSpec() == 'Transform'), None)
+        owner = bpyscene
+        if top is not None:
+            transform = ancestry[top].getRealNode()
+            owners = getattr(transform, "hierarchy_owners", None) or []
+            owner = next((ob for ob, anc in owners if len(anc) == top and all(a is b for a, b in zip(anc, ancestry))),
+                         None) or getattr(transform, "blendObject", None)
+            if owner is None:
+                logger.warning("%s %s: its Transform made no object; not carried", node.getSpec(), node.getDefName() or "")
+                continue
+        kept = json.loads(owner.get(CARRIED_PROPERTY, "[]") or "[]")
+        kept.append(xml)
+        owner[CARRIED_PROPERTY] = json.dumps(kept)
+    carried_defs = set()
+    for node, _ancestry, _xml in items:
+        for element in [node.x3dNode, *node.x3dNode.getElementsByTagName('*')]:
+            if element.hasAttribute('DEF'):
+                carried_defs.add(element.getAttribute('DEF'))
+    document = items[0][0].x3dNode.ownerDocument
+    routes, half = [], 0
+    for route in document.getElementsByTagName('ROUTE'):
+        ends = (route.getAttribute('fromNode'), route.getAttribute('toNode'))
+        if all(end in carried_defs for end in ends):
+            routes.append(route.toxml())
+        elif any(end in carried_defs for end in ends):
+            half += 1
+    if routes:
+        bpyscene[CARRIED_ROUTES_PROPERTY] = json.dumps(routes)
+    if half:
+        logger.warning("%d ROUTE(s) join a carried node to one the import builds; they are not carried", half)
+    logger.info("carried %d node(s) the import has no handler for (written back as the file wrote them)", len(items))
+
+
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
 X3D_LOD_PROPERTY = "x3d_lod"                  # on the same object: "<LOD name>:<level>"
 
@@ -9207,7 +9293,10 @@ def load_web3d(
     # objects made under a node whose visible field is false (X3D 4.0: X3DGroupingNode and X3DShapeNode have one)
     visible_false = []
 
+    carried, carried_inside = find_carried(all_nodes)
     for node, ancestry in all_nodes:
+        if id(node) in carried_inside:
+            continue           # carried as written (place_carried): nothing of it is built
         # if 'castle.wrl' not in node.getFilename():
         #   continue
         made_before = node.blendObject
@@ -9295,6 +9384,10 @@ def load_web3d(
             rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes)
         except Exception as exc:  # the objects are already in place; a failed rebuild leaves the flat import
             logger.error("Hierarchy rebuild failed, objects stay flat: %s", exc, exc_info=True)
+    try:
+        place_carried(carried, bpyscene)
+    except Exception as exc:  # carrying must never stop an import
+        logger.error("Carried nodes not kept: %s", exc, exc_info=True)
 
     if import_physics and not _INLINE_STACK:
         try:
