@@ -7829,7 +7829,7 @@ def import_loss_records(all_nodes, rebuilt=None):
             timers[name] = node
         elif spec == "ROUTE":
             attrs = {k: _attribute_raw(node, k, "") for k in ("fromNode", "fromField", "toNode", "toField")}
-            if _route_tuple(attrs) in rebuilt.edges:
+            if _route_tuple(attrs) in rebuilt.edges or _route_tuple(attrs) in _PHYSICS_ROUTES:
                 continue
             pair = (attrs["fromField"].replace("_changed", ""), attrs["toField"].replace("set_", ""))
             if pair not in _CONSUMED_ROUTES:
@@ -8928,6 +8928,58 @@ def finalize_lod():
 
 
 import_physics = True      # set by load(physics=...): RigidBodyPhysics becomes Blender's rigid body world
+_PHYSICS_ROUTES = set()    # ROUTE tuples a body's motion now drives in Blender (not import losses)
+_BODY_TO_TRANSFORM = {("position", "translation"): "COPY_LOCATION", ("orientation", "rotation"): "COPY_ROTATION"}
+
+
+def follow_body_routes(all_nodes, bodies, physics):
+    """ROUTE RigidBody.position -> Transform.translation and RigidBody.orientation -> Transform.rotation: the usual way
+    an X3D scene shows a body (X_ITE draws no collidable that is only a body's geometry). The Transform's object gets a
+    Copy Location / Copy Rotation constraint on the body's object, in world space, which is what the ROUTE does when the
+    Transform and the collection sit in the same coordinate system (the usual case; otherwise listed as a loss). The body's
+    own collidable object is then a stand-in: hidden in renders and drawn as wire."""
+    _PHYSICS_ROUTES.clear()
+    transforms = {}     # DEF -> the objects that stand for that Transform (empty in a flat import)
+    for node, _ancestry in all_nodes:
+        if node.getSpec() == "Transform" and node.getDefName() and not node.reference:
+            transforms.setdefault(node.getDefName(), [o for o, _a in node.getRealNode().hierarchy_owners])
+    for node, _ancestry in all_nodes:
+        if node.getSpec() != "ROUTE" or getattr(node, "x3dNode", None) is None:
+            continue
+        attrs = {k: _attribute_raw(node, k, "") for k in ("fromNode", "fromField", "toNode", "toField")}
+        body = bodies.get(attrs["fromNode"])
+        pair = (attrs["fromField"].replace("_changed", ""), attrs["toField"].replace("set_", ""))
+        kind = _BODY_TO_TRANSFORM.get(pair)
+        if body is None or kind is None:
+            continue
+        owners = transforms.get(attrs["toNode"])
+        if owners is None:
+            continue
+        name = f"X3D ROUTE {attrs['fromNode']}.{attrs['fromField']}"
+        if owners:      # keep_hierarchy: the object that stands for the Transform takes the body's pose, as the ROUTE does
+            for ob in owners:
+                if ob is body or "x3d_rigid_body" in ob.keys():
+                    continue
+                con = ob.constraints.new(kind)
+                con.name, con.target = name, body
+                con.owner_space = con.target_space = "WORLD"
+                if ob.parent is not None:
+                    physics.lose(f"ROUTE {attrs['fromNode']}.{attrs['fromField']} -> {attrs['toNode']}", "(route)",
+                                 "the Transform is nested: followed in world space, its parents' offset is not applied")
+        else:           # a flat import: each object under the Transform follows the body's motion from where it starts
+            for ob in bpy.data.objects:
+                if ob.get(X3D_DEF_PROPERTY) != attrs["toNode"] or ob is body or "x3d_rigid_body" in ob.keys() \
+                        or any(c.name.startswith("X3D ROUTE " + attrs["fromNode"] + ".") and c.type == "CHILD_OF"
+                               for c in ob.constraints):
+                    continue
+                con = ob.constraints.new("CHILD_OF")
+                con.name, con.target = name, body
+                con.inverse_matrix = body.matrix_world.inverted()
+        for stand_in in [body] + [c for c in body.children if c.rigid_body is not None]:
+            stand_in.hide_render = True
+            stand_in.display_type = "WIRE"
+            stand_in["x3d_collidable_only"] = True
+        _PHYSICS_ROUTES.add(_route_tuple(attrs))
 
 
 def import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection):
@@ -8963,6 +9015,7 @@ def import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, b
             ob.parent = None
             ob.matrix_world = world
     made = physics_blender.apply(physics, bpycontext.scene, bpycollection, shape_objects, matrices, conversion_scale)
+    follow_body_routes(all_nodes, made["bodies"], physics)
     records = [{"kind": "physics", "node": what, "detail": f"{field}: {why}"} for what, field, why in physics.losses]
     for record in records:
         logger.warning("X3D import loss: %s %s: %s", record["kind"], record["node"], record["detail"])
@@ -9361,6 +9414,7 @@ def load(context,
     colour_space = resolve_colour_space(color_space)
     lighting_units = resolve_light_units(light_units, colour_space)
     imported_lights.clear()
+    _PHYSICS_ROUTES.clear()
     lit_surfaces.clear()
     lit_by_node.clear()
     lod_records.clear()

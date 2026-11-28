@@ -41,7 +41,8 @@ def fnv1a(data: bytes) -> int:
     return h
 
 
-def record(path: str, seconds: float, fps: int, options=None):
+def record(path: str, seconds: float, fps: int, options=None, after_import=None):
+    """after_import(scene): a hook run after the import and before the run (the tests' wrong twins use it)."""
     import bpy
     from mathutils import Matrix
     from bpy_extras.io_utils import axis_conversion
@@ -57,6 +58,8 @@ def record(path: str, seconds: float, fps: int, options=None):
     if world is None:
         raise RuntimeError("the import made no rigid body world")
     world.point_cache.frame_start, world.point_cache.frame_end = 1, 1 + steps
+    if after_import is not None:
+        after_import(scene)
     to_file = axis_conversion(from_forward="-Z", from_up="Y").to_4x4().inverted()   # the operator's default axes
     bodies = sorted((ob for ob in bpy.data.objects if "x3d_rigid_body" in ob.keys()),
                     key=lambda ob: json.loads(ob["x3d_rigid_body"])["name"])

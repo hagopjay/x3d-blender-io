@@ -50,6 +50,7 @@ HELPER_PROPERTY = "x3d_physics_helper"
 BODY_PROPERTY = "x3d_rigid_body"
 JOINT_PROPERTY = "x3d_rigid_joint"
 WORLD_PROPERTY = "x3d_rigid_body_collection"
+HOLDER_PROPERTY = "x3d_rigid_body_holder"
 X_ITE_STEP_FPS = 60.0
 CONVEX_TYPES = {"IndexedFaceSet", "IndexedTriangleSet", "TriangleSet", "IndexedQuadSet", "QuadSet",
                 "IndexedTriangleFanSet", "IndexedTriangleStripSet", "TriangleFanSet", "TriangleStripSet"}
@@ -224,6 +225,7 @@ def _compound(scene, collection_bpy, body, objects, frame_world):
     objects as its rigid children."""
     me = bpy.data.meshes.new(body.name)
     holder = bpy.data.objects.new(body.name, me)
+    holder[HOLDER_PROPERTY] = True       # a body with no geometry of its own: the export writes it as the RigidBody only
     collection_bpy.objects.link(holder)
     holder.matrix_world = frame_world
     for child in objects:

@@ -27,12 +27,14 @@ try:
     from .ir import IRMetadata, IRScene
     from .splat_gltf import splat_glb_bytes
     from .splat_io import sh0_to_rgb
+    from .physics_export import physics_xml
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import display_colour
     from interaction import tour_timeline
     from ir import IRMetadata, IRScene
     from splat_gltf import splat_glb_bytes
     from splat_io import sh0_to_rgb
+    from physics_export import physics_xml
 
 # The head meta name of the loss receipt's line (receipt.RECEIPT_META; tests/test_receipt.py checks they agree).
 RECEIPT_META = "x3d-blender-io.receipt"
@@ -1737,6 +1739,8 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     has no Appearance. Circle2D is Geometry2D level 2; Immersive has level 1.
     """
     components = {}
+    if getattr(ir_scene, "physics", None):
+        components["RigidBodyPhysics"] = 2      # joints are level 2; Immersive has no RigidBodyPhysics
     if version == "4.1" and ir_scene.splats:
         components["GaussianSplats"] = 1
     if ir_scene.humanoids:
@@ -1906,6 +1910,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     if behaviour is not None:
         write("".join(behaviour.root))
         write("".join(behaviour.routes))
+    if getattr(ir_scene, "physics", None):
+        write(physics_xml(ir_scene.physics, defs, "    ", lambda name: defs.get("transform", name, "OB_")))
 
     write("  </Scene>\n")
     write("</X3D>\n")

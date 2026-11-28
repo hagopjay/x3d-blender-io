@@ -12,12 +12,14 @@ The reading of the contact parameters (CollisionCollection) follows the standard
 
 * ``bounce`` is the coefficient of restitution of a contact, applied when ``appliedParameters`` has "BOUNCE".
 * ``frictionCoefficients`` is the contact's Coulomb friction (first direction), applied when ``appliedParameters`` has
-  "FRICTION_COEFFICIENT-2" or "USER_FRICTION". The standard gives no friction when neither is applied; this reading then
+  "FRICTION_COEFFICIENT-2" or "USER_FRICTION". The parameter has two spellings in Web3D's own material: the standard's
+  text and the X3D 4.0 XSD documentation write "FRICTION_COEFFICIENT-2" (likewise "SPEED-1", "SLIP-1"), the tools made
+  from X3DUOM (x3d.py 4.0.65.8, X3DJSAIL) and X_ITE 16.8.1 write "FRICTION_COEFFICIENT_2". Both are read. The standard gives no friction when neither is applied; this reading then
   uses 0.25, which is what X_ITE 16.8.1 and Blender both make of two bodies at their own default friction of 0.5.
 
 X_ITE 16.8.1 sets ``bounce`` and the friction coefficient on each body, and Bullet multiplies the two bodies' values at a
 contact, so in X_ITE a contact gets bounce squared and friction squared (and X_ITE reads only the spelling
-"FRICTION_COEFFICIENT_2"). ``physics_blender`` gives each body the square root, so a contact gets the authored value.
+"FRICTION_COEFFICIENT_2"; with the other one it keeps 0.5 per body, 0.25 a contact). ``physics_blender`` gives each body the square root, so a contact gets the authored value.
 
 Everything the document asks for that the Blender rigid body world cannot do is listed in ``Physics.losses`` with the node
 and the field, so the importer's loss report names it. Nothing here runs code from the file.
@@ -77,6 +79,7 @@ UNSUPPORTED_COLLECTION_FIELDS = ("preferAccuracy", "errorCorrection", "constantF
                                  "disableTime")
 UNSUPPORTED_BODY_FIELDS = ("centerOfMass", "inertia", "useFiniteRotation", "disableTime")
 APPLIED_ONLY = {"SLIP-1": "slipFactors", "SLIP-2": "slipFactors", "SPEED-1": "surfaceSpeed", "SPEED-2": "surfaceSpeed",
+                "SLIP_1": "slipFactors", "SLIP_2": "slipFactors", "SPEED_1": "surfaceSpeed", "SPEED_2": "surfaceSpeed",
                 "ERROR_REDUCTION": "softnessErrorCorrection", "CONSTANT_FORCE": "softnessConstantForceMix"}
 
 
@@ -381,9 +384,6 @@ def read_physics(root):
 def _report_collider(physics, collection_name, collider):
     applied = set(collider.get("appliedParameters", ()))
     what = f"CollisionCollection of {collection_name}"
-    if "FRICTION_COEFFICIENT_2" in applied:
-        physics.lose(what, "appliedParameters", "FRICTION_COEFFICIENT_2 is X_ITE's spelling; the standard's is "
-                     "FRICTION_COEFFICIENT-2 (read as the same here)")
     fc = collider.get("frictionCoefficients", (0.0, 0.0))
     if applied & {"FRICTION_COEFFICIENT-2", "FRICTION_COEFFICIENT_2"} and abs(fc[0] - fc[1]) > 1e-9:
         physics.lose(what, "frictionCoefficients", "a second friction direction: Blender's friction is isotropic, the "

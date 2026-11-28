@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Interchange" version="4.0">
+ <head>
+  <component name="RigidBodyPhysics" level="2"/>
+  <meta name="title" content="Experiment: ODE-only fields that PhysX cannot honour (the loss report must list each one)"/>
+  <meta name="generator" content="hand-written, x3d-physx-bridge 0.0.1"/>
+ </head>
+ <Scene>
+  <Viewpoint position="0 0.3 1.2"/>
+  <Transform DEF="BoxT" translation="0 0.3 0"><Shape DEF="BoxShape"><Box size="0.1 0.1 0.1"/></Shape></Transform>
+  <Transform DEF="BaseT" translation="0 0 0"><Shape DEF="BaseShape"><Box size="1 0.02 1"/></Shape></Transform>
+  <RigidBodyCollection DEF="World" errorCorrection="0.5" constantForceMix="0.001">
+   <RigidBody DEF="BoxBody" containerField="bodies" position="0 0.3 0" useFiniteRotation="true" finiteRotationAxis="0 1 0" disableTime="2">
+    <CollidableShape DEF="BoxCollider" containerField="geometry"><Shape USE="BoxShape" containerField="shape"/></CollidableShape>
+   </RigidBody>
+   <RigidBody DEF="BaseBody" containerField="bodies" fixed="true">
+    <CollidableShape DEF="BaseCollider" containerField="geometry"><Shape USE="BaseShape" containerField="shape"/></CollidableShape>
+   </RigidBody>
+   <SingleAxisHingeJoint DEF="Hinge" containerField="joints" anchorPoint="0 0.25 0" axis="0 0 1" stopErrorCorrection="0.5"><RigidBody USE="BoxBody" containerField="body1"/><RigidBody USE="BaseBody" containerField="body2"/></SingleAxisHingeJoint>
+   <CollisionCollection DEF="Surface" containerField="collider" appliedParameters='"BOUNCE" "SLIP-1" "ERROR_REDUCTION"' slipFactors="0.1 0.1" softnessConstantForceMix="0.01" softnessErrorCorrection="0.5" surfaceSpeed="0.2 0">
+    <CollidableShape USE="BoxCollider" containerField="collidables"/>
+    <CollidableShape USE="BaseCollider" containerField="collidables"/>
+    <CollisionSpace DEF="Space" containerField="collidables" useGeometry="true"><CollidableShape USE="BoxCollider" containerField="collidables"/></CollisionSpace>
+   </CollisionCollection>
+  </RigidBodyCollection>
+  <ROUTE fromNode="BoxBody" fromField="position" toNode="BoxT" toField="set_translation"/>
+ </Scene>
+</X3D>

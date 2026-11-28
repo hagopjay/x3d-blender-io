@@ -26,6 +26,7 @@ try:
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
+    from . import physics_export
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
@@ -37,6 +38,7 @@ except ImportError:  # pragma: no cover - standalone test fallback
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
+    import physics_export
 
 logger = logging.getLogger("export_x3d")
 
@@ -1880,6 +1882,8 @@ def extract_scene(
             use_active_collection=use_active_collection,
         )
     )
+    # the rigid body world's helpers and constraint empties are written as physics, not as Transforms
+    exported = [obj for obj in exported if not physics_export.is_helper(obj)]
     exported_names = {obj.name for obj in exported}
     # Objects imported from an Inline are represented by their placeholder empty's Inline node.
     inline_children = [obj for obj in exported if (root := inline_root(obj)) is not None and root.name in exported_names]
@@ -2284,6 +2288,13 @@ def extract_scene(
         ir_scene.diagnostics.append(
             f"Skipped {count} {object_type} object(s): not yet supported by the X3D 4.0 path."
         )
+
+    try:
+        ir_scene.physics = physics_export.extract(scene, exported, global_matrix)
+        if ir_scene.physics:
+            ir_scene.diagnostics.extend(ir_scene.physics["diagnostics"])
+    except Exception as exc:  # physics must never stop an export
+        ir_scene.diagnostics.append(f"Rigid body physics not written: {exc}")
 
     if not ir_scene.object_names:
         ir_scene.diagnostics.append("No exportable objects matched the current filters.")

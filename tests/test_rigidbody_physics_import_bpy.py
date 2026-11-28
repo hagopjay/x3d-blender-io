@@ -55,7 +55,9 @@ class RigidBodyImportTests(unittest.TestCase):
             f.write(_x3d(body))
         bpy.ops.wm.read_factory_settings(use_empty=True)
         self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
-        return sorted((o for o in bpy.data.objects if o.type == "MESH"), key=lambda o: o.name)
+        # the rigid body world's own objects (a compound body's holder, the start-up anchor) carry no shape of the file
+        return sorted((o for o in bpy.data.objects if o.type == "MESH" and "x3d_rigid_body_holder" not in o.keys()
+                       and "x3d_physics_helper" not in o.keys()), key=lambda o: o.name)
 
     def _world(self, name, body):
         """The world matrices of the mesh objects, rounded."""

@@ -499,6 +499,8 @@ class IRScene:
     rigid_world: dict | None = None
     # Metadata of imported hosts with no Blender counterpart; WorldInfo ones are written, the rest reported.
     metadata_hosts: list[IRMetadataHost] = field(default_factory=list)
+    # Blender's rigid body world as plain data (physics_export.extract); written as a RigidBodyCollection.
+    physics: dict | None = None
 
     def iter_instances(self):
         """Depth-first walk over every instance, nested children included (the members of each instanced collection
