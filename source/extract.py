@@ -666,16 +666,22 @@ def _crease_from_sharp_edges(mesh) -> float:
     except Exception:
         return math.pi
 
-GEOMETRY_NODE_PROPERTY = "x3d_geometry"   # set by the importer on a mesh read from an IndexedTriangleSet
+GEOMETRY_NODE_PROPERTY = "x3d_geometry"   # set by the importer on a mesh read from one of TRIANGLE_SET_NODES
+
+# the triangle-set nodes a mesh is written back as while every face is a triangle (node board batches 2 and 5)
+TRIANGLE_SET_NODES = ("IndexedTriangleSet", "TriangleSet", "TriangleFanSet", "TriangleStripSet",
+                      "IndexedTriangleFanSet", "IndexedTriangleStripSet")
 
 
 def mark_triangle_sets(geometries, mesh, use_triangulate):
-    """Flag face geometries for an IndexedTriangleSet: the export triangulates, or the mesh came from one."""
-    wanted = use_triangulate or (mesh is not None and getattr(mesh, "get", lambda *_: None)(GEOMETRY_NODE_PROPERTY)
-                                 == "IndexedTriangleSet")
+    """Flag face geometries for a triangle set: the export triangulates (an IndexedTriangleSet), or the mesh came from
+    one of TRIANGLE_SET_NODES (that node)."""
+    node = mesh.get(GEOMETRY_NODE_PROPERTY) if mesh is not None and hasattr(mesh, "get") else None
+    node = node if node in TRIANGLE_SET_NODES else None
     for geometry in geometries:
         if not geometry.is_lines and not geometry.is_points:
-            geometry.triangle_set = bool(wanted)
+            geometry.triangle_set = bool(use_triangulate or node)
+            geometry.geometry_node = node
     return geometries
 
 

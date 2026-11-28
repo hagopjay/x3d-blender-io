@@ -483,12 +483,76 @@ def _triangle_index(coord_index):
     return out or None
 
 
+def _fan_strip_runs(triangles, strip):
+    """``triangles`` (a flat index, three per triangle, as the mesh has them) as fans or strips, or None.
+
+    The runs are read off the mesh itself: a triangle joins the run before it when it is the run's next triangle
+    (a fan: it shares the first and the last index; a strip: the last two, turned on every other triangle the way
+    a viewer turns them), else it starts a new run. The runs are then unrolled again and must give back the same
+    triangles in the same order and winding; if they do not, None, and the caller writes a triangle set."""
+    tris = [tuple(triangles[i:i + 3]) for i in range(0, len(triangles), 3)]
+    runs = []
+    for a, b, c in tris:
+        if runs:
+            run = runs[-1]
+            if strip:
+                j = len(run) - 2
+                joins = (a, b) == ((run[j], run[j + 1]) if j % 2 == 0 else (run[j + 1], run[j]))
+            else:
+                joins = a == run[0] and b == run[-1]
+            if joins:
+                run.append(c)
+                continue
+        runs.append([a, b, c])
+    unrolled = []
+    for run in runs:
+        for j in range(len(run) - 2):
+            if strip:
+                unrolled.append((run[j], run[j + 1], run[j + 2]) if j % 2 == 0 else (run[j + 1], run[j], run[j + 2]))
+            else:
+                unrolled.append((run[0], run[j + 1], run[j + 2]))
+    return runs if unrolled == tris else None
+
+
+# a triangle set without an index carries its arrays in corner order, so it cannot share a Coordinate by USE (a skin)
+# or have its points moved by a CoordinateInterpolator written for the shared vertices (shape keys)
+_UNINDEXED_SETS = ("TriangleSet", "TriangleFanSet", "TriangleStripSet")
+
+
+def _triangle_set_layout(geometry, triangles):
+    """(node, attrs, order) for a mesh whose every face is a triangle: the node it is written as (the one the import
+    read it from, ``geometry.geometry_node``, else an IndexedTriangleSet), its index or count attributes, and for a
+    set without an index the vertex order its arrays are written in (None: the arrays as they are)."""
+    node = getattr(geometry, "geometry_node", None) or "IndexedTriangleSet"
+    if node in _UNINDEXED_SETS and (geometry.skin_coord_def or geometry.morph_keys):
+        node = "IndexedTriangleSet"
+    runs = None
+    if node in ("TriangleFanSet", "TriangleStripSet", "IndexedTriangleFanSet", "IndexedTriangleStripSet"):
+        runs = _fan_strip_runs(triangles, strip=node.endswith("StripSet"))
+        if runs is None:
+            node = "TriangleSet" if node in _UNINDEXED_SETS else "IndexedTriangleSet"
+    if node == "IndexedTriangleSet":
+        return node, [f'index="{_fmt_ints(triangles)}"'], None
+    if node == "TriangleSet":
+        return node, [], list(triangles)
+    if node in ("IndexedTriangleFanSet", "IndexedTriangleStripSet"):
+        return node, [f'index="{_fmt_ints([i for run in runs for i in run + [-1]])}"'], None
+    count = "stripCount" if node == "TriangleStripSet" else "fanCount"
+    return node, [f'{count}="{_fmt_ints([len(run) for run in runs])}"'], [i for run in runs for i in run]
+
+
+def _in_order(values, order):
+    """``values`` (parallel to the coordinates), or for a triangle set without an index one entry per corner."""
+    return values if order is None else [values[i] for i in order]
+
+
 def _geometry_xml(geometry, defs: _DefNames, indent):
     geometry_def = defs.get("geometry", geometry.name, "ME_")
     triangles = _triangle_index(geometry.coord_index) if (
         getattr(geometry, "triangle_set", False) and not geometry.is_points and not geometry.is_lines) else None
+    layout = _triangle_set_layout(geometry, triangles) if triangles else None
     node = "PointSet" if geometry.is_points else "IndexedLineSet" if geometry.is_lines else \
-        "IndexedTriangleSet" if triangles else "IndexedFaceSet"
+        layout[0] if layout else "IndexedFaceSet"
     if not defs.first_use("geometry", geometry.name):
         return f'{indent}<{node} USE="{geometry_def}" />\n'
     if geometry.is_points:
@@ -509,15 +573,18 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
                 xml.append(f'{indent}  <Color color="{values}" />\n')
         xml.append(f"{indent}</IndexedLineSet>\n")
         return "".join(xml)
-    if triangles:
-        # an IndexedTriangleSet: one index for every array, no creaseAngle (its generated normals are per face, so a
-        # smooth mesh keeps the look only with its normals, written when the export writes normals)
-        attrs = [f'DEF="{geometry_def}"', f'index="{_fmt_ints(triangles)}"']
+    order = None
+    if layout:
+        # a triangle set: one index for every array (or, without an index, the arrays in corner order), no
+        # creaseAngle (its generated normals are per face, so a smooth mesh keeps the look only with its normals,
+        # written when the export writes normals)
+        attrs = [f'DEF="{geometry_def}"'] + layout[1]
+        order = layout[2]
     else:
         attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
     if not geometry.solid:
         attrs.append('solid="false"')
-    if not triangles and geometry.crease_angle is not None and geometry.crease_angle > 0.0:
+    if not layout and geometry.crease_angle is not None and geometry.crease_angle > 0.0:
         attrs.append(f'creaseAngle="{_fmt(geometry.crease_angle)}"')
     xml = [f"{indent}<{node} {' '.join(attrs)}>\n"]
     if geometry.skin_coord_def:
@@ -529,15 +596,16 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
             f'point="{_fmt_points(geometry.morph_states[0])}" />\n'
         )
     else:
-        xml.append(f'{indent}  <Coordinate point="{_fmt_points(geometry.coord)}" />\n')
+        xml.append(f'{indent}  <Coordinate point="{_fmt_points(_in_order(geometry.coord, order))}" />\n')
     if geometry.normal:
-        xml.append(f'{indent}  <Normal vector="{" ".join(_fmt3(vector) for vector in geometry.normal)}" />\n')
+        vectors = _in_order(geometry.normal, order)
+        xml.append(f'{indent}  <Normal vector="{" ".join(_fmt3(vector) for vector in vectors)}" />\n')
     if geometry.tex_coord:
-        xml.append(
-            f'{indent}  <TextureCoordinate point="{" ".join(_fmt2(point) for point in geometry.tex_coord)}" />\n'
-        )
+        points = _in_order(geometry.tex_coord, order)
+        xml.append(f'{indent}  <TextureCoordinate point="{" ".join(_fmt2(point) for point in points)}" />\n')
     if geometry.color:
-        xml.append(f'{indent}  <ColorRGBA color="{" ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)}" />\n')
+        colors = _in_order(geometry.color, order)
+        xml.append(f'{indent}  <ColorRGBA color="{" ".join(_fmt4(_unit_rgba(color)) for color in colors)}" />\n')
     xml.append(f"{indent}</{node}>\n")
     return "".join(xml)
 

@@ -263,6 +263,31 @@
       "round_trip": "unmeasured",
       "note": "x3d_geometry on the mesh; written back while every face is a triangle, else as an IndexedFaceSet (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
     },
+    "TriangleSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, its arrays in corner order (no index), else as an IndexedFaceSet; a skinned or shape-keyed mesh writes an IndexedTriangleSet (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "TriangleFanSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, fanCount read off the mesh's triangles (a fan that no longer chains is cut there), arrays in fan order; else an IndexedFaceSet, an IndexedTriangleSet for a skinned or shape-keyed mesh (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "TriangleStripSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, stripCount read off the mesh's triangles (a strip that no longer chains is cut there), arrays in strip order; else an IndexedFaceSet, an IndexedTriangleSet for a skinned or shape-keyed mesh (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedTriangleFanSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, the fans (index, -1 after each) read off the mesh's triangles, else as an IndexedFaceSet (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedTriangleStripSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, the strips (index, -1 after each) read off the mesh's triangles, else as an IndexedFaceSet (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
     "PixelTexture": {
       "import": "yes",
       "round_trip": "unmeasured",

@@ -101,6 +101,10 @@ class IRMeshGeometry:
     # Written as an IndexedTriangleSet (the arrays already share one index) when every face is a triangle: set for a
     # mesh the import read from one (``x3d_geometry`` on the mesh) or when the export triangulates.
     triangle_set: bool = False
+    # The triangle-set node the import read the mesh from (``x3d_geometry``: IndexedTriangleSet, TriangleSet,
+    # TriangleFanSet, TriangleStripSet, IndexedTriangleFanSet or IndexedTriangleStripSet), written back as that node
+    # while every face is a triangle; None writes an IndexedTriangleSet when ``triangle_set`` is set.
+    geometry_node: str | None = None
 
 
 @dataclass

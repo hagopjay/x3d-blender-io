@@ -2308,6 +2308,7 @@ def importMesh_IndexedTriangleStripSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleStripSet'))
     _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'IndexedTriangleStripSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleStripSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2323,6 +2324,7 @@ def importMesh_IndexedTriangleFanSet(geom, ancestry):
     # three or more fans asked Blender for more corners than it had made (RuntimeError, receipt-to-rule engine)
     runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleFanSet'))
     _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'IndexedTriangleFanSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleFanSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2354,6 +2356,7 @@ def importMesh_TriangleSet(geom, ancestry):
     n = len(bpymesh.vertices)
     corners = [3 * i + j for i in range(n // 3) for j in ((0, 1, 2) if ccw else (1, 0, 2))]
     _set_triangles(bpymesh, corners, 'TriangleSet')
+    bpymesh["x3d_geometry"] = "TriangleSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2367,6 +2370,7 @@ def importMesh_TriangleStripSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _counted_runs(geom.getFieldAsArray('stripCount', 0, ancestry), len(bpymesh.vertices), 'stripCount')
     _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'TriangleStripSet')
+    bpymesh["x3d_geometry"] = "TriangleStripSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2380,6 +2384,7 @@ def importMesh_TriangleFanSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _counted_runs(geom.getFieldAsArray('fanCount', 0, ancestry), len(bpymesh.vertices), 'fanCount')
     _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'TriangleFanSet')
+    bpymesh["x3d_geometry"] = "TriangleFanSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
