@@ -420,6 +420,10 @@ class IRInstance:
     # Nodes the import had no handler for, kept as the file wrote them (``x3d_carried``): XML texts written back inside
     # this object's Transform, after its children. Blender does nothing with them.
     carried: list[str] = field(default_factory=list)
+    # The CAD product structure the import found (node board batch 12, ``x3d_cad``): {"node": CADLayer | CADAssembly |
+    # CADPart, "def", "fields"} for an object that stands for that node, and/or "face": {"def", "fields"} for the object
+    # a CADFace holds; "moves" when the object is animated. None for a plain object.
+    cad: dict | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.

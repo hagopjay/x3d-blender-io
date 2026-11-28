@@ -361,6 +361,7 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:4px}
    <div class="rank" id="rank"></div>
    <div>
     <figure class="figure"><img src="img/lights-before-after.webp" alt="Before and after: a scene exported with lights wrapped in Transforms renders black; with global lights it renders lit" loading="lazy" width="1288" height="360"><figcaption><b>Found by the evolver, fixed in the add-on.</b> The exporter wrapped each light in a Transform, so a DirectionalLight with the default <code>global="false"</code> lit nothing outside it. Exporting <code>global="true"</code> fixes it. <span class="mono">X_ITE 16.4.3 · live in the demos</span></figcaption></figure>
+    <figure class="figure" style="margin-top:14px"><img src="img/cad-lamp-blender-before-after.webp" alt="Before and after in Blender: the lamp imported with CADPart poses ignored is one upright rod on its base; with them it is the assembled lamp" loading="lazy" width="1932" height="540"><figcaption><b>CAD parts where they belong.</b> The same X3D file imported into Blender before and after node board batch 12, rendered from the file's own Viewpoint. <span class="mono">Blender 5.3.0 Workbench · live in the demos</span></figcaption></figure>
     <figure class="figure" style="margin-top:14px"><img src="img/evolved-elites.webp" alt="Twelve evolved light sculptures: attractors, curl-flow ribbons and Hopf fibrations in neon colours" loading="lazy" width="1600" height="675"><figcaption><b>Evolved light.</b> The 12 best of 42 elites from a MAP-Elites run in which Gemini directs the mutations; rendered by Blender Cycles, scored by an image critic, and exported to X3D 4.0 (16 elites validate and load in X_ITE; the glow is lost, since X3D 4.0 has no emissive strength).</figcaption></figure>
    </div>
   </div>
@@ -408,7 +409,7 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:4px}
   <div class="eyebrow">Version-controlled</div>
   <h2>Changelog</h2>
   <p class="sub">This page is a static folder in <a href="https://github.com/hagopjay/x3d-blender-io/tree/main/docs/showcase">hagopjay/x3d-blender-io/docs/showcase</a>: plain HTML, the X3D scenes, and a <code>verdicts.json</code> written by the validator. Every change is a commit; the scene list and its verdicts are rebuilt by <code>tools/showcase_verdicts.py</code>.</p>
-  <div class="log" id="log"><b>2026-10-11</b> · First version: eight sourced numbers, the five-station loop, 12 live demos (24 X3D files, every one checked by the validator fork), findings, splats, Blender ecosystem ranking, nine spec questions.</div>
+  <div class="log" id="log"><b>2026-11-28</b> · CAD: a desk lamp CAD assembly through Blender and back (node board batch 12), live before and after, with a Blender figure. Verdicts rebuilt with the validator fork at fa0b389 (every earlier scene unchanged). Posters for the two new scenes from X_ITE 16.7.0.<br><b>2026-10-11</b> · First version: eight sourced numbers, the five-station loop, 12 live demos (24 X3D files, every one checked by the validator fork), findings, splats, Blender ecosystem ranking, nine spec questions.</div>
  </div>
 </section>
 
@@ -480,6 +481,11 @@ var DEMOS = [
   say:'“Valid, loaded, and completely dark: exactly what a render check is for.”',
   variants:[['Before · lights scoped','lights-before'],['After · global lights','lights-after']],
   facts:[['Cause','global="false"','X3D 4.0 default for DirectionalLight'],['Fix','global="true"','in the add-on\'s exporter'],['Both files','valid','schema, semantic and profile all pass']]},
+ {id:'cad', group:'The bridge', k:'sage', title:'A CAD assembly through Blender and back', short:'CADPart',
+  body:'<p>An articulated desk lamp as a CAD tool would write it: two CADLayers, three CADAssemblies, four CADParts and six named CADFaces. Every part is placed only by its CADPart. Both files below are what the add-on exported after importing that one file. Before node board batch 12 the import ignored CADPart poses, so every part sat at the origin, and the export wrote plain Transforms: the product structure was gone. Now each part stands where its CADPart puts it, the Outliner reads like the CAD tree, and the export writes the layers, assemblies, parts and faces back, the pose from Blender.</p>',
+  say:'“Same file in, two exports out: one is a pile of parts, one is a lamp.”',
+  variants:[['Before · exported by main','cad-lamp-before'],['After · batch 12','cad-lamp-after']],
+  facts:[['Before','0 CAD nodes','8 plain Transforms in the export'],['After','15 CAD nodes','2 layers, 3 assemblies, 4 parts, 6 faces'],['Round trip','fixed point','the second export is the first, byte for byte'],['Both files','valid','schema, semantic and profile all pass']]},
  {id:'quaternion', group:'Spec questions', k:'violet', title:'Splat quaternion order', short:'x y z w or w x y z?',
   body:'<p>197 splats (gold tangent dashes, pale dashes, radial rays, a core) written twice; only the four numbers of each orientation are reordered. The 4.1 draft does not say which order is meant. X_ITE reads x y z w, the glTF order; 3DGS PLY files store w x y z.</p>',
   say:'“Both files are valid. Only one is the picture the author meant.”',
