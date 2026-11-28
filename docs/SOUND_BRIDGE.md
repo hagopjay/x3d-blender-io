@@ -1,8 +1,8 @@
 # X3D 4.0 audio graph and Blender 5.3: the sound bridge
 
-Status: exploration checkpoint, branch `explore/sound-bridge`, 2026-11-27. The code is in `source/sound_graph.py`, the
-demo in `tools/sound_bridge_demo.py`, and the fixtures in `tests/sound/`. The importer and exporter are not wired up
-yet; the carry pass keeps these nodes as raw XML until that is done.
+Status: wired into the importer and the X3D 4.0 exporter, branch `export/sound-bridge`, 2026-11-28 (on top of carry).
+The model and renderer are in `source/sound_graph.py` (plain Python), the Blender glue in `source/sound_bridge.py`, the
+demo in `tools/sound_bridge_demo.py`, and the fixtures in `tests/sound/`. Section 8 says what the wiring does.
 
 Words used below:
 
@@ -126,21 +126,23 @@ on a spherical Speaker, which is approximate.
 
 ## 5. Round trip: what Blender stores so the export writes the same graph back
 
-aud expressions are not Blender data: nothing persists in the .blend file except Speakers, sounds and strips. The plan
-is:
+aud expressions are not Blender data: nothing persists in the .blend file except Speakers, sounds and strips. As built
+(section 8):
 
-1. **Store the model, not the render.** On import, keep the `AudioNode` tree as JSON on the Speaker (for SpatialSound
-   or Sound) or on the Scene (for AudioDestination). The JSON holds tag, `attrs` (the raw strings in file order) and
-   children. `to_xml(parse_graph(e))` already gives back the same tags, the same attribute strings in the same order,
-   and the same nesting for all three fixtures (`tests/test_sound_graph.py::RoundTrip`). Non-audio children are kept as
-   XML strings.
-2. **The baked WAV is a cache.** The Speaker plays it in Blender. The exporter ignores it and writes the stored model.
-3. **Edits made in Blender** to the mapped Speaker properties are written back into the stored model's fields on
-   export. Only fields that changed are written, so untouched raw strings such as `gain="0.50"` survive.
-4. **Hand-made Speakers** without a stored model export as `SpatialSound` → `AudioClip` (url = the sound file). That is
-   a classic mapping and is untested.
-5. This replaces carry for these nodes, but only when the model round-trips. Anything the parser does not model (a
-   ProtoInstance, MovieTexture as a source, ROUTEs targeting graph fields) stays in carry.
+1. **Store the graph as written, not the render.** The Speaker keeps the SpatialSound's XML text exactly as carry read
+   it (`x3d_sound_graph`). That is simpler than a JSON model and loses nothing: `to_xml(parse_graph(e))` gives back the
+   same tags, attribute strings in order and nesting (`tests/test_sound_graph.py::RoundTrip`), so the text and the model
+   are the same thing, and the export reparses the text only when it has an edit to merge.
+2. **The baked WAV is a cache.** The Speaker plays it in Blender (packed into the .blend). The export ignores it.
+3. **Edits made in Blender** to the mapped Speaker properties are merged into those fields only, so an untouched raw
+   string such as `gain="0.50"` survives. An edit is a difference from what Blender held right after the import
+   (`x3d_sound_applied`), not from the file's value: Blender clamps `volume` to 0..1, so `gain="2"` would otherwise look
+   edited on every export.
+4. **Hand-made Speakers** without a stored graph are still not written by the X3D 4.0 export (reported as skipped).
+   `SpatialSound` → `AudioClip` with the sound file as url is the obvious mapping; not built.
+5. **Carry stays underneath.** The bridge takes only graphs it can render faithfully. A graph with a USE in it, one a
+   ROUTE touches, one with a node the model does not know, a SpatialSound under a USE'd Transform, or one whose render
+   fails stays carried as the file wrote it.
 
 ## 6. Honest limits
 
@@ -191,16 +193,46 @@ Tests:
 - `Blender … run_tests_in_blender.py -- test_sound_graph_bpy`: 4 tests. They render the fixtures and the pause case,
   and check the frequency, level and timing figures above.
 
-## 8. Next: wiring this into the importer and exporter (after carry lands)
+## 8. Wiring into the importer and exporter (2026-11-28)
 
-1. **Import** (`import_x3d.py`): for each `sound_graph.find_graphs` root, if every node is modelled, render it to a WAV
-   next to the .blend (or pack it) and create a Speaker, a Scene sound or a strip for it. Store
-   `json(model)` on the datablock and apply `speaker_settings`. Otherwise leave it to carry. Parent Transforms give the
-   Speaker its world matrix.
-2. **Export** (`emit_x3d40.py`): a datablock with a stored model is written back with `to_xml`, with changed Speaker
-   properties merged in. A plain Speaker becomes SpatialSound + AudioClip.
-3. **Tests**: an import → export round trip of the fixtures, byte-comparing the graph subtree, plus a mixdown of a
-   placed Speaker (`bpy.ops.sound.mixdown`) to measure distance attenuation against Web Audio's INVERSE formula.
-4. **Close the untested rows**: render the square, saw, triangle and CUSTOM waves and the other 7 biquad types against
-   `biquad_magnitude`, and run the convolver with a known impulse response, ChannelSelector, WaveShaper and the
-   compressor.
+**Import** (`import_x3d.place_carried` → `sound_bridge`). Carry finds the audio graphs first (`find_carried`), so the
+bridge sees exactly what carry would keep. For each carried item:
+
+- **SpatialSound:** rendered for the scene's frame range (at most 60 s) at 48 kHz, written as 16-bit WAV, loaded and
+  packed. A Speaker object is made with `speaker_settings` applied, parented to the object of the nearest Transform (or
+  at the top of the scene), at `location`. Its −Z axis points along `direction`; −Z is OpenAL's forward, which audaspace
+  follows, but that convention has not been checked by ear or by a mixdown. The XML moves from carry to the Speaker.
+- **AudioDestination, StreamAudioDestination:** they stay carried. A sound strip in the sequencer plays the render, at
+  the scene's first frame on a free channel, marked `x3d_sound_cache`. The export ignores the strip: deleting it
+  changes nothing in the file.
+- **A Transform that holds only carried nodes** now gets an Empty (`rebuild_hierarchy`). Before this, carry reported
+  "its Transform made no object; not carried" and dropped the node. All three fixtures in `tests/sound/` are shaped
+  like that.
+
+**Export** (`extract.py`). A Speaker with `x3d_sound_graph` is not written as a Transform. Its XML, with edits merged
+(`sound_bridge.speaker_graph_xml`), joins its parent's carried nodes (or the scene's). From there it is written by the
+carry writer, so its DEFs are reserved, USEs are checked and ROUTEs are kept, as for any carried node. The fields
+merged are `intensity` (from `volume` ÷ `gain`), `referenceDistance`, `maxDistance`, `rolloffFactor`,
+`coneInnerAngle`, `coneOuterAngle`, `coneOuterGain`, `location` and `direction`. A turned Speaker keeps the file's
+`direction` length. Deleting the Speaker drops the graph.
+
+**Tests** (`tests/test_sound_bridge_bpy.py`, 10, Blender 5.3.0):
+
+- import → Speaker, its WAV measured: 880 Hz, peak 0.5, sound from 0.25 s to 1.25 s;
+- destination → strip (440 Hz dominant, 4000 Hz at −24.9 dB) and the graph unchanged in the export;
+- the graph back inside its Transform with the same tags, attributes and nesting;
+- edits reach only their fields; a turn writes `direction`; a clamped volume is not an edit;
+- deleting the Speaker drops the graph;
+- a routed graph and a graph with a USE stay carried;
+- a second round trip writes the same file.
+
+Every export validates against `x3d-4.0.xsd`.
+
+**Still open:**
+
+- A mixdown of a placed Speaker (`bpy.ops.sound.mixdown`), to measure distance attenuation against Web Audio's
+  INVERSE formula and to confirm the −Z convention.
+- Hand-made Speakers as SpatialSound + AudioClip.
+- The classic `Sound` node with graph children: it is imported by `importAudio`, which knows only AudioClip.
+- The untested rows of section 1: the square, saw, triangle and CUSTOM waves, the other 7 biquad types against
+  `biquad_magnitude`, the convolver with a known impulse response, ChannelSelector, WaveShaper and the compressor.
