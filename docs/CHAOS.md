@@ -289,7 +289,8 @@ The export now samples only an object that can move: it, or an ancestor between 
 action, NLA tracks, drivers, constraints or a rigid body (or its parent moves it through a bone or vertex). It inverts
 each parent once per frame, and a channel within float32 noise (relative 1e-6, absolute 1e-7) of its first value is
 still. One test changed for this: the behaviour-presets acceptance test expected a scale interpolator on a turning
-Door, which was float32 noise in its scale.
+Door, which was float32 noise in its scale. The invariants budget (`tools/io_sync/invariant_budget.json`) loses two
+gained PositionInterpolator ROUTE pairs in the suite's main scene for the same reason: the export no longer invents them.
 
 **Tried and not kept**: thinning keys that the interpolators reproduce from their neighbours (lerp, slerp) took the
 same level to 0.66 MB, but it broke the round-trip fixed point: the re-export picked slightly different keys (the
