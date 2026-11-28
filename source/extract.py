@@ -976,6 +976,7 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
                           standard_joint_count=sum(1 for joint in joints.values() if joint.hanim_name))
     skin_def = f"hanim_{_safe_key(armature.name)}_skinCoord"
     armature_inverse = inverted64(armature.matrix_world, armature.name)
+    displacers = {}     # shape key name -> (joint name, IRDisplacer): node board batch 11
 
     for mesh_obj in skinned:
         mesh = mesh_obj.data
@@ -991,9 +992,11 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
             include_loose=False,   # a skin shares one skinCoord; a PointSet has no index into it
         )
         group_names = [group.name for group in mesh_obj.vertex_groups]
+        key_offsets = _hanim_key_offsets(mesh_obj, armature_inverse)
         for geometry in geometries:
             offset = len(humanoid.skin_coord)
             humanoid.skin_coord.extend(geometry.coord)
+            _hanim_collect_displacers(displacers, mesh_obj, key_offsets, geometry, offset)
             for split_index, vertex_index in enumerate(geometry.orig_vertex_index):
                 for element in mesh.vertices[vertex_index].groups:
                     if element.weight <= 0.0 or element.group >= len(group_names):
@@ -1012,7 +1015,249 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
                 IRShape(geometry_name=geometry.name, material_name=material_sink(material) if material else None)
             )
         skin_geometries.extend(geometries)
+    for joint_name, displacer in displacers.values():
+        target = joints.get(joint_name) or (roots[0] if roots else None)
+        if target is not None:
+            target.displacers.append(displacer)
     return humanoid, skin_geometries
+
+
+# ---------------------------------------------------------------------------
+# HAnim completion (node board batch 11): segments, sites, displacers and motions (hanim_parts.py)
+
+
+def _hanim_modules():
+    try:
+        from . import hanim_parts
+        from .ir import IRDisplacer, IRMotion, IRSegment, IRSite
+    except ImportError:  # pragma: no cover - standalone test fallback
+        import hanim_parts
+        from ir import IRDisplacer, IRMotion, IRSegment, IRSite
+    return hanim_parts, IRDisplacer, IRMotion, IRSegment, IRSite
+
+
+def _hanim_key_offsets(mesh_obj, armature_inverse):
+    """[(shape key, {vertex index: offset in humanoid space})] for every shape key of a skin mesh but its basis."""
+    shape_keys = getattr(mesh_obj.data, "shape_keys", None)
+    if shape_keys is None or not shape_keys.use_relative:
+        return []
+    linear = (armature_inverse @ mesh_obj.matrix_world).to_3x3()
+    out = []
+    for key in shape_keys.key_blocks:
+        if key == shape_keys.reference_key:
+            continue
+        relative = key.relative_key or shape_keys.reference_key
+        offsets = {}
+        for index, (point, base) in enumerate(zip(key.data, relative.data)):
+            delta = linear @ (point.co - base.co)
+            if delta.length > 1e-7:
+                offsets[index] = (float(delta[0]), float(delta[1]), float(delta[2]))
+        out.append((key, offsets))
+    return out
+
+
+def _hanim_collect_displacers(displacers, mesh_obj, key_offsets, geometry, offset):
+    """Each shape key as an HAnimDisplacer: the skinCoord indices of the split vertices it moves, and their offsets."""
+    if not key_offsets:
+        return
+    hanim_parts, IRDisplacer, _IRMotion, _IRSegment, _IRSite = _hanim_modules()
+    records = hanim_parts.load(mesh_obj.get(hanim_parts.DISPLACERS_PROPERTY), {})
+    for key, offsets in key_offsets:
+        record = records.get(key.name) or {}
+        entry = displacers.get(key.name)
+        if entry is None:
+            entry = displacers[key.name] = (record.get("joint"), IRDisplacer(
+                name=key.name, weight=float(key.value), fields=dict(record.get("fields") or {}),
+            ))
+            entry[1].fields.setdefault("_def", record.get("def") or "")
+        displacer = entry[1]
+        for split_index, vertex_index in enumerate(geometry.orig_vertex_index):
+            moved = offsets.get(vertex_index)
+            if moved is not None:
+                displacer.coord_index.append(offset + split_index)
+                displacer.displacements.append(moved)
+
+
+def hanim_part_objects(armature, exported, skinned_names):
+    """The objects bone-parented to ``armature`` that are written inside its HAnimHumanoid: meshes as segment Shapes,
+    Empties as HAnimSites."""
+    bones = armature.data.bones
+    return [obj for obj in exported
+            if obj.parent is armature and obj.parent_type == "BONE" and obj.parent_bone in bones
+            and obj.name not in skinned_names and (obj.type == "EMPTY" or obj.type in MESH_LIKE_TYPES)]
+
+
+def hanim_rest_matrix(obj, armature):
+    """Where a bone-parented object sits in humanoid space at the rest pose (a bone's child hangs from its tail)."""
+    from mathutils import Matrix
+    bone = armature.data.bones[obj.parent_bone]
+    return bone.matrix_local @ Matrix.Translation((0.0, bone.length, 0.0)) @ obj.matrix_parent_inverse @ obj.matrix_basis
+
+
+def attach_hanim_parts(humanoid, armature, parts, build, diagnostics=None):
+    """Segments (from the bones' props and the bone-parented meshes), sites (bone-parented Empties), displacers kept as
+    written, and motions (the armature's HAnimMotion actions) onto ``humanoid``. ``build(obj, matrix)`` makes the
+    IRInstance of a part placed at ``matrix`` (humanoid space)."""
+    hanim_parts, IRDisplacer, _IRMotion, IRSegment, IRSite = _hanim_modules()
+    joints = {joint.name: joint for joint in humanoid.iter_joints()}
+
+    def segment_of(joint):
+        if joint.segment is None:
+            joint.segment = IRSegment(name=f"{joint.hanim_name or joint.name}_segment")
+        return joint.segment
+
+    def raw_displacer(entry):
+        fields = dict(entry.get("fields") or {})
+        fields.update({"_def": entry.get("def") or "", "coordIndex": entry.get("coordIndex") or "",
+                       "displacements": entry.get("displacements") or ""})
+        if entry.get("weight") is not None:
+            fields["weight"] = entry["weight"]
+        return IRDisplacer(name=entry.get("name") or "", fields=fields)
+
+    for bone in armature.data.bones:
+        joint = joints.get(bone.name)
+        if joint is None:
+            continue
+        record = hanim_parts.load(bone.get(hanim_parts.SEGMENT_PROPERTY))
+        if record:
+            segment = segment_of(joint)
+            segment.name = record.get("name") or segment.name
+            segment.fields = dict(record.get("fields") or {})
+            segment.fields["_def"] = record.get("def") or ""
+            segment.displacers = [raw_displacer(entry) for entry in record.get("displacers") or ()]
+        for field, width in hanim_parts.SEGMENT_NUMBERS.items():
+            number = bone.get(hanim_parts.SEGMENT_NUMBER_PREFIX + field)
+            if number is None:
+                continue
+            numbers = [float(number)] if width == 1 and not hasattr(number, "__len__") else [float(v) for v in number]
+            if len(numbers) == width:
+                segment_of(joint).fields[field] = numbers
+        for entry in hanim_parts.load(bone.get(hanim_parts.RAW_DISPLACERS_PROPERTY), ()) or ():
+            joint.displacers.append(raw_displacer(entry))
+    for obj in parts:
+        joint = joints.get(obj.parent_bone)
+        if joint is None:
+            continue
+        instance = build(obj, hanim_rest_matrix(obj, armature))
+        if instance is None:
+            continue
+        if obj.type == "EMPTY":
+            record = hanim_parts.load(obj.get(hanim_parts.SITE_PROPERTY), {}) or {}
+            fields = dict(record.get("fields") or {})
+            segment_of(joint).sites.append(IRSite(name=record.get("name") or obj.name, instance=instance, fields=fields))
+        else:
+            segment_of(joint).instances.append(instance)
+    humanoid.motions = extract_hanim_motions(armature, diagnostics)
+
+
+def hanim_motion_actions(armature):
+    """The HAnimMotion actions of ``armature`` (made by the import, hanim_parts.MOTION_PROPERTY), in file order: those
+    recorded for this humanoid, and its active action when that is one."""
+    import bpy
+    hanim_parts = _hanim_modules()[0]
+    active = armature.animation_data.action if armature.animation_data is not None else None
+    found = []
+    for action in bpy.data.actions:
+        record = hanim_parts.load(action.get(hanim_parts.MOTION_PROPERTY))
+        if record and (action == active or record.get("humanoid") == armature.name):
+            found.append((record.get("order", 0), action.name, action, record))
+    return [(action, record) for _, _, action, record in sorted(found, key=lambda item: (item[0], item[1]))]
+
+
+def hanim_motion_active(armature) -> bool:
+    """The armature's active action is an HAnimMotion: written as one, not sampled into interpolators too."""
+    active = armature.animation_data.action if armature.animation_data is not None else None
+    return active is not None and bool(active.get(_hanim_modules()[0].MOTION_PROPERTY))
+
+
+def _hanim_action_fcurves(action):
+    curves = {}
+    try:
+        for layer in action.layers:
+            for strip in layer.strips:
+                for bag in strip.channelbags:
+                    for fcurve in bag.fcurves:
+                        curves[(fcurve.data_path, fcurve.array_index)] = fcurve
+    except AttributeError:
+        pass
+    for fcurve in getattr(action, "fcurves", None) or ():
+        curves[(fcurve.data_path, fcurve.array_index)] = fcurve
+    return curves
+
+
+def extract_hanim_motions(armature, diagnostics=None):
+    """An IRMotion per HAnimMotion action: the channels re-read from the action's F-curves at each frame (the joint
+    transform J = L basis L^-1 about the joint centre, as _sample_joint_animation does), the fields as written."""
+    from mathutils import Euler, Matrix, Quaternion, Vector
+    hanim_parts, _IRDisplacer, IRMotion, _IRSegment, _IRSite = _hanim_modules()
+    motions = []
+    bones = armature.data.bones
+    for action, record in hanim_motion_actions(armature):
+        fields = dict(record.get("fields") or {})
+        raw_text = record.get("values")
+        raw = hanim_parts.floats(raw_text)
+        groups = hanim_parts.parse_channels(fields.get("channels", ""), fields.get("joints", ""))
+        width = sum(len(channels) for _, channels in groups)
+        frames = len(raw) // width if width else 0
+        duration = hanim_parts.floats(fields.get("frameDuration", "0.1"))
+        duration = duration[0] if duration else 0.1
+        start, fps = float(record.get("start", 1)), float(record.get("fps", 24.0))
+        curves = _hanim_action_fcurves(action)
+        bone_of = {}
+        for bone in bones:
+            bone_of.setdefault(bone.name, bone.name)
+        values = list(raw[:frames * width])
+        for frame_number in range(frames):
+            frame = start + frame_number * duration * fps
+            offset = frame_number * width
+            for joint_name, channels in groups:
+                cells = slice(offset, offset + len(channels))
+                offset += len(channels)
+                bone = bones.get(joint_name) if joint_name else None
+                if bone is None:
+                    continue
+                path = f'pose.bones["{bone.name}"]'
+
+                def read(prop, index, default):
+                    fcurve = curves.get((f"{path}.{prop}", index))
+                    return float(fcurve.evaluate(frame)) if fcurve is not None else default
+                location = Vector([read("location", i, 0.0) for i in range(3)])
+                if any((f"{path}.rotation_quaternion", i) in curves for i in range(4)):
+                    rotation = Quaternion([read("rotation_quaternion", i, d) for i, d in enumerate((1.0, 0.0, 0.0, 0.0))])
+                    rotation.normalize()
+                else:
+                    mode = armature.pose.bones[bone.name].rotation_mode if bone.name in armature.pose.bones else "XYZ"
+                    mode = mode if mode in ("XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX") else "XYZ"
+                    rotation = Euler([read("rotation_euler", i, 0.0) for i in range(3)], mode).to_quaternion()
+                scale = Vector([read("scale", i, 1.0) for i in range(3)])
+                rest = bone.matrix_local
+                joint_matrix = rest @ Matrix.LocRotScale(location, rotation, scale) @ rest.inverted()
+                turn = joint_matrix.to_quaternion()
+                center = bone.head_local
+                translation = joint_matrix.to_translation() - (center - turn @ center)
+                rotation_names = [name for name in channels if name in hanim_parts.ROTATION_CHANNELS]
+                order = hanim_parts.euler_order(rotation_names)
+                old = values[cells]
+                new = list(old)
+                euler = None
+                if order is not None:
+                    seed = {hanim_parts.ROTATION_CHANNELS[name]: value for name, value in zip(channels, old)
+                            if name in hanim_parts.ROTATION_CHANNELS}
+                    euler = turn.to_euler(order, Euler((seed.get("X", 0.0), seed.get("Y", 0.0), seed.get("Z", 0.0)), order))
+                elif rotation_names and diagnostics is not None:
+                    diagnostics.append(f"HAnimMotion {action.name!r}: joint {joint_name!r} has rotation channels that "
+                                       "are not three distinct axes; they are written as the import read them.")
+                for index, name in enumerate(channels):
+                    if name in hanim_parts.POSITION_CHANNELS:
+                        new[index] = float(translation[hanim_parts.POSITION_CHANNELS[name]])
+                    elif name in hanim_parts.ROTATION_CHANNELS and euler is not None:
+                        new[index] = float(euler["XYZ".index(hanim_parts.ROTATION_CHANNELS[name])])
+                values[cells] = new
+        unchanged = len(values) == len(raw) and all(abs(a - b) <= 1e-4 for a, b in zip(values, raw))
+        fields["_def"] = record.get("def") or ""
+        motions.append(IRMotion(name=record.get("name") or "", fields=fields, values=values,
+                                raw_values=raw_text if unchanged else None))
+    return motions
 
 
 def _safe_key(name: str) -> str:
@@ -2097,6 +2342,7 @@ def extract_scene(
     armatures = [obj for obj in exported if obj.type == "ARMATURE"]
     skinned_by_armature = {armature.name: _skinned_meshes(armature, exported) for armature in armatures}
     skinned_names = {mesh.name for meshes in skinned_by_armature.values() for mesh in meshes}
+    hanim_part_names = {part.name for armature in armatures for part in hanim_part_objects(armature, exported, skinned_names)}
 
     def register_material(material):
         if material is None:
@@ -2321,6 +2567,10 @@ def extract_scene(
             # Written as HAnim skin under its armature instead of a plain Shape.
             objects_by_name.pop(obj.name, None)
             return None
+        if obj.name in hanim_part_names and local_override is None:
+            # Written inside its armature's HAnimHumanoid (a segment Shape or an HAnimSite), not as a plain Transform.
+            objects_by_name.pop(obj.name, None)
+            return None
 
         if obj.type == "ARMATURE":
             humanoid, skin_geometries = extract_humanoid(
@@ -2332,6 +2582,13 @@ def extract_scene(
                 diagnostics=ir_scene.diagnostics,
             )
             ir_scene.geometries.extend(skin_geometries)
+
+            def build_part(part, matrix):
+                built = build_instance(part, None, local_override=matrix)
+                objects_by_name.pop(part.name, None)
+                return built
+            attach_hanim_parts(humanoid, obj, hanim_part_objects(obj, exported, skinned_names), build_part,
+                               ir_scene.diagnostics)
             ir_scene.humanoids.append(humanoid)
             ir_scene.object_names.append(obj.name)
             objects_by_name.pop(obj.name, None)
@@ -2457,7 +2714,7 @@ def extract_scene(
             use_hierarchy=use_hierarchy,
             global_matrix=global_matrix,
             frame_step=animation_step,
-            armatures=armatures,
+            armatures=[armature for armature in armatures if not hanim_motion_active(armature)],
         )
 
     # The viewpoint tour: cameras that carry x3d_tour_order, as Viewpoint poses in the exported frame.

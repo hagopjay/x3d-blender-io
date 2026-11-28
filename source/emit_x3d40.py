@@ -1341,7 +1341,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         humanoid = humanoids[instance.humanoid_name]
         placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
                                 standard_joint_count=humanoid.standard_joint_count,
-                                skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes)
+                                skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes,
+                                motions=humanoid.motions)
         xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir, look=look))
     if instance.inline is not None:
         inline_def = defs.get("inline", instance.object_name, "IN_")
@@ -1496,7 +1497,7 @@ def _joint_def(defs: _DefNames, humanoid_name, joint_name):
     return defs.get("joint", f"{humanoid_name}:{joint_name}", "hanim_")
 
 
-def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children"):
+def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children", write_part=None):
     joint_def = _joint_def(defs, humanoid_name, joint.name)
     attrs = [f'DEF="{joint_def}"', "name=" + quoteattr(_nmtoken(joint.hanim_name or joint.name, "joint")), f'center="{_fmt3(joint.center)}"']
     if container_field != "children":
@@ -1504,13 +1505,114 @@ def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field
     if joint.skin_coord_index:
         attrs.append(f'skinCoordIndex="{_fmt_ints(joint.skin_coord_index)}"')
         attrs.append(f'skinCoordWeight="{" ".join(_fmt(weight) for weight in joint.skin_coord_weight)}"')
-    if not joint.children:
+    parts = _hanim_joint_parts_xml(joint, humanoid_name, defs, indent + "  ", write_part)
+    if not joint.children and not parts:
         return f"{indent}<HAnimJoint {' '.join(attrs)} />\n"
-    xml = [f"{indent}<HAnimJoint {' '.join(attrs)}>\n"]
+    xml = [f"{indent}<HAnimJoint {' '.join(attrs)}>\n", parts]
     for child in joint.children:
-        xml.append(_joint_xml(child, humanoid_name, defs, indent + "  "))
+        xml.append(_joint_xml(child, humanoid_name, defs, indent + "  ", write_part=write_part))
     xml.append(f"{indent}</HAnimJoint>\n")
     return "".join(xml)
+
+
+# HAnim completion (node board batch 11): HAnimSegment, HAnimSite, HAnimDisplacer and HAnimMotion written back
+
+
+def _hanim_label(stored_def, fallback):
+    """The DEF label of a node the import kept: its DEF as written less the writer's "hanim_" prefix."""
+    stored_def = stored_def or ""
+    return stored_def[6:] if stored_def.startswith("hanim_") and len(stored_def) > 6 else (stored_def or fallback)
+
+
+def _hanim_kept_attrs(fields, names):
+    """``name="value"`` for each of ``names`` in ``fields``: strings as written, numbers (lists) formatted."""
+    out = []
+    for name in names:
+        value = fields.get(name)
+        if value in (None, ""):
+            continue
+        if isinstance(value, (list, tuple)):
+            value = " ".join(_fmt_short(float(v)) for v in value)
+        out.append(f"{name}={quoteattr(str(value))}")
+    return out
+
+
+def _hanim_displacer_xml(displacer, key, defs: _DefNames, indent):
+    fields = displacer.fields
+    label = _hanim_label(fields.get("_def"), displacer.name or "displacer")
+    attrs = [f'DEF="{defs.get("hanim_displacer", key, "hanim_", label=label)}"']
+    if displacer.name:
+        attrs.append("name=" + quoteattr(_nmtoken(displacer.name, "displacer")))
+    attrs += _hanim_kept_attrs(fields, ("description",))
+    if displacer.coord_index or "coordIndex" not in fields:     # a shape key; else kept as written
+        attrs.append(f'coordIndex="{_fmt_ints(displacer.coord_index)}"')
+        attrs.append(f'displacements="{_fmt_points(displacer.displacements)}"')
+        attrs.append(f'weight="{_fmt_short(displacer.weight)}"')
+    else:
+        attrs += _hanim_kept_attrs(fields, ("coordIndex", "displacements", "weight"))
+    return f"{indent}<HAnimDisplacer {' '.join(attrs)} />\n"
+
+
+def _hanim_segment_def(defs: _DefNames, humanoid_name, joint):
+    segment = joint.segment
+    return defs.get("hanim_segment", f"{humanoid_name}:{joint.name}", "hanim_",
+                    label=_hanim_label(segment.fields.get("_def"), segment.name))
+
+
+def _hanim_site_def(defs: _DefNames, site):
+    return defs.get("hanim_site", site.instance.object_name, "hanim_")
+
+
+def _hanim_joint_parts_xml(joint, humanoid_name, defs: _DefNames, indent, write_part):
+    """A joint's HAnimSegment (its Shapes, as the objects bone-parented to the bone, then its HAnimSites) and its
+    HAnimDisplacers."""
+    xml = []
+    segment = joint.segment
+    if segment is not None:
+        attrs = [f'DEF="{_hanim_segment_def(defs, humanoid_name, joint)}"',
+                 "name=" + quoteattr(_nmtoken(segment.name, "segment"))]
+        attrs += _hanim_kept_attrs(segment.fields, ("description", "mass", "centerOfMass", "momentsOfInertia"))
+        inner = []
+        for instance in segment.instances:
+            if write_part is not None:
+                inner.append(write_part(instance, indent + "  "))
+        for site in segment.sites:
+            tx = site.instance.transform
+            site_attrs = [f'DEF="{_hanim_site_def(defs, site)}"', "name=" + quoteattr(_nmtoken(site.name, "site"))]
+            site_attrs += _hanim_kept_attrs(site.fields, ("description",))
+            site_attrs += [f'translation="{_fmt3_length(tx.translation)}"', f'rotation="{_fmt4(tx.rotation_axis_angle)}"',
+                           f'scale="{_fmt3_length(tx.scale)}"']
+            children = "".join(write_part(child, indent + "    ") for child in site.instance.children) \
+                if write_part is not None else ""
+            if children:
+                inner.append(f"{indent}  <HAnimSite {' '.join(site_attrs)}>\n{children}{indent}  </HAnimSite>\n")
+            else:
+                inner.append(f"{indent}  <HAnimSite {' '.join(site_attrs)} />\n")
+        for number, displacer in enumerate(segment.displacers):
+            inner.append(_hanim_displacer_xml(displacer, f"{humanoid_name}:{joint.name}:segment:{number}", defs,
+                                              indent + "  "))
+        if inner:
+            xml.append(f"{indent}<HAnimSegment {' '.join(attrs)}>\n{''.join(inner)}{indent}</HAnimSegment>\n")
+        else:
+            xml.append(f"{indent}<HAnimSegment {' '.join(attrs)} />\n")
+    for number, displacer in enumerate(joint.displacers):
+        xml.append(_hanim_displacer_xml(displacer, f"{humanoid_name}:{joint.name}:{number}", defs, indent))
+    return "".join(xml)
+
+
+def _hanim_motion_xml(motion, key, defs: _DefNames, indent):
+    fields = motion.fields
+    label = _hanim_label(fields.get("_def"), motion.name or "motion")
+    attrs = [f'DEF="{defs.get("hanim_motion", key, "hanim_", label=label)}"']
+    if motion.name:
+        attrs.append("name=" + quoteattr(_nmtoken(motion.name, "motion")))
+    attrs += _hanim_kept_attrs(fields, ("description", "enabled", "loop", "loa", "frameDuration", "frameIncrement",
+                                        "frameIndex", "startFrame", "endFrame", "channels", "channelsEnabled", "joints"))
+    values = motion.raw_values if motion.raw_values is not None else " ".join(_fmt_short(v) for v in motion.values)
+    if values:
+        attrs.append(f"values={quoteattr(values)}")
+    attrs.append('containerField="motions"')
+    return f"{indent}<HAnimMotion {' '.join(attrs)} />\n"
 
 
 def _humanoid_info_attr(humanoid):
@@ -1534,10 +1636,22 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
         f'translation="{_fmt3_length(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
         f'scale="{_fmt3_length(tx.scale)}">\n'
     ]
+    def write_part(instance, part_indent):
+        return _instance_xml(instance, geometries, materials, defs, part_indent, output_dir=output_dir, look=look)
     for root in humanoid.root_joints:
-        xml.append(_joint_xml(root, humanoid.name, defs, indent + "  ", container_field="skeleton"))
+        xml.append(_joint_xml(root, humanoid.name, defs, indent + "  ", container_field="skeleton",
+                              write_part=write_part))
     for joint in humanoid.iter_joints():
         xml.append(f'{indent}  <HAnimJoint USE="{_joint_def(defs, humanoid.name, joint.name)}" containerField="joints" />\n')
+    segmented = [joint for joint in humanoid.iter_joints() if joint.segment is not None]
+    for joint in segmented:
+        xml.append(f'{indent}  <HAnimSegment USE="{_hanim_segment_def(defs, humanoid.name, joint)}" '
+                   'containerField="segments" />\n')
+    for joint in segmented:
+        for site in joint.segment.sites:
+            xml.append(f'{indent}  <HAnimSite USE="{_hanim_site_def(defs, site)}" containerField="sites" />\n')
+    for number, motion in enumerate(humanoid.motions):
+        xml.append(_hanim_motion_xml(motion, f"{humanoid.name}:{number}", defs, indent + "  "))
     if humanoid.skin_coord:
         skin_def = next((geometries[s.geometry_name].skin_coord_def for s in humanoid.skin_shapes
                          if s.geometry_name in geometries and geometries[s.geometry_name].skin_coord_def), None)
@@ -1969,7 +2083,7 @@ def _components(ir_scene: IRScene, version: str, look=None) -> list[tuple[str, i
     if version == "4.1" and ir_scene.splats:
         components["GaussianSplats"] = 1
     if ir_scene.humanoids:
-        components["HAnim"] = 1
+        components["HAnim"] = 2 if any(humanoid.motions for humanoid in ir_scene.humanoids) else 1   # HAnimMotion: 2
     geometries = ir_scene.geometry_by_name()
     materials = ir_scene.material_by_name()
     look = look if look is not None else _PLAIN_LOOK

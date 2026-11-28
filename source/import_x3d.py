@@ -7081,10 +7081,21 @@ def importHumanoid(bpycollection, node, ancestry, global_matrix):
         if indices and values:
             weights[bone_name] = list(zip([int(i) for i in indices], [float(w) for w in values]))
 
+    skins = []
     for shape in real.getChildrenBySpec('Shape'):
         if _attribute_raw(shape, 'containerField', '') != 'skin':
             continue
-        _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, weights, global_matrix)
+        skins.append(_import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, weights, global_matrix))
+
+    # node board batch 11: segments, sites, displacers and motions (hanim_parts.py)
+    for label, step in (("segments and sites", lambda: _import_hanim_segments(bpycollection, armature, joint_bones)),
+                        ("displacers", lambda: _import_hanim_displacers(armature, joint_bones,
+                                                                        [skin for skin in skins if skin], skin_points)),
+                        ("motions", lambda: _import_hanim_motions(armature, real, joint_bones))):
+        try:
+            step()
+        except Exception as exc:  # the humanoid itself is in; a part that fails must not take it away
+            logger.error("HAnimHumanoid %r: %s not imported: %s", name, label, exc, exc_info=True)
 
     return armature
 
@@ -7093,7 +7104,7 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
     geom = shape.getChildBySpec('IndexedFaceSet')
     if geom is None:
         logger.warning("HAnim skin Shape without IndexedFaceSet is not supported; skipped")
-        return
+        return None
     coord = _coordinate_of(geom)
     points = skin_points
     if coord is not None:
@@ -7186,6 +7197,226 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
                     group.add([new_index], weight, 'REPLACE')
     modifier = obj.modifiers.new("Armature", 'ARMATURE')
     modifier.object = armature
+    return obj, remap
+
+
+def _hanim_fields(node, names):
+    """The fields of ``node`` in ``names`` that the file wrote, as written."""
+    out = {}
+    for field in names:
+        raw = _attribute_raw(node, field, None)
+        if raw is not None:
+            out[field] = raw
+    return out
+
+
+def _hanim_bone_parent(obj, armature, bone_name):
+    """Parent ``obj`` to the bone, keeping its matrix_basis as its place in humanoid space at the rest pose (a child of
+    a bone hangs from the bone's tail)."""
+    bone = armature.data.bones[bone_name]
+    basis = obj.matrix_basis.copy()
+    obj.parent = armature
+    obj.parent_type = 'BONE'
+    obj.parent_bone = bone_name
+    obj.matrix_parent_inverse = (bone.matrix_local @ Matrix.Translation((0.0, bone.length, 0.0))).inverted()
+    obj.matrix_basis = basis
+
+
+def _import_hanim_segments(bpycollection, armature, joint_bones):
+    """HAnimSegment and HAnimSite (node board batch 11): each segment Shape becomes a mesh object and each site an
+    Empty, bone-parented to the joint's bone; the segment's fields go on the bone (hanim_parts.SEGMENT_PROPERTY)."""
+    from . import hanim_parts
+    for joint, bone_name in joint_bones.items():
+        segments = [child for child in joint.getChildrenBySpec('HAnimSegment') if not child.reference]
+        if len(segments) > 1:
+            logger.warning("HAnimJoint %r has %d segments; the fields of the first are kept, the Shapes of all",
+                           bone_name, len(segments))
+        for number, segment in enumerate(segments):
+            if number == 0:
+                record = {"name": _attribute_raw(segment, 'name', None) or "", "def": segment.getDefName() or "",
+                          "fields": _hanim_fields(segment, hanim_parts.SEGMENT_FIELDS)}
+                raw = _hanim_raw_displacers(segment)
+                if raw:
+                    record["displacers"] = raw
+                bone = armature.data.bones[bone_name]
+                bone[hanim_parts.SEGMENT_PROPERTY] = hanim_parts.dump(record)
+                for field, width in hanim_parts.SEGMENT_NUMBERS.items():
+                    raw_number = _attribute_raw(segment, field, None)
+                    numbers = hanim_parts.floats(raw_number)
+                    if raw_number is not None and len(numbers) == width:
+                        bone[hanim_parts.SEGMENT_NUMBER_PREFIX + field] = numbers[0] if width == 1 else numbers
+            if segment.getChildrenBySpec('Coordinate'):
+                logger.warning("HAnimSegment %r: its coord is not imported", bone_name)
+            _import_hanim_segment_children(bpycollection, armature, bone_name, segment, [segment])
+
+
+def _import_hanim_segment_children(bpycollection, armature, bone_name, parent, chain):
+    from . import hanim_parts
+    for child in parent.getRealNode().children:
+        spec = child.getSpec()
+        if spec == 'Shape':
+            made_before = child.getRealNode().blendObject if child.reference else None
+            importShape(bpycollection, child, chain, Matrix(), False, 0.0)
+            obj = child.blendObject
+            if obj is not None and obj is not made_before:
+                _hanim_bone_parent(obj, armature, bone_name)
+        elif spec in ('Transform', 'Group') and not child.reference:
+            _import_hanim_segment_children(bpycollection, armature, bone_name, child, chain + [child])
+        elif spec == 'HAnimSite' and not child.reference:
+            def_name = child.getDefName() or ""
+            site_name = _attribute_raw(child, 'name', None) or ""
+            object_name = (def_name[6:] if def_name.startswith("hanim_") and len(def_name) > 6 else def_name) \
+                or site_name or "Site"
+            empty = bpy.data.objects.new(object_name, None)
+            empty.empty_display_type = 'SPHERE'
+            empty.empty_display_size = 0.05
+            bpycollection.objects.link(empty)
+            own = translateTransform(child, chain)
+            empty.matrix_basis = getFinalMatrix(child, own, chain, Matrix())
+            _hanim_bone_parent(empty, armature, bone_name)
+            empty[hanim_parts.SITE_PROPERTY] = hanim_parts.dump(
+                {"name": site_name, "fields": _hanim_fields(child, hanim_parts.SITE_FIELDS)})
+            if def_name:
+                empty["x3d_def"] = def_name
+            child.blendData = child.blendObject = empty
+            if child.getRealNode().children:
+                logger.warning("HAnimSite %r: its children are not imported", object_name)
+
+
+def _hanim_raw_displacers(node):
+    """The HAnimDisplacers of ``node`` as written: [{name, def, coordIndex, displacements, weight, fields}]."""
+    from . import hanim_parts
+    out = []
+    for displacer in node.getChildrenBySpec('HAnimDisplacer'):
+        if displacer.reference:
+            continue
+        out.append({"name": _attribute_raw(displacer, 'name', None) or "", "def": displacer.getDefName() or "",
+                    "coordIndex": _attribute_raw(displacer, 'coordIndex', "") or "",
+                    "displacements": _attribute_raw(displacer, 'displacements', "") or "",
+                    "weight": _attribute_raw(displacer, 'weight', None),
+                    "fields": _hanim_fields(displacer, hanim_parts.DISPLACER_FIELDS)})
+    return out
+
+
+def _import_hanim_displacers(armature, joint_bones, skins, skin_points):
+    """HAnimDisplacer of a joint (node board batch 11): a shape key on each skin mesh, its key points the basis plus the
+    displacements at coordIndex (into skinCoord), its value the weight. With no skin to key they stay on the bone as
+    written (hanim_parts.RAW_DISPLACERS_PROPERTY)."""
+    from . import hanim_parts
+    for joint, bone_name in joint_bones.items():
+        displacers = [d for d in joint.getChildrenBySpec('HAnimDisplacer') if not d.reference]
+        if not displacers:
+            continue
+        if not skins:
+            armature.data.bones[bone_name][hanim_parts.RAW_DISPLACERS_PROPERTY] = hanim_parts.dump(
+                _hanim_raw_displacers(joint))
+            continue
+        for number, displacer in enumerate(displacers):
+            key_name = _attribute_raw(displacer, 'name', None) or displacer.getDefName() or f"{bone_name}_displacer{number}"
+            indices = [int(i) for i in displacer.getFieldAsArray('coordIndex', 0, ())]
+            offsets = displacer.getFieldAsArray('displacements', 3, (), conversion_scale)
+            weight = displacer.getFieldAsFloat('weight', 0.0, ())
+            record = {"joint": bone_name, "def": displacer.getDefName() or "",
+                      "fields": _hanim_fields(displacer, hanim_parts.DISPLACER_FIELDS)}
+            for obj, remap in skins:
+                mesh = obj.data
+                if mesh.shape_keys is None:
+                    obj.shape_key_add(name="Basis", from_mix=False)
+                key = obj.shape_key_add(name=key_name, from_mix=False)
+                key_name = key.name
+                for index, offset in zip(indices, offsets):
+                    if 0 <= index < len(remap) and remap[index] < len(key.data):
+                        vertex = remap[index]
+                        key.data[vertex].co = Vector(mesh.vertices[vertex].co) + Vector(offset)
+                key.slider_min = min(0.0, weight)
+                key.slider_max = max(1.0, weight)
+                key.value = weight
+                kept = hanim_parts.load(obj.get(hanim_parts.DISPLACERS_PROPERTY), {})
+                kept[key.name] = record
+                obj[hanim_parts.DISPLACERS_PROPERTY] = hanim_parts.dump(kept)
+
+
+def _hanim_assign_action(armature, action):
+    if armature.animation_data is None:
+        armature.animation_data_create()
+    armature.animation_data.action = action
+    try:
+        if hasattr(action, "slots") and armature.animation_data.action_slot is None:
+            slot = action.slots[0] if len(action.slots) else action.slots.new(id_type='OBJECT', name=armature.name)
+            armature.animation_data.action_slot = slot
+    except Exception:
+        pass
+
+
+def _import_hanim_motions(armature, real, joint_bones):
+    """HAnimMotion (node board batch 11): a Blender Action per motion, keyed per frame on each named joint's pose bone
+    (frame i at scene start + i * frameDuration * fps); the first is the armature's action. The node's fields are kept as
+    written on the action (hanim_parts.MOTION_PROPERTY), its values too, so an unedited action writes them back as
+    they were."""
+    from . import hanim_parts
+    motions = [m for m in real.getChildrenBySpec('HAnimMotion') if not m.reference]
+    if not motions:
+        return
+    scene = bpy.context.scene
+    fps = scene.render.fps / scene.render.fps_base
+    bones_by_name = {}
+    for joint_node, bone_name in joint_bones.items():
+        bones_by_name.setdefault(_attribute_raw(joint_node, 'name', None) or bone_name, bone_name)
+    first = None
+    last_frame = scene.frame_start
+    for number, motion in enumerate(motions):
+        motion_name = _attribute_raw(motion, 'name', None) or ""
+        action = bpy.data.actions.new(motion_name or motion.getDefName() or f"{armature.name}_motion")
+        action.use_fake_user = True
+        raw_values = _attribute_raw(motion, 'values', None)
+        fields = _hanim_fields(motion, hanim_parts.MOTION_FIELDS)
+        action[hanim_parts.MOTION_PROPERTY] = hanim_parts.dump(
+            {"humanoid": armature.name, "name": motion_name, "def": motion.getDefName() or "", "order": number,
+             "fields": fields, "values": raw_values, "start": scene.frame_start, "fps": fps})
+        _hanim_assign_action(armature, action)
+        first = first or action
+        groups = hanim_parts.parse_channels(fields.get("channels", ""), fields.get("joints", ""))
+        width = sum(len(channels) for _, channels in groups)
+        values = hanim_parts.floats(raw_values)
+        frames = len(values) // width if width else 0
+        duration = motion.getFieldAsFloat('frameDuration', 0.1, ())
+        for frame_number in range(frames):
+            row = values[frame_number * width:(frame_number + 1) * width]
+            frame = scene.frame_start + frame_number * duration * fps
+            last_frame = max(last_frame, frame)
+            offset = 0
+            for joint_name, channels in groups:
+                cells, offset = row[offset:offset + len(channels)], offset + len(channels)
+                bone_name = bones_by_name.get(joint_name)
+                if bone_name is None or bone_name not in armature.pose.bones:
+                    continue
+                translation = [0.0, 0.0, 0.0]
+                rotation = Matrix()
+                for channel, value in zip(channels, cells):
+                    if channel in hanim_parts.POSITION_CHANNELS:
+                        translation[hanim_parts.POSITION_CHANNELS[channel]] = value * conversion_scale
+                    elif channel in hanim_parts.ROTATION_CHANNELS:
+                        rotation = rotation @ Matrix.Rotation(value, 4, hanim_parts.ROTATION_CHANNELS[channel])
+                bone = armature.data.bones[bone_name]
+                rest = bone.matrix_local
+                center = bone.head_local
+                joint_matrix = Matrix.Translation(Vector(translation)) @ Matrix.Translation(center) @ rotation \
+                    @ Matrix.Translation(-center)
+                loc, quat, _scale = (rest.inverted() @ joint_matrix @ rest).decompose()
+                pose_bone = armature.pose.bones[bone_name]
+                pose_bone.rotation_mode = 'QUATERNION'
+                pose_bone.location = loc
+                pose_bone.rotation_quaternion = quat
+                pose_bone.keyframe_insert("location", frame=frame)
+                pose_bone.keyframe_insert("rotation_quaternion", frame=frame)
+        for fcu in _action_fcurves(action):
+            for kf in fcu.keyframe_points:
+                kf.interpolation = 'LINEAR'
+    _hanim_assign_action(armature, first)
+    for pose_bone in armature.pose.bones:     # the rest pose until the timeline plays
+        pose_bone.location = (0.0, 0.0, 0.0)
+        pose_bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+    _fit_frame_end(scene, last_frame)
 
 
 def _hanim_joint_target(defDict, target_def):

@@ -224,6 +224,26 @@
       "round_trip": "equivalent",
       "note": "skinCoordIndex renumbered with the skin's vertex split; weights per vertex position identical"
     },
+    "HAnimDisplacer": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "a joint's displacer is a shape key on each skin mesh (weight = key value), written back from the key with the split-vertex skinCoord indices; one with no skin, or of a segment, kept as written (node board batch 11). Round trip pinned by tests/test_node_board_batch11_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "HAnimMotion": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "a Blender Action on the armature, one key per frame per joint (rotation channels read as radians); fields kept as written, values re-read from the action and written as written when they agree within 1e-4 (node board batch 11). Round trip pinned by tests/test_node_board_batch11_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "HAnimSegment": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "its Shapes are mesh objects bone-parented to the joint's bone, written back each in its own Transform; name, mass, centerOfMass, momentsOfInertia on the bone (node board batch 11). Round trip pinned by tests/test_node_board_batch11_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "HAnimSite": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an Empty bone-parented to its segment's bone; translation, rotation and scale written from the Empty at the rest pose (center folded in), children not imported (node board batch 11). Round trip pinned by tests/test_node_board_batch11_bpy.py; the fixed-point corpus does not contain it yet."
+    },
     "Inline": {
       "import": "yes",
       "round_trip": "equivalent",

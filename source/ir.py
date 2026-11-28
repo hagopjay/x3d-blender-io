@@ -455,11 +455,59 @@ class IRJoint:
     children: list["IRJoint"] = field(default_factory=list)
     skin_coord_index: list[int] = field(default_factory=list)
     skin_coord_weight: list[float] = field(default_factory=list)
+    # The HAnimSegment under this joint (node board batch 11): the objects bone-parented to the bone, None for none.
+    segment: "IRSegment | None" = None
+    # HAnimDisplacers of this joint: the skin's shape keys (offsets into the humanoid's skinCoord).
+    displacers: list["IRDisplacer"] = field(default_factory=list)
 
     def iter_joints(self):
         yield self
         for child in self.children:
             yield from child.iter_joints()
+
+
+@dataclass
+class IRDisplacer:
+    """One HAnimDisplacer: a shape key of the skin, or one the import kept as written (``fields`` then holds it)."""
+
+    name: str
+    coord_index: list[int] = field(default_factory=list)
+    displacements: list[tuple[float, float, float]] = field(default_factory=list)
+    weight: float = 0.0
+    fields: dict = field(default_factory=dict)       # description and the like, as the file wrote them
+
+
+@dataclass
+class IRSite:
+    """One HAnimSite: an Empty bone-parented to its segment's bone. ``instance`` carries its placement (humanoid space,
+    rest pose) and its children."""
+
+    name: str
+    instance: "IRInstance"
+    fields: dict = field(default_factory=dict)
+
+
+@dataclass
+class IRSegment:
+    """One HAnimSegment: the bone's props (mass, centerOfMass, momentsOfInertia, name) and the mesh objects
+    bone-parented to the bone, each an IRInstance placed in humanoid space at the rest pose."""
+
+    name: str
+    fields: dict = field(default_factory=dict)       # mass, centerOfMass, momentsOfInertia, description as written
+    instances: list["IRInstance"] = field(default_factory=list)
+    sites: list[IRSite] = field(default_factory=list)
+    displacers: list[IRDisplacer] = field(default_factory=list)    # kept as written (segment coord displacers)
+
+
+@dataclass
+class IRMotion:
+    """One HAnimMotion: a Blender Action on the armature. ``fields`` are the node's fields as written but values;
+    ``values`` is what the action holds now (``raw_values`` is written instead when they agree)."""
+
+    name: str
+    fields: dict = field(default_factory=dict)
+    values: list[float] = field(default_factory=list)
+    raw_values: str | None = None
 
 
 @dataclass
@@ -473,10 +521,18 @@ class IRHumanoid:
     skin_shapes: list[IRShape] = field(default_factory=list)
     # Joints written under a standard H-Anim name, and the total (the HAnimHumanoid ``info`` says so).
     standard_joint_count: int = 0
+    motions: list[IRMotion] = field(default_factory=list)
 
     def iter_joints(self):
         for root in self.root_joints:
             yield from root.iter_joints()
+
+    def part_instances(self):
+        """The instances of the segments' objects and the sites' Empties (node board batch 11)."""
+        for joint in self.iter_joints():
+            if joint.segment is not None:
+                yield from joint.segment.instances
+                yield from (site.instance for site in joint.segment.sites)
 
 
 @dataclass
@@ -536,10 +592,11 @@ class IRScene:
         stack = list(reversed(self.instances))
         for members in reversed(list(self.collections.values())):
             stack = list(reversed(members)) + stack
+        parts = {humanoid.name: list(humanoid.part_instances()) for humanoid in self.humanoids}
         while stack:
             instance = stack.pop()
             yield instance
-            stack.extend(reversed(instance.children))
+            stack.extend(reversed(instance.children + parts.get(instance.humanoid_name, [])))
 
     def splats_by_name(self) -> dict[str, IRGaussianSplats]:
         return {splats.name: splats for splats in self.splats}
