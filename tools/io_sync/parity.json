@@ -247,6 +247,26 @@
       "import": "yes",
       "round_trip": "unmeasured",
       "note": "written for meshes the import made from an ElevationGrid without Color, Normal or TextureCoordinate children, while no vertex moved"
+    },
+    "Switch": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "every branch imported, the unchosen ones hidden; x3d_group_chain on each object lets the 4.0 export regroup them with whichChoice, an empty branch as an empty Group (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "LOD": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "every level imported, the ones the first Viewpoint does not see hidden; range and center kept in x3d_group_chain (file units) and written back with all levels (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedTriangleSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, else as an IndexedFaceSet (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "PixelTexture": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an image with x3d_pixel_texture (its components), written back inline up to 256 x 256 (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
     }
   },
   "asymmetries": [

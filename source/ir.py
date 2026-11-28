@@ -57,6 +57,9 @@ class IRTextureRef:
     # after path-mode resolution (COPY / RELATIVE / STRIP); when None the
     # emitter falls back to ``filepath``.
     url: str | None = None
+    # A PixelTexture the import read (``x3d_pixel_texture`` on the image, its component count): (width, height,
+    # components, pixel ints as SFImage packs them), written back inline; None for an image with a file.
+    pixel_image: tuple | None = None
 
 
 @dataclass
@@ -95,6 +98,9 @@ class IRMeshGeometry:
     # per key, each parallel to ``coord``.
     morph_keys: list[float] = field(default_factory=list)
     morph_states: list[list[tuple[float, float, float]]] = field(default_factory=list)
+    # Written as an IndexedTriangleSet (the arrays already share one index) when every face is a triangle: set for a
+    # mesh the import read from one (``x3d_geometry`` on the mesh) or when the export triangulates.
+    triangle_set: bool = False
 
 
 @dataclass
@@ -375,6 +381,10 @@ class IRInstance:
     collection_name: str | None = None
     # The ROUTE interaction authored on this object (a sensor inside its Transform), if any.
     interaction: IRInteraction | None = None
+    # The Switch and LOD nodes the import found above this object, outermost first (``x3d_group_chain``): dicts with
+    # node, key, def, branch, branches, and whichChoice (Switch) or range and center (LOD). The writer regroups siblings
+    # into those nodes again.
+    group_chain: list | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.

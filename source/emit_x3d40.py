@@ -269,10 +269,25 @@ def _texture_xml(texture_ref, indent, *, container_field, output_dir=None, defs:
     """An ImageTexture for ``texture_ref``. With ``defs``, the first texture for a url (and wrap mode) gets a DEF and
     later ones a USE with their own containerField, so an image shared by several materials, in any role, is loaded
     once (Web3D's X3D Schematron warns about repeated urls)."""
+    clip = texture_ref.extension == "CLIP"
+    pixels = getattr(texture_ref, "pixel_image", None)
+    if pixels:
+        # a PixelTexture the import read: written back inline (SFImage: width height components, then the pixels)
+        width, height, components, packed = pixels
+        digits = 2 * components
+        attrs = ""
+        if defs is not None:
+            key = f"pixels:{texture_ref.image_name}|{'clip' if clip else 'repeat'}"
+            texture_def = defs.get("texture", key, "TX_", label=texture_ref.image_name or "PixelTexture")
+            if not defs.first_use("texture", key):
+                return f'{indent}<PixelTexture USE="{texture_def}" containerField="{container_field}" />\n'
+            attrs = f' DEF="{texture_def}"'
+        image = " ".join([str(width), str(height), str(components)] + [f"0x{v:0{digits}X}" for v in packed])
+        wrap = ' repeatS="false" repeatT="false"' if clip else ""
+        return f'{indent}<PixelTexture{attrs} containerField="{container_field}" image="{image}"{wrap} />\n'
     url = _texture_url(texture_ref, output_dir=output_dir)
     if not url:
         return ""
-    clip = texture_ref.extension == "CLIP"
     attrs = ""
     if defs is not None:
         key = f"{url}|{'clip' if clip else 'repeat'}"
@@ -449,9 +464,31 @@ def _point_set_xml(geometry, geometry_def, indent):
     return "".join(xml)
 
 
+def _triangle_index(coord_index):
+    """The IndexedTriangleSet ``index`` for an IndexedFaceSet ``coordIndex`` whose every face is a triangle, else None."""
+    out, face = [], []
+    for i in coord_index:
+        if i < 0:
+            if face:
+                if len(face) != 3:
+                    return None
+                out.extend(face)
+            face = []
+        else:
+            face.append(i)
+    if face:
+        if len(face) != 3:
+            return None
+        out.extend(face)
+    return out or None
+
+
 def _geometry_xml(geometry, defs: _DefNames, indent):
     geometry_def = defs.get("geometry", geometry.name, "ME_")
-    node = "PointSet" if geometry.is_points else "IndexedLineSet" if geometry.is_lines else "IndexedFaceSet"
+    triangles = _triangle_index(geometry.coord_index) if (
+        getattr(geometry, "triangle_set", False) and not geometry.is_points and not geometry.is_lines) else None
+    node = "PointSet" if geometry.is_points else "IndexedLineSet" if geometry.is_lines else \
+        "IndexedTriangleSet" if triangles else "IndexedFaceSet"
     if not defs.first_use("geometry", geometry.name):
         return f'{indent}<{node} USE="{geometry_def}" />\n'
     if geometry.is_points:
@@ -472,12 +509,17 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
                 xml.append(f'{indent}  <Color color="{values}" />\n')
         xml.append(f"{indent}</IndexedLineSet>\n")
         return "".join(xml)
-    attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
+    if triangles:
+        # an IndexedTriangleSet: one index for every array, no creaseAngle (its generated normals are per face, so a
+        # smooth mesh keeps the look only with its normals, written when the export writes normals)
+        attrs = [f'DEF="{geometry_def}"', f'index="{_fmt_ints(triangles)}"']
+    else:
+        attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
     if not geometry.solid:
         attrs.append('solid="false"')
-    if geometry.crease_angle is not None and geometry.crease_angle > 0.0:
+    if not triangles and geometry.crease_angle is not None and geometry.crease_angle > 0.0:
         attrs.append(f'creaseAngle="{_fmt(geometry.crease_angle)}"')
-    xml = [f"{indent}<IndexedFaceSet {' '.join(attrs)}>\n"]
+    xml = [f"{indent}<{node} {' '.join(attrs)}>\n"]
     if geometry.skin_coord_def:
         xml.append(f'{indent}  <Coordinate USE="{geometry.skin_coord_def}" />\n')
     elif geometry.morph_keys:
@@ -496,7 +538,7 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
         )
     if geometry.color:
         xml.append(f'{indent}  <ColorRGBA color="{" ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)}" />\n')
-    xml.append(f"{indent}</IndexedFaceSet>\n")
+    xml.append(f"{indent}</{node}>\n")
     return "".join(xml)
 
 
@@ -506,7 +548,8 @@ def _imported_primitive_xml(primitive, defs: _DefNames, indent):
     default are left out."""
     node, fields = primitive["node"], primitive["fields"]
     key = f'{primitive.get("mesh") or id(primitive)}{"" if fields.get("solid", True) else "_2s"}'
-    primitive_def = defs.get("primitive", key, "GE_")
+    # a mesh imported from this writer's own file is already named GE_...: keep one prefix, so a round trip is stable
+    primitive_def = defs.get("primitive", key, "GE_", label=key[3:] if key.startswith("GE_") else key)
     if not defs.first_use("primitive", key):
         return f'{indent}<{node} USE="{primitive_def}" />\n'
     attrs = [f'DEF="{primitive_def}"']
@@ -763,6 +806,63 @@ def _world_info_xml(hosts, defs, indent, diagnostics):
     return "".join(xml)
 
 
+def _own_groups(instance, parent_chain):
+    """The Switch / LOD entries above ``instance`` that its parent is not already inside (matched by key and branch)."""
+    chain = instance.group_chain or []
+    n = 0
+    while (n < len(chain) and n < len(parent_chain) and chain[n].get("key") == parent_chain[n].get("key")
+           and chain[n].get("branch") == parent_chain[n].get("branch")):
+        n += 1
+    return chain[n:]
+
+
+def _grouped_xml(pairs, write_one, defs: _DefNames, indent):
+    """Siblings written in order, those under a Switch or LOD gathered into it at the place of the first one.
+    ``pairs`` is [(instance, the groups above it still to open)]; ``write_one(instance, indent)`` writes one."""
+    out, done = [], set()
+    for i, (instance, rest) in enumerate(pairs):
+        if i in done:
+            continue
+        if not rest:
+            out.append(write_one(instance, indent))
+            continue
+        head = rest[0]
+        group = [(j, pair) for j, pair in enumerate(pairs)
+                 if j not in done and pair[1] and pair[1][0].get("key") == head.get("key")]
+        done.update(j for j, _ in group)
+        out.append(_group_node_xml(head, [pair for _, pair in group], write_one, defs, indent))
+    return "".join(out)
+
+
+def _group_node_xml(head, pairs, write_one, defs: _DefNames, indent):
+    """One Switch or LOD with every branch the import saw: a branch with nothing left on it is an empty Group, so
+    whichChoice and the LOD levels still count the same children."""
+    node = "Switch" if head.get("node") == "Switch" else "LOD"
+    attrs = []
+    if head.get("def"):
+        attrs.append(f'DEF="{defs.get(node.lower(), head["key"], "", label=head["def"])}"')
+    if node == "Switch":
+        attrs.append(f'whichChoice="{int(head.get("whichChoice", -1))}"')
+    else:
+        if head.get("range"):
+            attrs.append(f'range="{" ".join(_fmt(v) for v in head["range"])}"')
+        center = head.get("center") or (0.0, 0.0, 0.0)
+        if any(center):
+            attrs.append(f'center="{_fmt3(center)}"')
+    branches = max([int(head.get("branches", 0))] + [int(p[1][0].get("branch", 0)) + 1 for p in pairs])
+    xml = [f"{indent}<{node} {' '.join(attrs)}>\n"]
+    for b in range(branches):
+        members = [(instance, rest[1:]) for instance, rest in pairs if int(rest[0].get("branch", -1)) == b]
+        if not members:
+            xml.append(f"{indent}  <Group />\n")
+        elif len(members) == 1:
+            xml.append(_grouped_xml(members, write_one, defs, indent + "  "))
+        else:
+            xml.append(f"{indent}  <Group>\n{_grouped_xml(members, write_one, defs, indent + '    ')}{indent}  </Group>\n")
+    xml.append(f"{indent}</{node}>\n")
+    return "".join(xml)
+
+
 def _subtree_hidden(instance):
     return not instance.visible and all(_subtree_hidden(child) for child in instance.children)
 
@@ -843,9 +943,11 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(_light_xml(instance.light, defs, indent + "  "))
     if instance.viewpoint is not None:
         xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
-    for child in instance.children:
-        xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids,
-                                 splats=splats, version=version, look=look, collections=collections))
+    def write_child(child, child_indent):
+        return _instance_xml(child, geometries, materials, defs, child_indent, output_dir=output_dir, humanoids=humanoids,
+                             splats=splats, version=version, look=look, collections=collections)
+    xml.append(_grouped_xml([(child, _own_groups(child, instance.group_chain or [])) for child in instance.children],
+                            write_child, defs, indent + "  "))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
 
@@ -1162,6 +1264,8 @@ def _behaviour_emission(ir_scene, defs: _DefNames, diagnostics, indent):
                 defs.get("behaviour-inner", inner, "", label=inner)
     by_object = {instance.object_name: instance for instance in ir_scene.iter_instances()}
     used_materials = {shape.material_name for instance in by_object.values() for shape in instance.iter_shapes()}
+    written_switches = {entry.get("key") for instance in by_object.values() for entry in instance.group_chain or ()
+                        if entry.get("node") == "Switch" and entry.get("def")}
 
     # Identity: a target is written under the name it has in the graph (for an imported file, the DEF it came with), and
     # a placed sensor's parent under the DEF the importer recorded. Asking ``defs`` first fixes that name for the key, so
@@ -1178,6 +1282,8 @@ def _behaviour_emission(ir_scene, defs: _DefNames, diagnostics, indent):
             return defs.get("light", instance.light.name, "", label=node.id)
         if kind == "material" and name in used_materials:
             return defs.get("material", name, "", label=node.id)
+        if kind == "switch" and name in written_switches:            # the Switch is written back (node board batch 2)
+            return defs.get("switch", name, "", label=node.id)
         return None
 
     for node in graph.nodes.values():
@@ -1462,9 +1568,10 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     splats = ir_scene.splats_by_name()
-    for instance in ir_scene.instances:
-        write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids,
-                            splats=splats, version=version, look=look, collections=ir_scene.collections))
+    def write_root(instance, root_indent):
+        return _instance_xml(instance, geometries, materials, defs, root_indent, output_dir=output_dir, humanoids=humanoids,
+                             splats=splats, version=version, look=look, collections=ir_scene.collections)
+    write(_grouped_xml([(instance, _own_groups(instance, [])) for instance in ir_scene.instances], write_root, defs, "    "))
     write(_animation_xml(ir_scene, defs, "    "))
     write(_interaction_xml(ir_scene, defs, "    "))
     if behaviour is not None:

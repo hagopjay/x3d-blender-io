@@ -11,6 +11,7 @@ emitter (``emit_x3d40``) never sees Blender objects.
 from __future__ import annotations
 
 import logging
+import json
 import math
 import os
 
@@ -664,6 +665,19 @@ def _crease_from_sharp_edges(mesh) -> float:
     except Exception:
         return math.pi
 
+GEOMETRY_NODE_PROPERTY = "x3d_geometry"   # set by the importer on a mesh read from an IndexedTriangleSet
+
+
+def mark_triangle_sets(geometries, mesh, use_triangulate):
+    """Flag face geometries for an IndexedTriangleSet: the export triangulates, or the mesh came from one."""
+    wanted = use_triangulate or (mesh is not None and getattr(mesh, "get", lambda *_: None)(GEOMETRY_NODE_PROPERTY)
+                                 == "IndexedTriangleSet")
+    for geometry in geometries:
+        if not geometry.is_lines and not geometry.is_points:
+            geometry.triangle_set = bool(wanted)
+    return geometries
+
+
 def extract_mesh_geometries(
     mesh,
     *,
@@ -1033,6 +1047,31 @@ def _matrix_transform(matrix) -> IRTransform:
     )
 
 
+GROUP_CHAIN_PROPERTY = "x3d_group_chain"   # set by the importer: the Switch and LOD nodes above an object (JSON)
+
+
+def group_chain(obj):
+    """The Switch / LOD chain the importer recorded on ``obj`` (outermost first), or None."""
+    raw = obj.get(GROUP_CHAIN_PROPERTY)
+    if not raw:
+        return None
+    try:
+        chain = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return chain if isinstance(chain, list) and chain else None
+
+
+def regrouped(obj, node):
+    """True when ``obj`` or an object above it sits under a ``node`` ("Switch" or "LOD") that the X3D 4.0 writer
+    writes back, so that node, not the object's own visibility, decides what is drawn."""
+    while obj is not None:
+        if any(entry.get("node") == node for entry in group_chain(obj) or ()):
+            return True
+        obj = obj.parent
+    return False
+
+
 def is_lod_hidden(obj):
     """An object of an LOD level the importer hid (and the user has not unhidden): written as geometry it would be
     drawn on top of the level that is shown, so neither writer exports it."""
@@ -1049,8 +1088,9 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
             continue
         if use_visible and not obj.visible_get():
             continue
-        if is_lod_hidden(obj):
-            # the 4.0 writer has no LOD node; unhide the level (hide_render off) to export it
+        if is_lod_hidden(obj) and not regrouped(obj, "LOD"):
+            # a level of a LOD the import recorded is written inside that LOD; one it did not (an older import) is
+            # not written: unhide it (hide_render off) to export it
             continue
         yield obj
 
@@ -1736,6 +1776,7 @@ def extract_scene(
                         use_normals=use_normals,
                         recorded_solid=obj.data.get(SOLID_PROPERTY) if obj.type == "MESH" else None,
                     )
+                    mark_triangle_sets(geometries, obj.data if obj.type == "MESH" else None, use_triangulate)
                 else:
                     geometries = []
             finally:
@@ -1813,6 +1854,7 @@ def extract_scene(
                     mesh.calc_loop_triangles()
                 geometries = extract_mesh_geometries(mesh, name=key, material_slots=slots,
                                                      use_triangulate=use_triangulate, use_normals=use_normals)
+                mark_triangle_sets(geometries, mesh, use_triangulate)
                 geometries_by_key[key] = geometries
                 ir_scene.geometries.extend(geometries)
                 shapes = []
@@ -1863,7 +1905,9 @@ def extract_scene(
         # only what the import hid (a Switch choice, visible="false") is written invisible; hide_render on any other object is a Blender-side
         # choice that does not reach the children, while visible="false" would hide the whole subtree
         instance.visible = not (bool(getattr(obj, "hide_render", False)) and (
-            obj.get(SWITCH_HIDDEN_PROPERTY) is not None or obj.get(VISIBLE_FALSE_PROPERTY) is not None))
+            (obj.get(SWITCH_HIDDEN_PROPERTY) is not None and not regrouped(obj, "Switch"))
+            or obj.get(VISIBLE_FALSE_PROPERTY) is not None))
+        instance.group_chain = group_chain(obj)
         if not name_prefix:
             objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
             instance.interaction = read_interaction(obj, ir_scene.diagnostics)

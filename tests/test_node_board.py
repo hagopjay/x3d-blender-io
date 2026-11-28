@@ -26,7 +26,7 @@ X3DUOM = Path("/home/user/x3d_mcp/src/validation/schemas/X3dUnifiedObjectModel-4
 
 # PINNED. Re-measure with tools/node_board_probe.py in Blender, then tools/node_board.py --write.
 PINNED = {"nodes": 260, "read_builds": 64, "read_graph": 2, "read_carries": 11, "read_structural": 18, "read_reported": 17,
-          "read_none": 147, "read_unprobed": 1, "written": 100, "writable": 1, "events": 57,
+          "read_none": 147, "read_unprobed": 1, "written": 104, "writable": 1, "events": 57,
           "event_wired": 57, "event_simulated": 57, "event_judged": 56, "event_played": 50}
 PINNED_COMPONENTS = 36
 

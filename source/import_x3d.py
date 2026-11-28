@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import json
 import logging
 from http.cookiejar import debug
 
@@ -2293,6 +2294,7 @@ def importMesh_IndexedTriangleSet(geom, ancestry):
     triangles = [t for t in triangles if -1 not in t]
     corners = [t[j] for t in triangles for j in ((0, 1, 2) if ccw else (1, 0, 2))]
     _set_triangles(bpymesh, corners, 'IndexedTriangleSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleSet"     # the X3D 4.0 export writes it back as one (extract.GEOMETRY_NODE_PROPERTY)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -5535,6 +5537,7 @@ def appearance_LoadPixelTexture(pixelTexture, ancestry):
         logger.warning(f"ImportX3D warning: pixel count in PixelTexture is off. Pixels: {len(pixels)}, Width: {w}, Height: {h}")
 
     bpyima = bpy.data.images.new("PixelTexture", w, h, alpha=has_alpha, float_buffer=True)
+    bpyima["x3d_pixel_texture"] = plane_count     # written back as a PixelTexture (material.PIXEL_TEXTURE_PROPERTY)
     if not has_alpha:
         bpyima.alpha_mode = 'NONE'
 
@@ -7955,6 +7958,9 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
             worlds[empty] = getFinalMatrix(node, None, ancestry, global_matrix)
             empty.matrix_world = worlds[empty]
             tag_x3d_identity(empty, node, ancestry)
+            chain = group_chain(node, ancestry)       # a Transform on a Switch branch or LOD level: the export regroups it
+            if chain:
+                empty[GROUP_CHAIN_PROPERTY] = json.dumps(chain)
             owners[key] = empty
 
     def owner_above(key):
@@ -8392,6 +8398,37 @@ def switch_branches(node, ancestry):
     return " ".join(entries)
 
 
+GROUP_CHAIN_PROPERTY = "x3d_group_chain"     # on an object made under a Switch or LOD: JSON, outermost first, for the export
+group_keys = {}                              # id(real Switch/LOD node) -> its key in GROUP_CHAIN_PROPERTY (DEF, else made up)
+
+
+def group_chain(node, ancestry):
+    """Every Switch and LOD above ``node``, outermost first, as the exporter needs them to write the node back: its type,
+    DEF (or a key unique in this import), the branch ``node`` sits on, how many branches there are, and the Switch's
+    whichChoice or the LOD's range and center (in the file's units). A GeoLOD is left out (not written back)."""
+    chain = tuple(ancestry) + (node,)
+    out = []
+    for i, anc in enumerate(ancestry):
+        spec = anc.getSpec()
+        if spec not in ('Switch', 'LOD'):
+            continue
+        real = anc.getRealNode()
+        kids = [c for c in real.children if _switch_child_counts(c)]
+        index = next((n for n, kid in enumerate(kids) if kid is chain[i + 1]), None)
+        if index is None:
+            continue
+        name = anc.getDefName() or real.getDefName() or ""
+        key = group_keys.setdefault(id(real), name or f"{spec}_{len(group_keys) + 1}")
+        entry = {"node": spec, "key": key, "def": name, "branch": index, "branches": len(kids)}
+        if spec == 'Switch':
+            entry["whichChoice"] = anc.getFieldAsInt('whichChoice', -1, ancestry[:i])
+        else:
+            entry["range"] = [float(v) for v in (anc.getFieldAsArray('range', 0, ancestry[:i], 1.0) or [])]
+            entry["center"] = [float(v) for v in anc.getFieldAsFloatTuple('center', (0.0, 0.0, 0.0), ancestry[:i])]
+        out.append(entry)
+    return out
+
+
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
 X3D_LOD_PROPERTY = "x3d_lod"                  # on the same object: "<LOD name>:<level>"
 
@@ -8698,6 +8735,11 @@ def load_web3d(
                 item.getFieldAsBool('visible', True, chain) is not False
                 for item, chain in [(anc, ancestry[:i]) for i, anc in enumerate(ancestry)] + [(node, ancestry)]):
             visible_false.append(node.blendObject)
+        if node.blendObject is not None and node.blendObject is not made_before \
+                and any(anc.getSpec() in ('Switch', 'LOD') for anc in ancestry):
+            chain = group_chain(node, ancestry)
+            if chain:
+                node.blendObject[GROUP_CHAIN_PROPERTY] = json.dumps(chain)
         if spec in ('LOD', 'GeoLOD'):
             lod_records[lod_key(node, ancestry)] = {
                 "node": node, "ancestry": list(ancestry), "global_matrix": global_matrix,
@@ -8915,6 +8957,7 @@ def load(context,
     lit_by_node.clear()
     lod_records.clear()
     lod_members.clear()
+    group_keys.clear()
     navigation_headlight = None
     bound_view = default_view = None
 
