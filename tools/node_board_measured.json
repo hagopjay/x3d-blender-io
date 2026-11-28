@@ -84,9 +84,12 @@
    ]
   },
   "BallJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "Billboard": {
    "read": "carries",
@@ -236,7 +239,8 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/consistency/probe-collision.x3d",
-    "tests/node_board/gap_batch_6.x3d"
+    "tests/node_board/gap_batch_6.x3d",
+    "tests/node_board/gap_batch_7.x3d"
    ]
   },
   "Collision": {
@@ -278,6 +282,7 @@
    "read_evidence": "materials changed",
    "written": "observed",
    "written_by": [
+    "tests/node_board/gap_batch_8.x3d",
     "tests/node_board/writable_nodes.x3d"
    ]
   },
@@ -406,7 +411,10 @@
   "CoordinateDouble": {
    "read": "builds",
    "read_evidence": "meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "CoordinateInterpolator": {
    "read": "none",
@@ -479,9 +487,12 @@
    "written": "no"
   },
   "DoubleAxisHingeJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "DynamicsCompressor": {
    "read": "none",
@@ -742,15 +753,18 @@
    "read_evidence": "curves +1, materials +1, objects +1",
    "written": "observed",
    "written_by": [
-    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
-    "docs/showcase/scenes/nurbs-weights.x3d",
-    "tests/behaviour/wired-pick.x3d"
+    "tests/behaviour/wired-pick.x3d",
+    "tests/golden/loose_edges.c14n.x3d",
+    "tests/node_board/writable_nodes.x3d"
    ]
   },
   "IndexedQuadSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "IndexedTriangleFanSet": {
    "read": "builds",
@@ -876,7 +890,12 @@
   "LineSet": {
    "read": "builds",
    "read_evidence": "curves +1, materials +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
+    "docs/showcase/scenes/nurbs-weights.x3d",
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "ListenerPointSource": {
    "read": "none",
@@ -1200,7 +1219,12 @@
   "PointProperties": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
+    "docs/showcase/scenes/nurbs-weights.x3d",
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "PointSet": {
    "read": "builds",
@@ -1322,7 +1346,10 @@
   "QuadSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "ReceiverPdu": {
    "read": "none",
@@ -1344,7 +1371,8 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/consistency/probe-collision.x3d",
-    "tests/node_board/gap_batch_6.x3d"
+    "tests/node_board/gap_batch_6.x3d",
+    "tests/node_board/gap_batch_7.x3d"
    ]
   },
   "RigidBodyCollection": {
@@ -1353,7 +1381,8 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/consistency/probe-collision.x3d",
-    "tests/node_board/gap_batch_6.x3d"
+    "tests/node_board/gap_batch_6.x3d",
+    "tests/node_board/gap_batch_7.x3d"
    ]
   },
   "ScalarChaser": {
@@ -1453,9 +1482,12 @@
    ]
   },
   "SliderJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "Sound": {
    "read": "builds",
@@ -1762,9 +1794,12 @@
    "written": "no"
   },
   "UniversalJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "UnlitMaterial": {
    "read": "builds",
