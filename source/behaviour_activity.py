@@ -862,8 +862,15 @@ def _link_index(tree):
 
 
 def _colour(x3d_type):
+    """The field type's colour, under the editor's style (behaviour_style; Classic leaves it as it is)."""
     from . import behaviour_nodes
-    return behaviour_nodes._COLOURS.get(x3d_type, (0.62, 0.62, 0.62, 1.0))[:3]
+    base = behaviour_nodes._COLOURS.get(x3d_type, (0.62, 0.62, 0.62, 1.0))[:3]
+    try:
+        import time
+        from . import behaviour_style
+        return tuple(behaviour_style.field_colour(base, x3d_type, time.monotonic()))
+    except Exception:       # noqa: BLE001 - the style is decoration; the overlay must draw without it
+        return base
 
 
 def _bright(colour, amount=0.4):
@@ -1004,6 +1011,12 @@ def _draw_in_view():
                                                                 "width": first[3], "height": first[4],
                                                                 "px_rect": list(node_rects[first[0].name])}}
 
+    try:
+        from . import behaviour_style
+        size_k, glow_k, trail_k = behaviour_style.scales()
+        sparkle = behaviour_style.sparkle_on()
+    except Exception:       # noqa: BLE001
+        behaviour_style, size_k, glow_k, trail_k, sparkle = None, 1.0, 1.0, 1.0, False
     gpu.state.blend_set("ADDITIVE")
     halo_pos, halo_col, core_pos, core_col, paths = [], [], [], [], {}
     for key in activity.active_keys(now):
@@ -1018,17 +1031,23 @@ def _draw_in_view():
         colour, strength = _colour(activity.route_type(key)), activity.glow(key, now)
         for a, b in zip(points, points[1:]):
             halo_pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
-            halo_col += [(*colour, 0.20 * strength)] * 2
+            halo_col += [(*colour, min(1.0, 0.20 * strength * glow_k))] * 2
             core_pos += [(a[0], a[1], 0.0), (b[0], b[1], 0.0)]
             core_col += [(*_tint(colour, 0.6), 0.95 * strength)] * 2
     line = shaders["line"]
     line.uniform_float("viewportSize", size)
-    for pos, col, width in ((halo_pos, halo_col, 9.0 * unit), (core_pos, core_col, 2.0 * unit)):
+    for pos, col, width in ((halo_pos, halo_col, 9.0 * unit * max(0.4, glow_k)), (core_pos, core_col, 2.0 * unit)):
         if pos:
             line.uniform_float("lineWidth", width)
             batch_for_shader(line, "LINES", {"pos": pos, "color": col}).draw(line)
 
-    layers = {"halo": ([], []), "tail": ([], []), "head": ([], []), "core": ([], [])}
+    layers = {"halo": ([], []), "tail": ([], []), "head": ([], []), "core": ([], []), "sparkle": ([], [])}
+    if sparkle and behaviour_style is not None:
+        import time
+        for number, (key, (points, _lengths)) in enumerate(paths.items()):
+            for spot, bright in behaviour_style.sparkle_points(points, time.monotonic(), seed=number * 31):
+                layers["sparkle"][0].append((spot[0], spot[1], 0.0))
+                layers["sparkle"][1].append((1.0, 1.0, 1.0, 0.85 * bright))
     for key, age, count in activity.packets(now):
         found_path = paths.get(key)
         if found_path is None:
@@ -1037,7 +1056,7 @@ def _draw_in_view():
         if lengths[-1] <= 0:
             continue
         colour = _colour(activity.route_type(key))
-        tail = min(0.5, 40.0 * unit / (per_unit * lengths[-1]))             # about 40 pixels
+        tail = min(0.9, 40.0 * unit * trail_k / (per_unit * lengths[-1]))  # about 40 pixels (times the style's trail)
         for number, (position, strength) in enumerate(packet_trail(points, lengths, age, tail)):
             spot = (position[0], position[1], 0.0)
             if number == 0:
@@ -1052,10 +1071,10 @@ def _draw_in_view():
                 layers["tail"][1].append((*_bright(colour, 0.3), 0.8 * strength))
     _state["diag"]["packets_drawn"] = len(layers["head"][0])
     point = shaders["point"]
-    for name, px in (("halo", 20.0), ("tail", 4.0), ("head", 8.0), ("core", 4.0)):
+    for name, px in (("halo", 20.0 * max(0.4, glow_k)), ("tail", 4.0), ("head", 8.0), ("core", 4.0), ("sparkle", 3.0)):
         pos, col = layers[name]
         if pos:
-            point.uniform_float("size", px * unit)
+            point.uniform_float("size", px * unit * size_k)
             batch_for_shader(point, "POINTS", {"pos": pos, "color": col}).draw(point)
     gpu.state.blend_set("ALPHA")
     if _state["debug"]:
