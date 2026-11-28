@@ -616,6 +616,9 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
     geometry_def = defs.get("geometry", geometry.name, "ME_")
     triangles = _triangle_index(geometry.coord_index) if (
         getattr(geometry, "triangle_set", False) and not geometry.is_points and not geometry.is_lines) else None
+    if triangles and not geometry.normal and geometry.crease_angle is not None and geometry.crease_angle > 0.0:
+        # a smooth mesh written without normals keeps its look only through creaseAngle, which a triangle set lacks
+        triangles = None
     layout = None if geometry.is_points or geometry.is_lines else _quad_set_layout(geometry)
     if layout is None and triangles:
         layout = _triangle_set_layout(geometry, triangles)
