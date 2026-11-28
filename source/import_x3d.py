@@ -8927,6 +8927,54 @@ def finalize_lod():
             member[X3D_LOD_PROPERTY] = f"{name}:{index}"
 
 
+import_physics = True      # set by load(physics=...): RigidBodyPhysics becomes Blender's rigid body world
+
+
+def import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection):
+    """The file's RigidBodyCollections as Blender's rigid body world (source/physics_blender.py says what maps how).
+    The losses join the scene's import loss record (``x3d_import_losses``) with kind "physics"; they are logged, and
+    X3D_IMPORT_STRICT does not raise on them (they describe a simulation that runs, not behaviour that was dropped)."""
+    import json
+    element = getattr(root_node, "x3dNode", None)
+    if element is None:     # classic VRML encoding: no physics component to read
+        return None
+    document = element.ownerDocument.documentElement if element.ownerDocument is not None else element
+    if not document.getElementsByTagName("RigidBodyCollection"):
+        return None
+    from . import physics_model
+    physics = physics_model.read_physics(document)
+    if not physics.collections:
+        return None
+    from . import physics_blender
+    shape_objects, matrices = {}, {}
+    for node, ancestry in all_nodes:
+        el = getattr(node, "x3dNode", None)
+        if el is None:
+            continue
+        spec = node.getSpec()
+        if spec == "Shape" and node.blendObject is not None:
+            shape_objects.setdefault(id(el), node.blendObject)
+        elif spec == "RigidBodyCollection":
+            matrices.setdefault(id(el), getFinalMatrix(node, Matrix(), ancestry, global_matrix))
+    # a rigid body simulates in world space: a body the hierarchy rebuild parented keeps its world matrix, without parent
+    for ob in shape_objects.values():
+        if ob.parent is not None:
+            world = ob.matrix_world.copy()
+            ob.parent = None
+            ob.matrix_world = world
+    made = physics_blender.apply(physics, bpycontext.scene, bpycollection, shape_objects, matrices, conversion_scale)
+    records = [{"kind": "physics", "node": what, "detail": f"{field}: {why}"} for what, field, why in physics.losses]
+    for record in records:
+        logger.warning("X3D import loss: %s %s: %s", record["kind"], record["node"], record["detail"])
+    if records:
+        try:
+            raw = bpycontext.scene.get("x3d_import_losses")
+            bpycontext.scene["x3d_import_losses"] = json.dumps((json.loads(raw) if raw else []) + records)
+        except Exception:  # pragma: no cover - a scene that cannot hold a property
+            pass
+    return made
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -9098,6 +9146,12 @@ def load_web3d(
             rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes)
         except Exception as exc:  # the objects are already in place; a failed rebuild leaves the flat import
             logger.error("Hierarchy rebuild failed, objects stay flat: %s", exc, exc_info=True)
+
+    if import_physics and not _INLINE_STACK:
+        try:
+            import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection)
+        except Exception as exc:  # physics must never break a geometry import
+            logger.error("RigidBodyPhysics import failed, the geometry stays: %s", exc, exc_info=True)
 
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
@@ -9282,7 +9336,8 @@ def load(context,
          light_units=None,
          gpu_instances=None,
          keep_hierarchy=True,
-         defer_route_losses=False
+         defer_route_losses=False,
+         physics=None
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
@@ -9292,9 +9347,15 @@ def load(context,
     gpu_instances: group objects that share a mesh under one Empty each, so the glTF exporter's GPU Instances option
     writes EXT_mesh_gpu_instancing (also on when BLENDER_X3D_GPU_INSTANCES is 1; see group_instances).
     keep_hierarchy: parent objects as the file's Transforms nest them (rebuild_hierarchy); False imports every object
-    at its world matrix without parents, as before."""
+    at its world matrix without parents, as before.
+    physics: RigidBodyCollections become Blender's rigid body world (import_rigid_body_physics); None reads
+    BLENDER_X3D_PHYSICS (default on), False keeps only their geometry, as before."""
     global colour_space, lighting_units, navigation_headlight, bound_view, default_view, defer_routes_to_caller
+    global import_physics
     defer_routes_to_caller = bool(defer_route_losses)
+    # physics: RigidBodyPhysics as Blender's rigid body world (None: BLENDER_X3D_PHYSICS, else on)
+    import_physics = (os.environ.get("BLENDER_X3D_PHYSICS", "1").strip().lower() not in ("0", "false", "no", "off")
+                      if physics is None else bool(physics))
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
     colour_space = resolve_colour_space(color_space)

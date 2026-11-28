@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><head><component name="RigidBodyPhysics" level="2"/><meta name="title" content="slope"/></head><Scene>
+<NavigationInfo type='"EXAMINE"' headlight="true"/><Viewpoint position="0 3 14"/>
+<RigidBodyCollection DEF="W" gravity="0 -9.8 0"><CollisionCollection containerField="collider" bounce="0" frictionCoefficients="0.2 0.2" appliedParameters='"FRICTION_COEFFICIENT-2"'/><RigidBody DEF="G" position="0 0 0" orientation="0 0 1 0.5235987755982988" mass="1" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="60 1 60"/></Shape></CollidableShape></RigidBody><RigidBody DEF="C" position="-0.49999999999999994 0.8680254037844387 0" mass="1" orientation="0 0 1 0.5235987755982988"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="1 1 1"/></Shape></CollidableShape></RigidBody></RigidBodyCollection></Scene></X3D>
