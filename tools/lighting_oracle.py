@@ -23,8 +23,11 @@ each pixel centre, X3D 4.0 (ISO/IEC 19775-1:2023) 17.2.2.5 Phong lighting model,
 The spec says nothing about colour spaces (X3D 4.0 17.2.2 and 12 Shape component never mention gamma or sRGB; Don
 Brutzman, x3d-public, 27 Nov 2020: "The X3D specification is silent about gamma correction"). So the oracle has two
 readings: 'linear' decodes every colour (Material and light colours) from sRGB, lights, and encodes the clamped sum
-for the display (X3DOM's default, gammaCorrectionDefault "linear"); 'display' runs the equations on the file's
-numbers and shows the clamped sum as it is (the classic OpenGL way). And two curves for the decoding: 'srgb' (the
+for the display; 'display' runs the equations on the file's numbers and shows the clamped sum as it is (the classic
+OpenGL way: X_ITE 16.8.1 as it ships, X3DOM 1.8.3 with gammaCorrectionDefault "none"); 'linear-values' takes the
+file's numbers as linear values, lights them and encodes the clamped sum (X3DOM 1.8.3 as it ships, X_ITE 16.8.1 with
+ColorSpace LINEAR, and how X3D 4.0's PhysicalMaterial and glTF read a colour factor). 'linear-values' was added after
+the first recording (27 Nov 2026), when both browsers' gamma-correct modes landed on neither of the first two. And two curves for the decoding: 'srgb' (the
 IEC 61966-2-1 piecewise curve Blender uses) and 'pow22' (x^2.2, X_ITE 16.8.1's and X3DOM 1.8.3's).
 """
 
@@ -87,6 +90,7 @@ SCENES = {
     },
 }
 
+READINGS = ("linear", "display", "linear-values")
 LIGHT_DEFAULTS = {"intensity": 1.0, "ambientIntensity": 0.0, "color": (1.0, 1.0, 1.0), "attenuation": (1.0, 0.0, 0.0),
                   "radius": 100.0, "beamWidth": math.pi * 3.0 / 16.0, "cutOffAngle": math.pi / 2.0,
                   "direction": (0.0, 0.0, -1.0), "location": (0.0, 0.0, 0.0)}
@@ -136,6 +140,8 @@ def evaluate(scene, reading="linear", curve="srgb", size=SIZE):
     def work(colour):
         return decode(colour, curve) if reading == "linear" else np.asarray(colour, dtype=float)
 
+    encoded = reading in ("linear", "linear-values")
+
     point, view = surface(size)
     normal = np.array((0.0, 0.0, 1.0))
     diffuse, specular = work(material["diffuseColor"]), work(material["specularColor"])
@@ -177,7 +183,7 @@ def evaluate(scene, reading="linear", curve="srgb", size=SIZE):
                  + fields["intensity"] * specular * (n_dot_h ** (material["shininess"] * 128.0))[..., None])
         total += (on * attenuation * spot)[..., None] * work(fields["color"]) * terms
         reached.append(on)
-    picture = encode(total, curve) if reading == "linear" else np.clip(total, 0.0, 1.0)
+    picture = encode(total, curve) if encoded else np.clip(total, 0.0, 1.0)
     return picture, np.stack(reached, axis=-1)
 
 
@@ -238,7 +244,7 @@ def fixture(scene):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("scene", nargs="?")
-    parser.add_argument("--reading", default="linear", choices=("linear", "display"))
+    parser.add_argument("--reading", default="linear", choices=READINGS)
     parser.add_argument("--curve", default="srgb", choices=("srgb", "pow22"))
     parser.add_argument("--write-fixtures", action="store_true")
     args = parser.parse_args()
