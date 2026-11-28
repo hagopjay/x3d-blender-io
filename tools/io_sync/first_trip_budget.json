@@ -14,7 +14,7 @@
    "attr_extra|PhysicalMaterial|roughness": 4,
    "attr_missing|Appearance|USE": 1,
    "attr_missing|IndexedFaceSet|USE": 1,
-   "attr_missing|IndexedFaceSet|solid": 5,
+   "attr_missing|IndexedTriangleSet|solid": 5,
    "extra|Appearance|": 1,
    "extra|Coordinate|": 1,
    "extra|PhysicalMaterial|": 1,
