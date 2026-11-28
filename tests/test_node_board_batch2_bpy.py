@@ -122,7 +122,8 @@ class NodeBoardBatch2Tests(unittest.TestCase):
         root = self._round_trip()
         pixel = root.find(".//PixelTexture")
         self.assertIsNotNone(pixel)
-        self.assertEqual(pixel.get("image"), "2 2 3 0xFF0000 0x00FF00 0x0000FF 0xFFFF00")
+        # the same four pixels as the fixture's 0xFF0000 0x00FF00 0x0000FF 0xFFFF00, written as decimal integers
+        self.assertEqual([int(v, 0) for v in pixel.get("image").split()], [2, 2, 3, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00])
         self.assertEqual((pixel.get("repeatS"), pixel.get("repeatT")), ("false", "false"))
 
     def test_a_second_round_trip_writes_the_same_file(self):

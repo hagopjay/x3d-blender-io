@@ -274,7 +274,6 @@ def _texture_xml(texture_ref, indent, *, container_field, output_dir=None, defs:
     if pixels:
         # a PixelTexture the import read: written back inline (SFImage: width height components, then the pixels)
         width, height, components, packed = pixels
-        digits = 2 * components
         attrs = ""
         if defs is not None:
             key = f"pixels:{texture_ref.image_name}|{'clip' if clip else 'repeat'}"
@@ -282,7 +281,8 @@ def _texture_xml(texture_ref, indent, *, container_field, output_dir=None, defs:
             if not defs.first_use("texture", key):
                 return f'{indent}<PixelTexture USE="{texture_def}" containerField="{container_field}" />\n'
             attrs = f' DEF="{texture_def}"'
-        image = " ".join([str(width), str(height), str(components)] + [f"0x{v:0{digits}X}" for v in packed])
+        # decimal integers: SFImage allows hex or decimal, and the x3d.py validator reads every pixel with float()
+        image = " ".join([str(width), str(height), str(components)] + [str(int(v)) for v in packed])
         wrap = ' repeatS="false" repeatT="false"' if clip else ""
         return f'{indent}<PixelTexture{attrs} containerField="{container_field}" image="{image}"{wrap} />\n'
     url = _texture_url(texture_ref, output_dir=output_dir)
