@@ -81,6 +81,8 @@ def get_translation():
             "as_collection": "Import as collection",
             "keep_hierarchy": "Keep hierarchy",
             "keep_hierarchy_description": "Parent objects as the file's Transforms nest them (an Empty for a Transform with several or no objects), with animation in the parent's space. Off: every object at its world position, no parents",
+            "physics": "Rigid body physics",
+            "physics_description": "Make the file's RigidBodyCollections Blender's rigid body world: bodies, collision shapes, joints, gravity, bounce and friction, and the bodies' starting velocities. Off: only their geometry",
             "gpu_instances": "Group instances",
             "gpu_instances_description": "Parent objects that share a mesh to one Empty each, so the glTF exporter's GPU Instances option writes EXT_mesh_gpu_instancing (an Empty per mesh; world matrices unchanged)",
             "as_collection_description": "Import the file as a new collection inside the active collection",

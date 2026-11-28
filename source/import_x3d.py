@@ -7905,7 +7905,7 @@ def import_loss_records(all_nodes, rebuilt=None):
             timers[name] = node
         elif spec == "ROUTE":
             attrs = {k: _attribute_raw(node, k, "") for k in ("fromNode", "fromField", "toNode", "toField")}
-            if _route_tuple(attrs) in rebuilt.edges:
+            if _route_tuple(attrs) in rebuilt.edges or _route_tuple(attrs) in _PHYSICS_ROUTES:
                 continue
             pair = (attrs["fromField"].replace("_changed", ""), attrs["toField"].replace("set_", ""))
             if pair not in _CONSUMED_ROUTES:
@@ -9089,6 +9089,123 @@ def finalize_lod():
             member[X3D_LOD_PROPERTY] = f"{name}:{index}"
 
 
+import_legacy_rigid_bodies = False   # BLENDER_X3D_PHYSICS=legacy: the node board's batch 6/7 importer instead of the physics one
+import_physics = True      # set by load(physics=...): RigidBodyPhysics becomes Blender's rigid body world
+_PHYSICS_ROUTES = set()    # ROUTE tuples a body's motion now drives in Blender (not import losses)
+_BODY_TO_TRANSFORM = {("position", "translation"): "COPY_LOCATION", ("orientation", "rotation"): "COPY_ROTATION"}
+
+
+def follow_body_routes(all_nodes, bodies, physics):
+    """ROUTE RigidBody.position -> Transform.translation and RigidBody.orientation -> Transform.rotation: the usual way
+    an X3D scene shows a body (X_ITE draws no collidable that is only a body's geometry). The Transform's object gets a
+    Copy Location / Copy Rotation constraint on the body's object, in world space, which is what the ROUTE does when the
+    Transform and the collection sit in the same coordinate system (the usual case; otherwise listed as a loss). The body's
+    own collidable object is then a stand-in: hidden in renders and drawn as wire."""
+    _PHYSICS_ROUTES.clear()
+    transforms = {}     # DEF -> the objects that stand for that Transform (empty in a flat import)
+    for node, _ancestry in all_nodes:
+        if node.getSpec() == "Transform" and node.getDefName() and not node.reference:
+            transforms.setdefault(node.getDefName(), [o for o, _a in node.getRealNode().hierarchy_owners])
+    for node, _ancestry in all_nodes:
+        if node.getSpec() != "ROUTE" or getattr(node, "x3dNode", None) is None:
+            continue
+        attrs = {k: _attribute_raw(node, k, "") for k in ("fromNode", "fromField", "toNode", "toField")}
+        body = bodies.get(attrs["fromNode"])
+        pair = (attrs["fromField"].replace("_changed", ""), attrs["toField"].replace("set_", ""))
+        kind = _BODY_TO_TRANSFORM.get(pair)
+        if body is None or kind is None:
+            continue
+        owners = transforms.get(attrs["toNode"])
+        if owners is None:
+            continue
+        name = f"X3D ROUTE {attrs['fromNode']}.{attrs['fromField']}"
+        if owners:      # keep_hierarchy: the object that stands for the Transform takes the body's pose, as the ROUTE does
+            for ob in owners:
+                if ob is body or "x3d_rigid_body" in ob.keys():
+                    continue
+                con = ob.constraints.new(kind)
+                con.name, con.target = name, body
+                con.owner_space = con.target_space = "WORLD"
+                if ob.parent is not None:
+                    physics.lose(f"ROUTE {attrs['fromNode']}.{attrs['fromField']} -> {attrs['toNode']}", "(route)",
+                                 "the Transform is nested: followed in world space, its parents' offset is not applied")
+        else:           # a flat import: each object under the Transform follows the body's motion from where it starts
+            for ob in bpy.data.objects:
+                if ob.get(X3D_DEF_PROPERTY) != attrs["toNode"] or ob is body or "x3d_rigid_body" in ob.keys() \
+                        or any(c.name.startswith("X3D ROUTE " + attrs["fromNode"] + ".") and c.type == "CHILD_OF"
+                               for c in ob.constraints):
+                    continue
+                con = ob.constraints.new("CHILD_OF")
+                con.name, con.target = name, body
+                con.inverse_matrix = body.matrix_world.inverted()
+        for stand_in in [body] + [c for c in body.children if c.rigid_body is not None]:
+            stand_in.hide_render = True
+            stand_in.display_type = "WIRE"
+            stand_in["x3d_collidable_only"] = True
+        _PHYSICS_ROUTES.add(_route_tuple(attrs))
+
+
+def import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection):
+    """The file's RigidBodyCollections as Blender's rigid body world (source/physics_blender.py says what maps how).
+    The losses join the scene's import loss record (``x3d_import_losses``) with kind "physics"; they are logged, and
+    X3D_IMPORT_STRICT does not raise on them (they describe a simulation that runs, not behaviour that was dropped)."""
+    import json
+    element = getattr(root_node, "x3dNode", None)
+    if element is None:     # classic VRML encoding: no physics component to read
+        return None
+    document = element.ownerDocument.documentElement if element.ownerDocument is not None else element
+    if not document.getElementsByTagName("RigidBodyCollection"):
+        return None
+    from . import physics_model
+    physics = physics_model.read_physics(document)
+    if not physics.collections:
+        return None
+    from . import physics_blender
+    shape_objects, matrices = {}, {}
+    for node, ancestry in all_nodes:
+        el = getattr(node, "x3dNode", None)
+        if el is None:
+            continue
+        spec = node.getSpec()
+        if spec == "Shape" and node.blendObject is not None:
+            shape_objects.setdefault(id(el), node.blendObject)
+        elif spec == "RigidBodyCollection":
+            matrices.setdefault(id(el), getFinalMatrix(node, Matrix(), ancestry, global_matrix))
+    # a Shape's object can be gone by now (the importer removes the ones it merged or replaced): leave those out
+    def alive(ob):
+        try:
+            return ob.name in bpy.data.objects
+        except ReferenceError:
+            return False
+    shape_objects = {key: ob for key, ob in shape_objects.items() if alive(ob)}
+    def in_collection(el):
+        while el is not None:
+            if getattr(el, "tagName", "") == "RigidBodyCollection":
+                return True
+            el = el.parentNode
+        return False
+    # a rigid body simulates in world space: a body the hierarchy rebuild parented keeps its world matrix, without parent.
+    # Only the shapes inside a RigidBodyCollection; every other object of the file keeps the hierarchy it was given.
+    shape_elements = {id(node.x3dNode): node.x3dNode for node, _a in all_nodes if getattr(node, "x3dNode", None) is not None}
+    for key, ob in shape_objects.items():
+        if ob.parent is not None and in_collection(shape_elements.get(key)):
+            world = ob.matrix_world.copy()
+            ob.parent = None
+            ob.matrix_world = world
+    made = physics_blender.apply(physics, bpycontext.scene, bpycollection, shape_objects, matrices, conversion_scale)
+    follow_body_routes(all_nodes, made["bodies"], physics)
+    records = [{"kind": "physics", "node": what, "detail": f"{field}: {why}"} for what, field, why in physics.losses]
+    for record in records:
+        logger.warning("X3D import loss: %s %s: %s", record["kind"], record["node"], record["detail"])
+    if records:
+        try:
+            raw = bpycontext.scene.get("x3d_import_losses")
+            bpycontext.scene["x3d_import_losses"] = json.dumps((json.loads(raw) if raw else []) + records)
+        except Exception:  # pragma: no cover - a scene that cannot hold a property
+            pass
+    return made
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -9272,6 +9389,12 @@ def load_web3d(
     except Exception as exc:  # carrying must never stop an import
         logger.error("Carried nodes not kept: %s", exc, exc_info=True)
 
+    if import_physics and not _INLINE_STACK:
+        try:
+            import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection)
+        except Exception as exc:  # physics must never break a geometry import
+            logger.error("RigidBodyPhysics import failed, the geometry stays: %s", exc, exc_info=True)
+
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
         importRoute(node, ancestry)
@@ -9284,7 +9407,10 @@ def load_web3d(
     except Exception as exc:  # metadata must never stop an import
         logger.error("Scene-level Metadata not kept: %s", exc, exc_info=True)
     try:
-        import_rigid_bodies(all_nodes, global_matrix, bpycontext)
+        # the node board's batch 6/7 importer (field records, no simulation model) is kept behind BLENDER_X3D_PHYSICS=legacy;
+        # the physics importer above replaced it as the default, and running both would make every body twice
+        if import_legacy_rigid_bodies:
+            import_rigid_bodies(all_nodes, global_matrix, bpycontext)
     except Exception as exc:  # physics must never stop the geometry import
         logger.error("Rigid body physics not made: %s", exc, exc_info=True)
     report_import_losses(all_nodes, bpycontext, defer_routes_to_caller)
@@ -9455,7 +9581,8 @@ def load(context,
          light_units=None,
          gpu_instances=None,
          keep_hierarchy=True,
-         defer_route_losses=False
+         defer_route_losses=False,
+         physics=None
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
@@ -9465,14 +9592,24 @@ def load(context,
     gpu_instances: group objects that share a mesh under one Empty each, so the glTF exporter's GPU Instances option
     writes EXT_mesh_gpu_instancing (also on when BLENDER_X3D_GPU_INSTANCES is 1; see group_instances).
     keep_hierarchy: parent objects as the file's Transforms nest them (rebuild_hierarchy); False imports every object
-    at its world matrix without parents, as before."""
+    at its world matrix without parents, as before.
+    physics: RigidBodyCollections become Blender's rigid body world (import_rigid_body_physics); None reads
+    BLENDER_X3D_PHYSICS (default on), False keeps only their geometry, as before."""
     global colour_space, lighting_units, navigation_headlight, bound_view, default_view, defer_routes_to_caller
+    global import_physics, import_legacy_rigid_bodies
     defer_routes_to_caller = bool(defer_route_losses)
+    # physics: RigidBodyPhysics as Blender's rigid body world (None: BLENDER_X3D_PHYSICS, else on)
+    import_physics = (os.environ.get("BLENDER_X3D_PHYSICS", "1").strip().lower() not in ("0", "false", "no", "off", "legacy")
+                      if physics is None else bool(physics))
+    import_legacy_rigid_bodies = os.environ.get("BLENDER_X3D_PHYSICS", "").strip().lower() == "legacy"
+    if import_legacy_rigid_bodies:
+        import_physics = False
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
     colour_space = resolve_colour_space(color_space)
     lighting_units = resolve_light_units(light_units, colour_space)
     imported_lights.clear()
+    _PHYSICS_ROUTES.clear()
     lit_surfaces.clear()
     lit_by_node.clear()
     lod_records.clear()

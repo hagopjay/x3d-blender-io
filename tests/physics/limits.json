@@ -1,0 +1,38 @@
+{
+  "about": "Limits for the RigidBodyPhysics ladder (tools/physics_judge.py), written after one exploration run (27 Nov 2026, see docs/PHYSICS.md) and before the measured runs. Each limit is on Blender's numbers; X_ITE's are recorded next to them and not gated. Analytic answers come from x3d.loom x3d.physics/rigid-engines lib/scenes.js (fc30c89). A limit that a later run needs to change is changed in its own commit, with the reason here.",
+  "drop-bounce.x3d": {
+    "apex above contact (m), analytic 1.125": {"target": 1.125, "abs": 0.05, "expect": "fail", "why": "Blender 5.3's solver drops restitution for slow impacts at small steps (docs/PHYSICS.md, the restitution lottery); kept as a gate that is expected to fail until Blender changes"},
+    "final centre height (m), analytic 0.5": {"target": 0.5, "abs": 0.01},
+    "first contact (s), analytic 0.958": {"target": 0.958, "abs": 0.02}
+  },
+  "stack3.x3d": {
+    "B1 height (m), ideal 0.5": {"target": 0.5, "abs": 0.01},
+    "B2 height (m), ideal 1.5": {"target": 1.5, "abs": 0.01},
+    "B3 height (m), ideal 2.5": {"target": 2.5, "abs": 0.01},
+    "sideways drift of top box (m)": {"max": 0.01}
+  },
+  "slope-mu0.2.x3d": {
+    "acceleration (m/s2), analytic 3.19": {"target": 3.19, "rel": 0.02}
+  },
+  "pendulum-ball.x3d": {
+    "period error (%)": {"absmax": 0.5},
+    "max drift of arm length (m), ideal 0": {"max": 0.001},
+    "amplitude in the last 3 s (m), start 0.347": {"target": 0.347, "abs": 0.005}
+  },
+  "hinge-limit.x3d": {
+    "max angle (rad), limit 1.0": {"max": 1.01},
+    "door centre off its 0.5 m circle (m), ideal 0": {"max": 0.001}
+  },
+  "slider-limit.x3d": {
+    "max separation (m), limit 1.5": {"max": 1.505},
+    "sag (m), ideal 0": {"max": 0.001},
+    "z drift (m)": {"max": 0.001}
+  },
+  "billiards-head-on.x3d": {
+    "A speed after (m/s), analytic 0": {"target": 0.0, "abs": 0.05},
+    "B speed after (m/s), analytic 3": {"target": 3.0, "abs": 0.05},
+    "energy error (%)": {"max": 1.0}
+  },
+  "free_fall": {"discrete_euler_max_m": 0.0001, "x_ite_agreement_before_contact_m": 0.0001},
+  "determinism": {"replay_mismatches": 0}
+}

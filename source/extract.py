@@ -26,6 +26,7 @@ try:
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
+    from . import physics_export
 except ImportError:  # pragma: no cover - standalone test fallback
     from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRFog, IRTextureRef, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
@@ -37,6 +38,7 @@ except ImportError:  # pragma: no cover - standalone test fallback
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
+    import physics_export
 
 logger = logging.getLogger("export_x3d")
 
@@ -2006,6 +2008,13 @@ def extract_scene(
             use_active_collection=use_active_collection,
         )
     )
+    # the rigid body world's helpers and constraint empties are written as physics, not as Transforms
+    if not scene.get(RIGID_WORLD_PROPERTY):    # (a legacy-imported world keeps the batch 6/7 writer, see below)
+        # the import's hidden wire stand-ins for a body (x3d_collidable_only) are written in the RigidBody, not as Transforms
+        physics_scope = [obj for obj in exported if not physics_export.is_helper(obj)]     # what physics_export may write
+        exported = [obj for obj in physics_scope if not obj.get("x3d_collidable_only")]
+    else:
+        physics_scope = exported
     exported_names = {obj.name for obj in exported}
     # Objects imported from an Inline are represented by their placeholder empty's Inline node.
     inline_children = [obj for obj in exported if (root := inline_root(obj)) is not None and root.name in exported_names]
@@ -2411,6 +2420,22 @@ def extract_scene(
         ir_scene.diagnostics.append(
             f"Skipped {count} {object_type} object(s): not yet supported by the X3D 4.0 path."
         )
+
+    try:
+        # a scene the legacy importer made (it carries x3d_rigid_world) keeps the batch 6/7 writer; every other rigid body
+        # world is written by physics_export
+        ir_scene.physics = None if scene.get(RIGID_WORLD_PROPERTY) else physics_export.extract(scene, physics_scope, global_matrix)
+        if ir_scene.physics:
+            ir_scene.diagnostics.extend(ir_scene.physics["diagnostics"])
+            # one writer: physics_export writes the whole rigid body world, so the node board's batch 6 and 7 per-object
+            # RigidBody and joint records (rigid_body_of, rigid_joint_of) stand down and the bodies stay plain Transforms
+            ir_scene.diagnostics[:] = [d for d in ir_scene.diagnostics if "is written as a plain Transform" not in d]
+            for instance in ir_scene.iter_instances():
+                instance.rigid_body = None
+                instance.rigid_joint = None
+            ir_scene.rigid_world = None
+    except Exception as exc:  # physics must never stop an export
+        ir_scene.diagnostics.append(f"Rigid body physics not written: {exc}")
 
     if not ir_scene.object_names:
         ir_scene.diagnostics.append("No exportable objects matched the current filters.")

@@ -136,6 +136,12 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         default=True,
     )
 
+    physics: BoolProperty(
+        name=translate(lang, "physics"),
+        description=translate(lang, "physics_description"),
+        default=True,
+    )
+
     solidify: BoolProperty(
         name=translate(lang, "solidify"),
         description=translate(lang, "solidify_description"),
@@ -237,6 +243,9 @@ def import_ui_general(layout, operator):
 
         line = body.row(align=True)
         line.prop(operator, "keep_hierarchy")
+
+        line = body.row(align=True)
+        line.prop(operator, "physics")
 
 def import_ui_transform(layout, operator):
     header, body = layout.panel("IMPORT_SCENE_OT_x3d_transform", default_closed=False)

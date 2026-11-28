@@ -43,6 +43,18 @@ def _floats(text):
 
 @unittest.skipUnless(HAVE_BPY, "bpy not available")
 class NodeBoardBatch6Tests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):   # the node board's batch 6/7 importer, kept behind BLENDER_X3D_PHYSICS=legacy (docs/PHYSICS.md)
+        cls._physics_env = os.environ.get("BLENDER_X3D_PHYSICS")
+        os.environ["BLENDER_X3D_PHYSICS"] = "legacy"
+
+    @classmethod
+    def tearDownClass(cls):
+        if getattr(cls, "_physics_env", None) is None:
+            os.environ.pop("BLENDER_X3D_PHYSICS", None)
+        else:
+            os.environ["BLENDER_X3D_PHYSICS"] = cls._physics_env
+
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="x3d_node_board6_")
         _register_extension(self.tmp)
@@ -142,20 +154,23 @@ class NodeBoardBatch6Tests(unittest.TestCase):
         root = self._export()[1]
         body = root.find(".//RigidBodyCollection/RigidBody")
         self.assertIsNotNone(body)
-        self.assertEqual(body.get("mass"), "3.000000")
+        self.assertEqual(float(body.get("mass")), 3.0)      # physics_export writes the shortest spelling
         self.assertEqual([round(v, 4) for v in _floats(body.get("position"))], [0.0, 2.0, 0.0], "Blender Z is X3D Y")
-        shape_def = body.find("CollidableShape").get("DEF")
-        uses = [c.get("USE") for c in root.find(".//RigidBodyCollection/CollisionCollection")]
-        self.assertEqual(uses, [shape_def], "a body made in Blender collides: it is in the CollisionCollection")
+        # physics_export keeps the shape inside the RigidBody's geometry and leaves the CollisionCollection's list empty
+        # (X_ITE 16.8.1 collides a body by its geometry); batch 6 listed it by USE. Which reading the standard intends is
+        # one of the questions held for Web3D (docs/PHYSICS.md).
+        self.assertIsNotNone(body.find("CollidableShape"))
 
-    def test_a_scaled_rigid_body_stays_a_transform(self):
+    def test_a_scaled_rigid_body_is_written_with_its_scale_in_the_shape(self):
         bpy.ops.mesh.primitive_cube_add(location=(0.0, 0.0, 2.0))
         cube = bpy.context.active_object
         cube.scale = (2.0, 1.0, 1.0)
         bpy.ops.rigidbody.object_add(type="ACTIVE")
         root = self._export()[1]
-        self.assertIsNone(root.find(".//RigidBodyCollection"), "a RigidBody has no scale: not written as one")
-        self.assertEqual(len(list(root.iter("Transform"))), 1)
+        # physics_export (RigidBodyPhysics change) writes the body and bakes the scale into the collision shape, where the
+        # node board's batch 6 left such a body as a plain Transform. A RigidBody has no scale field either way.
+        self.assertEqual(len(list(root.iterfind(".//RigidBodyCollection/RigidBody"))), 1)
+        self.assertTrue(all(b.get("scale") is None for b in root.iter("RigidBody")))
 
     def test_a_second_round_trip_writes_the_same_file(self):
         self._import()
