@@ -190,24 +190,40 @@
    ]
   },
   "CADAssembly": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_cad']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CADFace": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_carried']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CADLayer": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_cad']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CADPart": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_cad']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CartoonVolumeStyle": {
    "read": "none",
@@ -378,9 +394,9 @@
    "read_evidence": "materials +2, meshes +1, objects +1",
    "written": "observed",
    "written_by": [
-    "docs/showcase/scenes/geolod-origin.x3d",
-    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d",
-    "tests/behaviour/demos/gallery-06-solar-gauntlet-v2/gallery-06-solar-gauntlet-v2.x3d"
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "docs/showcase/scenes/cad-lamp-before.x3d",
+    "docs/showcase/scenes/geolod-origin.x3d"
    ]
   },
   "ConeEmitter": {
@@ -986,7 +1002,7 @@
    "written_by": [
     "docs/showcase/scenes/annotation-standard.x3d",
     "docs/showcase/scenes/annotation.x3d",
-    "docs/showcase/scenes/ellipsoid-earth.x3d"
+    "docs/showcase/scenes/cad-lamp-after.x3d"
    ]
   },
   "Matrix3VertexAttribute": {
@@ -1675,9 +1691,13 @@
    ]
   },
   "StaticGroup": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "StreamAudioDestination": {
    "read": "builds",
