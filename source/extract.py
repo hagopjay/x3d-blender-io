@@ -1157,6 +1157,22 @@ def regrouped(obj, node):
     return False
 
 
+CARRIED_PROPERTY = "x3d_carried"                  # set by the importer (import_x3d.place_carried), JSON list of XML
+CARRIED_ROUTES_PROPERTY = "x3d_carried_routes"
+
+
+def carried_of(owner, name=CARRIED_PROPERTY):
+    """The XML texts carried on an object or the scene (strings only; anything else is ignored)."""
+    raw = owner.get(name) if hasattr(owner, "get") else None
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    return [x for x in value if isinstance(x, str)] if isinstance(value, list) else []
+
+
 RIGID_WORLD_PROPERTY = "x3d_rigid_world"   # set by the importer (import_x3d.import_rigid_bodies), JSON
 RIGID_BODY_PROPERTY = "x3d_rigid_body"
 RIGID_JOINT_PROPERTY = "x3d_rigid_joint"
@@ -1968,6 +1984,8 @@ def extract_scene(
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    ir_scene.carried_root = carried_of(scene)
+    ir_scene.carried_routes = carried_of(scene, CARRIED_ROUTES_PROPERTY)
     ir_scene.material_model = resolve_material_model(material_model, scene)
     ir_scene.material_model_forced = str(material_model or "").strip().lower() in MATERIAL_MODELS
     ir_scene.headlight = scene_headlight(scene)
@@ -2224,6 +2242,7 @@ def extract_scene(
             instance.rigid_body = rigid_body_of(obj, x3d_matrix, use_hierarchy and parent is not None,
                                                 ir_scene.diagnostics)
             instance.rigid_joint = rigid_joint_of(obj, global_matrix) if not list(obj.children) else None
+            instance.carried = carried_of(obj)
             if instance.rigid_body is not None and ir_scene.rigid_world is None:
                 ir_scene.rigid_world = rigid_world_of(scene, global_matrix)
             objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
