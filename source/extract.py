@@ -11,31 +11,34 @@ emitter (``emit_x3d40``) never sees Blender objects.
 from __future__ import annotations
 
 import logging
+import json
 import math
 import os
 
 try:
-    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRFog, IRTextureRef, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from .interaction import check_interactions, read_interaction, read_tour
-    from .material import analyze_material
+    from .material import analyze_material, pixel_image
     from . import budget
     from . import default_uv
     from .matrix_safety import axis_scales, decompose_exact, inverted64, scale_to_children_matrix
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
+    from . import physics_export
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRFog, IRTextureRef, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from interaction import check_interactions, read_interaction, read_tour
-    from material import analyze_material
+    from material import analyze_material, pixel_image
     import budget
     import default_uv
     from matrix_safety import axis_scales, decompose_exact, inverted64, scale_to_children_matrix
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
+    import physics_export
 
 logger = logging.getLogger("export_x3d")
 
@@ -54,6 +57,14 @@ SPLAT_SH_ATTR = "splat_sh{degree}_{coef}"
 SOLID_PROPERTY = "x3d_solid"
 # A line set's LineProperties linewidthScaleFactor, kept on the object by the importer (Blender draws no line width).
 LINE_WIDTH_PROPERTY = "x3d_line_width"
+# A point set's PointProperties fields (JSON, numbers), kept on the object by the importer (Blender draws no point size).
+POINT_PROPERTIES_PROPERTY = "x3d_point_properties"
+POINT_PROPERTIES_DEFAULTS = {"attenuation": [1.0, 0.0, 0.0], "pointSizeMaxValue": 1.0, "pointSizeMinValue": 1.0,
+                             "pointSizeScaleFactor": 1.0}
+# A CoordinateDouble's point text as the file wrote it, one token per component in the mesh's (or curve's) vertex order
+# (JSON list), kept by the importer only when every vertex is that point read to float32; the export writes a
+# CoordinateDouble with those tokens for every vertex that still has exactly that float32 value.
+COORDINATE_DOUBLE_PROPERTY = "x3d_coordinate_double"
 INLINE_URL_PROPERTY = "x3d_inline_url"
 INLINE_SOURCE_PROPERTY = "x3d_inline_source"
 # Where each Inline asset was found at import: the placeholder empty's ``session_uid`` -> absolute path. Kept in this
@@ -174,13 +185,19 @@ SCENE_METADATA_PROPERTY = "x3d_scene_metadata"
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+# The first Fog of an imported file, kept on the scene: color, fogType and visibilityRange as the file gave them, and
+# the mist falloff the import set (the export reads the distance and type back from the world's mist settings).
+FOG_PROPERTY = "x3d_fog"
+# A TwoSidedMaterial's back fields (JSON numbers), kept on the Blender material, which draws both sides alike.
+TWO_SIDED_PROPERTY = "x3d_two_sided"
 # The headlight level an import in classic light units matched (a rig and diagnostics value; the export does not read it).
 HEADLIGHT_LUX_PROPERTY = "x3d_headlight_lux"
 # Set by the importer on every object it makes. The scene-level properties below describe what an import brought in, so
 # they stop applying when none of that content is left in the scene (scene_has_imported_content).
 IMPORTED_OBJECT_PROPERTY = "x3d_imported"
 SCENE_IMPORT_PROPERTIES = (COLOUR_SPACE_PROPERTY, LIGHTING_MODEL_PROPERTY, HEADLIGHT_PROPERTY, HEADLIGHT_LUX_PROPERTY,
-                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY, SCENE_METADATA_PROPERTY)
+                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY, SCENE_METADATA_PROPERTY,
+                           FOG_PROPERTY)
 # What marks content of a file imported before IMPORTED_OBJECT_PROPERTY existed: a DEF, USE or Inline record on the
 # object, a primitive, solid, light or splat record on its data (the importer's own names; extract cannot import them).
 _IMPORTED_OBJECT_MARKS = (IMPORTED_OBJECT_PROPERTY, "x3d_def", "x3d_def_path", "x3d_use", INLINE_URL_PROPERTY)
@@ -243,6 +260,31 @@ def _line_width(obj):
     except (AttributeError, TypeError, ValueError):
         return None
     return width if math.isfinite(width) and width >= 0.0 else None
+
+
+def _point_properties(obj):
+    """The PointProperties fields the import kept on a point object ({name: number or [3 numbers]}), else None."""
+    try:
+        fields = json.loads(obj.get(POINT_PROPERTIES_PROPERTY) or "null")
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if not isinstance(fields, dict):
+        return None
+    out = {}
+    for name, default in POINT_PROPERTIES_DEFAULTS.items():
+        value = fields.get(name)
+        try:
+            if isinstance(default, list):
+                value = [float(v) for v in value] if value is not None else None
+                ok = value is not None and len(value) == 3 and all(math.isfinite(v) and v >= 0.0 for v in value)
+            else:
+                value = float(value) if value is not None else None
+                ok = value is not None and math.isfinite(value) and value >= 0.0
+        except (TypeError, ValueError):
+            ok = False
+        if ok:
+            out[name] = value
+    return out or None
 
 
 def _session_uid(obj):
@@ -465,7 +507,8 @@ def _color_values(mesh):
 # Set by the import on a mesh it tessellated from a Box, Sphere, Cylinder, Cone, Rectangle2D, Extrusion or ElevationGrid
 # (import_x3d.mark_primitive).
 PRIMITIVE_PROPERTY = "x3d_primitive"
-_PRIMITIVE_NODES = frozenset(("Box", "Sphere", "Cylinder", "Cone", "Rectangle2D", "Extrusion", "ElevationGrid"))
+_PRIMITIVE_NODES = frozenset(("Box", "Sphere", "Cylinder", "Cone", "Rectangle2D", "Extrusion", "ElevationGrid",
+                              "GeoElevationGrid"))
 
 
 def _position_signature(mesh):
@@ -663,6 +706,64 @@ def _crease_from_sharp_edges(mesh) -> float:
         return float(angles.min()) * 0.999
     except Exception:
         return math.pi
+
+GEOMETRY_NODE_PROPERTY = "x3d_geometry"   # set by the importer on a mesh read from one of TRIANGLE_SET_NODES
+
+# the triangle-set nodes a mesh is written back as while every face is a triangle (node board batches 2 and 5)
+TRIANGLE_SET_NODES = ("IndexedTriangleSet", "TriangleSet", "TriangleFanSet", "TriangleStripSet",
+                      "IndexedTriangleFanSet", "IndexedTriangleStripSet")
+
+
+# the quad-set nodes a mesh is written back as while every face is a quad (node board batch 8)
+QUAD_SET_NODES = ("QuadSet", "IndexedQuadSet")
+
+
+def _coordinate_double_tokens(geometry, tokens):
+    """The CoordinateDouble point text for ``geometry``'s coordinates, one (x, y, z) token triple per coordinate, or
+    None unless every coordinate is still exactly its point read to float32 (COORDINATE_DOUBLE_PROPERTY)."""
+    import struct
+    if not tokens or geometry.skin_coord_def or geometry.morph_keys or not geometry.coord \
+            or len(geometry.orig_vertex_index) != len(geometry.coord):
+        return None
+    out = []
+    try:
+        for point, vertex in zip(geometry.coord, geometry.orig_vertex_index):
+            triple = tuple(str(t) for t in tokens[3 * vertex:3 * vertex + 3])
+            if len(triple) != 3 or any(not math.isfinite(float(t))
+                                       or struct.unpack("f", struct.pack("f", float(t)))[0] != float(v)
+                                       for t, v in zip(triple, point)):
+                return None
+            out.append(triple)
+    except (TypeError, ValueError, OverflowError, struct.error):
+        return None
+    return out
+
+
+def mark_triangle_sets(geometries, mesh, use_triangulate):
+    """Name the node each geometry is written back as: for faces, a triangle set when the export triangulates (an
+    IndexedTriangleSet) or the mesh came from one of TRIANGLE_SET_NODES (that node), or the quad set it came from
+    (QUAD_SET_NODES); for lines, a LineSet when it came from one. ``mesh`` is the object's data (a curve's too).
+    Also keeps the CoordinateDouble text the import recorded, for the coordinates that still match it."""
+    get = getattr(mesh, "get", None) if mesh is not None else None
+    tag = get(GEOMETRY_NODE_PROPERTY) if get is not None else None
+    node = tag if tag in TRIANGLE_SET_NODES or tag in QUAD_SET_NODES else None
+    tokens = None
+    raw = get(COORDINATE_DOUBLE_PROPERTY) if get is not None else None
+    if raw:
+        try:
+            tokens = json.loads(raw)
+        except (TypeError, ValueError):
+            tokens = None
+        tokens = tokens if isinstance(tokens, list) else None
+    for geometry in geometries:
+        if geometry.is_lines:
+            geometry.geometry_node = "LineSet" if tag == "LineSet" else None
+        elif not geometry.is_points:
+            geometry.triangle_set = bool(use_triangulate or (node in TRIANGLE_SET_NODES))
+            geometry.geometry_node = node
+        geometry.coord_double = _coordinate_double_tokens(geometry, tokens)
+    return geometries
+
 
 def extract_mesh_geometries(
     mesh,
@@ -875,6 +976,7 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
                           standard_joint_count=sum(1 for joint in joints.values() if joint.hanim_name))
     skin_def = f"hanim_{_safe_key(armature.name)}_skinCoord"
     armature_inverse = inverted64(armature.matrix_world, armature.name)
+    displacers = {}     # shape key name -> (joint name, IRDisplacer): node board batch 11
 
     for mesh_obj in skinned:
         mesh = mesh_obj.data
@@ -890,9 +992,11 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
             include_loose=False,   # a skin shares one skinCoord; a PointSet has no index into it
         )
         group_names = [group.name for group in mesh_obj.vertex_groups]
+        key_offsets = _hanim_key_offsets(mesh_obj, armature_inverse)
         for geometry in geometries:
             offset = len(humanoid.skin_coord)
             humanoid.skin_coord.extend(geometry.coord)
+            _hanim_collect_displacers(displacers, mesh_obj, key_offsets, geometry, offset)
             for split_index, vertex_index in enumerate(geometry.orig_vertex_index):
                 for element in mesh.vertices[vertex_index].groups:
                     if element.weight <= 0.0 or element.group >= len(group_names):
@@ -911,7 +1015,249 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
                 IRShape(geometry_name=geometry.name, material_name=material_sink(material) if material else None)
             )
         skin_geometries.extend(geometries)
+    for joint_name, displacer in displacers.values():
+        target = joints.get(joint_name) or (roots[0] if roots else None)
+        if target is not None:
+            target.displacers.append(displacer)
     return humanoid, skin_geometries
+
+
+# ---------------------------------------------------------------------------
+# HAnim completion (node board batch 11): segments, sites, displacers and motions (hanim_parts.py)
+
+
+def _hanim_modules():
+    try:
+        from . import hanim_parts
+        from .ir import IRDisplacer, IRMotion, IRSegment, IRSite
+    except ImportError:  # pragma: no cover - standalone test fallback
+        import hanim_parts
+        from ir import IRDisplacer, IRMotion, IRSegment, IRSite
+    return hanim_parts, IRDisplacer, IRMotion, IRSegment, IRSite
+
+
+def _hanim_key_offsets(mesh_obj, armature_inverse):
+    """[(shape key, {vertex index: offset in humanoid space})] for every shape key of a skin mesh but its basis."""
+    shape_keys = getattr(mesh_obj.data, "shape_keys", None)
+    if shape_keys is None or not shape_keys.use_relative:
+        return []
+    linear = (armature_inverse @ mesh_obj.matrix_world).to_3x3()
+    out = []
+    for key in shape_keys.key_blocks:
+        if key == shape_keys.reference_key:
+            continue
+        relative = key.relative_key or shape_keys.reference_key
+        offsets = {}
+        for index, (point, base) in enumerate(zip(key.data, relative.data)):
+            delta = linear @ (point.co - base.co)
+            if delta.length > 1e-7:
+                offsets[index] = (float(delta[0]), float(delta[1]), float(delta[2]))
+        out.append((key, offsets))
+    return out
+
+
+def _hanim_collect_displacers(displacers, mesh_obj, key_offsets, geometry, offset):
+    """Each shape key as an HAnimDisplacer: the skinCoord indices of the split vertices it moves, and their offsets."""
+    if not key_offsets:
+        return
+    hanim_parts, IRDisplacer, _IRMotion, _IRSegment, _IRSite = _hanim_modules()
+    records = hanim_parts.load(mesh_obj.get(hanim_parts.DISPLACERS_PROPERTY), {})
+    for key, offsets in key_offsets:
+        record = records.get(key.name) or {}
+        entry = displacers.get(key.name)
+        if entry is None:
+            entry = displacers[key.name] = (record.get("joint"), IRDisplacer(
+                name=key.name, weight=float(key.value), fields=dict(record.get("fields") or {}),
+            ))
+            entry[1].fields.setdefault("_def", record.get("def") or "")
+        displacer = entry[1]
+        for split_index, vertex_index in enumerate(geometry.orig_vertex_index):
+            moved = offsets.get(vertex_index)
+            if moved is not None:
+                displacer.coord_index.append(offset + split_index)
+                displacer.displacements.append(moved)
+
+
+def hanim_part_objects(armature, exported, skinned_names):
+    """The objects bone-parented to ``armature`` that are written inside its HAnimHumanoid: meshes as segment Shapes,
+    Empties as HAnimSites."""
+    bones = armature.data.bones
+    return [obj for obj in exported
+            if obj.parent is armature and obj.parent_type == "BONE" and obj.parent_bone in bones
+            and obj.name not in skinned_names and (obj.type == "EMPTY" or obj.type in MESH_LIKE_TYPES)]
+
+
+def hanim_rest_matrix(obj, armature):
+    """Where a bone-parented object sits in humanoid space at the rest pose (a bone's child hangs from its tail)."""
+    from mathutils import Matrix
+    bone = armature.data.bones[obj.parent_bone]
+    return bone.matrix_local @ Matrix.Translation((0.0, bone.length, 0.0)) @ obj.matrix_parent_inverse @ obj.matrix_basis
+
+
+def attach_hanim_parts(humanoid, armature, parts, build, diagnostics=None):
+    """Segments (from the bones' props and the bone-parented meshes), sites (bone-parented Empties), displacers kept as
+    written, and motions (the armature's HAnimMotion actions) onto ``humanoid``. ``build(obj, matrix)`` makes the
+    IRInstance of a part placed at ``matrix`` (humanoid space)."""
+    hanim_parts, IRDisplacer, _IRMotion, IRSegment, IRSite = _hanim_modules()
+    joints = {joint.name: joint for joint in humanoid.iter_joints()}
+
+    def segment_of(joint):
+        if joint.segment is None:
+            joint.segment = IRSegment(name=f"{joint.hanim_name or joint.name}_segment")
+        return joint.segment
+
+    def raw_displacer(entry):
+        fields = dict(entry.get("fields") or {})
+        fields.update({"_def": entry.get("def") or "", "coordIndex": entry.get("coordIndex") or "",
+                       "displacements": entry.get("displacements") or ""})
+        if entry.get("weight") is not None:
+            fields["weight"] = entry["weight"]
+        return IRDisplacer(name=entry.get("name") or "", fields=fields)
+
+    for bone in armature.data.bones:
+        joint = joints.get(bone.name)
+        if joint is None:
+            continue
+        record = hanim_parts.load(bone.get(hanim_parts.SEGMENT_PROPERTY))
+        if record:
+            segment = segment_of(joint)
+            segment.name = record.get("name") or segment.name
+            segment.fields = dict(record.get("fields") or {})
+            segment.fields["_def"] = record.get("def") or ""
+            segment.displacers = [raw_displacer(entry) for entry in record.get("displacers") or ()]
+        for field, width in hanim_parts.SEGMENT_NUMBERS.items():
+            number = bone.get(hanim_parts.SEGMENT_NUMBER_PREFIX + field)
+            if number is None:
+                continue
+            numbers = [float(number)] if width == 1 and not hasattr(number, "__len__") else [float(v) for v in number]
+            if len(numbers) == width:
+                segment_of(joint).fields[field] = numbers
+        for entry in hanim_parts.load(bone.get(hanim_parts.RAW_DISPLACERS_PROPERTY), ()) or ():
+            joint.displacers.append(raw_displacer(entry))
+    for obj in parts:
+        joint = joints.get(obj.parent_bone)
+        if joint is None:
+            continue
+        instance = build(obj, hanim_rest_matrix(obj, armature))
+        if instance is None:
+            continue
+        if obj.type == "EMPTY":
+            record = hanim_parts.load(obj.get(hanim_parts.SITE_PROPERTY), {}) or {}
+            fields = dict(record.get("fields") or {})
+            segment_of(joint).sites.append(IRSite(name=record.get("name") or obj.name, instance=instance, fields=fields))
+        else:
+            segment_of(joint).instances.append(instance)
+    humanoid.motions = extract_hanim_motions(armature, diagnostics)
+
+
+def hanim_motion_actions(armature):
+    """The HAnimMotion actions of ``armature`` (made by the import, hanim_parts.MOTION_PROPERTY), in file order: those
+    recorded for this humanoid, and its active action when that is one."""
+    import bpy
+    hanim_parts = _hanim_modules()[0]
+    active = armature.animation_data.action if armature.animation_data is not None else None
+    found = []
+    for action in bpy.data.actions:
+        record = hanim_parts.load(action.get(hanim_parts.MOTION_PROPERTY))
+        if record and (action == active or record.get("humanoid") == armature.name):
+            found.append((record.get("order", 0), action.name, action, record))
+    return [(action, record) for _, _, action, record in sorted(found, key=lambda item: (item[0], item[1]))]
+
+
+def hanim_motion_active(armature) -> bool:
+    """The armature's active action is an HAnimMotion: written as one, not sampled into interpolators too."""
+    active = armature.animation_data.action if armature.animation_data is not None else None
+    return active is not None and bool(active.get(_hanim_modules()[0].MOTION_PROPERTY))
+
+
+def _hanim_action_fcurves(action):
+    curves = {}
+    try:
+        for layer in action.layers:
+            for strip in layer.strips:
+                for bag in strip.channelbags:
+                    for fcurve in bag.fcurves:
+                        curves[(fcurve.data_path, fcurve.array_index)] = fcurve
+    except AttributeError:
+        pass
+    for fcurve in getattr(action, "fcurves", None) or ():
+        curves[(fcurve.data_path, fcurve.array_index)] = fcurve
+    return curves
+
+
+def extract_hanim_motions(armature, diagnostics=None):
+    """An IRMotion per HAnimMotion action: the channels re-read from the action's F-curves at each frame (the joint
+    transform J = L basis L^-1 about the joint centre, as _sample_joint_animation does), the fields as written."""
+    from mathutils import Euler, Matrix, Quaternion, Vector
+    hanim_parts, _IRDisplacer, IRMotion, _IRSegment, _IRSite = _hanim_modules()
+    motions = []
+    bones = armature.data.bones
+    for action, record in hanim_motion_actions(armature):
+        fields = dict(record.get("fields") or {})
+        raw_text = record.get("values")
+        raw = hanim_parts.floats(raw_text)
+        groups = hanim_parts.parse_channels(fields.get("channels", ""), fields.get("joints", ""))
+        width = sum(len(channels) for _, channels in groups)
+        frames = len(raw) // width if width else 0
+        duration = hanim_parts.floats(fields.get("frameDuration", "0.1"))
+        duration = duration[0] if duration else 0.1
+        start, fps = float(record.get("start", 1)), float(record.get("fps", 24.0))
+        curves = _hanim_action_fcurves(action)
+        bone_of = {}
+        for bone in bones:
+            bone_of.setdefault(bone.name, bone.name)
+        values = list(raw[:frames * width])
+        for frame_number in range(frames):
+            frame = start + frame_number * duration * fps
+            offset = frame_number * width
+            for joint_name, channels in groups:
+                cells = slice(offset, offset + len(channels))
+                offset += len(channels)
+                bone = bones.get(joint_name) if joint_name else None
+                if bone is None:
+                    continue
+                path = f'pose.bones["{bone.name}"]'
+
+                def read(prop, index, default):
+                    fcurve = curves.get((f"{path}.{prop}", index))
+                    return float(fcurve.evaluate(frame)) if fcurve is not None else default
+                location = Vector([read("location", i, 0.0) for i in range(3)])
+                if any((f"{path}.rotation_quaternion", i) in curves for i in range(4)):
+                    rotation = Quaternion([read("rotation_quaternion", i, d) for i, d in enumerate((1.0, 0.0, 0.0, 0.0))])
+                    rotation.normalize()
+                else:
+                    mode = armature.pose.bones[bone.name].rotation_mode if bone.name in armature.pose.bones else "XYZ"
+                    mode = mode if mode in ("XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX") else "XYZ"
+                    rotation = Euler([read("rotation_euler", i, 0.0) for i in range(3)], mode).to_quaternion()
+                scale = Vector([read("scale", i, 1.0) for i in range(3)])
+                rest = bone.matrix_local
+                joint_matrix = rest @ Matrix.LocRotScale(location, rotation, scale) @ rest.inverted()
+                turn = joint_matrix.to_quaternion()
+                center = bone.head_local
+                translation = joint_matrix.to_translation() - (center - turn @ center)
+                rotation_names = [name for name in channels if name in hanim_parts.ROTATION_CHANNELS]
+                order = hanim_parts.euler_order(rotation_names)
+                old = values[cells]
+                new = list(old)
+                euler = None
+                if order is not None:
+                    seed = {hanim_parts.ROTATION_CHANNELS[name]: value for name, value in zip(channels, old)
+                            if name in hanim_parts.ROTATION_CHANNELS}
+                    euler = turn.to_euler(order, Euler((seed.get("X", 0.0), seed.get("Y", 0.0), seed.get("Z", 0.0)), order))
+                elif rotation_names and diagnostics is not None:
+                    diagnostics.append(f"HAnimMotion {action.name!r}: joint {joint_name!r} has rotation channels that "
+                                       "are not three distinct axes; they are written as the import read them.")
+                for index, name in enumerate(channels):
+                    if name in hanim_parts.POSITION_CHANNELS:
+                        new[index] = float(translation[hanim_parts.POSITION_CHANNELS[name]])
+                    elif name in hanim_parts.ROTATION_CHANNELS and euler is not None:
+                        new[index] = float(euler["XYZ".index(hanim_parts.ROTATION_CHANNELS[name])])
+                values[cells] = new
+        unchanged = len(values) == len(raw) and all(abs(a - b) <= 1e-4 for a, b in zip(values, raw))
+        fields["_def"] = record.get("def") or ""
+        motions.append(IRMotion(name=record.get("name") or "", fields=fields, values=values,
+                                raw_values=raw_text if unchanged else None))
+    return motions
 
 
 def _safe_key(name: str) -> str:
@@ -1035,6 +1381,228 @@ def _matrix_transform(matrix) -> IRTransform:
     )
 
 
+GROUP_CHAIN_PROPERTY = "x3d_group_chain"   # set by the importer: the Switch and LOD nodes above an object (JSON)
+
+
+def group_chain(obj):
+    """The Switch / LOD chain the importer recorded on ``obj`` (outermost first), or None."""
+    raw = obj.get(GROUP_CHAIN_PROPERTY)
+    if not raw:
+        return None
+    try:
+        chain = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return chain if isinstance(chain, list) and chain else None
+
+
+def regrouped(obj, node):
+    """True when ``obj`` or an object above it sits under a ``node`` ("Switch" or "LOD") that the X3D 4.0 writer
+    writes back, so that node, not the object's own visibility, decides what is drawn."""
+    while obj is not None:
+        if any(entry.get("node") == node for entry in group_chain(obj) or ()):
+            return True
+        obj = obj.parent
+    return False
+
+
+CARRIED_PROPERTY = "x3d_carried"                  # set by the importer (import_x3d.place_carried), JSON list of XML
+CARRIED_ROUTES_PROPERTY = "x3d_carried_routes"
+
+
+def carried_of(owner, name=CARRIED_PROPERTY):
+    """The XML texts carried on an object or the scene (strings only; anything else is ignored)."""
+    raw = owner.get(name) if hasattr(owner, "get") else None
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    return [x for x in value if isinstance(x, str)] if isinstance(value, list) else []
+
+
+CAD_PROPERTY = "x3d_cad"            # set by the importer (import_x3d._record_cad), JSON
+CAD_NODES = ("CADLayer", "CADAssembly", "CADPart")
+
+
+def cad_of(obj):
+    """The CAD record of an object (node board batch 12), checked: a node the writer knows, string fields only."""
+    raw = obj.get(CAD_PROPERTY) if hasattr(obj, "get") else None
+    if not raw:
+        return None
+    try:
+        record = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(record, dict):
+        return None
+
+    def clean(part):
+        fields = part.get("fields") if isinstance(part.get("fields"), dict) else {}
+        return {"def": str(part.get("def") or ""), "fields": {str(k): str(v) for k, v in fields.items()
+                                                             if isinstance(v, (str, int, float))}}
+    out = {}
+    if record.get("node") in CAD_NODES:
+        out.update(clean(record), node=record["node"])
+    if isinstance(record.get("face"), dict):
+        out["face"] = clean(record["face"])
+        if isinstance(record["face"].get("order"), int):
+            out["face"]["order"] = record["face"]["order"]
+    if not out:
+        return None
+    if isinstance(record.get("order"), int):
+        out["order"] = record["order"]
+    animation = getattr(obj, "animation_data", None)
+    out["moves"] = bool(animation is not None and (animation.action is not None or animation.nla_tracks))
+    return out
+
+
+def snap_float32_residue(values):
+    """Components of a translation more than a million times smaller than its largest are float32 rounding left by
+    the parent's inverse (1e-8 next to 0.3): Blender's float32 holds about 7 significant digits, so they are no data,
+    and they would change on every round trip. Zeroed. Relative, not absolute: a molecule at 1e-10 keeps every digit."""
+    largest = max((abs(v) for v in values), default=0.0)
+    return tuple(0.0 if largest and abs(v) < 1e-6 * largest else float(v) for v in values)
+
+
+def _sound_bridge():
+    try:
+        from . import sound_bridge
+    except ImportError:  # pragma: no cover - standalone test fallback
+        import sound_bridge
+    return sound_bridge
+
+
+def is_bridged_speaker(obj) -> bool:
+    """A Speaker the import made for a SpatialSound graph: written back as that graph, not as a Transform."""
+    return getattr(obj, "type", None) == "SPEAKER" and isinstance(obj.get("x3d_sound_graph"), str)
+
+
+RIGID_WORLD_PROPERTY = "x3d_rigid_world"   # set by the importer (import_x3d.import_rigid_bodies), JSON
+RIGID_BODY_PROPERTY = "x3d_rigid_body"
+RIGID_JOINT_PROPERTY = "x3d_rigid_joint"
+
+
+def _record(owner, name):
+    raw = owner.get(name) if hasattr(owner, "get") else None
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _frame_of(fields):
+    """The matrix of a collidable's translation and rotation as the file wrote them (X3D space)."""
+    from mathutils import Matrix, Quaternion, Vector
+
+    def numbers(text, n, default):
+        try:
+            values = [float(v) for v in str(text).replace(",", " ").split()]
+        except ValueError:
+            return default
+        return values if len(values) == n else default
+    t = numbers(fields.get("translation", ""), 3, [0.0, 0.0, 0.0])
+    r = numbers(fields.get("rotation", ""), 4, [0.0, 0.0, 1.0, 0.0])
+    axis = Vector(r[:3])
+    rotation = Quaternion(axis.normalized(), r[3]) if axis.length > 1e-12 else Quaternion()
+    return Matrix.Translation(Vector(t)) @ rotation.to_matrix().to_4x4()
+
+
+def rigid_body_of(obj, x3d_matrix, has_parent, diagnostics):
+    """The RigidBody to write for ``obj`` (IRInstance.rigid_body), or None. ``x3d_matrix`` is the object's matrix in
+    X3D space. Only a root object without children and at unit scale is written as a body; another keeps its Transform."""
+    rb = getattr(obj, "rigid_body", None)
+    if rb is None:
+        return None
+    if has_parent or list(getattr(obj, "children", ()) or ()):
+        diagnostics.append(f"Object {obj.name!r}: a rigid body with a parent or children is written as a plain Transform.")
+        return None
+    scale = x3d_matrix.to_scale()
+    if any(abs(v - 1.0) > 1e-5 for v in scale):
+        diagnostics.append(f"Object {obj.name!r}: a rigid body at scale {tuple(round(v, 4) for v in scale)} is written as a "
+                           "plain Transform (a RigidBody has no scale).")
+        return None
+    record = _record(obj, RIGID_BODY_PROPERTY)
+    chain = list(record.get("offsets") or []) + ([record["collidable"]] if record.get("collidable") else [])
+    frame = x3d_matrix.copy()
+    for item in reversed(chain):            # the body is the object's frame without the collidables' own frames
+        frame = frame @ _frame_of(item.get("fields") or {}).inverted()
+    translation, rotation = frame.to_translation(), frame.to_quaternion()
+    # the axis conversion leaves float noise (1e-8 where the file had 0), which would grow on every round trip
+    translation = [0.0 if abs(v) < 1e-6 else v for v in translation]
+    axis, angle = rotation.to_axis_angle()
+    return {"def": record.get("def") or obj.name, "fields": record.get("fields") or {},
+            "collidable": record.get("collidable"), "offsets": record.get("offsets") or [],
+            "position": tuple(translation), "orientation": canonical_axis_angle(tuple(axis), angle),
+            "fixed": rb.type == "PASSIVE", "mass": float(rb.mass), "enabled": bool(rb.enabled),
+            "linear_damping": float(rb.linear_damping), "angular_damping": float(rb.angular_damping)}
+
+
+JOINT_OF_CONSTRAINT = {"HINGE": "SingleAxisHingeJoint", "POINT": "BallJoint", "SLIDER": "SliderJoint",
+                       "GENERIC": "DoubleAxisHingeJoint"}
+
+
+def rigid_joint_of(obj, global_matrix):
+    """The joint to write for an empty with a rigid body constraint between two objects, or None: HINGE is a
+    SingleAxisHingeJoint, POINT a BallJoint, SLIDER a SliderJoint, GENERIC a DoubleAxisHingeJoint (a UniversalJoint when
+    the import made it from one). The anchor, axes and limits are Blender's, in X3D space."""
+    from mathutils import Vector
+    con = getattr(obj, "rigid_body_constraint", None)
+    if con is None or con.object1 is None or con.object2 is None or con.type not in JOINT_OF_CONSTRAINT:
+        return None
+    record = _record(obj, RIGID_JOINT_PROPERTY)
+    node = JOINT_OF_CONSTRAINT[con.type]
+    if con.type == "GENERIC" and record.get("node") == "UniversalJoint":
+        node = "UniversalJoint"
+    world = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+    clean = lambda v, eps: tuple(0.0 if abs(c) < eps else c for c in v)
+    axis_of = lambda local: clean((world.to_3x3() @ Vector(local)).normalized(), 1e-9)
+    joint = {"node": node, "def": record.get("def") or obj.name,
+             # the fields as written belong to the joint the file had: a constraint turned into another kind drops them
+             "fields": (record.get("fields") or {}) if record.get("node", node) == node else {},
+             "anchor": clean(world.to_translation(), 1e-6), "body1": con.object1.name, "body2": con.object2.name,
+             "enabled": bool(con.enabled)}
+    if node == "SingleAxisHingeJoint":
+        joint["axis"] = axis_of((0.0, 0.0, 1.0))
+        if con.use_limit_ang_z:
+            joint["limits"] = (float(con.limit_ang_z_lower), float(con.limit_ang_z_upper))
+    elif node == "SliderJoint":
+        joint["axis"] = axis_of((1.0, 0.0, 0.0))
+        if con.use_limit_lin_x:
+            # back from Blender's travel to X3D's separation: add how far apart the bodies start along the axis
+            to_x3d = global_matrix if global_matrix is not None else None
+            p1, p2 = con.object1.matrix_world.translation, con.object2.matrix_world.translation
+            if to_x3d is not None:
+                p1, p2 = to_x3d @ p1, to_x3d @ p2
+            start = (Vector(p2) - Vector(p1)).dot(Vector(joint["axis"]))
+            scale = global_matrix.to_3x3().col[0].length if global_matrix is not None else 1.0    # Blender to X3D units
+            joint["separation"] = (float(con.limit_lin_x_lower) * scale + start,
+                                   float(con.limit_lin_x_upper) * scale + start)
+    elif node in ("DoubleAxisHingeJoint", "UniversalJoint"):
+        joint["axis1"] = axis_of((0.0, 0.0, 1.0))
+        joint["axis2"] = axis_of((1.0, 0.0, 0.0))
+        if node == "DoubleAxisHingeJoint" and con.use_limit_ang_z:
+            joint["limits"] = (float(con.limit_ang_z_lower), float(con.limit_ang_z_upper))
+    return joint
+
+
+def rigid_world_of(scene, global_matrix):
+    """The RigidBodyCollection's own values: gravity in X3D space, iterations, and what the import kept."""
+    from mathutils import Vector
+    record = _record(scene, RIGID_WORLD_PROPERTY)
+    gravity = Vector(scene.gravity)
+    if global_matrix is not None:
+        gravity = global_matrix.to_3x3().normalized() @ gravity
+    world = getattr(scene, "rigidbody_world", None)
+    return {"def": record.get("def") or "", "fields": record.get("fields") or {}, "collider": record.get("collider"),
+            "gravity": tuple(gravity), "iterations": int(world.solver_iterations) if world is not None else 10,
+            "recorded": bool(record)}
+
+
 def is_lod_hidden(obj):
     """An object of an LOD level the importer hid (and the user has not unhidden): written as geometry it would be
     drawn on top of the level that is shown, so neither writer exports it."""
@@ -1051,8 +1619,9 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
             continue
         if use_visible and not obj.visible_get():
             continue
-        if is_lod_hidden(obj):
-            # the 4.0 writer has no LOD node; unhide the level (hide_render off) to export it
+        if is_lod_hidden(obj) and not regrouped(obj, "LOD"):
+            # a level of a LOD the import recorded is written inside that LOD; one it did not (an older import) is
+            # not written: unhide it (hide_render off) to export it
             continue
         yield obj
 
@@ -1109,7 +1678,49 @@ def _analyzed_material(material):
             analyzed.metadata = object_metadata(material.get(METADATA_PROPERTY))
         except (AttributeError, TypeError):
             pass
+        analyzed.two_sided = two_sided_fields(material)
     return analyzed
+
+
+_TWO_SIDED_DEFAULTS = {"backAmbientIntensity": 0.2, "backDiffuseColor": [0.8, 0.8, 0.8],
+                       "backEmissiveColor": [0.0, 0.0, 0.0], "backShininess": 0.2, "backSpecularColor": [0.0, 0.0, 0.0],
+                       "backTransparency": 0.0, "separateBackColor": False}
+
+
+def two_sided_fields(material):
+    """The TwoSidedMaterial back fields the import kept on ``material`` (TWO_SIDED_PROPERTY), checked: numbers in
+    [0, 1] (colours as three of them), separateBackColor a bool; anything else in the record is dropped. None when
+    the material has no record (it is not from a TwoSidedMaterial)."""
+    try:
+        raw = material.get(TWO_SIDED_PROPERTY)
+    except (AttributeError, TypeError):
+        return None
+    if not isinstance(raw, str):
+        return None
+    try:
+        record = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(record, dict):
+        return None
+    out = {}
+    for name, default in _TWO_SIDED_DEFAULTS.items():
+        value = record.get(name)
+        if value is None:
+            continue
+        if isinstance(default, bool):
+            if isinstance(value, bool):
+                out[name] = value
+            continue
+        try:
+            value = [float(v) for v in value] if isinstance(default, list) else float(value)
+        except (TypeError, ValueError):
+            continue
+        values = value if isinstance(value, list) else [value]
+        if (len(values) == (3 if isinstance(default, list) else 1)
+                and all(math.isfinite(v) and 0.0 <= v <= 1.0 for v in values)):
+            out[name] = value
+    return out
 
 
 def scene_metadata_hosts(scene) -> list[IRMetadataHost]:
@@ -1150,13 +1761,72 @@ def scene_background(scene) -> IRBackground | None:
     if not sky_color:
         return None
     transparency = get("transparency")
+    textures = {}
+    if get("node") == "TextureBackground":
+        faces = get("textures")
+        faces_get = getattr(faces, "get", None)
+        for face in TEXTURE_BACKGROUND_FACES:
+            name = faces_get(face) if faces_get is not None else None
+            image = _image_named(name)
+            if image is not None:
+                textures[face] = IRTextureRef(image_name=image.name, filepath=image.filepath, source=image.source,
+                                              usage=face, pixel_image=pixel_image(image))
     return IRBackground(
         sky_color=sky_color,
         sky_angle=numbers("skyAngle"),
         ground_color=colors("groundColor"),
         ground_angle=numbers("groundAngle"),
         transparency=float(transparency) if isinstance(transparency, (int, float)) else 0.0,
+        node="TextureBackground" if get("node") == "TextureBackground" else "Background",
+        textures=textures,
     )
+
+
+# a TextureBackground's faces, in the order the export writes them
+TEXTURE_BACKGROUND_FACES = ("backTexture", "bottomTexture", "frontTexture", "leftTexture", "rightTexture", "topTexture")
+
+
+def _image_named(name):
+    """The Blender image called ``name``, or None (also outside Blender)."""
+    if not isinstance(name, str) or not name:
+        return None
+    try:
+        import bpy
+    except ImportError:  # pragma: no cover - plain Python
+        return None
+    return bpy.data.images.get(name)
+
+
+# Blender's mist falloff read back as an X3D fogType: LINEAR is the same ramp, the other two curve like EXPONENTIAL
+_FALLOFF_FOG_TYPE = {"LINEAR": "LINEAR", "QUADRATIC": "EXPONENTIAL", "INVERSE_QUADRATIC": "EXPONENTIAL"}
+
+
+def scene_fog(scene) -> IRFog | None:
+    """The Fog the importer kept on ``scene`` (FOG_PROPERTY), with its distance and type read from the world's mist
+    when the scene has a world: visibilityRange is where the mist is full (start + depth), and the falloff gives the
+    fogType. The colour is the record's (mist has none). None when there is no record."""
+    stored = imported_scene_property(scene, FOG_PROPERTY)
+    get = getattr(stored, "get", None)
+    if get is None:
+        return None
+    try:
+        color = tuple(max(0.0, min(1.0, float(v))) for v in get("color"))
+    except (TypeError, ValueError):
+        color = ()
+    color = color if len(color) == 3 else (1.0, 1.0, 1.0)
+    fog_type = get("fogType") if get("fogType") in ("LINEAR", "EXPONENTIAL") else "LINEAR"
+    try:
+        distance = float(get("visibilityRange"))
+    except (TypeError, ValueError):
+        distance = 0.0
+    world = getattr(scene, "world", None)
+    mist = getattr(world, "mist_settings", None) if world is not None else None
+    if mist is not None and get("falloff") is not None:
+        distance = float(mist.start) + float(mist.depth)
+        if mist.falloff != get("falloff"):
+            fog_type = _FALLOFF_FOG_TYPE.get(mist.falloff, fog_type)
+    distance = distance if math.isfinite(distance) and distance > 0.0 else 0.0
+    return IRFog(color=color, fog_type=fog_type, visibility_range=distance)
 
 
 def _unit_interval(value, default):
@@ -1661,11 +2331,14 @@ def extract_scene(
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    ir_scene.carried_root = carried_of(scene)
+    ir_scene.carried_routes = carried_of(scene, CARRIED_ROUTES_PROPERTY)
     ir_scene.material_model = resolve_material_model(material_model, scene)
     ir_scene.material_model_forced = str(material_model or "").strip().lower() in MATERIAL_MODELS
     ir_scene.headlight = scene_headlight(scene)
     # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
     ir_scene.background = scene_background(scene)
+    ir_scene.fog = scene_fog(scene)
     ir_scene.metadata_hosts = scene_metadata_hosts(scene)
     world = getattr(scene, "world", None)
     if ir_scene.background is None and world is not None and getattr(world, "color", None) is not None:
@@ -1680,6 +2353,13 @@ def extract_scene(
             use_active_collection=use_active_collection,
         )
     )
+    # the rigid body world's helpers and constraint empties are written as physics, not as Transforms
+    if not scene.get(RIGID_WORLD_PROPERTY):    # (a legacy-imported world keeps the batch 6/7 writer, see below)
+        # the import's hidden wire stand-ins for a body (x3d_collidable_only) are written in the RigidBody, not as Transforms
+        physics_scope = [obj for obj in exported if not physics_export.is_helper(obj)]     # what physics_export may write
+        exported = [obj for obj in physics_scope if not obj.get("x3d_collidable_only")]
+    else:
+        physics_scope = exported
     exported_names = {obj.name for obj in exported}
     # Objects imported from an Inline are represented by their placeholder empty's Inline node.
     inline_children = [obj for obj in exported if (root := inline_root(obj)) is not None and root.name in exported_names]
@@ -1705,6 +2385,7 @@ def extract_scene(
     armatures = [obj for obj in exported if obj.type == "ARMATURE"]
     skinned_by_armature = {armature.name: _skinned_meshes(armature, exported) for armature in armatures}
     skinned_names = {mesh.name for meshes in skinned_by_armature.values() for mesh in meshes}
+    hanim_part_names = {part.name for armature in armatures for part in hanim_part_objects(armature, exported, skinned_names)}
 
     def register_material(material):
         if material is None:
@@ -1779,6 +2460,7 @@ def extract_scene(
                         use_normals=use_normals,
                         recorded_solid=obj.data.get(SOLID_PROPERTY) if obj.type == "MESH" else None,
                     )
+                    mark_triangle_sets(geometries, obj.data, use_triangulate)   # a curve's data names a LineSet
                 else:
                     geometries = []
             finally:
@@ -1856,6 +2538,7 @@ def extract_scene(
                     mesh.calc_loop_triangles()
                 geometries = extract_mesh_geometries(mesh, name=key, material_slots=slots,
                                                      use_triangulate=use_triangulate, use_normals=use_normals)
+                mark_triangle_sets(geometries, mesh, use_triangulate)
                 geometries_by_key[key] = geometries
                 ir_scene.geometries.extend(geometries)
                 shapes = []
@@ -1906,13 +2589,29 @@ def extract_scene(
         # only what the import hid (a Switch choice, visible="false") is written invisible; hide_render on any other object is a Blender-side
         # choice that does not reach the children, while visible="false" would hide the whole subtree
         instance.visible = not (bool(getattr(obj, "hide_render", False)) and (
-            obj.get(SWITCH_HIDDEN_PROPERTY) is not None or obj.get(VISIBLE_FALSE_PROPERTY) is not None))
+            (obj.get(SWITCH_HIDDEN_PROPERTY) is not None and not regrouped(obj, "Switch"))
+            or obj.get(VISIBLE_FALSE_PROPERTY) is not None))
+        instance.group_chain = group_chain(obj)
         if not name_prefix:
+            x3d_matrix = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+            instance.rigid_body = rigid_body_of(obj, x3d_matrix, use_hierarchy and parent is not None,
+                                                ir_scene.diagnostics)
+            instance.rigid_joint = rigid_joint_of(obj, global_matrix) if not list(obj.children) else None
+            instance.carried = carried_of(obj)
+            instance.cad = cad_of(obj)
+            if instance.cad is not None or (parent is not None and cad_of(parent) is not None):
+                instance.transform.translation = snap_float32_residue(instance.transform.translation)
+            if instance.rigid_body is not None and ir_scene.rigid_world is None:
+                ir_scene.rigid_world = rigid_world_of(scene, global_matrix)
             objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
             instance.interaction = read_interaction(obj, ir_scene.diagnostics)
 
         if obj.name in skinned_names:
             # Written as HAnim skin under its armature instead of a plain Shape.
+            objects_by_name.pop(obj.name, None)
+            return None
+        if obj.name in hanim_part_names and local_override is None:
+            # Written inside its armature's HAnimHumanoid (a segment Shape or an HAnimSite), not as a plain Transform.
             objects_by_name.pop(obj.name, None)
             return None
 
@@ -1926,6 +2625,13 @@ def extract_scene(
                 diagnostics=ir_scene.diagnostics,
             )
             ir_scene.geometries.extend(skin_geometries)
+
+            def build_part(part, matrix):
+                built = build_instance(part, None, local_override=matrix)
+                objects_by_name.pop(part.name, None)
+                return built
+            attach_hanim_parts(humanoid, obj, hanim_part_objects(obj, exported, skinned_names), build_part,
+                               ir_scene.diagnostics)
             ir_scene.humanoids.append(humanoid)
             ir_scene.object_names.append(obj.name)
             objects_by_name.pop(obj.name, None)
@@ -1957,6 +2663,7 @@ def extract_scene(
             instance.cast_shadow = bool(getattr(obj, "visible_shadow", True))
             instance.metadata = object_metadata(obj.get(METADATA_PROPERTY))
             instance.line_width = _line_width(obj)
+            instance.point_properties = _point_properties(obj)
             # Geometry Nodes (and particle) instances; vertex/face instancing instances child objects, which are
             # written as objects of their own
             # (only for meshes: a curve, surface or text object's own evaluated mesh is listed as an instance of it, and
@@ -2004,7 +2711,12 @@ def extract_scene(
 
         if use_hierarchy:
             for child in exported:
-                if exported_parent(child) is obj:
+                if exported_parent(child) is obj and is_bridged_speaker(child):
+                    graph = _sound_bridge().speaker_graph_xml(
+                        child, inverted64(obj.matrix_world, obj.name) @ child.matrix_world, ir_scene.diagnostics)
+                    if graph:
+                        instance.carried.append(graph)       # inside this Transform, with its other carried nodes
+                elif exported_parent(child) is obj:
                     child_instance = build_instance(child, obj)
                     if child_instance is not None:
                         instance.children.append(child_instance)
@@ -2013,14 +2725,26 @@ def extract_scene(
     if use_hierarchy:
         roots = [obj for obj in exported if exported_parent(obj) is None]
         for obj in roots:
+            if is_bridged_speaker(obj):
+                continue
             instance = build_instance(obj, None)
             if instance is not None:
                 ir_scene.instances.append(instance)
     else:
         for obj in exported:
+            if is_bridged_speaker(obj):
+                continue
             instance = build_instance(obj, None)
             if instance is not None:
                 ir_scene.instances.append(instance)
+
+    # bridged Speakers at the top of the scene (or every one, flat): their graphs among the scene's carried nodes
+    for obj in exported:
+        if is_bridged_speaker(obj) and (not use_hierarchy or exported_parent(obj) is None):
+            matrix = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+            graph = _sound_bridge().speaker_graph_xml(obj, matrix, ir_scene.diagnostics)
+            if graph:
+                ir_scene.carried_root = [*ir_scene.carried_root, graph]
 
     active = getattr(scene, "camera", None)
     if active is not None:
@@ -2033,7 +2757,7 @@ def extract_scene(
             use_hierarchy=use_hierarchy,
             global_matrix=global_matrix,
             frame_step=animation_step,
-            armatures=armatures,
+            armatures=[armature for armature in armatures if not hanim_motion_active(armature)],
         )
 
     # The viewpoint tour: cameras that carry x3d_tour_order, as Viewpoint poses in the exported frame.
@@ -2073,6 +2797,22 @@ def extract_scene(
         ir_scene.diagnostics.append(
             f"Skipped {count} {object_type} object(s): not yet supported by the X3D 4.0 path."
         )
+
+    try:
+        # a scene the legacy importer made (it carries x3d_rigid_world) keeps the batch 6/7 writer; every other rigid body
+        # world is written by physics_export
+        ir_scene.physics = None if scene.get(RIGID_WORLD_PROPERTY) else physics_export.extract(scene, physics_scope, global_matrix)
+        if ir_scene.physics:
+            ir_scene.diagnostics.extend(ir_scene.physics["diagnostics"])
+            # one writer: physics_export writes the whole rigid body world, so the node board's batch 6 and 7 per-object
+            # RigidBody and joint records (rigid_body_of, rigid_joint_of) stand down and the bodies stay plain Transforms
+            ir_scene.diagnostics[:] = [d for d in ir_scene.diagnostics if "is written as a plain Transform" not in d]
+            for instance in ir_scene.iter_instances():
+                instance.rigid_body = None
+                instance.rigid_joint = None
+            ir_scene.rigid_world = None
+    except Exception as exc:  # physics must never stop an export
+        ir_scene.diagnostics.append(f"Rigid body physics not written: {exc}")
 
     if not ir_scene.object_names:
         ir_scene.diagnostics.append("No exportable objects matched the current filters.")

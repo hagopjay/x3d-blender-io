@@ -1,0 +1,721 @@
+{
+ "schema": "x3d-blender-io.physics-receipt/1",
+ "limits": {
+  "path": "tests/physics/limits.json",
+  "sha256": "07eb76d05ec51c897bd3ca425039d5df19ed26c090041470be9e2b3b09cdb899"
+ },
+ "code_commit": "f69cb82+dirty",
+ "fixtures": {
+  "drop-bounce.x3d": {
+   "x_ite": {
+    "engine_version": "16.8.1",
+    "host": "158.0.8127.36",
+    "fps": 60,
+    "steps": 180,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "eb0acf203e5c25644b71e2957c53b827cb9fc50f30e9fe649e3a295a78581e14",
+    "info": null,
+    "renamed_friction": false,
+    "metrics": {
+     "apex above contact (m), analytic 1.125": 0.552,
+     "final centre height (m), analytic 0.5": 0.5,
+     "first contact (s), analytic 0.958": 0.967
+    },
+    "checks": {
+     "apex above contact (m), analytic 1.125": {
+      "value": 0.552,
+      "verdict": "fail",
+      "expect": "fail"
+     },
+     "final centre height (m), analytic 0.5": {
+      "value": 0.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "first contact (s), analytic 0.958": {
+      "value": 0.967,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    },
+    "drop_y_first_55_frames": [
+     5,
+     4.998502731323242,
+     4.994283199310303,
+     4.98734188079834,
+     4.977678298950195,
+     4.965292453765869,
+     4.950183868408203,
+     4.9323530197143555,
+     4.911799907684326,
+     4.888525009155273,
+     4.862527847290039,
+     4.833808422088623,
+     4.802366733551025,
+     4.768202781677246,
+     4.731317043304443,
+     4.691708564758301,
+     4.649377822875977,
+     4.604324817657471,
+     4.556549549102783,
+     4.506052494049072,
+     4.45283317565918,
+     4.3968915939331055,
+     4.33822774887085,
+     4.276841640472412,
+     4.212733268737793,
+     4.145902633666992,
+     4.07634973526001,
+     4.004074573516846,
+     3.929077386856079,
+     3.85135817527771,
+     3.770916700363159,
+     3.6877529621124268,
+     3.6018669605255127,
+     3.513258934020996,
+     3.421928882598877,
+     3.327876329421997,
+     3.2311017513275146,
+     3.1316049098968506,
+     3.029386043548584,
+     2.9244449138641357,
+     2.816781520843506,
+     2.7063961029052734,
+     2.5932884216308594,
+     2.4774587154388428,
+     2.3589065074920654,
+     2.2376322746276855,
+     2.113636016845703,
+     1.98691725730896,
+     1.8574764728546143,
+     1.725313425064087,
+     1.5904282331466675,
+     1.4528207778930664,
+     1.3124909400939941,
+     1.1694389581680298,
+     1.0236645936965942
+    ],
+    "free_fall_vs_discrete_euler_m": 1.597983042422868e-05
+   },
+   "blender": {
+    "engine_version": "5.3.0",
+    "host": "bpy",
+    "fps": 60,
+    "steps": 180,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "fb72595ef2b05a8a103000575420e30480bd6e072370c02326dab5b0391d5321",
+    "info": {
+     "substeps_per_frame": 10,
+     "solver_iterations": 10,
+     "gravity": [
+      0.0,
+      0.0,
+      -9.800000190734863
+     ],
+     "losses": [],
+     "launch_constraints": 0,
+     "joints": 0
+    },
+    "renamed_friction": null,
+    "metrics": {
+     "apex above contact (m), analytic 1.125": 0.008,
+     "final centre height (m), analytic 0.5": 0.5,
+     "first contact (s), analytic 0.958": 0.967
+    },
+    "checks": {
+     "apex above contact (m), analytic 1.125": {
+      "value": 0.008,
+      "verdict": "fail",
+      "expect": "fail"
+     },
+     "final centre height (m), analytic 0.5": {
+      "value": 0.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "first contact (s), analytic 0.958": {
+      "value": 0.967,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    },
+    "drop_y_first_55_frames": [
+     5.0,
+     4.998502731323242,
+     4.994283199310303,
+     4.98734188079834,
+     4.977677822113037,
+     4.965291500091553,
+     4.950183391571045,
+     4.932352542877197,
+     4.911799907684326,
+     4.888525009155273,
+     4.862527847290039,
+     4.833808422088623,
+     4.802366733551025,
+     4.768202781677246,
+     4.731316566467285,
+     4.691708087921143,
+     4.649377822875977,
+     4.604324817657471,
+     4.556550025939941,
+     4.5060529708862305,
+     4.45283317565918,
+     4.3968915939331055,
+     4.33822774887085,
+     4.276841640472412,
+     4.212733268737793,
+     4.145902633666992,
+     4.07634973526001,
+     4.004075050354004,
+     3.929077625274658,
+     3.85135817527771,
+     3.770916700363159,
+     3.6877527236938477,
+     3.6018664836883545,
+     3.513258218765259,
+     3.4219276905059814,
+     3.3278748989105225,
+     3.231099843978882,
+     3.1316027641296387,
+     3.0293831825256348,
+     2.9244415760040283,
+     2.8167777061462402,
+     2.7063915729522705,
+     2.593283176422119,
+     2.477452516555786,
+     2.3588998317718506,
+     2.2376248836517334,
+     2.1136276721954346,
+     1.9869080781936646,
+     1.857466459274292,
+     1.7253025770187378,
+     1.590416431427002,
+     1.452808141708374,
+     1.312477469444275,
+     1.1694247722625732,
+     1.0236496925354004
+    ],
+    "free_fall_vs_discrete_euler_m": 3.090964426633036e-07
+   }
+  },
+  "stack3.x3d": {
+   "x_ite": {
+    "engine_version": "16.8.1",
+    "host": "158.0.8127.36",
+    "fps": 60,
+    "steps": 360,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "36522190f9dd2f3ecc9583480bcba261215dd3498ca74c6a3a77e22de2b41d6e",
+    "info": null,
+    "renamed_friction": false,
+    "metrics": {
+     "B1 height (m), ideal 0.5": 0.5,
+     "B2 height (m), ideal 1.5": 1.5,
+     "B3 height (m), ideal 2.5": 2.5,
+     "sideways drift of top box (m)": 0.00072
+    },
+    "checks": {
+     "B1 height (m), ideal 0.5": {
+      "value": 0.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "B2 height (m), ideal 1.5": {
+      "value": 1.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "B3 height (m), ideal 2.5": {
+      "value": 2.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "sideways drift of top box (m)": {
+      "value": 0.00072,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   },
+   "blender": {
+    "engine_version": "5.3.0",
+    "host": "bpy",
+    "fps": 60,
+    "steps": 360,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "1dff765c15a41cf1ee0c9ffdca30a6c55529882937c84ebe96b959aedf9e24f2",
+    "info": {
+     "substeps_per_frame": 10,
+     "solver_iterations": 10,
+     "gravity": [
+      0.0,
+      0.0,
+      -9.800000190734863
+     ],
+     "losses": [],
+     "launch_constraints": 0,
+     "joints": 0
+    },
+    "renamed_friction": null,
+    "metrics": {
+     "B1 height (m), ideal 0.5": 0.5,
+     "B2 height (m), ideal 1.5": 1.5,
+     "B3 height (m), ideal 2.5": 2.5,
+     "sideways drift of top box (m)": 0.00071
+    },
+    "checks": {
+     "B1 height (m), ideal 0.5": {
+      "value": 0.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "B2 height (m), ideal 1.5": {
+      "value": 1.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "B3 height (m), ideal 2.5": {
+      "value": 2.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "sideways drift of top box (m)": {
+      "value": 0.00071,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   }
+  },
+  "slope-mu0.2.x3d": {
+   "x_ite": {
+    "engine_version": "16.8.1",
+    "host": "158.0.8127.36",
+    "fps": 60,
+    "steps": 120,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "00b1f67264de615cdd7244107805177bb9ad412cbf4b3a2f5d62769e3826a37e",
+    "info": null,
+    "renamed_friction": false,
+    "metrics": {
+     "downhill distance, 0.5 s to 1.5 s (m)": 2.695,
+     "acceleration (m/s2), analytic 3.19": 2.77
+    },
+    "checks": {
+     "acceleration (m/s2), analytic 3.19": {
+      "value": 2.77,
+      "verdict": "fail",
+      "expect": "pass"
+     }
+    }
+   },
+   "blender": {
+    "engine_version": "5.3.0",
+    "host": "bpy",
+    "fps": 60,
+    "steps": 120,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "b51322270e095149f9b18763365ba66e8b83baf7a9532d302e1db648561fec3d",
+    "info": {
+     "substeps_per_frame": 10,
+     "solver_iterations": 10,
+     "gravity": [
+      0.0,
+      0.0,
+      -9.800000190734863
+     ],
+     "losses": [],
+     "launch_constraints": 0,
+     "joints": 0
+    },
+    "renamed_friction": null,
+    "metrics": {
+     "downhill distance, 0.5 s to 1.5 s (m)": 3.199,
+     "acceleration (m/s2), analytic 3.19": 3.2
+    },
+    "checks": {
+     "acceleration (m/s2), analytic 3.19": {
+      "value": 3.2,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   }
+  },
+  "pendulum-ball.x3d": {
+   "x_ite": {
+    "engine_version": "16.8.1",
+    "host": "158.0.8127.36",
+    "fps": 60,
+    "steps": 900,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "b837c7906d847a8f70fff80d51bdc3fcd2249e9d867fc4ed3a2e6596a2b486d3",
+    "info": null,
+    "renamed_friction": false,
+    "metrics": {
+     "period (s), analytic 2.8473": 2.8587,
+     "period error (%)": 0.4,
+     "max drift of arm length (m), ideal 0": 0.0,
+     "amplitude in the last 3 s (m), start 0.347": 0.347
+    },
+    "checks": {
+     "period error (%)": {
+      "value": 0.4,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "max drift of arm length (m), ideal 0": {
+      "value": 0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "amplitude in the last 3 s (m), start 0.347": {
+      "value": 0.347,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   },
+   "blender": {
+    "engine_version": "5.3.0",
+    "host": "bpy",
+    "fps": 60,
+    "steps": 900,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "73eb4baa2f7c8a4bfc9f0b7f5834a0e491ee766bd41fb0a8a5a72dfb767bf17e",
+    "info": {
+     "substeps_per_frame": 10,
+     "solver_iterations": 10,
+     "gravity": [
+      0.0,
+      0.0,
+      -9.800000190734863
+     ],
+     "losses": [],
+     "launch_constraints": 0,
+     "joints": 1
+    },
+    "renamed_friction": null,
+    "metrics": {
+     "period (s), analytic 2.8473": 2.8531,
+     "period error (%)": 0.2,
+     "max drift of arm length (m), ideal 0": 0.0,
+     "amplitude in the last 3 s (m), start 0.347": 0.347
+    },
+    "checks": {
+     "period error (%)": {
+      "value": 0.2,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "max drift of arm length (m), ideal 0": {
+      "value": 0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "amplitude in the last 3 s (m), start 0.347": {
+      "value": 0.347,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   }
+  },
+  "hinge-limit.x3d": {
+   "x_ite": {
+    "engine_version": "16.8.1",
+    "host": "158.0.8127.36",
+    "fps": 60,
+    "steps": 180,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "24f2004afdcc4f48b5d9214e4fbbbc639a0bb42c4d4baa0c220f2c5278ba9a65",
+    "info": null,
+    "renamed_friction": false,
+    "metrics": {
+     "max angle (rad), limit 1.0": 3.134,
+     "angle at 3 s (rad)": 2.716,
+     "door centre off its 0.5 m circle (m), ideal 0": 0.0
+    },
+    "checks": {
+     "max angle (rad), limit 1.0": {
+      "value": 3.134,
+      "verdict": "fail",
+      "expect": "pass"
+     },
+     "door centre off its 0.5 m circle (m), ideal 0": {
+      "value": 0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   },
+   "blender": {
+    "engine_version": "5.3.0",
+    "host": "bpy",
+    "fps": 60,
+    "steps": 180,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "f0d489480da64ee16e77739c6ab9537af1da493cbad610fe2a01ba1ba818d46b",
+    "info": {
+     "substeps_per_frame": 10,
+     "solver_iterations": 10,
+     "gravity": [
+      0.0,
+      0.0,
+      -9.800000190734863
+     ],
+     "losses": [],
+     "launch_constraints": 3,
+     "joints": 1
+    },
+    "renamed_friction": null,
+    "metrics": {
+     "max angle (rad), limit 1.0": 1.0,
+     "angle at 3 s (rad)": 0.383,
+     "door centre off its 0.5 m circle (m), ideal 0": 0.0
+    },
+    "checks": {
+     "max angle (rad), limit 1.0": {
+      "value": 1.0,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "door centre off its 0.5 m circle (m), ideal 0": {
+      "value": 0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   }
+  },
+  "slider-limit.x3d": {
+   "x_ite": {
+    "engine_version": "16.8.1",
+    "host": "158.0.8127.36",
+    "fps": 60,
+    "steps": 180,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "c957036b861dd063084c1b89b1b520cdf637f294f0c9d026fcaad20640fce840",
+    "info": null,
+    "renamed_friction": false,
+    "metrics": {
+     "max separation (m), limit 1.5": 1.5,
+     "x at 3 s (m)": 0.501,
+     "sag (m), ideal 0": 0,
+     "z drift (m)": 0
+    },
+    "checks": {
+     "max separation (m), limit 1.5": {
+      "value": 1.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "sag (m), ideal 0": {
+      "value": 0,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "z drift (m)": {
+      "value": 0,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   },
+   "blender": {
+    "engine_version": "5.3.0",
+    "host": "bpy",
+    "fps": 60,
+    "steps": 180,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "58f03b2ad3e4c37159a9fd305aa42c9d5a9b0a54220c549abb8253d21f56ddc0",
+    "info": {
+     "substeps_per_frame": 10,
+     "solver_iterations": 10,
+     "gravity": [
+      0.0,
+      0.0,
+      -9.800000190734863
+     ],
+     "losses": [],
+     "launch_constraints": 1,
+     "joints": 1
+    },
+    "renamed_friction": null,
+    "metrics": {
+     "max separation (m), limit 1.5": 1.5,
+     "x at 3 s (m)": 1.5,
+     "sag (m), ideal 0": 0.0,
+     "z drift (m)": 0.0
+    },
+    "checks": {
+     "max separation (m), limit 1.5": {
+      "value": 1.5,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "sag (m), ideal 0": {
+      "value": 0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "z drift (m)": {
+      "value": 0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   }
+  },
+  "billiards-head-on.x3d": {
+   "x_ite": {
+    "engine_version": "16.8.1",
+    "host": "158.0.8127.36",
+    "fps": 60,
+    "steps": 120,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "4e9d18ae60b541bb6d189458e134b37bb235c752fbfce28dd6ada155954b4132",
+    "info": null,
+    "renamed_friction": false,
+    "metrics": {
+     "A speed after (m/s), analytic 0": -0.001,
+     "B speed after (m/s), analytic 3": 3.001,
+     "momentum error (%)": 0.0,
+     "energy error (%)": 0.09
+    },
+    "checks": {
+     "A speed after (m/s), analytic 0": {
+      "value": -0.001,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "B speed after (m/s), analytic 3": {
+      "value": 3.001,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "energy error (%)": {
+      "value": 0.09,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   },
+   "blender": {
+    "engine_version": "5.3.0",
+    "host": "bpy",
+    "fps": 60,
+    "steps": 120,
+    "replays": [
+     {
+      "mismatches": 0,
+      "first_mismatch": null
+     }
+    ],
+    "trace_sha256": "8bfb8108637a1b9705519a10eaa54c29f375e2fa88bf26961f396c95ed997712",
+    "info": {
+     "substeps_per_frame": 10,
+     "solver_iterations": 10,
+     "gravity": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "losses": [],
+     "launch_constraints": 1,
+     "joints": 0
+    },
+    "renamed_friction": null,
+    "metrics": {
+     "A speed after (m/s), analytic 0": -0.0,
+     "B speed after (m/s), analytic 3": 3.0,
+     "momentum error (%)": 0.0,
+     "energy error (%)": 0.0
+    },
+    "checks": {
+     "A speed after (m/s), analytic 0": {
+      "value": -0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "B speed after (m/s), analytic 3": {
+      "value": 3.0,
+      "verdict": "pass",
+      "expect": "pass"
+     },
+     "energy error (%)": {
+      "value": 0.0,
+      "verdict": "pass",
+      "expect": "pass"
+     }
+    }
+   }
+  }
+ }
+}

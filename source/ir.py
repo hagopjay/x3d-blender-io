@@ -57,6 +57,9 @@ class IRTextureRef:
     # after path-mode resolution (COPY / RELATIVE / STRIP); when None the
     # emitter falls back to ``filepath``.
     url: str | None = None
+    # A PixelTexture the import read (``x3d_pixel_texture`` on the image, its component count): (width, height,
+    # components, pixel ints as SFImage packs them), written back inline; None for an image with a file.
+    pixel_image: tuple | None = None
 
 
 @dataclass
@@ -95,6 +98,16 @@ class IRMeshGeometry:
     # per key, each parallel to ``coord``.
     morph_keys: list[float] = field(default_factory=list)
     morph_states: list[list[tuple[float, float, float]]] = field(default_factory=list)
+    # Written as an IndexedTriangleSet (the arrays already share one index) when every face is a triangle: set for a
+    # mesh the import read from one (``x3d_geometry`` on the mesh) or when the export triangulates.
+    triangle_set: bool = False
+    # The triangle-set node the import read the mesh from (``x3d_geometry``: IndexedTriangleSet, TriangleSet,
+    # TriangleFanSet, TriangleStripSet, IndexedTriangleFanSet or IndexedTriangleStripSet), written back as that node
+    # while every face is a triangle; None writes an IndexedTriangleSet when ``triangle_set`` is set.
+    geometry_node: str | None = None
+    # The CoordinateDouble point text for each coordinate (x, y, z tokens), when the import read one and every
+    # coordinate still has exactly that value in float32: written as a CoordinateDouble, else a Coordinate.
+    coord_double: list[tuple[str, str, str]] | None = None
 
 
 @dataclass
@@ -116,6 +129,9 @@ class IRPBRMaterial:
     alpha_mode: str = "OPAQUE"
     alpha_cutoff: float | None = None
     double_sided: bool | None = None
+    # A TwoSidedMaterial's back fields the import kept ({field: number, [3 numbers] or bool}); the classic writer
+    # writes a TwoSidedMaterial with them, its front from this material.
+    two_sided: dict | None = None
     unlit: bool = False
     # Metadata* node (IRMetadataNode) read by the importer from the X3D material; written as its metadata field.
     metadata: object | None = None
@@ -265,6 +281,19 @@ class IRBackground:
     ground_color: list[tuple[float, float, float]] = field(default_factory=list)
     ground_angle: list[float] = field(default_factory=list)
     transparency: float = 0.0
+    # "TextureBackground" for one read from a TextureBackground, whose faces are ``textures`` (containerField ->
+    # texture: frontTexture, backTexture, leftTexture, rightTexture, topTexture, bottomTexture)
+    node: str = "Background"
+    textures: dict = field(default_factory=dict)
+
+
+@dataclass
+class IRFog:
+    """An X3D Fog: ``fog_type`` LINEAR or EXPONENTIAL, ``visibility_range`` 0 for no fog."""
+
+    color: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    fog_type: str = "LINEAR"
+    visibility_range: float = 0.0
 
 
 @dataclass
@@ -370,11 +399,31 @@ class IRInstance:
     visible: bool = True
     # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
     line_width: float | None = None
+    # PointProperties fields of the instance's point geometry, kept by the import ({field: value}); written as a
+    # PointProperties in its Appearance.
+    point_properties: dict | None = None
     # Name of an IRScene.collections entry this Empty instances (Blender "Collection" instance); written as a Group that
     # is DEF'd at its first use and USE'd after, so N linked copies cost N Transforms, not N copies of the content.
     collection_name: str | None = None
     # The ROUTE interaction authored on this object (a sensor inside its Transform), if any.
     interaction: IRInteraction | None = None
+    # The Switch and LOD nodes the import found above this object, outermost first (``x3d_group_chain``): dicts with
+    # node, key, def, branch, branches, and whichChoice (Switch) or range and center (LOD). The writer regroups siblings
+    # into those nodes again.
+    group_chain: list | None = None
+    # A Blender rigid body written as an X3D RigidBody (node board batch 6): Blender's own values (mass, fixed, damping,
+    # enabled), the body frame in X3D space, and the fields the import kept as written. None for a plain object.
+    rigid_body: dict | None = None
+    # A Blender HINGE rigid body constraint written as a SingleAxisHingeJoint: anchor and axis in X3D space, limits,
+    # the two bodies' object names, the fields kept as written. Its empty is not written as a Transform.
+    rigid_joint: dict | None = None
+    # Nodes the import had no handler for, kept as the file wrote them (``x3d_carried``): XML texts written back inside
+    # this object's Transform, after its children. Blender does nothing with them.
+    carried: list[str] = field(default_factory=list)
+    # The CAD product structure the import found (node board batch 12, ``x3d_cad``): {"node": CADLayer | CADAssembly |
+    # CADPart, "def", "fields"} for an object that stands for that node, and/or "face": {"def", "fields"} for the object
+    # a CADFace holds; "moves" when the object is animated. None for a plain object.
+    cad: dict | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -406,11 +455,59 @@ class IRJoint:
     children: list["IRJoint"] = field(default_factory=list)
     skin_coord_index: list[int] = field(default_factory=list)
     skin_coord_weight: list[float] = field(default_factory=list)
+    # The HAnimSegment under this joint (node board batch 11): the objects bone-parented to the bone, None for none.
+    segment: "IRSegment | None" = None
+    # HAnimDisplacers of this joint: the skin's shape keys (offsets into the humanoid's skinCoord).
+    displacers: list["IRDisplacer"] = field(default_factory=list)
 
     def iter_joints(self):
         yield self
         for child in self.children:
             yield from child.iter_joints()
+
+
+@dataclass
+class IRDisplacer:
+    """One HAnimDisplacer: a shape key of the skin, or one the import kept as written (``fields`` then holds it)."""
+
+    name: str
+    coord_index: list[int] = field(default_factory=list)
+    displacements: list[tuple[float, float, float]] = field(default_factory=list)
+    weight: float = 0.0
+    fields: dict = field(default_factory=dict)       # description and the like, as the file wrote them
+
+
+@dataclass
+class IRSite:
+    """One HAnimSite: an Empty bone-parented to its segment's bone. ``instance`` carries its placement (humanoid space,
+    rest pose) and its children."""
+
+    name: str
+    instance: "IRInstance"
+    fields: dict = field(default_factory=dict)
+
+
+@dataclass
+class IRSegment:
+    """One HAnimSegment: the bone's props (mass, centerOfMass, momentsOfInertia, name) and the mesh objects
+    bone-parented to the bone, each an IRInstance placed in humanoid space at the rest pose."""
+
+    name: str
+    fields: dict = field(default_factory=dict)       # mass, centerOfMass, momentsOfInertia, description as written
+    instances: list["IRInstance"] = field(default_factory=list)
+    sites: list[IRSite] = field(default_factory=list)
+    displacers: list[IRDisplacer] = field(default_factory=list)    # kept as written (segment coord displacers)
+
+
+@dataclass
+class IRMotion:
+    """One HAnimMotion: a Blender Action on the armature. ``fields`` are the node's fields as written but values;
+    ``values`` is what the action holds now (``raw_values`` is written instead when they agree)."""
+
+    name: str
+    fields: dict = field(default_factory=dict)
+    values: list[float] = field(default_factory=list)
+    raw_values: str | None = None
 
 
 @dataclass
@@ -424,10 +521,18 @@ class IRHumanoid:
     skin_shapes: list[IRShape] = field(default_factory=list)
     # Joints written under a standard H-Anim name, and the total (the HAnimHumanoid ``info`` says so).
     standard_joint_count: int = 0
+    motions: list[IRMotion] = field(default_factory=list)
 
     def iter_joints(self):
         for root in self.root_joints:
             yield from root.iter_joints()
+
+    def part_instances(self):
+        """The instances of the segments' objects and the sites' Empties (node board batch 11)."""
+        for joint in self.iter_joints():
+            if joint.segment is not None:
+                yield from joint.segment.instances
+                yield from (site.instance for site in joint.segment.sites)
 
 
 @dataclass
@@ -461,6 +566,8 @@ class IRScene:
     background_color: tuple[float, float, float] | None = None
     # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
     background: IRBackground | None = None
+    # A Fog read by the importer (its distance and type now from the world's mist), written after the Background.
+    fog: IRFog | None = None
     # How the exported materials are lit: 'classic' (X3D Material, Phong; X_ITE shades it in display space) or
     # 'physical' (PhysicalMaterial, glTF style). Taken from the scene's x3d_lighting_model unless the export option sets it.
     material_model: str = "physical"
@@ -468,8 +575,16 @@ class IRScene:
     material_model_forced: bool = False
     # The NavigationInfo headlight the scene had when it was imported (True/False), None when it never had one.
     headlight: bool | None = None
+    # The scene's rigid body world, written as a RigidBodyCollection: gravity (X3D space), iterations, and the fields
+    # and CollisionCollection the import kept as written. None when no object is written as a RigidBody.
+    rigid_world: dict | None = None
+    # Carried nodes at the scene's top level, and ROUTEs between carried nodes (XML texts, as the file wrote them).
+    carried_root: list[str] = field(default_factory=list)
+    carried_routes: list[str] = field(default_factory=list)
     # Metadata of imported hosts with no Blender counterpart; WorldInfo ones are written, the rest reported.
     metadata_hosts: list[IRMetadataHost] = field(default_factory=list)
+    # Blender's rigid body world as plain data (physics_export.extract); written as a RigidBodyCollection.
+    physics: dict | None = None
 
     def iter_instances(self):
         """Depth-first walk over every instance, nested children included (the members of each instanced collection
@@ -477,10 +592,11 @@ class IRScene:
         stack = list(reversed(self.instances))
         for members in reversed(list(self.collections.values())):
             stack = list(reversed(members)) + stack
+        parts = {humanoid.name: list(humanoid.part_instances()) for humanoid in self.humanoids}
         while stack:
             instance = stack.pop()
             yield instance
-            stack.extend(reversed(instance.children))
+            stack.extend(reversed(instance.children + parts.get(instance.humanoid_name, [])))
 
     def splats_by_name(self) -> dict[str, IRGaussianSplats]:
         return {splats.name: splats for splats in self.splats}
@@ -501,3 +617,5 @@ class IRScene:
         for material in self.materials:
             for _container_field, texture_ref in material.texture_refs():
                 yield texture_ref
+        if self.background is not None:
+            yield from self.background.textures.values()

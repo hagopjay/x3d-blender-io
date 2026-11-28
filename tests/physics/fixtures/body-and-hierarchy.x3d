@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><head><component name="RigidBodyPhysics" level="2"/><meta name="title" content="body-and-hierarchy"/>
+<meta name="description" content="A falling box drawn through a ROUTE, beside a Transform with a child that has nothing to do with physics. Written for tests/test_physics_rigid_bodies_bpy.py: the import may not un-parent the shapes that are not bodies."/></head><Scene>
+<Viewpoint position="0 2 10"/>
+<Transform DEF="Parent" translation="5 0 0"><Shape><Appearance><Material diffuseColor="0.5 0.5 0.5"/></Appearance><Box size="1 1 1"/></Shape><Transform DEF="Child" translation="0 2 0"><Shape><Appearance><Material diffuseColor="0.2 0.4 0.9"/></Appearance><Sphere radius="0.25"/></Shape></Transform></Transform>
+<Transform DEF="BoxT" translation="0 3 0"><Shape><Appearance><Material diffuseColor="0.9 0.4 0.2"/></Appearance><Box size="1 1 1"/></Shape></Transform>
+<RigidBodyCollection DEF="W" gravity="0 -9.8 0">
+<RigidBody DEF="G" position="0 -0.5 0" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="20 1 20"/></Shape></CollidableShape></RigidBody>
+<RigidBody DEF="BoxBody" position="0 3 0" mass="2"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="1 1 1"/></Shape></CollidableShape></RigidBody>
+</RigidBodyCollection>
+<ROUTE fromNode="BoxBody" fromField="position" toNode="BoxT" toField="set_translation"/>
+<ROUTE fromNode="BoxBody" fromField="orientation" toNode="BoxT" toField="set_rotation"/>
+</Scene></X3D>

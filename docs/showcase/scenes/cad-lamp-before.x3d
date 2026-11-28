@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D version="4.0" profile="Immersive" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="Shape" level="2" />
+    <meta name="generator" content="X3D Blender I/O v2.7.8" />
+    <meta name="filename" content="cad-lamp-before.x3d" />
+    <meta name="title" content="Node board batch 12: an articulated desk lamp as a CAD product structure" />
+    <meta name="description" content="CADLayer, CADAssembly, CADPart, CADFace and StaticGroup as a CAD tool would write them: a lamp assembly with a base, a two-link arm and a shade hinged at its apex with a bulb in it, each part a CADPart with its own pose (translation, rotation about a hinge center) and named faces, sorted into a Structure layer and a Lighting layer. Every part is placed only by its CADPart fields, so a misread CADPart puts it at the origin. The import must give the parts their poses; the export must write the product structure back." />
+    <meta name="x3d-blender-io.receipt" content="sha256=cfb2743cb0553e32374e5e47db50b8df dropped=6 approximated=0 clamped=0 schema=x3d-blender-io.loss-receipt/1" />
+  </head>
+  <Scene>
+    <NavigationInfo headlight="true" type='"EXAMINE" "ANY"' />
+    <Background skyColor="0.930000 0.940000 0.960000" />
+    <Transform DEF="OB_Viewpoint" translation="1.350000 0.850000 1.750000" rotation="-0.270893 0.958175 0.092298 0.683599" scale="1.000000 1.000000 1.000000">
+      <Viewpoint DEF="CA_Viewpoint" description="Lamp, three quarter" position="0.000000 0.000000 0.000000" orientation="0.000000 0.000000 1.000000 0.000000" fieldOfView="0.785398" />
+    </Transform>
+    <Transform DEF="OB_BaseTop" translation="0.000000 0.000000 0.000000" rotation="0.000000 0.000000 1.000000 0.000000" scale="1.000000 1.000000 1.000000">
+      <Shape>
+        <Appearance DEF="APP_BaseTop">
+          <Material DEF="MA_BaseTop" diffuseColor="0.180000 0.200000 0.240000" specularColor="0.500000 0.500000 0.500000" shininess="0.600000" />
+        </Appearance>
+        <Cylinder DEF="GE_BaseTop_Cylinder" radius="0.300000" height="0.050000" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_LowerRod" translation="0.000000 0.300000 0.000000" rotation="0.000000 0.000000 1.000000 0.000000" scale="1.000000 1.000000 1.000000">
+      <Shape>
+        <Appearance DEF="APP_LowerRod">
+          <Material DEF="MA_LowerRod" diffuseColor="0.750000 0.760000 0.780000" specularColor="0.900000 0.900000 0.900000" shininess="0.800000" />
+        </Appearance>
+        <Cylinder DEF="GE_LowerRod_Cylinder" radius="0.015000" height="0.600000" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_UpperRod" translation="0.000000 0.250000 0.000000" rotation="0.000000 0.000000 1.000000 0.000000" scale="1.000000 1.000000 1.000000">
+      <Shape>
+        <Appearance USE="APP_LowerRod" />
+        <Cylinder DEF="GE_UpperRod_Cylinder" radius="0.012000" height="0.500000" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_Knuckle" translation="0.000000 0.000000 0.000000" rotation="0.000000 0.000000 1.000000 0.000000" scale="1.000000 1.000000 1.000000">
+      <Shape>
+        <Appearance DEF="APP_Knuckle">
+          <Material DEF="MA_Knuckle" diffuseColor="0.180000 0.200000 0.240000" />
+        </Appearance>
+        <Sphere DEF="GE_Knuckle_Sphere" radius="0.030000" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_ShadeShell" translation="0.000000 -0.090000 0.000000" rotation="0.000000 0.000000 1.000000 0.000000" scale="1.000000 1.000000 1.000000">
+      <Shape>
+        <Appearance DEF="APP_ShadeShell">
+          <Material DEF="MA_ShadeShell" diffuseColor="0.550000 0.420000 0.780000" specularColor="0.600000 0.600000 0.600000" shininess="0.500000" />
+        </Appearance>
+        <Cone DEF="GE_ShadeShell_Cone" bottomRadius="0.120000" height="0.180000" bottom="false" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_Bulb" translation="0.000000 -0.120000 0.000000" rotation="0.000000 0.000000 1.000000 0.000000" scale="1.000000 1.000000 1.000000">
+      <Shape>
+        <Appearance DEF="APP_Bulb">
+          <Material DEF="MA_Bulb" diffuseColor="1.000000 0.950000 0.800000" emissiveColor="1.000000 0.900000 0.600000" />
+        </Appearance>
+        <Sphere DEF="GE_Bulb_Sphere" radius="0.035000" />
+      </Shape>
+    </Transform>
+    <Transform DEF="OB_Desk" translation="0.000000 -0.030000 0.000000" rotation="0.000000 0.000000 1.000000 0.000000" scale="1.000000 1.000000 1.000000">
+      <Shape>
+        <Appearance DEF="APP_Desk">
+          <Material DEF="MA_Desk" diffuseColor="0.450000 0.300000 0.200000" />
+        </Appearance>
+        <Box DEF="GE_Desk_Box" size="2.000000 0.020000 1.200000" />
+      </Shape>
+    </Transform>
+  </Scene>
+</X3D>

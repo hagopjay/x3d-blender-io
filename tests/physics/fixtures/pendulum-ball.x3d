@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><head><component name="RigidBodyPhysics" level="2"/><meta name="title" content="pendulum"/></head><Scene>
+<NavigationInfo type='"EXAMINE"' headlight="true"/><Viewpoint position="0 3 14"/>
+<RigidBodyCollection DEF="W" gravity="0 -9.8 0"><CollisionCollection containerField="collider" bounce="0"/><RigidBody DEF="Pin" position="0 5 0" mass="1" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="0.2 0.2 0.2"/></Shape></CollidableShape></RigidBody><RigidBody DEF="Bob" position="0.34729635533386066 3.0303844939755837 0" mass="1"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.25"/></Shape></CollidableShape></RigidBody><BallJoint containerField="joints" anchorPoint="0 5 0"><RigidBody USE="Pin" containerField="body1"/><RigidBody USE="Bob" containerField="body2"/></BallJoint></RigidBodyCollection></Scene></X3D>

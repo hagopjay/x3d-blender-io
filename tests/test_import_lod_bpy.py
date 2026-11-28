@@ -161,6 +161,20 @@ class ImportLodTests(unittest.TestCase):
         out = os.path.join(self.tmpdir, "rt_out.x3d")
         self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D40", use_selection=False), {"FINISHED"})
         text = open(out, encoding="utf-8").read()
+        # both levels are written inside the LOD (node board batch 2), which draws one of them: nothing on top
+        import xml.etree.ElementTree as ET
+        lod = ET.parse(out).getroot().find(".//LOD")
+        self.assertIsNotNone(lod, text)
+        self.assertEqual(lod.get("range"), "5.000000")
+        self.assertEqual([t.get("DEF") for t in lod.findall("Transform")], ["OB_A", "OB_B"])
+        self.assertEqual(text.count("<Shape"), 2, text)
+        self.assertEqual(text.split("<LOD")[0].count("<Shape") + text.split("</LOD>")[1].count("<Shape"), 0,
+                         "no level is written outside the LOD, where it would be drawn on top")
+        # a scene imported before the LOD was recorded (no x3d_group_chain): the hidden level is not written
+        for name in ("A", "B"):
+            del bpy.data.objects[name]["x3d_group_chain"]
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=out, x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        text = open(out, encoding="utf-8").read()
         self.assertEqual(text.count("<Shape"), 1, text)
         self.assertNotIn("DEF='A'", text)     # level 0 is the hidden one at distance 10 > range 5
         # unhiding a level brings it back into the export

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Full" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <meta name="description" content="Two oscillators (440 Hz and 4000 Hz) summed into a 1000 Hz lowpass, then a Gain of 0.5, then the AudioDestination."/>
+  </head>
+  <Scene>
+    <AudioDestination DEF="Out" maxChannelCount="1">
+      <Gain DEF="Half" gain="0.5">
+        <BiquadFilter DEF="LP" type="LOWPASS" frequency="1000" qualityFactor="0">
+          <OscillatorSource DEF="A440" frequency="440"/>
+          <OscillatorSource DEF="Hi4k" frequency="4000"/>
+        </BiquadFilter>
+      </Gain>
+    </AudioDestination>
+  </Scene>
+</X3D>

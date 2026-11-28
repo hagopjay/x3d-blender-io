@@ -44,6 +44,18 @@ def _x3d(body: str) -> str:
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class RigidBodyImportTests(unittest.TestCase):
     @classmethod
+    def setUpClass(cls):   # the node board's batch 6/7 importer, kept behind BLENDER_X3D_PHYSICS=legacy (docs/PHYSICS.md)
+        cls._physics_env = os.environ.get("BLENDER_X3D_PHYSICS")
+        os.environ["BLENDER_X3D_PHYSICS"] = "legacy"
+
+    @classmethod
+    def tearDownClass(cls):
+        if getattr(cls, "_physics_env", None) is None:
+            os.environ.pop("BLENDER_X3D_PHYSICS", None)
+        else:
+            os.environ["BLENDER_X3D_PHYSICS"] = cls._physics_env
+
+    @classmethod
     def setUpClass(cls):
         cls.tmpdir = tempfile.mkdtemp(prefix="x3d_rigidbody_")
         _register_extension(cls.tmpdir)
@@ -55,7 +67,9 @@ class RigidBodyImportTests(unittest.TestCase):
             f.write(_x3d(body))
         bpy.ops.wm.read_factory_settings(use_empty=True)
         self.assertEqual(bpy.ops.import_scene.x3d(filepath=path), {"FINISHED"})
-        return sorted((o for o in bpy.data.objects if o.type == "MESH"), key=lambda o: o.name)
+        # the rigid body world's own objects (a compound body's holder, the start-up anchor) carry no shape of the file
+        return sorted((o for o in bpy.data.objects if o.type == "MESH" and "x3d_rigid_body_holder" not in o.keys()
+                       and "x3d_physics_helper" not in o.keys()), key=lambda o: o.name)
 
     def _world(self, name, body):
         """The world matrices of the mesh objects, rounded."""

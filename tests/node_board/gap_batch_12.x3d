@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="CADGeometry" level="2"/>
+    <component name="Grouping" level="3"/>
+    <meta name="title" content="Node board batch 12: an articulated desk lamp as a CAD product structure"/>
+    <meta name="description" content="CADLayer, CADAssembly, CADPart, CADFace and StaticGroup as a CAD tool would write them: a lamp assembly with a base, a two-link arm and a shade hinged at its apex with a bulb in it, each part a CADPart with its own pose (translation, rotation about a hinge center) and named faces, sorted into a Structure layer and a Lighting layer. Every part is placed only by its CADPart fields, so a misread CADPart puts it at the origin. The import must give the parts their poses; the export must write the product structure back."/>
+  </head>
+  <Scene>
+    <Background skyColor="0.93 0.94 0.96"/>
+    <Viewpoint description="Lamp, three quarter" position="1.35 0.85 1.75" orientation="-0.270893 0.958174 0.092298 0.683599"/>
+    <CADLayer DEF="Structure" name="Structure">
+      <CADAssembly DEF="Lamp" name="LMP100_DeskLamp">
+        <CADPart DEF="Base" name="LMP101_Base">
+          <CADFace DEF="BaseTop" name="TopFace">
+            <Shape containerField="shape"><Appearance><Material diffuseColor="0.18 0.2 0.24" specularColor="0.5 0.5 0.5" shininess="0.6"/></Appearance><Cylinder radius="0.3" height="0.05"/></Shape>
+          </CADFace>
+        </CADPart>
+        <CADAssembly DEF="Arm" name="LMP110_Arm">
+          <CADPart DEF="LowerArm" name="LMP111_LowerLink" translation="0 0.025 0" center="0 0 0" rotation="0 0 1 -0.35">
+            <CADFace DEF="LowerRod" name="Rod">
+              <Transform containerField="shape" translation="0 0.3 0">
+                <Shape><Appearance><Material diffuseColor="0.75 0.76 0.78" specularColor="0.9 0.9 0.9" shininess="0.8"/></Appearance><Cylinder radius="0.015" height="0.6"/></Shape>
+              </Transform>
+            </CADFace>
+          </CADPart>
+          <CADPart DEF="UpperArm" name="LMP112_UpperLink" translation="0.2057 0.5888 0" center="0 0 0" rotation="0 0 1 0.9">
+            <CADFace DEF="UpperRod" name="Rod">
+              <Transform containerField="shape" translation="0 0.25 0">
+                <Shape><Appearance><Material diffuseColor="0.75 0.76 0.78" specularColor="0.9 0.9 0.9" shininess="0.8"/></Appearance><Cylinder radius="0.012" height="0.5"/></Shape>
+              </Transform>
+            </CADFace>
+            <CADFace DEF="Knuckle" name="ElbowKnuckle">
+              <Shape containerField="shape"><Appearance><Material diffuseColor="0.18 0.2 0.24"/></Appearance><Sphere radius="0.03"/></Shape>
+            </CADFace>
+          </CADPart>
+        </CADAssembly>
+      </CADAssembly>
+    </CADLayer>
+    <CADLayer DEF="Lighting" name="Lighting">
+      <CADAssembly DEF="Head" name="LMP120_Head">
+        <CADPart DEF="Shade" name="LMP121_Shade" translation="-0.186 0.8996 0" rotation="0 0 1 -0.6" scale="1 1.2 1">
+          <CADFace DEF="ShadeShell" name="Shell">
+            <Transform containerField="shape" translation="0 -0.09 0">
+              <Shape><Appearance><Material diffuseColor="0.55 0.42 0.78" specularColor="0.6 0.6 0.6" shininess="0.5"/></Appearance><Cone bottomRadius="0.12" height="0.18" bottom="false"/></Shape>
+            </Transform>
+          </CADFace>
+          <CADFace DEF="Bulb" name="Bulb">
+            <Transform containerField="shape" translation="0 -0.12 0">
+              <Shape><Appearance><Material diffuseColor="1 0.95 0.8" emissiveColor="1 0.9 0.6"/></Appearance><Sphere radius="0.035"/></Shape>
+            </Transform>
+          </CADFace>
+        </CADPart>
+      </CADAssembly>
+      <StaticGroup DEF="Desk">
+        <Transform translation="0 -0.03 0">
+          <Shape><Appearance><Material diffuseColor="0.45 0.3 0.2"/></Appearance><Box size="2 0.02 1.2"/></Shape>
+        </Transform>
+      </StaticGroup>
+    </CADLayer>
+  </Scene>
+</X3D>
