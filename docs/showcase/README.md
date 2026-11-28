@@ -16,9 +16,9 @@ With GitHub Pages set to serve `main` from `/docs`, the page is at `https://hago
 | Path | What |
 | --- | --- |
 | `index.html` | The page: numbers, the validation loop, a 12-demo theatre, findings, splats, the Blender ecosystem ranking, spec questions, timeline, changelog. No build step. |
-| `scenes/*.x3d` | 24 X3D 4.0 and 4.1 files behind the demos. Four fail validation on purpose (`repair-0-written`, `profile-tables`, `geolod-no-origin`, `annotation`): each is the "before" half of a finding. |
+| `scenes/*.x3d` | 26 X3D 4.0 and 4.1 files behind the demos. Four fail validation on purpose (`repair-0-written`, `profile-tables`, `geolod-no-origin`, `annotation`): each is the "before" half of a finding. |
 | `scenes/verdicts.json` | The validator fork's verdict on every scene, shown under each demo. Rebuild with `tools/showcase_verdicts.py`. |
-| `img/posters/*.webp` | Stills of each scene from headless X_ITE 16.4.3 (Chromium, SwiftShader, 960×600), shown until the viewer presses "Load live 3D". |
+| `img/posters/*.webp` | Stills of each scene from headless X_ITE 16.4.3 (Chromium, SwiftShader, 960×600), shown until the viewer presses "Load live 3D"; the two `cad-lamp-*` posters from X_ITE 16.7.0. |
 | `img/*.webp` | Figures: Cycles vs X_ITE, the splat training run, the exporter light fix, evolved elites, the bench contact sheet. |
 
 X_ITE is loaded from `vendor/x_ite/` when present (for hosts that block CDNs), otherwise from jsDelivr pinned at 16.4.3.

@@ -378,6 +378,14 @@ NODE_REFERENCE = 3  # USE foobar
 PHYSICS_REFERENCE_SPECS = frozenset({'RigidBody', 'CollidableShape', 'CollidableOffset'})
 # Nodes that move what is under them like a Transform does, with the same fields, except RigidBody (position, orientation).
 PHYSICS_FRAME_SPECS = frozenset({'RigidBody', 'CollidableShape', 'CollidableOffset'})
+# Nodes with a Transform's own fields (translation, rotation, scale, center, scaleOrientation) that place their children:
+# CADPart is one (node board batch 12; before, its pose was ignored and every part of an assembly sat at the origin).
+TRANSFORM_SPECS = frozenset({'Transform', 'CADPart'})
+# The CAD product structure (node board batch 12): each of these gets an object of its own in the hierarchy, recorded
+# with X3D_CAD_PROPERTY so the X3D 4.0 export writes the node back. CADFace is a mark on the object of its content.
+CAD_FRAME_SPECS = frozenset({'CADLayer', 'CADAssembly', 'CADPart'})
+CAD_RAW_FIELDS = ('name', 'visible', 'bboxCenter', 'bboxSize', 'bboxDisplay')
+X3D_CAD_PROPERTY = "x3d_cad"            # JSON {"node", "def", "fields"[, "face": {"def", "fields"}]}
 # NODE_PROTO = 4 #
 
 lines = []
@@ -1899,8 +1907,8 @@ def _note_protos(has_protos):
 
 def getFinalMatrix(node, mtx, ancestry, global_matrix):
 
-    transform_nodes = [node_tx for node_tx in ancestry if node_tx.getSpec() == 'Transform' or node_tx.getSpec() in PHYSICS_FRAME_SPECS]
-    if node.getSpec() == 'Transform':
+    transform_nodes = [node_tx for node_tx in ancestry if node_tx.getSpec() in TRANSFORM_SPECS or node_tx.getSpec() in PHYSICS_FRAME_SPECS]
+    if node.getSpec() in TRANSFORM_SPECS:
         transform_nodes.append(node)
     transform_nodes.reverse()
 
@@ -7993,7 +8001,7 @@ def _chain_matrix(ancestry, global_matrix, upto=None):
     node below them, shear included."""
     matrix = Matrix()
     for anc in ancestry[: None if upto is None else upto + 1]:
-        if anc.getSpec() == 'Transform':
+        if anc.getSpec() in TRANSFORM_SPECS:
             matrix = matrix @ translateTransform(anc, ancestry)
     return global_matrix @ matrix
 
@@ -8037,6 +8045,53 @@ def _group_has_metadata(node):
     return host_metadata(node) is not None
 
 
+def _record_cad(transforms, owners, created, key_of, file_order=None):
+    """The CAD product structure on the objects that stand for it (node board batch 12): each CADLayer, CADAssembly and
+    CADPart owner gets X3D_CAD_PROPERTY (its type, DEF and the fields the file wrote) and the part's ``name`` as its
+    object name, so the Outliner reads like the CAD tree; the object a CADFace holds (its Shape's, or its Transform's)
+    gets the face's DEF and fields under "face". A CADFace has no object of its own: it holds one node, and an Empty
+    for it would add a level on every round trip."""
+    def merge(ob, extra):
+        try:
+            record = json.loads(ob.get(X3D_CAD_PROPERTY) or "{}")
+        except (TypeError, ValueError):
+            record = {}
+        record.update(extra)
+        ob[X3D_CAD_PROPERTY] = json.dumps(record)
+
+    for key, owner in owners.items():
+        node = transforms[key][0]
+        spec = node.getSpec()
+        if spec not in CAD_FRAME_SPECS:
+            continue
+        real = node.getRealNode()
+        fields = raw_fields(real, CAD_RAW_FIELDS)
+        merge(owner, {"node": spec, "def": real.getDefName() or "", "fields": fields,
+                      "order": (file_order or {}).get(id(node), 0)})
+        if fields.get("name", "").strip():
+            owner.name = fields["name"].strip()[:63]
+    marked = set()
+    for ob, ancestry in created:
+        face = next((i for i in range(len(ancestry) - 1, -1, -1) if ancestry[i].getSpec() == 'CADFace'), None)
+        if ob is None or face is None:
+            continue
+        try:
+            ob.name                                   # a part the hierarchy rebuild joined away
+        except ReferenceError:
+            continue
+        if face + 1 < len(ancestry) and ancestry[face + 1].getSpec() in TRANSFORM_SPECS:
+            ob = owners.get(key_of(ancestry, face + 1), ob)
+        face_key = key_of(ancestry, face)
+        if face_key in marked:
+            continue
+        marked.add(face_key)
+        real = ancestry[face].getRealNode()
+        order = (file_order or {}).get(id(ancestry[face]), 0)
+        merge(ob, {"face": {"def": real.getDefName() or "", "fields": raw_fields(real, CAD_RAW_FIELDS), "order": order}})
+        if "order" not in json.loads(ob[X3D_CAD_PROPERTY]):      # a face object's place among its part's faces
+            merge(ob, {"order": order})
+
+
 def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=(), carried=()):
     """Give the flat import the file's Transform hierarchy back (the import option keep_hierarchy).
 
@@ -8077,7 +8132,8 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=(), carri
     def frame_like(a):
         # a Transform, or a Group that carries its own Metadata: IFC's spatial tree (Site, Building, Storey) travels
         # as such Groups, and without an Empty of its own the Group's Metadata and the nesting are lost on export.
-        return a.getSpec() == 'Transform' or (a.getSpec() == 'Group' and _group_has_metadata(a))
+        return a.getSpec() in TRANSFORM_SPECS or a.getSpec() in CAD_FRAME_SPECS \
+            or (a.getSpec() == 'Group' and _group_has_metadata(a))
 
     for ob, ancestry in created:
         if ob is None or ob.parent is not None:
@@ -8172,6 +8228,8 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=(), carri
         if TRANSFORM_METADATA_PROPERTY not in owner:
             keep_host_metadata(owner, transforms[key][0], TRANSFORM_METADATA_PROPERTY)
 
+    _record_cad(transforms, owners, created, key_of, {id(n): i for i, (n, _a) in enumerate(all_nodes)})
+
     by_node = {}
     for key, owner in owners.items():
         node = transforms[key][0].getRealNode()
@@ -8231,7 +8289,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
         if target is not None and target.getSpec() == 'HAnimJoint':
             _animate_joint(defDict, target_def, target, channel_defs, timers_for_interp, scene, fps, frame_start)
             continue
-        if target is None or target.getSpec() != 'Transform':
+        if target is None or target.getSpec() not in TRANSFORM_SPECS:
             logger.warning("ROUTE target %r is not a Transform; skipped", target_def)
             continue
 
@@ -8289,13 +8347,13 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
             index = ancestry.index(target)
             above = Matrix()
             for anc in ancestry[:index]:
-                if anc.getSpec() == 'Transform':
+                if anc.getSpec() in TRANSFORM_SPECS:
                     above = above @ translateTransform(anc, ancestry)
             below = Matrix()
             for anc in ancestry[index + 1:]:
-                if anc.getSpec() == 'Transform':
+                if anc.getSpec() in TRANSFORM_SPECS:
                     below = below @ translateTransform(anc, ancestry)
-            if node is not None and node.getSpec() == 'Transform':
+            if node is not None and node.getSpec() in TRANSFORM_SPECS:
                 below = below @ translateTransform(node, ancestry)
 
             # Non-Transform nodes (lights, viewpoints) carry their own local offset
@@ -8588,6 +8646,7 @@ GROUP_RAW_FIELDS = {
     'Billboard': ('axisOfRotation',),
     'GeoLocation': ('geoCoords', 'geoSystem'),
     'GeoLOD': ('center', 'geoSystem', 'range', 'rootUrl', 'child1Url', 'child2Url', 'child3Url', 'child4Url'),
+    'StaticGroup': ('visible', 'bboxCenter', 'bboxSize', 'bboxDisplay'),   # node board batch 12
 }
 GEO_ORIGIN_FIELDS = ('geoCoords', 'geoSystem', 'rotateYUp')
 
@@ -9252,7 +9311,7 @@ def load_web3d(
             importLamp(bpycollection, node, spec, ancestry, global_matrix)
         elif spec in {'Viewpoint', 'GeoViewpoint', 'OrthoViewpoint'}:
             importViewpoint(bpycollection, node, ancestry, global_matrix)
-        elif spec == 'Transform':
+        elif spec in TRANSFORM_SPECS:
             # Only use transform nodes when we are not importing a flat object hierarchy
             if not PREF_FLAT:
                 importTransform(bpycollection, node, ancestry, global_matrix)

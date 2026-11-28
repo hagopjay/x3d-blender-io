@@ -407,6 +407,31 @@
       "import": "yes",
       "round_trip": "unmeasured",
       "note": "as a DoubleAxisHingeJoint without stops; written back as a UniversalJoint when the import made it from one (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CADLayer": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an Empty named by its name field, DEF and fields kept in x3d_cad; the 4.0 export writes it back around its children (node board batch 12). Round trip pinned by tests/test_node_board_batch12_bpy.py (byte-identical from the first export); the fixed-point corpus does not contain it yet."
+    },
+    "CADAssembly": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an Empty named by its name field, DEF and fields kept in x3d_cad; the 4.0 export writes it back around its children, with a Transform inside when the object was moved or is animated (node board batch 12). Round trip pinned by tests/test_node_board_batch12_bpy.py (byte-identical from the first export); the fixed-point corpus does not contain it yet."
+    },
+    "CADPart": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "a frame like a Transform (its pose placed its parts; before batch 12 it was ignored), an object named by its name field, DEF and fields in x3d_cad; the 4.0 export writes the pose from Blender and every child in a CADFace, the only node x3d-4.0.xsd allows in a CADPart (node board batch 12). Round trip pinned by tests/test_node_board_batch12_bpy.py (byte-identical from the first export); the fixed-point corpus does not contain it yet."
+    },
+    "CADFace": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "no object of its own: a mark (x3d_cad face) on the object of the node it holds; the 4.0 export wraps that object's Shape or Transform in it, containerField shape (node board batch 12). Round trip pinned by tests/test_node_board_batch12_bpy.py (byte-identical from the first export); the fixed-point corpus does not contain it yet."
+    },
+    "StaticGroup": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "dissolved into its children; x3d_group_chain keeps its fields as written and the 4.0 export puts the children back inside, declaring Grouping 3 (node board batch 12). Round trip pinned by tests/test_node_board_batch12_bpy.py (byte-identical from the first export); the fixed-point corpus does not contain it yet."
     }
   },
   "asymmetries": [
