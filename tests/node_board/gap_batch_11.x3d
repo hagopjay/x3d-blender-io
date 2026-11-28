@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="HAnim" level="2"/>
+    <meta name="title" content="Node board gap batch 11: HAnimSegment, HAnimSite, HAnimMotion and HAnimDisplacer"/>
+    <meta name="description" content="A two-joint humanoid (HumanoidRoot, skullbase) with a skin quad. HumanoidRoot holds the pelvis segment (mass 12, centerOfMass, momentsOfInertia, a Box); skullbase holds the skull segment (a Sphere in a Transform, and the crown site 0.3 above the joint, turned a quarter about Y) and a displacer (brow_raise: skin points 2 and 3 up 0.05, weight 0.5). A three-frame motion (nod) moves HumanoidRoot and turns skullbase about X. The import must make bone-parented objects, an Empty, a shape key and an Action; the export must write all four back."/>
+  </head>
+  <Scene>
+    <HAnimHumanoid DEF="hanim_Walker" name="Walker" version="2.0" skeletalConfiguration="BASIC">
+      <HAnimJoint DEF="hanim_HumanoidRoot" name="HumanoidRoot" center="0 1 0" containerField="skeleton" skinCoordIndex="0 1" skinCoordWeight="1 1">
+        <HAnimSegment DEF="PelvisSeg" name="pelvis" mass="12" centerOfMass="0 1.05 0" momentsOfInertia="0.1 0 0 0 0.2 0 0 0 0.1">
+          <Shape DEF="PelvisShape"><Appearance><Material diffuseColor="0.3 0.4 0.8"/></Appearance><Box size="0.4 0.2 0.2"/></Shape>
+        </HAnimSegment>
+        <HAnimJoint DEF="hanim_skullbase" name="skullbase" center="0 1.6 0" skinCoordIndex="2 3" skinCoordWeight="1 1">
+          <HAnimSegment DEF="SkullSeg" name="skull" mass="4.5">
+            <Transform DEF="OB_Head" translation="0 1.75 0">
+              <Shape><Appearance><Material diffuseColor="0.9 0.7 0.6"/></Appearance><Sphere radius="0.12"/></Shape>
+            </Transform>
+            <HAnimSite DEF="hanim_crown" name="crown_pt" description="top of the head" translation="0 1.9 0" rotation="0 1 0 1.5708"/>
+          </HAnimSegment>
+          <HAnimDisplacer DEF="BrowRaise" name="brow_raise" coordIndex="2 3" displacements="0 0.05 0 0 0.05 0" weight="0.5"/>
+        </HAnimJoint>
+      </HAnimJoint>
+      <HAnimJoint USE="hanim_HumanoidRoot" containerField="joints"/>
+      <HAnimJoint USE="hanim_skullbase" containerField="joints"/>
+      <HAnimSegment USE="PelvisSeg" containerField="segments"/>
+      <HAnimSegment USE="SkullSeg" containerField="segments"/>
+      <HAnimSite USE="hanim_crown" containerField="sites"/>
+      <HAnimMotion DEF="Nod" name="nod" description="a nod" loop="true" frameDuration="0.5" joints="HumanoidRoot skullbase" channels="6 Xposition Yposition Zposition Xrotation Yrotation Zrotation 3 Zrotation Xrotation Yrotation" values="0 0 0 0 0 0 0 0 0 0 0.1 0 0 0 0 0 0.4 0 0 0 0 0 0 0 0 0.2 0" containerField="motions"/>
+      <Coordinate DEF="hanim_Walker_skinCoord" containerField="skinCoord" point="-0.2 1.4 0.2 0.2 1.4 0.2 0.2 1.8 0.2 -0.2 1.8 0.2"/>
+      <Shape containerField="skin">
+        <Appearance><Material diffuseColor="0.8 0.8 0.8"/></Appearance>
+        <IndexedFaceSet DEF="ME_Face_skin" coordIndex="0 1 2 3 -1"><Coordinate USE="hanim_Walker_skinCoord"/></IndexedFaceSet>
+      </Shape>
+    </HAnimHumanoid>
+    <Viewpoint description="Front" position="0 1.4 4"/>
+  </Scene>
+</X3D>
