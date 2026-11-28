@@ -2933,6 +2933,12 @@ def importMesh_Extrusion(geom, ancestry):
     # Let's save some memory by not creating identical but distinct vertices;
     # later we'll introduce conditional logic to link the last vertex with
     # the first one where necessary.
+    if len({tuple(c) for c in cross}) < 2:
+        # one crossSection point, or all of them at one place, sweeps no surface. The cap texture scale divided by
+        # zero (ZeroDivisionError) and one point left no cross at all (TypeError): receipt-to-rule weekly run,
+        # 28 Nov 2026, on a real file a language model wrote (x3d.ml obj-05)
+        logger.warning("Extrusion: the crossSection has fewer than two distinct points; it has no surface, skipped")
+        return None
     cross_closed = cross[0] == cross[-1]
     if cross_closed:
         cross = cross[:-1]
@@ -3073,7 +3079,7 @@ def importMesh_Extrusion(geom, ancestry):
                 z_max = z
         dx = x_max - x_min
         dz = z_max - z_min
-        cap_scale = dz if dz > dx else dx
+        cap_scale = (dz if dz > dx else dx) or 1.0
 
     # Takes an index in the cross array, returns scaled
     # texture coords for cap texturing purposes
@@ -5839,18 +5845,22 @@ def importShape_ProcessObject(
 
 
 def process_font_object(bpyob):
-    """Set style attributes of text object"""
-    if bpyob.data["bold"] or (bpyob.data["italic"]):
-        bpy.context.view_layer.objects.active = bpyob
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.font.select_all()
-        if bpyob.data["bold"]:
-            bpy.ops.font.style_toggle(style='BOLD')
-            del bpyob.data["bold"]
-        if bpyob.data["italic"]:
-            bpy.ops.font.style_toggle(style='ITALIC')
-            del bpyob.data["italic"]
-        bpy.ops.object.mode_set(mode='OBJECT')
+    """Set style attributes of text object.
+
+    The style is set on the characters' format directly. 2.9.0 entered edit mode and ran style_toggle, and each
+    mode switch evaluated every text in the scene: segment-sphere.x3d (646 Text nodes, 2 bold) took 43 s to import,
+    77 ms per Text node (receipt-to-rule weekly run, 28 Nov 2026)."""
+    data = bpyob.data
+    bold, italic = bool(data.get("bold")), bool(data.get("italic"))
+    if bold or italic:
+        for character in data.body_format:
+            if bold:
+                character.use_bold = True
+            if italic:
+                character.use_italic = True
+    for key in ("bold", "italic"):
+        if key in data:
+            del data[key]
 
 
 def importText(geom, ancestry):
@@ -6764,17 +6774,24 @@ def importAudio(bpycollection, node, ancestry, global_matrix):
     if not name:
         name = 'Sound'
 
-    # audio_urls is a list or None
-    audio_urls = source.getFieldAsMFStringArray('url', None, ancestry)
-
-    if not audio_urls and source: # only return for corrupt node
-        logger.warning("warning, Sound source with no URL, this is odd")
-        return None
-
-    bpyaudio = load_audio_file(audio_urls, node)
-    if not bpyaudio and source: # only return for corrupt node
-        logger.warning("warning, Sound source failed to load")
-        return None
+    bpyaudio = None
+    if source is None:
+        # An empty <Sound/>, or one whose source is an X3D 4 sound-graph node (OscillatorSource, BufferAudioSource,
+        # ...): a speaker with no sound, as the spec allows. The url was read before this check, so both raised
+        # AttributeError (receipt-to-rule weekly run, 28 Nov 2026).
+        other = [child.getSpec() for child in node.getRealNode().children if child.getSpec()]
+        if other:
+            logger.warning("Sound %r: source %s is not imported; the speaker has no sound", name, ", ".join(other))
+    else:
+        # audio_urls is a list or None
+        audio_urls = source.getFieldAsMFStringArray('url', None, ancestry)
+        if not audio_urls:  # only return for corrupt node
+            logger.warning("warning, Sound source with no URL, this is odd")
+            return None
+        bpyaudio = load_audio_file(audio_urls, node)
+        if not bpyaudio:  # only return for corrupt node
+            logger.warning("warning, Sound source failed to load")
+            return None
 
     location = node.getFieldAsFloatTuple('location', (0.0, 0.0, 0.0), ancestry, conversion_scale)
     direction = node.getFieldAsFloatTuple('direction', (0.0, 0.0, 0.0), ancestry, conversion_scale)
