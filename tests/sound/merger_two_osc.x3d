@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Full" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <meta name="description" content="ChannelMerger: 440 Hz into the left channel, 660 Hz at gain 0.5 into the right channel."/>
+  </head>
+  <Scene>
+    <AudioDestination DEF="Out" maxChannelCount="2">
+      <ChannelMerger DEF="LR">
+        <OscillatorSource DEF="Left" frequency="440"/>
+        <OscillatorSource DEF="Right" frequency="660" gain="0.5"/>
+      </ChannelMerger>
+    </AudioDestination>
+  </Scene>
+</X3D>
