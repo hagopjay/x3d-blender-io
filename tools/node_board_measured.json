@@ -746,9 +746,12 @@
    ]
   },
   "HAnimDisplacer": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "shape_keys +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "HAnimHumanoid": {
    "read": "builds",
@@ -756,6 +759,7 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/probe-hanim.x3d",
+    "tests/node_board/gap_batch_11.x3d",
     "tests/plants/schematron-missing-component.x3d"
    ]
   },
@@ -765,23 +769,34 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/probe-hanim.x3d",
+    "tests/node_board/gap_batch_11.x3d",
     "tests/plants/schematron-missing-component.x3d"
    ]
   },
   "HAnimMotion": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "actions +1, scenes changed",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "HAnimSegment": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/probe-hanim.x3d",
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "HAnimSite": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "ImageCubeMapTexture": {
    "read": "none",
