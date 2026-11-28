@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="Geospatial" level="1"/>
+    <meta name="title" content="Node board gap batch 3: Billboard, GeoLocation, GeoLOD and GeoElevationGrid written back"/>
+    <meta name="description" content="A Billboard turning about Y around a sign; a GeoLocation pinning a marker at a WGS84 latitude, longitude and height; a GeoLOD whose rootNode holds a tile, with a range and child URLs; a 3 x 3 GeoElevationGrid placed by a GeoOrigin. The export must write each node back with the fields as the file wrote them."/>
+  </head>
+  <Scene>
+    <Billboard DEF="Sign" axisOfRotation="0 1 0">
+      <Transform DEF="SignBoard" translation="0 1 0">
+        <Shape><Appearance><Material diffuseColor="0.9 0.8 0.2"/></Appearance><Box size="1 0.5 0.05"/></Shape>
+      </Transform>
+    </Billboard>
+    <GeoLocation DEF="Pin" geoSystem='"GD" "WE"' geoCoords="37.4219999 -122.0840575 12.5">
+      <Transform DEF="Marker">
+        <Shape><Appearance><Material diffuseColor="1 0.2 0.2"/></Appearance><Cone bottomRadius="0.3" height="1"/></Shape>
+      </Transform>
+    </GeoLocation>
+    <GeoLOD DEF="Tile" geoSystem='"GD" "WE"' center="37.42 -122.08 0" range="2500" child1Url='"tile-nw.x3d"' child2Url='"tile-ne.x3d"' child3Url='"tile-sw.x3d"' child4Url='"tile-se.x3d"'>
+      <Transform DEF="TileRoot" containerField="rootNode" translation="3 0 0">
+        <Shape><Appearance><Material diffuseColor="0.3 0.6 0.3"/></Appearance><Box size="2 0.1 2"/></Shape>
+      </Transform>
+      <GeoOrigin geoSystem='"GD" "WE"' geoCoords="37.42 -122.08 0"/>
+    </GeoLOD>
+    <Transform DEF="Terrain" translation="0 -2 0">
+      <Shape>
+        <Appearance><Material diffuseColor="0.5 0.4 0.3"/></Appearance>
+        <GeoElevationGrid DEF="Hill" geoSystem='"GD" "WE"' geoGridOrigin="37.4 -122.1 0" xDimension="3" zDimension="3" xSpacing="0.0001" zSpacing="0.0001" yScale="1" height="0 1 0 1 3 1 0 1 0" solid="false">
+          <GeoOrigin geoSystem='"GD" "WE"' geoCoords="37.4001 -122.0999 0" rotateYUp="true"/>
+        </GeoElevationGrid>
+      </Shape>
+    </Transform>
+    <Viewpoint description="Front" position="0 1 12"/>
+  </Scene>
+</X3D>

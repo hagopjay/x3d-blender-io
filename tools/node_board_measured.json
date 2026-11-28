@@ -1,10 +1,13 @@
 {
  "instrument": {
   "blender": "5.3.0",
-  "python": "3.13.18",
+  "python": "3.13.13",
   "validator": "lxml XMLSchema over x3d-4.0.xsd (x3d-4.1.xsd for a version=\"4.1\" file)",
   "tool": "tools/node_board_probe.py",
   "fixtures_invalid": {
+   "docs/showcase/scenes/geolod-no-origin.x3d": [
+    "<string>:23:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'GeoLOD': Missing child element(s). Expected is one of ( Background, ColorInterpolator, CoordinateInterpolator, DirectionalLight, Group, NavigationInfo, NormalInterpolator, OrientationInterpolator, PositionInterpolator, ScalarInterpolator )."
+   ],
    "tests/behaviour/pick-fallback/probe-pick-fallback.x3d": [
     "<string>:1108:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Coordinate': This element is not expected."
    ],
@@ -12,9 +15,9 @@
     "<string>:746:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Coordinate': This element is not expected."
    ],
    "tests/behaviour/probe-pick.x3d": [
-    "<string>:2852:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Box': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, LineSet, IndexedLineSet, Anchor ).",
-    "<string>:2853:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedLineSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, PointSet, Anchor, Billboard ).",
-    "<string>:2854:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedFaceSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, Box, Cone, Cylinder )."
+    "<string>:2860:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Box': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, LineSet, IndexedLineSet, Anchor ).",
+    "<string>:2861:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedLineSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, PointSet, Anchor, Billboard ).",
+    "<string>:2862:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedFaceSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, Box, Cone, Cylinder )."
    ]
   }
  },
@@ -25,9 +28,12 @@
    "written": "no"
   },
   "Analyser": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Anchor": {
    "read": "structural",
@@ -65,9 +71,14 @@
    ]
   },
   "AudioDestination": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "sounds +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/merger_two_osc.x3d",
+    "tests/sound/osc_lowpass_gain.x3d"
+   ]
   },
   "Background": {
    "read": "carries",
@@ -80,19 +91,30 @@
    ]
   },
   "BallJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "Billboard": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "BiquadFilter": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/osc_lowpass_gain.x3d"
+   ]
   },
   "BlendedVolumeStyle": {
    "read": "none",
@@ -160,29 +182,48 @@
    ]
   },
   "BufferAudioSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "CADAssembly": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_cad']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CADFace": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CADLayer": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_cad']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CADPart": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_cad']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "CartoonVolumeStyle": {
    "read": "none",
@@ -190,19 +231,29 @@
    "written": "no"
   },
   "ChannelMerger": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/merger_two_osc.x3d"
+   ]
   },
   "ChannelSelector": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "ChannelSplitter": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Circle2D": {
    "read": "builds",
@@ -210,19 +261,31 @@
    "written": "writable"
   },
   "ClipPlane": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "CollidableOffset": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_6.x3d"
+   ]
   },
   "CollidableShape": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d",
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "Collision": {
    "read": "structural",
@@ -238,7 +301,9 @@
    "read_evidence": "",
    "written": "observed",
    "written_by": [
-    "tests/behaviour/wired-collision.x3d"
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/behaviour/wired-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d"
    ]
   },
   "CollisionSensor": {
@@ -261,6 +326,7 @@
    "read_evidence": "materials changed",
    "written": "observed",
    "written_by": [
+    "tests/node_board/gap_batch_8.x3d",
     "tests/node_board/writable_nodes.x3d"
    ]
   },
@@ -270,7 +336,8 @@
    "written": "observed",
    "written_by": [
     "behaviour_graph:ColorChaser",
-    "tests/behaviour/demos/workbench/workbench.x3d"
+    "tests/behaviour/demos/gallery-22-lava-lamp/gallery-22-lava-lamp.x3d",
+    "tests/behaviour/demos/gallery-25-weather-machine/gallery-25-weather-machine.x3d"
    ]
   },
   "ColorDamper": {
@@ -327,9 +394,9 @@
    "read_evidence": "materials +2, meshes +1, objects +1",
    "written": "observed",
    "written_by": [
-    "docs/showcase/scenes/geolod-no-origin.x3d",
-    "docs/showcase/scenes/geolod-origin.x3d",
-    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d"
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "docs/showcase/scenes/cad-lamp-before.x3d",
+    "docs/showcase/scenes/geolod-origin.x3d"
    ]
   },
   "ConeEmitter": {
@@ -353,9 +420,12 @@
    "written": "no"
   },
   "Convolver": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Coordinate": {
    "read": "builds",
@@ -388,7 +458,10 @@
   "CoordinateDouble": {
    "read": "builds",
    "read_evidence": "meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "CoordinateInterpolator": {
    "read": "none",
@@ -441,9 +514,13 @@
    "written": "no"
   },
   "Delay": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/spatial_delay_window.x3d"
+   ]
   },
   "DirectionalLight": {
    "read": "builds",
@@ -461,14 +538,20 @@
    "written": "no"
   },
   "DoubleAxisHingeJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "DynamicsCompressor": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "EaseInEaseOut": {
    "read": "none",
@@ -507,6 +590,7 @@
    "read_evidence": "materials +2, meshes +1, objects +1",
    "written": "observed",
    "written_by": [
+    "tests/behaviour/demos/gallery-25-weather-machine/gallery-25-weather-machine.x3d",
     "tests/node_board/gap_batch_1.x3d"
    ]
   },
@@ -521,9 +605,12 @@
    "written": "no"
   },
   "Fog": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_fog']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "FogCoordinate": {
    "read": "none",
@@ -537,7 +624,7 @@
    "written_by": [
     "docs/showcase/scenes/annotation-standard.x3d",
     "docs/showcase/scenes/annotation.x3d",
-    "docs/showcase/scenes/geolod-no-origin.x3d"
+    "docs/showcase/scenes/geolod-origin.x3d"
    ]
   },
   "ForcePhysicsModel": {
@@ -546,9 +633,14 @@
    "written": "no"
   },
   "Gain": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/osc_lowpass_gain.x3d"
+   ]
   },
   "GeneratedCubeMapTexture": {
    "read": "none",
@@ -563,27 +655,47 @@
   "GeoElevationGrid": {
    "read": "builds",
    "read_evidence": "materials +2",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/ellipsoid-earth.x3d",
+    "docs/showcase/scenes/ellipsoid-moon.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoLOD": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/geolod-origin.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoLocation": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/geolod-origin.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoMetadata": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "GeoOrigin": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/geolod-origin.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoPositionInterpolator": {
    "read": "none",
@@ -630,15 +742,16 @@
    "read_evidence": "children are read, the node itself is not kept",
    "written": "observed",
    "written_by": [
-    "tests/suite:x3d_suite_crease.x3d",
-    "tests/suite:x3d_suite_main.x3d",
-    "tests/suite:x3d_suite_x41.x3d"
+    "tests/node_board/gap_batch_2.x3d"
    ]
   },
   "HAnimDisplacer": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "shape_keys +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "HAnimHumanoid": {
    "read": "builds",
@@ -646,8 +759,8 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/probe-hanim.x3d",
-    "tests/plants/schematron-missing-component.x3d",
-    "tests/suite:x3d_suite_crease.x3d"
+    "tests/node_board/gap_batch_11.x3d",
+    "tests/plants/schematron-missing-component.x3d"
    ]
   },
   "HAnimJoint": {
@@ -656,24 +769,34 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/probe-hanim.x3d",
-    "tests/plants/schematron-missing-component.x3d",
-    "tests/suite:x3d_suite_crease.x3d"
+    "tests/node_board/gap_batch_11.x3d",
+    "tests/plants/schematron-missing-component.x3d"
    ]
   },
   "HAnimMotion": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "actions +1, scenes changed",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "HAnimSegment": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "materials +2, meshes +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/probe-hanim.x3d",
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "HAnimSite": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_11.x3d"
+   ]
   },
   "ImageCubeMapTexture": {
    "read": "none",
@@ -686,14 +809,17 @@
    "written": "observed",
    "written_by": [
     "docs/showcase/scenes/stilllife-x3d40.x3d",
-    "tests/behaviour/demos/orrery/orrery.x3d",
-    "tests/behaviour/probe-load.x3d"
+    "tests/behaviour/probe-load.x3d",
+    "tests/behaviour/probe-loadlive.x3d"
    ]
   },
   "ImageTexture3D": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d"
+   ]
   },
   "IndexedFaceSet": {
    "read": "builds",
@@ -710,30 +836,42 @@
    "read_evidence": "curves +1, materials +1, objects +1",
    "written": "observed",
    "written_by": [
-    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
-    "docs/showcase/scenes/nurbs-weights.x3d",
-    "tests/behaviour/wired-pick.x3d"
+    "tests/behaviour/wired-pick.x3d",
+    "tests/golden/loose_edges.c14n.x3d",
+    "tests/node_board/writable_nodes.x3d"
    ]
   },
   "IndexedQuadSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "IndexedTriangleFanSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "IndexedTriangleSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_2.x3d"
+   ]
   },
   "IndexedTriangleStripSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "Inline": {
    "read": "builds",
@@ -766,9 +904,12 @@
    ]
   },
   "IsoSurfaceVolumeData": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "KeySensor": {
    "read": "reported",
@@ -782,7 +923,12 @@
   "LOD": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/lod-control.x3d",
+    "docs/showcase/scenes/lod-scaled.x3d",
+    "tests/node_board/gap_batch_2.x3d"
+   ]
   },
   "Layer": {
    "read": "builds",
@@ -795,8 +941,8 @@
    "written": "no"
   },
   "Layout": {
-   "read": "none",
-   "read_evidence": "",
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
    "written": "no"
   },
   "LayoutGroup": {
@@ -830,12 +976,20 @@
   "LineSet": {
    "read": "builds",
    "read_evidence": "curves +1, materials +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
+    "docs/showcase/scenes/nurbs-weights.x3d",
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "ListenerPointSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "LoadSensor": {
    "read": "none",
@@ -848,9 +1002,13 @@
    ]
   },
   "LocalFog": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "Material": {
    "read": "builds",
@@ -859,7 +1017,7 @@
    "written_by": [
     "docs/showcase/scenes/annotation-standard.x3d",
     "docs/showcase/scenes/annotation.x3d",
-    "docs/showcase/scenes/ellipsoid-earth.x3d"
+    "docs/showcase/scenes/cad-lamp-after.x3d"
    ]
   },
   "Matrix3VertexAttribute": {
@@ -875,7 +1033,10 @@
   "MetadataBoolean": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "MetadataDouble": {
    "read": "carries",
@@ -888,7 +1049,10 @@
   "MetadataFloat": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "MetadataInteger": {
    "read": "carries",
@@ -915,9 +1079,12 @@
    ]
   },
   "MicrophoneSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "MotorJoint": {
    "read": "none",
@@ -931,7 +1098,7 @@
   },
   "MultiTexture": {
    "read": "none",
-   "read_evidence": "",
+   "read_evidence": "TextureBackground backTexture: a MultiTexture is not imported",
    "written": "no"
   },
   "MultiTextureCoordinate": {
@@ -982,9 +1149,12 @@
    "written": "no"
   },
   "NurbsOrientationInterpolator": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsPatchSurface": {
    "read": "builds",
@@ -992,19 +1162,28 @@
    "written": "no"
   },
   "NurbsPositionInterpolator": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsSet": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsSurfaceInterpolator": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "NurbsSweptSurface": {
    "read": "builds",
@@ -1065,15 +1244,18 @@
    "read_evidence": "cameras +1, objects +1",
    "written": "observed",
    "written_by": [
-    "tests/golden/cameras.c14n.x3d",
-    "tests/suite:x3d_suite_crease.x3d",
-    "tests/suite:x3d_suite_main.x3d"
+    "tests/golden/cameras.c14n.x3d"
    ]
   },
   "OscillatorSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/merger_two_osc.x3d"
+   ]
   },
   "PackagedShader": {
    "read": "builds",
@@ -1081,13 +1263,17 @@
    "written": "no"
   },
   "ParticleSystem": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "PeriodicWave": {
-   "read": "none",
-   "read_evidence": "",
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
    "written": "no"
   },
   "PhysicalMaterial": {
@@ -1101,14 +1287,22 @@
    ]
   },
   "PickableGroup": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "PixelTexture": {
    "read": "builds",
    "read_evidence": "images +1, materials changed",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/demos/orrery/orrery.x3d",
+    "tests/node_board/gap_batch_2.x3d",
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "PixelTexture3D": {
    "read": "none",
@@ -1128,7 +1322,10 @@
   "PointEmitter": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d"
+   ]
   },
   "PointLight": {
    "read": "builds",
@@ -1152,7 +1349,12 @@
   "PointProperties": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/nurbs-weights-premultiplied.x3d",
+    "docs/showcase/scenes/nurbs-weights.x3d",
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "PointSet": {
    "read": "builds",
@@ -1223,8 +1425,8 @@
    "written": "observed",
    "written_by": [
     "behaviour_graph:PositionInterpolator",
-    "tests/behaviour/demos/gallery-02-disco-floor/gallery-02-disco-floor.x3d",
-    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d"
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/behaviour/demos/gallery-02-disco-floor/gallery-02-disco-floor.x3d"
    ]
   },
   "PositionInterpolator2D": {
@@ -1274,7 +1476,10 @@
   "QuadSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_8.x3d"
+   ]
   },
   "ReceiverPdu": {
    "read": "none",
@@ -1293,12 +1498,22 @@
   "RigidBody": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d",
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "RigidBodyCollection": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_rigid_world']",
+   "written": "observed",
+   "written_by": [
+    "tests/behaviour/consistency/probe-collision.x3d",
+    "tests/node_board/gap_batch_6.x3d",
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "ScalarChaser": {
    "read": "none",
@@ -1325,7 +1540,7 @@
    "written_by": [
     "behaviour_graph:ScalarInterpolator",
     "reference/glsl_golden.x3d",
-    "tests/behaviour/demos/piano/piano.x3d"
+    "tests/behaviour/demos/gallery-21-transforming-robot/gallery-21-transforming-robot.x3d"
    ]
   },
   "ScreenFontStyle": {
@@ -1349,9 +1564,12 @@
    ]
   },
   "SegmentedVolumeData": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "ShadedVolumeStyle": {
    "read": "none",
@@ -1389,14 +1607,20 @@
    "written": "no"
   },
   "SingleAxisHingeJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_6.x3d"
+   ]
   },
   "SliderJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "Sound": {
    "read": "builds",
@@ -1407,9 +1631,13 @@
    ]
   },
   "SpatialSound": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "objects +1, sounds +1, speakers +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/spatial_delay_window.x3d"
+   ]
   },
   "Sphere": {
    "read": "builds",
@@ -1464,8 +1692,7 @@
    "written": "observed",
    "written_by": [
     "tests/golden/four_lights.c14n.x3d",
-    "tests/suite:x3d_suite_crease.x3d",
-    "tests/suite:x3d_suite_main.x3d"
+    "tools/scene_fixture.py"
    ]
   },
   "SquadOrientationInterpolator": {
@@ -1479,19 +1706,29 @@
    ]
   },
   "StaticGroup": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/cad-lamp-after.x3d",
+    "tests/node_board/gap_batch_12.x3d"
+   ]
   },
   "StreamAudioDestination": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "sounds +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "StreamAudioSource": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "StringSensor": {
    "read": "reported",
@@ -1509,8 +1746,13 @@
   },
   "Switch": {
    "read": "carries",
-   "read_evidence": "objects props ['x3d_switch_hidden']",
-   "written": "no"
+   "read_evidence": "objects props ['x3d_group_chain', 'x3d_switch_hidden']",
+   "written": "observed",
+   "written_by": [
+    "demo/investor_poc/blender_modern_poc.x3d",
+    "tests/behaviour/probe-script.x3d",
+    "tests/behaviour/probe-shader.x3d"
+   ]
   },
   "TexCoordChaser2D": {
    "read": "none",
@@ -1537,13 +1779,16 @@
    "written_by": [
     "docs/showcase/scenes/annotation-standard.x3d",
     "docs/showcase/scenes/annotation.x3d",
-    "docs/showcase/scenes/geolod-no-origin.x3d"
+    "docs/showcase/scenes/geolod-origin.x3d"
    ]
   },
   "TextureBackground": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_background']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "TextureCoordinate": {
    "read": "carries",
@@ -1571,14 +1816,20 @@
    "written": "no"
   },
   "TextureProjector": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "TextureProjectorParallel": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "TextureProperties": {
    "read": "none",
@@ -1667,12 +1918,18 @@
   "TriangleFanSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "TriangleSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "TriangleSet2D": {
    "read": "builds",
@@ -1682,17 +1939,26 @@
   "TriangleStripSet": {
    "read": "builds",
    "read_evidence": "materials +2, meshes +1, objects +1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_5.x3d"
+   ]
   },
   "TwoSidedMaterial": {
    "read": "builds",
    "read_evidence": "materials -1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "UniversalJoint": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "builds",
+   "read_evidence": "collections +1, objects +1",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_7.x3d"
+   ]
   },
   "UnlitMaterial": {
    "read": "builds",
@@ -1720,8 +1986,8 @@
    "written": "no"
   },
   "Viewport": {
-   "read": "none",
-   "read_evidence": "",
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
    "written": "no"
   },
   "VisibilitySensor": {
@@ -1734,9 +2000,13 @@
    ]
   },
   "VolumeData": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "VolumeEmitter": {
    "read": "none",
@@ -1753,9 +2023,13 @@
    ]
   },
   "WaveShaper": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_carried']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/carry.x3d",
+    "tests/node_board/carry_all.x3d"
+   ]
   },
   "WindPhysicsModel": {
    "read": "none",
@@ -1767,6 +2041,7 @@
    "read_evidence": "",
    "written": "observed",
    "written_by": [
+    "tests/node_board/gap_batch_9.x3d",
     "tests/node_board/writable_nodes.x3d"
    ]
   }

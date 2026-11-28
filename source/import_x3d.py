@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import json
 import logging
 from http.cookiejar import debug
 
@@ -21,8 +22,8 @@ from . import default_uv
 from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
-from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+from .extract import (BACKGROUND_PROPERTY, FOG_PROPERTY, TWO_SIDED_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, POINT_PROPERTIES_PROPERTY, COORDINATE_DOUBLE_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY, VISIBLE_FALSE_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
@@ -377,6 +378,14 @@ NODE_REFERENCE = 3  # USE foobar
 PHYSICS_REFERENCE_SPECS = frozenset({'RigidBody', 'CollidableShape', 'CollidableOffset'})
 # Nodes that move what is under them like a Transform does, with the same fields, except RigidBody (position, orientation).
 PHYSICS_FRAME_SPECS = frozenset({'RigidBody', 'CollidableShape', 'CollidableOffset'})
+# Nodes with a Transform's own fields (translation, rotation, scale, center, scaleOrientation) that place their children:
+# CADPart is one (node board batch 12; before, its pose was ignored and every part of an assembly sat at the origin).
+TRANSFORM_SPECS = frozenset({'Transform', 'CADPart'})
+# The CAD product structure (node board batch 12): each of these gets an object of its own in the hierarchy, recorded
+# with X3D_CAD_PROPERTY so the X3D 4.0 export writes the node back. CADFace is a mark on the object of its content.
+CAD_FRAME_SPECS = frozenset({'CADLayer', 'CADAssembly', 'CADPart'})
+CAD_RAW_FIELDS = ('name', 'visible', 'bboxCenter', 'bboxSize', 'bboxDisplay')
+X3D_CAD_PROPERTY = "x3d_cad"            # JSON {"node", "def", "fields"[, "face": {"def", "fields"}]}
 # NODE_PROTO = 4 #
 
 lines = []
@@ -1898,8 +1907,8 @@ def _note_protos(has_protos):
 
 def getFinalMatrix(node, mtx, ancestry, global_matrix):
 
-    transform_nodes = [node_tx for node_tx in ancestry if node_tx.getSpec() == 'Transform' or node_tx.getSpec() in PHYSICS_FRAME_SPECS]
-    if node.getSpec() == 'Transform':
+    transform_nodes = [node_tx for node_tx in ancestry if node_tx.getSpec() in TRANSFORM_SPECS or node_tx.getSpec() in PHYSICS_FRAME_SPECS]
+    if node.getSpec() in TRANSFORM_SPECS:
         transform_nodes.append(node)
     transform_nodes.reverse()
 
@@ -2293,6 +2302,7 @@ def importMesh_IndexedTriangleSet(geom, ancestry):
     triangles = [t for t in triangles if -1 not in t]
     corners = [t[j] for t in triangles for j in ((0, 1, 2) if ccw else (1, 0, 2))]
     _set_triangles(bpymesh, corners, 'IndexedTriangleSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleSet"     # the X3D 4.0 export writes it back as one (extract.GEOMETRY_NODE_PROPERTY)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2306,6 +2316,7 @@ def importMesh_IndexedTriangleStripSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleStripSet'))
     _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'IndexedTriangleStripSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleStripSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2321,6 +2332,7 @@ def importMesh_IndexedTriangleFanSet(geom, ancestry):
     # three or more fans asked Blender for more corners than it had made (RuntimeError, receipt-to-rule engine)
     runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleFanSet'))
     _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'IndexedTriangleFanSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleFanSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2352,6 +2364,7 @@ def importMesh_TriangleSet(geom, ancestry):
     n = len(bpymesh.vertices)
     corners = [3 * i + j for i in range(n // 3) for j in ((0, 1, 2) if ccw else (1, 0, 2))]
     _set_triangles(bpymesh, corners, 'TriangleSet')
+    bpymesh["x3d_geometry"] = "TriangleSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2365,6 +2378,7 @@ def importMesh_TriangleStripSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _counted_runs(geom.getFieldAsArray('stripCount', 0, ancestry), len(bpymesh.vertices), 'stripCount')
     _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'TriangleStripSet')
+    bpymesh["x3d_geometry"] = "TriangleStripSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2378,6 +2392,7 @@ def importMesh_TriangleFanSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _counted_runs(geom.getFieldAsArray('fanCount', 0, ancestry), len(bpymesh.vertices), 'fanCount')
     _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'TriangleFanSet')
+    bpymesh["x3d_geometry"] = "TriangleFanSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2864,7 +2879,20 @@ def importMesh_GeoElevationGrid(geom, ancestry):
                            len(points) if per_vertex else len(cells), "vertices" if per_vertex else "cells")
 
     bpymesh.update()
+    # written back as a GeoElevationGrid while unedited (extract.primitive_for_mesh), its fields as the file wrote them,
+    # when nothing the record cannot carry is there: a unit scale, no Color, Normal or TextureCoordinate child
+    if conversion_scale == 1.0 and getattr(geom.getRealNode(), "x3dNode", None) is not None and not any(
+            geom.getChildBySpec(child) is not None for child in ('Color', 'ColorRGBA', 'Normal', 'TextureCoordinate')):
+        fields = raw_fields(geom, GEO_GRID_FIELDS)
+        origin = geom.getChildBySpec('GeoOrigin')
+        if origin is not None:
+            fields["geoOrigin"] = raw_fields(origin, GEO_ORIGIN_FIELDS)
+        mark_primitive(bpymesh, geom, ancestry, 'GeoElevationGrid', **fields)
     return bpymesh
+
+
+GEO_GRID_FIELDS = ('geoSystem', 'geoGridOrigin', 'xDimension', 'zDimension', 'xSpacing', 'zSpacing', 'yScale', 'height',
+                   'ccw', 'creaseAngle')
 
 
 def importMesh_Extrusion(geom, ancestry):
@@ -3134,6 +3162,7 @@ def importMesh_LineSet(geom, ancestry):
         made = _coloured_line_mesh("LineSet", polylines)
         if made is not None:
             set_point_colours(made[0], made[1], kind)
+            made[0]["x3d_geometry"] = "LineSet"     # written back as one by the X3D 4.0 export (node board batch 8)
             made[0].update()
             return made[0]
     elif kind:
@@ -3155,6 +3184,7 @@ def importMesh_LineSet(geom, ancestry):
                 yield 0
         sp.points.foreach_set('co', [x for x in points()])
         b += n
+    bpycurve["x3d_geometry"] = "LineSet"     # written back as one by the X3D 4.0 export (node board batch 8)
     return bpycurve
 
 
@@ -4333,6 +4363,67 @@ def position_signature(bpymesh):
     return [count, len(bpymesh.polygons), round(weighted, 5)]
 
 
+def _float32(value):
+    import struct
+    return struct.unpack("f", struct.pack("f", value))[0]
+
+
+def _data_points(bpydata):
+    """The vertex positions of a mesh, or the points of a curve's splines in order (its evaluated mesh's vertices)."""
+    if isinstance(bpydata, bpy.types.Mesh):
+        flat = [0.0] * (3 * len(bpydata.vertices))
+        bpydata.vertices.foreach_get("co", flat)
+        return flat
+    if isinstance(bpydata, bpy.types.Curve):
+        flat = []
+        for spline in bpydata.splines:
+            if spline.type != 'POLY':
+                return None
+            for point in spline.points:
+                flat.extend(point.co[:3])
+        return flat
+    return None
+
+
+def mark_coordinate_double(bpydata, geom):
+    """Keep a CoordinateDouble's point text on ``bpydata`` (COORDINATE_DOUBLE_PROPERTY) when its vertices are the file's
+    points one to one, in order, at unit scale: then the export can write the doubles back for the vertices nobody has
+    moved. Anything else (a face set that culled its points, a USE of the coordinates elsewhere, another scale) keeps
+    nothing and the export writes a Coordinate, as before."""
+    coord = _coordinate_of(geom)
+    if coord is None or coord.getRealNode().getSpec() != 'CoordinateDouble' or conversion_scale != 1.0:
+        return
+    text = _attribute_raw(coord, 'point')
+    if not text:
+        return
+    tokens = text.replace(',', ' ').split()
+    flat = _data_points(bpydata)
+    if flat is None or len(tokens) != len(flat) or not flat:
+        return
+    try:
+        if any(_float32(float(token)) != value for token, value in zip(tokens, flat)):
+            return
+    except ValueError:
+        return
+    bpydata[COORDINATE_DOUBLE_PROPERTY] = json.dumps(tokens)
+
+
+def point_properties_fields(node, ancestry):
+    """A PointProperties node's fields as numbers ({} when all are the X3D defaults), for POINT_PROPERTIES_PROPERTY."""
+    from .extract import POINT_PROPERTIES_DEFAULTS
+    fields = {}
+    for name, default in POINT_PROPERTIES_DEFAULTS.items():
+        if isinstance(default, list):
+            value = [float(v) for v in node.getFieldAsArray(name, 0, ancestry)]
+            value = value if len(value) == 3 and all(math.isfinite(v) for v in value) else default
+        else:
+            value = node.getFieldAsFloat(name, default, ancestry)
+            value = float(value) if value is not None and math.isfinite(value) else default
+        if value != default:
+            fields[name] = value
+    return fields
+
+
 def mark_primitive(bpymesh, geom, ancestry, node_type, **fields):
     """Remember the primitive node behind ``bpymesh`` (see PRIMITIVE_PROPERTY)."""
     import json
@@ -4652,6 +4743,7 @@ def _quad_mesh(name, geom, ancestry, index=None):
     bpymesh.polygons.add(count)
     bpymesh.polygons.foreach_set("loop_start", range(0, 4 * count, 4))
     bpymesh.polygons.foreach_set("vertices", [v for q in quads for v in q])
+    bpymesh["x3d_geometry"] = name     # QuadSet or IndexedQuadSet, written back as one by the X3D 4.0 export (batch 8)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -4783,6 +4875,30 @@ def importMesh_TriangleSet2D(geom, ancestry):
 
 
 # Textures are processed elsewhere.
+# TwoSidedMaterial's back fields and their X3D defaults: Blender gives one material to both sides of a face, so they are
+# kept on the material as numbers (TWO_SIDED_PROPERTY) and written back; the front fields are the Blender material's
+TWO_SIDED_BACK_FIELDS = {"backAmbientIntensity": 0.2, "backDiffuseColor": [0.8, 0.8, 0.8], "backEmissiveColor": [0.0, 0.0, 0.0],
+                         "backShininess": 0.2, "backSpecularColor": [0.0, 0.0, 0.0], "backTransparency": 0.0,
+                         "separateBackColor": False}
+
+
+def two_sided_back_fields(mat, ancestry):
+    """A TwoSidedMaterial's back fields that differ from the defaults, as numbers (colours as 3 numbers)."""
+    fields = {}
+    for name, default in TWO_SIDED_BACK_FIELDS.items():
+        if isinstance(default, bool):
+            value = mat.getFieldAsBool(name, default, ancestry)
+        elif isinstance(default, list):
+            value = [float(v) for v in mat.getFieldAsArray(name, 0, ancestry)[:3]]
+            value = value if len(value) == 3 and all(math.isfinite(v) for v in value) else default
+        else:
+            value = mat.getFieldAsFloat(name, default, ancestry)
+            value = float(value) if value is not None and math.isfinite(value) else default
+        if value != default:
+            fields[name] = value
+    return fields
+
+
 def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     # Given an X3D material, creates a Blender material.
     # texture is applied later, in appearance_Create().
@@ -4809,6 +4925,8 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     if mat:
         keep_host_metadata(bpymat, mat)
         bpymat[MATERIAL_MODEL_PROPERTY] = 'classic'   # a Material or TwoSidedMaterial: the 4.0 export writes one again
+        if mat.getSpec() == 'TwoSidedMaterial':
+            bpymat[TWO_SIDED_PROPERTY] = json.dumps(two_sided_back_fields(mat, ancestry), sort_keys=True)
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
 
     bpymat_wrap.base_color = diff_color
@@ -5467,12 +5585,13 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     tex_node = appr.getChildBySpec(('ImageTexture', 'PixelTexture', 'MovieTexture'))
     # Other texture nodes are: MultiTexture
     # TwoSidedMaterial's front fields are Material's (ambientIntensity, diffuseColor, emissiveColor, shininess,
-    # specularColor, transparency); its back* fields have no Blender counterpart on one mesh and are not carried.
+    # specularColor, transparency); its back* fields have no Blender counterpart on one mesh: they are kept on the
+    # material for the export (TWO_SIDED_PROPERTY), and Blender draws both sides with the front.
     material = appr.getChildBySpec(('Material', 'TwoSidedMaterial'))
     if material is not None and material.getSpec() == 'TwoSidedMaterial' \
             and material.getFieldAsBool('separateBackColor', False, ancestry):
-        logger.warning('ImportX3D: TwoSidedMaterial "%s": the back colours are not imported; both sides use the front',
-                       material.getDefName() or vrmlname)
+        logger.warning('ImportX3D: TwoSidedMaterial "%s": Blender draws the back with the front colours; the back '
+                       'fields are kept for the X3D export', material.getDefName() or vrmlname)
     # We're ignoring FillProperties, LineProperties, and shaders
 
     # Check the USE-based material cache for textureless materials
@@ -5541,6 +5660,7 @@ def appearance_LoadPixelTexture(pixelTexture, ancestry):
         logger.warning(f"ImportX3D warning: pixel count in PixelTexture is off. Pixels: {len(pixels)}, Width: {w}, Height: {h}")
 
     bpyima = bpy.data.images.new("PixelTexture", w, h, alpha=has_alpha, float_buffer=True)
+    bpyima["x3d_pixel_texture"] = plane_count     # written back as a PixelTexture (material.PIXEL_TEXTURE_PROPERTY)
     if not has_alpha:
         bpyima.alpha_mode = 'NONE'
 
@@ -6203,6 +6323,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if isinstance(bpydata, bpy.types.Mesh) and geom_spec not in LINE_POINT_SPECS:
             # the file's solid for the export to write back (D14): a classic Material's surface stays two-sided in Blender
             bpydata[SOLID_PROPERTY] = geometry_solid(geom, ancestry)
+        if shared is None:
+            mark_coordinate_double(bpydata, geom)
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
@@ -6211,6 +6333,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata), source=bpymat)
             line_properties = appr.getChildBySpec('LineProperties') if appr is not None else None
             line_width = line_properties.getFieldAsFloat('linewidthScaleFactor', None, ancestry) if line_properties else None
+            point_properties = appr.getChildBySpec('PointProperties') if appr is not None else None
+            point_properties = point_properties_fields(point_properties, ancestry) if point_properties else None
 
         # There are no geometry importers that can legally return
         # no object.  It's either a bpy object, or an exception
@@ -6236,6 +6360,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         tag_x3d_identity(node.blendObject, node, ancestry)
         if geom_spec in LINE_POINT_SPECS and line_width is not None and node.blendObject is not None:
             node.blendObject[LINE_WIDTH_PROPERTY] = line_width   # Blender draws no line width; the 4.0 export writes it back
+        if geom_spec in LINE_POINT_SPECS and point_properties and node.blendObject is not None:
+            # Blender draws no point size either: kept as a custom property the 4.0 export writes back (batch 8)
+            node.blendObject[POINT_PROPERTIES_PROPERTY] = json.dumps(point_properties, sort_keys=True)
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
@@ -6513,7 +6640,56 @@ def importBackground(bpyscene, node, ancestry):
     transparency = node.getFieldAsFloat('transparency', None, ancestry)
     if transparency is not None:
         background["transparency"] = transparency
+    if node.getSpec() == 'TextureBackground':
+        # the six faces are X3DTextureNodes: each ImageTexture or PixelTexture is loaded as a Blender image (the export
+        # writes it from that image, through the same path handling as a material's textures); others are not kept
+        background["node"] = 'TextureBackground'
+        faces = {}
+        for child in node.getRealNode().children:
+            element = getattr(child, "x3dNode", None)
+            field = element.getAttribute('containerField') if element is not None else ""
+            if field not in TEXTURE_BACKGROUND_FIELDS:
+                continue
+            if child.getSpec() not in ('ImageTexture', 'PixelTexture'):
+                logger.warning("TextureBackground %s: a %s is not imported", field, child.getSpec())
+                continue
+            image = appearance_LoadTexture(child, ancestry, node)
+            if image is not None:
+                faces[field] = image.name
+        if faces:
+            background["textures"] = faces
     bpyscene[BACKGROUND_PROPERTY] = background
+
+
+TEXTURE_BACKGROUND_FIELDS = ('backTexture', 'bottomTexture', 'frontTexture', 'leftTexture', 'rightTexture', 'topTexture')
+# what an X3D fogType becomes in Blender's mist falloff: LINEAR is the same ramp; X3D's EXPONENTIAL rises fastest near
+# the viewer, as Blender's inverse quadratic does (there is no exponential falloff)
+FOG_FALLOFF = {'LINEAR': 'LINEAR', 'EXPONENTIAL': 'INVERSE_QUADRATIC'}
+
+
+def importFog(bpyscene, node, ancestry):
+    """A Fog as the scene world's mist (Blender's Mist pass: start 0, depth visibilityRange, the falloff closest to
+    fogType), with the Mist pass turned on so it can be seen; mist has no colour, so the colour is kept on the scene
+    (FOG_PROPERTY) with the fogType the file gave. The X3D 4.0 export writes the Fog back from the mist and that record.
+    A scene without a world keeps the record only (a new world would add a Background the file did not have)."""
+    fog_type = (node.getFieldAsString('fogType', 'LINEAR', ancestry) or 'LINEAR').strip().upper()
+    fog_type = fog_type if fog_type in FOG_FALLOFF else 'LINEAR'
+    color = [float(v) for v in node.getFieldAsArray('color', 0, ancestry)[:3]]
+    color = color if len(color) == 3 and all(math.isfinite(v) for v in color) else [1.0, 1.0, 1.0]
+    distance = node.getFieldAsFloat('visibilityRange', 0.0, ancestry)
+    distance = max(0.0, float(distance)) if distance is not None and math.isfinite(distance) else 0.0
+    distance *= conversion_scale
+    record = {"color": color, "fogType": fog_type, "visibilityRange": distance}
+    world = bpyscene.world
+    if world is not None:
+        mist = world.mist_settings
+        mist.start = 0.0
+        mist.depth = distance
+        mist.falloff = FOG_FALLOFF[fog_type]
+        record["falloff"] = mist.falloff
+        for layer in bpyscene.view_layers:
+            layer.use_pass_mist = True
+    bpyscene[FOG_PROPERTY] = record
 
 
 def importTransform(bpycollection, node, ancestry, global_matrix):
@@ -6922,10 +7098,21 @@ def importHumanoid(bpycollection, node, ancestry, global_matrix):
         if indices and values:
             weights[bone_name] = list(zip([int(i) for i in indices], [float(w) for w in values]))
 
+    skins = []
     for shape in real.getChildrenBySpec('Shape'):
         if _attribute_raw(shape, 'containerField', '') != 'skin':
             continue
-        _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, weights, global_matrix)
+        skins.append(_import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, weights, global_matrix))
+
+    # node board batch 11: segments, sites, displacers and motions (hanim_parts.py)
+    for label, step in (("segments and sites", lambda: _import_hanim_segments(bpycollection, armature, joint_bones)),
+                        ("displacers", lambda: _import_hanim_displacers(armature, joint_bones,
+                                                                        [skin for skin in skins if skin], skin_points)),
+                        ("motions", lambda: _import_hanim_motions(armature, real, joint_bones))):
+        try:
+            step()
+        except Exception as exc:  # the humanoid itself is in; a part that fails must not take it away
+            logger.error("HAnimHumanoid %r: %s not imported: %s", name, label, exc, exc_info=True)
 
     return armature
 
@@ -6934,7 +7121,7 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
     geom = shape.getChildBySpec('IndexedFaceSet')
     if geom is None:
         logger.warning("HAnim skin Shape without IndexedFaceSet is not supported; skipped")
-        return
+        return None
     coord = _coordinate_of(geom)
     points = skin_points
     if coord is not None:
@@ -7027,6 +7214,226 @@ def _import_skin_shape(bpycollection, shape, ancestry, armature, skin_points, we
                     group.add([new_index], weight, 'REPLACE')
     modifier = obj.modifiers.new("Armature", 'ARMATURE')
     modifier.object = armature
+    return obj, remap
+
+
+def _hanim_fields(node, names):
+    """The fields of ``node`` in ``names`` that the file wrote, as written."""
+    out = {}
+    for field in names:
+        raw = _attribute_raw(node, field, None)
+        if raw is not None:
+            out[field] = raw
+    return out
+
+
+def _hanim_bone_parent(obj, armature, bone_name):
+    """Parent ``obj`` to the bone, keeping its matrix_basis as its place in humanoid space at the rest pose (a child of
+    a bone hangs from the bone's tail)."""
+    bone = armature.data.bones[bone_name]
+    basis = obj.matrix_basis.copy()
+    obj.parent = armature
+    obj.parent_type = 'BONE'
+    obj.parent_bone = bone_name
+    obj.matrix_parent_inverse = (bone.matrix_local @ Matrix.Translation((0.0, bone.length, 0.0))).inverted()
+    obj.matrix_basis = basis
+
+
+def _import_hanim_segments(bpycollection, armature, joint_bones):
+    """HAnimSegment and HAnimSite (node board batch 11): each segment Shape becomes a mesh object and each site an
+    Empty, bone-parented to the joint's bone; the segment's fields go on the bone (hanim_parts.SEGMENT_PROPERTY)."""
+    from . import hanim_parts
+    for joint, bone_name in joint_bones.items():
+        segments = [child for child in joint.getChildrenBySpec('HAnimSegment') if not child.reference]
+        if len(segments) > 1:
+            logger.warning("HAnimJoint %r has %d segments; the fields of the first are kept, the Shapes of all",
+                           bone_name, len(segments))
+        for number, segment in enumerate(segments):
+            if number == 0:
+                record = {"name": _attribute_raw(segment, 'name', None) or "", "def": segment.getDefName() or "",
+                          "fields": _hanim_fields(segment, hanim_parts.SEGMENT_FIELDS)}
+                raw = _hanim_raw_displacers(segment)
+                if raw:
+                    record["displacers"] = raw
+                bone = armature.data.bones[bone_name]
+                bone[hanim_parts.SEGMENT_PROPERTY] = hanim_parts.dump(record)
+                for field, width in hanim_parts.SEGMENT_NUMBERS.items():
+                    raw_number = _attribute_raw(segment, field, None)
+                    numbers = hanim_parts.floats(raw_number)
+                    if raw_number is not None and len(numbers) == width:
+                        bone[hanim_parts.SEGMENT_NUMBER_PREFIX + field] = numbers[0] if width == 1 else numbers
+            if segment.getChildrenBySpec('Coordinate'):
+                logger.warning("HAnimSegment %r: its coord is not imported", bone_name)
+            _import_hanim_segment_children(bpycollection, armature, bone_name, segment, [segment])
+
+
+def _import_hanim_segment_children(bpycollection, armature, bone_name, parent, chain):
+    from . import hanim_parts
+    for child in parent.getRealNode().children:
+        spec = child.getSpec()
+        if spec == 'Shape':
+            made_before = child.getRealNode().blendObject if child.reference else None
+            importShape(bpycollection, child, chain, Matrix(), False, 0.0)
+            obj = child.blendObject
+            if obj is not None and obj is not made_before:
+                _hanim_bone_parent(obj, armature, bone_name)
+        elif spec in ('Transform', 'Group') and not child.reference:
+            _import_hanim_segment_children(bpycollection, armature, bone_name, child, chain + [child])
+        elif spec == 'HAnimSite' and not child.reference:
+            def_name = child.getDefName() or ""
+            site_name = _attribute_raw(child, 'name', None) or ""
+            object_name = (def_name[6:] if def_name.startswith("hanim_") and len(def_name) > 6 else def_name) \
+                or site_name or "Site"
+            empty = bpy.data.objects.new(object_name, None)
+            empty.empty_display_type = 'SPHERE'
+            empty.empty_display_size = 0.05
+            bpycollection.objects.link(empty)
+            own = translateTransform(child, chain)
+            empty.matrix_basis = getFinalMatrix(child, own, chain, Matrix())
+            _hanim_bone_parent(empty, armature, bone_name)
+            empty[hanim_parts.SITE_PROPERTY] = hanim_parts.dump(
+                {"name": site_name, "fields": _hanim_fields(child, hanim_parts.SITE_FIELDS)})
+            if def_name:
+                empty["x3d_def"] = def_name
+            child.blendData = child.blendObject = empty
+            if child.getRealNode().children:
+                logger.warning("HAnimSite %r: its children are not imported", object_name)
+
+
+def _hanim_raw_displacers(node):
+    """The HAnimDisplacers of ``node`` as written: [{name, def, coordIndex, displacements, weight, fields}]."""
+    from . import hanim_parts
+    out = []
+    for displacer in node.getChildrenBySpec('HAnimDisplacer'):
+        if displacer.reference:
+            continue
+        out.append({"name": _attribute_raw(displacer, 'name', None) or "", "def": displacer.getDefName() or "",
+                    "coordIndex": _attribute_raw(displacer, 'coordIndex', "") or "",
+                    "displacements": _attribute_raw(displacer, 'displacements', "") or "",
+                    "weight": _attribute_raw(displacer, 'weight', None),
+                    "fields": _hanim_fields(displacer, hanim_parts.DISPLACER_FIELDS)})
+    return out
+
+
+def _import_hanim_displacers(armature, joint_bones, skins, skin_points):
+    """HAnimDisplacer of a joint (node board batch 11): a shape key on each skin mesh, its key points the basis plus the
+    displacements at coordIndex (into skinCoord), its value the weight. With no skin to key they stay on the bone as
+    written (hanim_parts.RAW_DISPLACERS_PROPERTY)."""
+    from . import hanim_parts
+    for joint, bone_name in joint_bones.items():
+        displacers = [d for d in joint.getChildrenBySpec('HAnimDisplacer') if not d.reference]
+        if not displacers:
+            continue
+        if not skins:
+            armature.data.bones[bone_name][hanim_parts.RAW_DISPLACERS_PROPERTY] = hanim_parts.dump(
+                _hanim_raw_displacers(joint))
+            continue
+        for number, displacer in enumerate(displacers):
+            key_name = _attribute_raw(displacer, 'name', None) or displacer.getDefName() or f"{bone_name}_displacer{number}"
+            indices = [int(i) for i in displacer.getFieldAsArray('coordIndex', 0, ())]
+            offsets = displacer.getFieldAsArray('displacements', 3, (), conversion_scale)
+            weight = displacer.getFieldAsFloat('weight', 0.0, ())
+            record = {"joint": bone_name, "def": displacer.getDefName() or "",
+                      "fields": _hanim_fields(displacer, hanim_parts.DISPLACER_FIELDS)}
+            for obj, remap in skins:
+                mesh = obj.data
+                if mesh.shape_keys is None:
+                    obj.shape_key_add(name="Basis", from_mix=False)
+                key = obj.shape_key_add(name=key_name, from_mix=False)
+                key_name = key.name
+                for index, offset in zip(indices, offsets):
+                    if 0 <= index < len(remap) and remap[index] < len(key.data):
+                        vertex = remap[index]
+                        key.data[vertex].co = Vector(mesh.vertices[vertex].co) + Vector(offset)
+                key.slider_min = min(0.0, weight)
+                key.slider_max = max(1.0, weight)
+                key.value = weight
+                kept = hanim_parts.load(obj.get(hanim_parts.DISPLACERS_PROPERTY), {})
+                kept[key.name] = record
+                obj[hanim_parts.DISPLACERS_PROPERTY] = hanim_parts.dump(kept)
+
+
+def _hanim_assign_action(armature, action):
+    if armature.animation_data is None:
+        armature.animation_data_create()
+    armature.animation_data.action = action
+    try:
+        if hasattr(action, "slots") and armature.animation_data.action_slot is None:
+            slot = action.slots[0] if len(action.slots) else action.slots.new(id_type='OBJECT', name=armature.name)
+            armature.animation_data.action_slot = slot
+    except Exception:
+        pass
+
+
+def _import_hanim_motions(armature, real, joint_bones):
+    """HAnimMotion (node board batch 11): a Blender Action per motion, keyed per frame on each named joint's pose bone
+    (frame i at scene start + i * frameDuration * fps); the first is the armature's action. The node's fields are kept as
+    written on the action (hanim_parts.MOTION_PROPERTY), its values too, so an unedited action writes them back as
+    they were."""
+    from . import hanim_parts
+    motions = [m for m in real.getChildrenBySpec('HAnimMotion') if not m.reference]
+    if not motions:
+        return
+    scene = bpy.context.scene
+    fps = scene.render.fps / scene.render.fps_base
+    bones_by_name = {}
+    for joint_node, bone_name in joint_bones.items():
+        bones_by_name.setdefault(_attribute_raw(joint_node, 'name', None) or bone_name, bone_name)
+    first = None
+    last_frame = scene.frame_start
+    for number, motion in enumerate(motions):
+        motion_name = _attribute_raw(motion, 'name', None) or ""
+        action = bpy.data.actions.new(motion_name or motion.getDefName() or f"{armature.name}_motion")
+        action.use_fake_user = True
+        raw_values = _attribute_raw(motion, 'values', None)
+        fields = _hanim_fields(motion, hanim_parts.MOTION_FIELDS)
+        action[hanim_parts.MOTION_PROPERTY] = hanim_parts.dump(
+            {"humanoid": armature.name, "name": motion_name, "def": motion.getDefName() or "", "order": number,
+             "fields": fields, "values": raw_values, "start": scene.frame_start, "fps": fps})
+        _hanim_assign_action(armature, action)
+        first = first or action
+        groups = hanim_parts.parse_channels(fields.get("channels", ""), fields.get("joints", ""))
+        width = sum(len(channels) for _, channels in groups)
+        values = hanim_parts.floats(raw_values)
+        frames = len(values) // width if width else 0
+        duration = motion.getFieldAsFloat('frameDuration', 0.1, ())
+        for frame_number in range(frames):
+            row = values[frame_number * width:(frame_number + 1) * width]
+            frame = scene.frame_start + frame_number * duration * fps
+            last_frame = max(last_frame, frame)
+            offset = 0
+            for joint_name, channels in groups:
+                cells, offset = row[offset:offset + len(channels)], offset + len(channels)
+                bone_name = bones_by_name.get(joint_name)
+                if bone_name is None or bone_name not in armature.pose.bones:
+                    continue
+                translation = [0.0, 0.0, 0.0]
+                rotation = Matrix()
+                for channel, value in zip(channels, cells):
+                    if channel in hanim_parts.POSITION_CHANNELS:
+                        translation[hanim_parts.POSITION_CHANNELS[channel]] = value * conversion_scale
+                    elif channel in hanim_parts.ROTATION_CHANNELS:
+                        rotation = rotation @ Matrix.Rotation(value, 4, hanim_parts.ROTATION_CHANNELS[channel])
+                bone = armature.data.bones[bone_name]
+                rest = bone.matrix_local
+                center = bone.head_local
+                joint_matrix = Matrix.Translation(Vector(translation)) @ Matrix.Translation(center) @ rotation \
+                    @ Matrix.Translation(-center)
+                loc, quat, _scale = (rest.inverted() @ joint_matrix @ rest).decompose()
+                pose_bone = armature.pose.bones[bone_name]
+                pose_bone.rotation_mode = 'QUATERNION'
+                pose_bone.location = loc
+                pose_bone.rotation_quaternion = quat
+                pose_bone.keyframe_insert("location", frame=frame)
+                pose_bone.keyframe_insert("rotation_quaternion", frame=frame)
+        for fcu in _action_fcurves(action):
+            for kf in fcu.keyframe_points:
+                kf.interpolation = 'LINEAR'
+    _hanim_assign_action(armature, first)
+    for pose_bone in armature.pose.bones:     # the rest pose until the timeline plays
+        pose_bone.location = (0.0, 0.0, 0.0)
+        pose_bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+    _fit_frame_end(scene, last_frame)
 
 
 def _hanim_joint_target(defDict, target_def):
@@ -7754,7 +8161,7 @@ def import_loss_records(all_nodes, rebuilt=None):
             timers[name] = node
         elif spec == "ROUTE":
             attrs = {k: _attribute_raw(node, k, "") for k in ("fromNode", "fromField", "toNode", "toField")}
-            if _route_tuple(attrs) in rebuilt.edges:
+            if _route_tuple(attrs) in rebuilt.edges or _route_tuple(attrs) in _PHYSICS_ROUTES:
                 continue
             pair = (attrs["fromField"].replace("_changed", ""), attrs["toField"].replace("set_", ""))
             if pair not in _CONSUMED_ROUTES:
@@ -7842,7 +8249,7 @@ def _chain_matrix(ancestry, global_matrix, upto=None):
     node below them, shear included."""
     matrix = Matrix()
     for anc in ancestry[: None if upto is None else upto + 1]:
-        if anc.getSpec() == 'Transform':
+        if anc.getSpec() in TRANSFORM_SPECS:
             matrix = matrix @ translateTransform(anc, ancestry)
     return global_matrix @ matrix
 
@@ -7881,7 +8288,59 @@ def _join_material_parts(objs, name):
     return first
 
 
-def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
+def _group_has_metadata(node):
+    """True for a Group whose own metadata field holds a Metadata* node (host_metadata reads the same field)."""
+    return host_metadata(node) is not None
+
+
+def _record_cad(transforms, owners, created, key_of, file_order=None):
+    """The CAD product structure on the objects that stand for it (node board batch 12): each CADLayer, CADAssembly and
+    CADPart owner gets X3D_CAD_PROPERTY (its type, DEF and the fields the file wrote) and the part's ``name`` as its
+    object name, so the Outliner reads like the CAD tree; the object a CADFace holds (its Shape's, or its Transform's)
+    gets the face's DEF and fields under "face". A CADFace has no object of its own: it holds one node, and an Empty
+    for it would add a level on every round trip."""
+    def merge(ob, extra):
+        try:
+            record = json.loads(ob.get(X3D_CAD_PROPERTY) or "{}")
+        except (TypeError, ValueError):
+            record = {}
+        record.update(extra)
+        ob[X3D_CAD_PROPERTY] = json.dumps(record)
+
+    for key, owner in owners.items():
+        node = transforms[key][0]
+        spec = node.getSpec()
+        if spec not in CAD_FRAME_SPECS:
+            continue
+        real = node.getRealNode()
+        fields = raw_fields(real, CAD_RAW_FIELDS)
+        merge(owner, {"node": spec, "def": real.getDefName() or "", "fields": fields,
+                      "order": (file_order or {}).get(id(node), 0)})
+        if fields.get("name", "").strip():
+            owner.name = fields["name"].strip()[:63]
+    marked = set()
+    for ob, ancestry in created:
+        face = next((i for i in range(len(ancestry) - 1, -1, -1) if ancestry[i].getSpec() == 'CADFace'), None)
+        if ob is None or face is None:
+            continue
+        try:
+            ob.name                                   # a part the hierarchy rebuild joined away
+        except ReferenceError:
+            continue
+        if face + 1 < len(ancestry) and ancestry[face + 1].getSpec() in TRANSFORM_SPECS:
+            ob = owners.get(key_of(ancestry, face + 1), ob)
+        face_key = key_of(ancestry, face)
+        if face_key in marked:
+            continue
+        marked.add(face_key)
+        real = ancestry[face].getRealNode()
+        order = (file_order or {}).get(id(ancestry[face]), 0)
+        merge(ob, {"face": {"def": real.getDefName() or "", "fields": raw_fields(real, CAD_RAW_FIELDS), "order": order}})
+        if "order" not in json.loads(ob[X3D_CAD_PROPERTY]):      # a face object's place among its part's faces
+            merge(ob, {"order": order})
+
+
+def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=(), carried=()):
     """Give the flat import the file's Transform hierarchy back (the import option keep_hierarchy).
 
     ``created`` lists (object, ancestry) for every object the import made, in the file's order, each already at its
@@ -7890,7 +8349,8 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
     its Shapes), the export's Shapes of one multi-material mesh joined back into one object (_join_material_parts),
     or else an Empty named after the Transform (several objects, child Transforms only, or an exported Empty: a
     Transform DEF'd OB_ with nothing in it). Every object is then parented to the object of its nearest Transform.
-    Group, Switch, LOD and the other grouping nodes have no matrix and are not kept as objects. Objects that already
+    Group, Switch, LOD and the other grouping nodes have no matrix and are not kept as objects, except a Group that
+    carries its own Metadata, which gets an Empty so its Metadata and its place in the tree survive. Objects that already
     have a parent (a skin on its armature, an Inline's content on its placeholder) keep it.
 
     World matrices come from the file, shear included: the flat import bakes the shear of a rotated child under a
@@ -7917,10 +8377,16 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
             previous = key
         return previous
 
+    def frame_like(a):
+        # a Transform, or a Group that carries its own Metadata: IFC's spatial tree (Site, Building, Storey) travels
+        # as such Groups, and without an Empty of its own the Group's Metadata and the nesting are lost on export.
+        return a.getSpec() in TRANSFORM_SPECS or a.getSpec() in CAD_FRAME_SPECS \
+            or (a.getSpec() == 'Group' and _group_has_metadata(a))
+
     for ob, ancestry in created:
         if ob is None or ob.parent is not None:
             continue
-        transform_indices = [i for i, a in enumerate(ancestry) if a.getSpec() == 'Transform']
+        transform_indices = [i for i, a in enumerate(ancestry) if frame_like(a)]
         nearest = register(ancestry, transform_indices)
         if nearest is not None and any(a.getSpec() in {'Switch', 'LOD', 'GeoLOD'}
                                        for a in ancestry[transform_indices[-1] + 1:]):
@@ -7945,7 +8411,11 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
         if node.getSpec() == 'Transform' and (node.getDefName() or "").startswith("OB_") \
                 and not any(a.getSpec() == 'HAnimHumanoid' for a in ancestry):
             path = list(ancestry) + [node]
-            register(path, [i for i, a in enumerate(path) if a.getSpec() == 'Transform'])
+            register(path, [i for i, a in enumerate(path) if frame_like(a)])
+    # a Transform holding only carried nodes (find_carried): it needs an object for them to ride on (place_carried
+    # looks for the nearest Transform, so the key is the Transform's, not a metadata Group's)
+    holds_carried = {register(ancestry, [i for i, a in enumerate(ancestry) if a.getSpec() == 'Transform'])
+                     for _node, ancestry, _xml in carried} - {None}
 
     has_children = {k for k in parent_key.values() if k is not None}
     owners = {}
@@ -7964,7 +8434,7 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
                 members[key] = objs = [joined]
         if len(objs) == 1 and key not in branch_owners:
             owners[key] = objs[0]
-        elif objs or key in has_children or (node.getDefName() or "").startswith("OB_"):
+        elif objs or key in has_children or key in holds_carried or (node.getDefName() or "").startswith("OB_"):
             empty = bpy.data.objects.new(name, None)
             bpycollection.objects.link(empty)
             empty.empty_display_type = 'PLAIN_AXES'
@@ -7972,6 +8442,9 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
             worlds[empty] = getFinalMatrix(node, None, ancestry, global_matrix)
             empty.matrix_world = worlds[empty]
             tag_x3d_identity(empty, node, ancestry)
+            chain = group_chain(node, ancestry)       # a Transform on a Switch branch or LOD level: the export regroups it
+            if chain:
+                empty[GROUP_CHAIN_PROPERTY] = json.dumps(chain)
             owners[key] = empty
 
     def owner_above(key):
@@ -8002,6 +8475,8 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
         # keeps its own Shape Metadata under METADATA_PROPERTY as before)
         if TRANSFORM_METADATA_PROPERTY not in owner:
             keep_host_metadata(owner, transforms[key][0], TRANSFORM_METADATA_PROPERTY)
+
+    _record_cad(transforms, owners, created, key_of, {id(n): i for i, (n, _a) in enumerate(all_nodes)})
 
     by_node = {}
     for key, owner in owners.items():
@@ -8062,7 +8537,7 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
         if target is not None and target.getSpec() == 'HAnimJoint':
             _animate_joint(defDict, target_def, target, channel_defs, timers_for_interp, scene, fps, frame_start)
             continue
-        if target is None or target.getSpec() != 'Transform':
+        if target is None or target.getSpec() not in TRANSFORM_SPECS:
             logger.warning("ROUTE target %r is not a Transform; skipped", target_def)
             continue
 
@@ -8120,13 +8595,13 @@ def importRoutesXML(all_nodes, global_matrix, bpycontext):
             index = ancestry.index(target)
             above = Matrix()
             for anc in ancestry[:index]:
-                if anc.getSpec() == 'Transform':
+                if anc.getSpec() in TRANSFORM_SPECS:
                     above = above @ translateTransform(anc, ancestry)
             below = Matrix()
             for anc in ancestry[index + 1:]:
-                if anc.getSpec() == 'Transform':
+                if anc.getSpec() in TRANSFORM_SPECS:
                     below = below @ translateTransform(anc, ancestry)
-            if node is not None and node.getSpec() == 'Transform':
+            if node is not None and node.getSpec() in TRANSFORM_SPECS:
                 below = below @ translateTransform(node, ancestry)
 
             # Non-Transform nodes (lights, viewpoints) carry their own local offset
@@ -8409,6 +8884,400 @@ def switch_branches(node, ancestry):
     return " ".join(entries)
 
 
+GROUP_CHAIN_PROPERTY = "x3d_group_chain"     # on an object made under a Switch or LOD: JSON, outermost first, for the export
+group_keys = {}                              # id(real Switch/LOD node) -> its key in GROUP_CHAIN_PROPERTY (DEF, else made up)
+
+
+# Grouping nodes the import dissolves but records for the export (group_chain), with the fields kept as the file wrote
+# them (their attribute text: geospatial values are doubles, and a string list keeps its quoting)
+GROUP_RAW_FIELDS = {
+    'Billboard': ('axisOfRotation',),
+    'GeoLocation': ('geoCoords', 'geoSystem'),
+    'GeoLOD': ('center', 'geoSystem', 'range', 'rootUrl', 'child1Url', 'child2Url', 'child3Url', 'child4Url'),
+    'StaticGroup': ('visible', 'bboxCenter', 'bboxSize', 'bboxDisplay'),   # node board batch 12
+}
+GEO_ORIGIN_FIELDS = ('geoCoords', 'geoSystem', 'rotateYUp')
+
+
+def raw_fields(node, names):
+    """{field: attribute text} for the fields the file sets on ``node`` (XML encoding only; empty otherwise)."""
+    out = {}
+    for name in names:
+        value = _attribute_raw(node, name)
+        if value is not None:
+            out[name] = value
+    return out
+
+
+def group_chain(node, ancestry):
+    """Every Switch and LOD above ``node``, outermost first, as the exporter needs them to write the node back: its type,
+    DEF (or a key unique in this import), the branch ``node`` sits on, how many branches there are, and the Switch's
+    whichChoice or the LOD's range and center (in the file's units). Billboard, GeoLocation and GeoLOD come with their fields
+    as the file wrote them (GROUP_RAW_FIELDS) and their GeoOrigin, as one group of children."""
+    chain = tuple(ancestry) + (node,)
+    out = []
+    for i, anc in enumerate(ancestry):
+        spec = anc.getSpec()
+        if spec not in ('Switch', 'LOD', *GROUP_RAW_FIELDS):
+            continue
+        real = anc.getRealNode()
+        kids = [c for c in real.children if _switch_child_counts(c) and c.getSpec() != 'GeoOrigin']
+        index = next((n for n, kid in enumerate(kids) if kid is chain[i + 1]), None)
+        if index is None:
+            continue
+        name = anc.getDefName() or real.getDefName() or ""
+        key = group_keys.setdefault(id(real), name or f"{spec}_{len(group_keys) + 1}")
+        entry = {"node": spec, "key": key, "def": name, "branch": index, "branches": len(kids)}
+        if spec in GROUP_RAW_FIELDS:
+            # one group of children (no branches): the fields as written, and a GeoOrigin child if there is one
+            entry.update(branch=0, branches=1, fields=raw_fields(anc, GROUP_RAW_FIELDS[spec]))
+            origin = real.getChildBySpec('GeoOrigin')
+            if origin is not None:
+                entry["geoOrigin"] = raw_fields(origin, GEO_ORIGIN_FIELDS)
+        elif spec == 'Switch':
+            entry["whichChoice"] = anc.getFieldAsInt('whichChoice', -1, ancestry[:i])
+        else:
+            entry["range"] = [float(v) for v in (anc.getFieldAsArray('range', 0, ancestry[:i], 1.0) or [])]
+            entry["center"] = [float(v) for v in anc.getFieldAsFloatTuple('center', (0.0, 0.0, 0.0), ancestry[:i])]
+        out.append(entry)
+    return out
+
+
+# -- rigid body physics as Blender rigid bodies (node board batch 6) ---------------------------------------------------
+# A RigidBodyCollection becomes the scene's rigid body world, each RigidBody's object a Blender rigid body, and a
+# SingleAxisHingeJoint an empty with a HINGE constraint. What Blender holds (mass, fixed, damping, gravity, the hinge's
+# anchor, axis and limits) is read back from Blender on export, so editing it in Blender reaches the file; every field
+# is also kept as the file wrote it (RIGID_*_PROPERTY, JSON) for what Blender cannot hold (linearVelocity, the
+# CollisionCollection, a joint's forceOutput...).
+RIGID_WORLD_PROPERTY = "x3d_rigid_world"      # on the scene
+RIGID_BODY_PROPERTY = "x3d_rigid_body"        # on a body's object
+RIGID_JOINT_PROPERTY = "x3d_rigid_joint"      # on a joint's empty
+RIGID_COLLECTION_FIELDS = ('autoDisable', 'constantForceMix', 'contactSurfaceThickness', 'disableAngularSpeed',
+                           'disableLinearSpeed', 'disableTime', 'enabled', 'errorCorrection', 'gravity', 'iterations',
+                           'maxCorrectionSpeed', 'preferAccuracy')
+RIGID_BODY_FIELDS = ('angularDampingFactor', 'angularVelocity', 'autoDamp', 'autoDisable', 'centerOfMass',
+                     'disableAngularSpeed', 'disableLinearSpeed', 'disableTime', 'enabled', 'finiteRotationAxis', 'fixed',
+                     'forces', 'inertia', 'linearDampingFactor', 'linearVelocity', 'mass', 'orientation', 'position',
+                     'torques', 'useFiniteRotation', 'useGlobalGravity')
+COLLIDABLE_FIELDS = ('enabled', 'rotation', 'translation')
+COLLISION_COLLECTION_FIELDS = ('appliedParameters', 'bounce', 'enabled', 'frictionCoefficients', 'minBounceSpeed',
+                               'slipFactors', 'softnessConstantForceMix', 'softnessErrorCorrection', 'surfaceSpeed')
+HINGE_FIELDS = ('anchorPoint', 'axis', 'forceOutput', 'maxAngle', 'minAngle', 'stopBounce', 'stopErrorCorrection')
+# the settable fields of the other joints (their output-only ones, such as separation or hinge1Angle, are never kept)
+JOINT_FIELDS = {
+    'SingleAxisHingeJoint': HINGE_FIELDS,
+    'BallJoint': ('anchorPoint', 'forceOutput'),
+    'SliderJoint': ('axis', 'forceOutput', 'maxSeparation', 'minSeparation', 'stopBounce', 'stopErrorCorrection'),
+    'DoubleAxisHingeJoint': ('anchorPoint', 'axis1', 'axis2', 'desiredAngularVelocity1', 'desiredAngularVelocity2',
+                             'forceOutput', 'maxAngle1', 'maxTorque1', 'maxTorque2', 'minAngle1', 'stop1Bounce',
+                             'stop1ConstantForceMix', 'stop1ErrorCorrection', 'suspensionErrorCorrection',
+                             'suspensionForce'),
+    'UniversalJoint': ('anchorPoint', 'axis1', 'axis2', 'forceOutput', 'stop1Bounce', 'stop1ErrorCorrection',
+                       'stop2Bounce', 'stop2ErrorCorrection'),
+}
+JOINT_CONSTRAINT = {'SingleAxisHingeJoint': 'HINGE', 'BallJoint': 'POINT', 'SliderJoint': 'SLIDER',
+                    'DoubleAxisHingeJoint': 'GENERIC', 'UniversalJoint': 'GENERIC'}
+COLLISION_SHAPE_OF = {'Box': 'BOX', 'Sphere': 'SPHERE', 'Cylinder': 'CYLINDER', 'Cone': 'CONE'}
+
+
+def _container_of(node):
+    element = getattr(node, "x3dNode", None)
+    return element.getAttribute('containerField') if element is not None and element.hasAttribute('containerField') else ""
+
+
+def _floats(text, default):
+    try:
+        values = [float(v) for v in str(text).replace(",", " ").split()]
+    except ValueError:
+        return default
+    return values if len(values) == len(default) else default
+
+
+def import_rigid_bodies(all_nodes, global_matrix, bpycontext):
+    """Every RigidBodyCollection: Blender's rigid body world, rigid bodies and hinge constraints (see above). The
+    objects already stand where the bodies place them (RigidBody is a frame, PHYSICS_FRAME_SPECS)."""
+    import json
+    scene = bpycontext.scene
+    axes = global_matrix.to_3x3().normalized()
+    for node, ancestry in all_nodes:
+        if node.getSpec() != 'RigidBodyCollection' or node.node_type == NODE_REFERENCE:
+            continue
+        real = node.getRealNode()
+        if scene.rigidbody_world is None:
+            with bpycontext.temp_override(scene=scene):
+                bpy.ops.rigidbody.world_add()
+        world = scene.rigidbody_world
+        fields = raw_fields(node, RIGID_COLLECTION_FIELDS)
+        scene.gravity = axes @ Vector(_floats(fields.get('gravity', '0 -9.8 0'), [0.0, -9.8, 0.0]))
+        if 'iterations' in fields:
+            world.solver_iterations = max(1, int(_floats(fields['iterations'], [10.0])[0]))
+        record = {"def": node.getDefName() or real.getDefName() or "", "fields": fields, "collider": None}
+        objects = {}           # id(real RigidBody node) -> object
+        for body in real.children:
+            if body.getSpec() == 'CollisionCollection':
+                record["collider"] = {"def": body.getDefName() or "", "fields": raw_fields(body, COLLISION_COLLECTION_FIELDS),
+                                      "collidables": [c.getRealNode().getDefName() for c in body.getRealNode().children
+                                                      if c.getSpec() in ('CollidableShape', 'CollidableOffset')
+                                                      and c.getRealNode().getDefName()]}
+            if body.getSpec() != 'RigidBody' or body.node_type == NODE_REFERENCE:
+                continue
+            ob, collidable, offsets = _body_object(body)
+            if ob is None:
+                logger.warning("RigidBody %s: no shape was imported for it; not made a Blender rigid body",
+                               body.getDefName() or "(no DEF)")
+                continue
+            objects[id(body.getRealNode())] = ob
+            body_fields = raw_fields(body, RIGID_BODY_FIELDS)
+            with bpycontext.temp_override(scene=scene, object=ob, active_object=ob, selected_objects=[ob]):
+                bpy.ops.rigidbody.object_add(type='PASSIVE' if body_fields.get('fixed', 'false') == 'true' else 'ACTIVE')
+            rb = ob.rigid_body
+            rb.mass = max(0.001, _floats(body_fields.get('mass', '1'), [1.0])[0])
+            auto = body_fields.get('autoDamp', 'false') == 'true'
+            rb.linear_damping = _floats(body_fields.get('linearDampingFactor', '0.001'), [0.001])[0] if auto else 0.0
+            rb.angular_damping = _floats(body_fields.get('angularDampingFactor', '0.001'), [0.001])[0] if auto else 0.0
+            rb.enabled = body_fields.get('enabled', 'true') != 'false'
+            primitive = json.loads(ob.data.get(PRIMITIVE_PROPERTY, "{}") or "{}") if ob.type == 'MESH' else {}
+            rb.collision_shape = COLLISION_SHAPE_OF.get(primitive.get("node"), 'CONVEX_HULL')
+            ob[RIGID_BODY_PROPERTY] = json.dumps({"def": body.getDefName() or "", "fields": body_fields,
+                                                  "collidable": collidable, "offsets": offsets})
+        for joint in real.children:
+            if joint.getSpec() in JOINT_CONSTRAINT and joint.node_type != NODE_REFERENCE:
+                _joint(joint, objects, axes, global_matrix, bpycontext, scene)
+            elif joint.getSpec() == 'MotorJoint':
+                logger.info("MotorJoint %s: not made a Blender constraint (Blender has no motor joint between two "
+                            "bodies with three axes)", joint.getDefName() or "")
+        scene[RIGID_WORLD_PROPERTY] = json.dumps(record)
+
+
+def _body_object(body):
+    """(the object the import made for a RigidBody's first collidable shape, that collidable's record, the
+    CollidableOffsets between the body and it, outermost first)."""
+    offsets = []
+    for geometry in body.getRealNode().children:
+        node = geometry
+        while node is not None and node.getSpec() == 'CollidableOffset':
+            offsets.append({"def": node.getRealNode().getDefName() or "", "fields": raw_fields(node, COLLIDABLE_FIELDS)})
+            node = next((c for c in node.getRealNode().children if c.getSpec() in ('CollidableShape', 'CollidableOffset')),
+                        None)
+        if node is None or node.getSpec() != 'CollidableShape':
+            offsets = []
+            continue
+        shape = next((c for c in node.getRealNode().children if c.getSpec() == 'Shape'), None)
+        ob = getattr(shape.getRealNode(), "blendObject", None) if shape is not None else None
+        try:
+            if ob is not None and ob.name:
+                return ob, {"def": node.getRealNode().getDefName() or "", "fields": raw_fields(node, COLLIDABLE_FIELDS)}, offsets
+        except ReferenceError:
+            pass
+        offsets = []
+    return None, None, []
+
+
+def _joint(joint, objects, axes, global_matrix, bpycontext, scene):
+    """A joint as an empty with a Blender rigid body constraint between its two bodies (JOINT_CONSTRAINT): at the
+    anchor (a SliderJoint, which has none, at its first body), turned so the constraint's own axes are the joint's:
+    HINGE turns about Z (axis); SLIDER slides along X (axis), limited by min/maxSeparation; GENERIC (Double axis hinge,
+    Universal) frees Z (axis1) and X (axis2), Z limited by min/maxAngle1 on a DoubleAxisHingeJoint; POINT is a ball."""
+    import json
+    import math
+    spec = joint.getSpec()
+    fields = raw_fields(joint, JOINT_FIELDS[spec])
+    ends = {}
+    for child in joint.getRealNode().children:
+        if child.getSpec() == 'RigidBody':
+            ends[_container_of(child) or ("body1" if "body1" not in ends else "body2")] = objects.get(id(child.getRealNode()))
+    zero = [0.0, 0.0, 0.0]
+    if 'anchorPoint' in JOINT_FIELDS[spec]:
+        anchor = global_matrix @ Vector(_floats(fields.get('anchorPoint', '0 0 0'), zero))
+    else:
+        first = ends.get("body1") or ends.get("body2")
+        anchor = first.matrix_world.translation.copy() if first is not None else global_matrix @ Vector(zero)
+
+    def direction(name, default):
+        v = axes @ Vector(_floats(fields.get(name, default), zero))
+        return v.normalized() if v.length > 1e-9 else None
+    if spec == 'SingleAxisHingeJoint':
+        z, x = direction('axis', '0 0 0'), None
+    elif spec == 'SliderJoint':
+        z, x = None, direction('axis', '0 1 0')
+    elif spec in ('DoubleAxisHingeJoint', 'UniversalJoint'):
+        z, x = direction('axis1', '0 0 0'), direction('axis2', '0 0 0')
+    else:
+        z = x = None
+    rotation = _frame_rotation(z, x)
+    empty = bpy.data.objects.new(joint.getDefName() or spec, None)
+    scene.collection.objects.link(empty)
+    empty.empty_display_type, empty.empty_display_size = 'ARROWS', 0.3
+    empty.matrix_world = Matrix.Translation(anchor) @ rotation.to_4x4()
+    # the operator reads the view layer's active object: an override alone leaves the joint without a constraint on
+    # Blender 5.1 and older (or crashes it), so the empty is made active there too
+    scene.view_layers[0].objects.active = empty
+    with bpycontext.temp_override(scene=scene, object=empty, active_object=empty, selected_objects=[empty]):
+        bpy.ops.rigidbody.constraint_add(type=JOINT_CONSTRAINT[spec])
+    con = empty.rigid_body_constraint
+    con.object1, con.object2 = ends.get("body1"), ends.get("body2")
+    if spec == 'SingleAxisHingeJoint':
+        low = _floats(fields.get('minAngle', str(-math.pi)), [-math.pi])[0]
+        high = _floats(fields.get('maxAngle', str(math.pi)), [math.pi])[0]
+        if low > -math.pi or high < math.pi:          # X3D's default is no stop
+            con.use_limit_ang_z = True
+            con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
+    elif spec == 'SliderJoint':
+        # X3D's separation is the bodies' distance along the axis; Blender's slider limits count from where they start
+        b1, b2 = ends.get("body1"), ends.get("body2")
+        start = ((b2.matrix_world.translation - b1.matrix_world.translation).dot(x)
+                 if b1 is not None and b2 is not None and x is not None else 0.0)
+        low = _floats(fields.get('minSeparation', '0'), [0.0])[0] * conversion_scale
+        high = _floats(fields.get('maxSeparation', '1'), [1.0])[0] * conversion_scale
+        con.use_limit_lin_x = True
+        con.limit_lin_x_lower, con.limit_lin_x_upper = low - start, high - start
+    elif spec in ('DoubleAxisHingeJoint', 'UniversalJoint'):
+        # a two-axis joint: no sliding, no turning about Y; free about Z (axis1) and X (axis2)
+        for name in ('lin_x', 'lin_y', 'lin_z', 'ang_y'):
+            setattr(con, f"use_limit_{name}", True)
+            setattr(con, f"limit_{name}_lower", 0.0)
+            setattr(con, f"limit_{name}_upper", 0.0)
+        if spec == 'DoubleAxisHingeJoint':
+            low = _floats(fields.get('minAngle1', str(-math.pi)), [-math.pi])[0]
+            high = _floats(fields.get('maxAngle1', str(math.pi)), [math.pi])[0]
+            if low > -math.pi or high < math.pi:
+                con.use_limit_ang_z = True
+                con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
+    empty[RIGID_JOINT_PROPERTY] = json.dumps({"node": spec, "def": joint.getDefName() or "", "fields": fields})
+
+
+def _frame_rotation(z, x):
+    """A rotation whose local Z is ``z`` and local X ``x`` (either may be None; x is made square to z)."""
+    if z is None and x is None:
+        return Matrix.Identity(3)
+    if z is None:
+        return Vector((1.0, 0.0, 0.0)).rotation_difference(x).to_matrix()
+    if x is None or abs(x.dot(z)) > 1.0 - 1e-9:
+        return Vector((0.0, 0.0, 1.0)).rotation_difference(z).to_matrix()
+    x = (x - z * x.dot(z)).normalized()
+    y = z.cross(x)
+    return Matrix((x, y, z)).transposed()
+
+
+# -- carry: nodes the import has no handler for, kept as written and written back in place ------------------------------
+# X3D child nodes the import otherwise drops without a trace (node board read rung "none"): Sound and its audio graph,
+# volume data, particle systems, layering, texture projectors, NURBS interpolators... Blender does nothing with them;
+# their XML, exactly as the file wrote it, rides on the object of their nearest Transform (or the scene) and the X3D 4.0
+# export writes it back there. A node a later batch builds natively leaves this list. DIS is left out on purpose: another
+# agent is bringing it natively.
+CARRIED_PROPERTY = "x3d_carried"            # JSON list of XML texts, on an object or the scene
+CARRIED_ROUTES_PROPERTY = "x3d_carried_routes"   # on the scene: ROUTEs between carried nodes
+CARRY_SPECS = frozenset((
+    'Analyser', 'AudioDestination', 'BiquadFilter', 'BufferAudioSource', 'CADFace', 'ChannelMerger', 'ChannelSelector',
+    'ChannelSplitter', 'ClipPlane', 'Convolver', 'Delay',
+    'DynamicsCompressor', 'Gain', 'GeoMetadata', 'IsoSurfaceVolumeData', 'Layout',
+    'ListenerPointSource', 'LocalFog', 'MicrophoneSource', 'NurbsOrientationInterpolator', 'NurbsPositionInterpolator',
+    'NurbsSet', 'NurbsSurfaceInterpolator', 'OscillatorSource', 'ParticleSystem', 'PeriodicWave', 'PickableGroup',
+    'SegmentedVolumeData', 'SpatialSound', 'StreamAudioDestination', 'StreamAudioSource',
+    'TextureProjector', 'TextureProjectorParallel', 'Viewport', 'VolumeData', 'WaveShaper'))
+# what the import builds: a subtree holding any of these is not carried (it would be written twice)
+CARRY_BLOCKERS = frozenset(('Shape', 'Inline', 'HAnimHumanoid', 'Viewpoint', 'OrthoViewpoint', 'GeoViewpoint',
+                            'PointLight', 'SpotLight', 'DirectionalLight', 'Transform', 'GaussianSplats'))
+CARRY_PASS_THROUGH = frozenset(('Group', 'StaticGroup'))     # between a carried node and its Transform
+
+
+def find_carried(all_nodes):
+    """[(node, ancestry, xml)] for the nodes to carry, and the ids of every node inside them (the import skips those)."""
+    items, inside, tops = [], set(), set()
+    for node, ancestry in all_nodes:          # depth first: a node's ancestors come before it
+        if any(id(a) in tops for a in ancestry):
+            inside.add(id(node))
+            continue
+        if node.getSpec() not in CARRY_SPECS:
+            continue
+        element = getattr(node, "x3dNode", None)
+        if element is None:                      # the classic VRML encoding: no XML to keep
+            continue
+        top = next((i for i in range(len(ancestry) - 1, -1, -1) if ancestry[i].getSpec() == 'Transform'), None)
+        between = ancestry[(top + 1) if top is not None else 0:]
+        if any(a.getSpec() not in CARRY_PASS_THROUGH and a.getSpec() not in ('X3D', 'Scene', None) for a in between):
+            continue                             # under a node the writer dissolves or rebuilds: no place to put it
+        if any(e.tagName in CARRY_BLOCKERS for e in element.getElementsByTagName('*')):
+            continue
+        items.append((node, ancestry, element.toxml()))
+        inside.add(id(node))
+        tops.add(id(node))
+    return items, inside
+
+
+def place_carried(items, bpyscene, global_matrix=None, base_dir=".", collection=None):
+    """Each carried node's XML onto its nearest Transform's object (the one made for that ancestry), else the scene.
+    ROUTEs between carried nodes are kept with them; one with a single carried end is reported, not guessed at.
+    An audio graph the sound bridge models is made audible (sound_bridge): a SpatialSound becomes a Speaker that keeps
+    its XML instead, a destination graph stays carried and gets a sound strip."""
+    import json
+    if not items:
+        return
+    document = items[0][0].x3dNode.ownerDocument
+    routed = {route.getAttribute(end) for route in document.getElementsByTagName('ROUTE')
+              for end in ('fromNode', 'toNode')}
+    speakers = strips = 0
+    for node, ancestry, xml in items:
+        top = next((i for i in range(len(ancestry) - 1, -1, -1) if ancestry[i].getSpec() == 'Transform'), None)
+        owner = bpyscene
+        if top is not None:
+            transform = ancestry[top].getRealNode()
+            owners = getattr(transform, "hierarchy_owners", None) or []
+            owner = next((ob for ob, anc in owners if len(anc) == top and all(a is b for a, b in zip(anc, ancestry))),
+                         None) or getattr(transform, "blendObject", None)
+            if owner is None:
+                logger.warning("%s %s: its Transform made no object; not carried", node.getSpec(), node.getDefName() or "")
+                continue
+        bridged = _bridge_sound(xml, owner, ancestry, top, routed, bpyscene, global_matrix, base_dir, collection)
+        if bridged == "speaker":
+            speakers += 1
+            continue                             # the Speaker keeps the XML
+        strips += bridged == "strip"
+        kept = json.loads(owner.get(CARRIED_PROPERTY, "[]") or "[]")
+        kept.append(xml)
+        owner[CARRIED_PROPERTY] = json.dumps(kept)
+    carried_defs = set()
+    for node, _ancestry, _xml in items:
+        for element in [node.x3dNode, *node.x3dNode.getElementsByTagName('*')]:
+            if element.hasAttribute('DEF'):
+                carried_defs.add(element.getAttribute('DEF'))
+    routes, half = [], 0
+    for route in document.getElementsByTagName('ROUTE'):
+        ends = (route.getAttribute('fromNode'), route.getAttribute('toNode'))
+        if all(end in carried_defs for end in ends):
+            routes.append(route.toxml())
+        elif any(end in carried_defs for end in ends):
+            half += 1
+    if routes:
+        bpyscene[CARRIED_ROUTES_PROPERTY] = json.dumps(routes)
+    if half:
+        logger.warning("%d ROUTE(s) join a carried node to one the import builds; they are not carried", half)
+    logger.info("carried %d node(s) the import has no handler for (written back as the file wrote them)", len(items))
+    if speakers or strips:
+        logger.info("sound bridge: %d SpatialSound graph(s) as Speakers, %d destination graph(s) as sound strips",
+                    speakers, strips)
+
+
+def _bridge_sound(xml, owner, ancestry, top, routed, bpyscene, global_matrix, base_dir, collection):
+    """"speaker", "strip" or None (left to carry alone). Never stops the import."""
+    from . import sound_bridge
+    root = sound_bridge.bridgeable(xml, routed)
+    if root is None:
+        return None
+    try:
+        if root.tag in sound_bridge.SPEAKER_ROOTS:
+            if top is not None and len(getattr(ancestry[top].getRealNode(), "hierarchy_owners", None) or []) > 1:
+                return None                      # under a USE'd Transform: one graph, several places
+            sound_bridge.make_speaker(root, xml, owner, bpyscene, global_matrix or Matrix(), base_dir,
+                                      collection or bpyscene.collection)
+            return "speaker"
+        sound_bridge.make_strip(root, bpyscene, base_dir)
+        return "strip"
+    except Exception as exc:                     # the graph is still carried as written
+        logger.warning("%s %s: not rendered (%s); carried as written", root.tag, root.get("DEF") or "", exc)
+        return None
+
+
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
 X3D_LOD_PROPERTY = "x3d_lod"                  # on the same object: "<LOD name>:<level>"
 
@@ -8564,6 +9433,123 @@ def finalize_lod():
             member[X3D_LOD_PROPERTY] = f"{name}:{index}"
 
 
+import_legacy_rigid_bodies = False   # BLENDER_X3D_PHYSICS=legacy: the node board's batch 6/7 importer instead of the physics one
+import_physics = True      # set by load(physics=...): RigidBodyPhysics becomes Blender's rigid body world
+_PHYSICS_ROUTES = set()    # ROUTE tuples a body's motion now drives in Blender (not import losses)
+_BODY_TO_TRANSFORM = {("position", "translation"): "COPY_LOCATION", ("orientation", "rotation"): "COPY_ROTATION"}
+
+
+def follow_body_routes(all_nodes, bodies, physics):
+    """ROUTE RigidBody.position -> Transform.translation and RigidBody.orientation -> Transform.rotation: the usual way
+    an X3D scene shows a body (X_ITE draws no collidable that is only a body's geometry). The Transform's object gets a
+    Copy Location / Copy Rotation constraint on the body's object, in world space, which is what the ROUTE does when the
+    Transform and the collection sit in the same coordinate system (the usual case; otherwise listed as a loss). The body's
+    own collidable object is then a stand-in: hidden in renders and drawn as wire."""
+    _PHYSICS_ROUTES.clear()
+    transforms = {}     # DEF -> the objects that stand for that Transform (empty in a flat import)
+    for node, _ancestry in all_nodes:
+        if node.getSpec() == "Transform" and node.getDefName() and not node.reference:
+            transforms.setdefault(node.getDefName(), [o for o, _a in node.getRealNode().hierarchy_owners])
+    for node, _ancestry in all_nodes:
+        if node.getSpec() != "ROUTE" or getattr(node, "x3dNode", None) is None:
+            continue
+        attrs = {k: _attribute_raw(node, k, "") for k in ("fromNode", "fromField", "toNode", "toField")}
+        body = bodies.get(attrs["fromNode"])
+        pair = (attrs["fromField"].replace("_changed", ""), attrs["toField"].replace("set_", ""))
+        kind = _BODY_TO_TRANSFORM.get(pair)
+        if body is None or kind is None:
+            continue
+        owners = transforms.get(attrs["toNode"])
+        if owners is None:
+            continue
+        name = f"X3D ROUTE {attrs['fromNode']}.{attrs['fromField']}"
+        if owners:      # keep_hierarchy: the object that stands for the Transform takes the body's pose, as the ROUTE does
+            for ob in owners:
+                if ob is body or "x3d_rigid_body" in ob.keys():
+                    continue
+                con = ob.constraints.new(kind)
+                con.name, con.target = name, body
+                con.owner_space = con.target_space = "WORLD"
+                if ob.parent is not None:
+                    physics.lose(f"ROUTE {attrs['fromNode']}.{attrs['fromField']} -> {attrs['toNode']}", "(route)",
+                                 "the Transform is nested: followed in world space, its parents' offset is not applied")
+        else:           # a flat import: each object under the Transform follows the body's motion from where it starts
+            for ob in bpy.data.objects:
+                if ob.get(X3D_DEF_PROPERTY) != attrs["toNode"] or ob is body or "x3d_rigid_body" in ob.keys() \
+                        or any(c.name.startswith("X3D ROUTE " + attrs["fromNode"] + ".") and c.type == "CHILD_OF"
+                               for c in ob.constraints):
+                    continue
+                con = ob.constraints.new("CHILD_OF")
+                con.name, con.target = name, body
+                con.inverse_matrix = body.matrix_world.inverted()
+        for stand_in in [body] + [c for c in body.children if c.rigid_body is not None]:
+            stand_in.hide_render = True
+            stand_in.display_type = "WIRE"
+            stand_in["x3d_collidable_only"] = True
+        _PHYSICS_ROUTES.add(_route_tuple(attrs))
+
+
+def import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection):
+    """The file's RigidBodyCollections as Blender's rigid body world (source/physics_blender.py says what maps how).
+    The losses join the scene's import loss record (``x3d_import_losses``) with kind "physics"; they are logged, and
+    X3D_IMPORT_STRICT does not raise on them (they describe a simulation that runs, not behaviour that was dropped)."""
+    import json
+    element = getattr(root_node, "x3dNode", None)
+    if element is None:     # classic VRML encoding: no physics component to read
+        return None
+    document = element.ownerDocument.documentElement if element.ownerDocument is not None else element
+    if not document.getElementsByTagName("RigidBodyCollection"):
+        return None
+    from . import physics_model
+    physics = physics_model.read_physics(document)
+    if not physics.collections:
+        return None
+    from . import physics_blender
+    shape_objects, matrices = {}, {}
+    for node, ancestry in all_nodes:
+        el = getattr(node, "x3dNode", None)
+        if el is None:
+            continue
+        spec = node.getSpec()
+        if spec == "Shape" and node.blendObject is not None:
+            shape_objects.setdefault(id(el), node.blendObject)
+        elif spec == "RigidBodyCollection":
+            matrices.setdefault(id(el), getFinalMatrix(node, Matrix(), ancestry, global_matrix))
+    # a Shape's object can be gone by now (the importer removes the ones it merged or replaced): leave those out
+    def alive(ob):
+        try:
+            return ob.name in bpy.data.objects
+        except ReferenceError:
+            return False
+    shape_objects = {key: ob for key, ob in shape_objects.items() if alive(ob)}
+    def in_collection(el):
+        while el is not None:
+            if getattr(el, "tagName", "") == "RigidBodyCollection":
+                return True
+            el = el.parentNode
+        return False
+    # a rigid body simulates in world space: a body the hierarchy rebuild parented keeps its world matrix, without parent.
+    # Only the shapes inside a RigidBodyCollection; every other object of the file keeps the hierarchy it was given.
+    shape_elements = {id(node.x3dNode): node.x3dNode for node, _a in all_nodes if getattr(node, "x3dNode", None) is not None}
+    for key, ob in shape_objects.items():
+        if ob.parent is not None and in_collection(shape_elements.get(key)):
+            world = ob.matrix_world.copy()
+            ob.parent = None
+            ob.matrix_world = world
+    made = physics_blender.apply(physics, bpycontext.scene, bpycollection, shape_objects, matrices, conversion_scale)
+    follow_body_routes(all_nodes, made["bodies"], physics)
+    records = [{"kind": "physics", "node": what, "detail": f"{field}: {why}"} for what, field, why in physics.losses]
+    for record in records:
+        logger.warning("X3D import loss: %s %s: %s", record["kind"], record["node"], record["detail"])
+    if records:
+        try:
+            raw = bpycontext.scene.get("x3d_import_losses")
+            bpycontext.scene["x3d_import_losses"] = json.dumps((json.loads(raw) if raw else []) + records)
+        except Exception:  # pragma: no cover - a scene that cannot hold a property
+            pass
+    return made
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -8643,6 +9629,7 @@ def load_web3d(
     created = []  # (object, ancestry) of every object this file's nodes made, for rebuild_hierarchy
     # the first Background of the file is the one a browser shows; an inlined file's does not count
     background_seen = bool(_INLINE_STACK)
+    fog_seen = bool(_INLINE_STACK)     # Fog is bindable too: the file's first one
     # objects a Switch does not choose; collected as each is made, since a node under a USE'd Switch (or a USE'd Shape)
     # makes one object per instance and keeps only the last in node.blendObject
     switch_hidden = []
@@ -8650,7 +9637,10 @@ def load_web3d(
     # objects made under a node whose visible field is false (X3D 4.0: X3DGroupingNode and X3DShapeNode have one)
     visible_false = []
 
+    carried, carried_inside = find_carried(all_nodes)
     for node, ancestry in all_nodes:
+        if id(node) in carried_inside:
+            continue           # carried as written (place_carried): nothing of it is built
         # if 'castle.wrl' not in node.getFilename():
         #   continue
         made_before = node.blendObject
@@ -8686,15 +9676,18 @@ def load_web3d(
             importLamp(bpycollection, node, spec, ancestry, global_matrix)
         elif spec in {'Viewpoint', 'GeoViewpoint', 'OrthoViewpoint'}:
             importViewpoint(bpycollection, node, ancestry, global_matrix)
-        elif spec == 'Transform':
+        elif spec in TRANSFORM_SPECS:
             # Only use transform nodes when we are not importing a flat object hierarchy
             if not PREF_FLAT:
                 importTransform(bpycollection, node, ancestry, global_matrix)
         elif spec == 'NavigationInfo' and not _INLINE_STACK and navigation_headlight is None:
             navigation_headlight = node.getFieldAsBool('headlight', True, ancestry)
-        elif spec == 'Background' and not background_seen:
+        elif spec in ('Background', 'TextureBackground') and not background_seen:
             importBackground(bpyscene, node, ancestry)
             background_seen = True
+        elif spec == 'Fog' and not fog_seen:
+            importFog(bpyscene, node, ancestry)
+            fog_seen = True
         elif spec == 'Sound':
             importAudio(bpycollection, node, ancestry, global_matrix)
             '''
@@ -8715,6 +9708,11 @@ def load_web3d(
                 item.getFieldAsBool('visible', True, chain) is not False
                 for item, chain in [(anc, ancestry[:i]) for i, anc in enumerate(ancestry)] + [(node, ancestry)]):
             visible_false.append(node.blendObject)
+        if node.blendObject is not None and node.blendObject is not made_before \
+                and any(anc.getSpec() in ('Switch', 'LOD', *GROUP_RAW_FIELDS) for anc in ancestry):
+            chain = group_chain(node, ancestry)
+            if chain:
+                node.blendObject[GROUP_CHAIN_PROPERTY] = json.dumps(chain)
         if spec in ('LOD', 'GeoLOD'):
             lod_records[lod_key(node, ancestry)] = {
                 "node": node, "ancestry": list(ancestry), "global_matrix": global_matrix,
@@ -8727,9 +9725,19 @@ def load_web3d(
 
     if PREF_HIERARCHY and PREF_FLAT:
         try:
-            rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes)
+            rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes, carried)
         except Exception as exc:  # the objects are already in place; a failed rebuild leaves the flat import
             logger.error("Hierarchy rebuild failed, objects stay flat: %s", exc, exc_info=True)
+    try:
+        place_carried(carried, bpyscene, global_matrix, os.path.dirname(os.path.abspath(filepath)), bpycollection)
+    except Exception as exc:  # carrying must never stop an import
+        logger.error("Carried nodes not kept: %s", exc, exc_info=True)
+
+    if import_physics and not _INLINE_STACK:
+        try:
+            import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection)
+        except Exception as exc:  # physics must never break a geometry import
+            logger.error("RigidBodyPhysics import failed, the geometry stays: %s", exc, exc_info=True)
 
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
@@ -8742,6 +9750,13 @@ def load_web3d(
         keep_scene_metadata(bpyscene, all_nodes)
     except Exception as exc:  # metadata must never stop an import
         logger.error("Scene-level Metadata not kept: %s", exc, exc_info=True)
+    try:
+        # the node board's batch 6/7 importer (field records, no simulation model) is kept behind BLENDER_X3D_PHYSICS=legacy;
+        # the physics importer above replaced it as the default, and running both would make every body twice
+        if import_legacy_rigid_bodies:
+            import_rigid_bodies(all_nodes, global_matrix, bpycontext)
+    except Exception as exc:  # physics must never stop the geometry import
+        logger.error("Rigid body physics not made: %s", exc, exc_info=True)
     report_import_losses(all_nodes, bpycontext, defer_routes_to_caller)
 
     # Switch: every child is imported, so nothing is lost on the way back out, but only the chosen one is shown; the others
@@ -8910,7 +9925,8 @@ def load(context,
          light_units=None,
          gpu_instances=None,
          keep_hierarchy=True,
-         defer_route_losses=False
+         defer_route_losses=False,
+         physics=None
          ):
     """circle_divisions: segments for Sphere, Cylinder, Cone and the 2D circles (None: BLENDER_X3D_CIRCLE_DIV, else
     16). X3D leaves the tessellation of its primitives to the browser; renders at 4K or 8K want 64 or more.
@@ -8920,18 +9936,29 @@ def load(context,
     gpu_instances: group objects that share a mesh under one Empty each, so the glTF exporter's GPU Instances option
     writes EXT_mesh_gpu_instancing (also on when BLENDER_X3D_GPU_INSTANCES is 1; see group_instances).
     keep_hierarchy: parent objects as the file's Transforms nest them (rebuild_hierarchy); False imports every object
-    at its world matrix without parents, as before."""
+    at its world matrix without parents, as before.
+    physics: RigidBodyCollections become Blender's rigid body world (import_rigid_body_physics); None reads
+    BLENDER_X3D_PHYSICS (default on), False keeps only their geometry, as before."""
     global colour_space, lighting_units, navigation_headlight, bound_view, default_view, defer_routes_to_caller
+    global import_physics, import_legacy_rigid_bodies
     defer_routes_to_caller = bool(defer_route_losses)
+    # physics: RigidBodyPhysics as Blender's rigid body world (None: BLENDER_X3D_PHYSICS, else on)
+    import_physics = (os.environ.get("BLENDER_X3D_PHYSICS", "1").strip().lower() not in ("0", "false", "no", "off", "legacy")
+                      if physics is None else bool(physics))
+    import_legacy_rigid_bodies = os.environ.get("BLENDER_X3D_PHYSICS", "").strip().lower() == "legacy"
+    if import_legacy_rigid_bodies:
+        import_physics = False
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
     colour_space = resolve_colour_space(color_space)
     lighting_units = resolve_light_units(light_units, colour_space)
     imported_lights.clear()
+    _PHYSICS_ROUTES.clear()
     lit_surfaces.clear()
     lit_by_node.clear()
     lod_records.clear()
     lod_members.clear()
+    group_keys.clear()
     navigation_headlight = None
     bound_view = default_view = None
 

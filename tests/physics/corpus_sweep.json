@@ -1,0 +1,1519 @@
+{
+ "about": "tools/physics_corpus_sweep.py over every .x3d of hagopjay/x3d.demo (19608b7) and hagopjay/x3d.loom (fc30c89) that names RigidBodyCollection; Blender 5.3.0 (bpy), 27 Nov 2026",
+ "files": [
+  {
+   "file": "x3d.demo@19608b7/docs/demos/blender-tour/v1/assets/rigidbody-tower.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 30,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.2
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/bridge-blenderizer/v2/lab-scenes/_demo-phys-drop.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 8,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/bridge-blenderizer/v2/lab-scenes/_demo-phys-hinge.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 4,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/d3-bridge/v2.1/scenes/living.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 0,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.4
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/d3-bridge/v2.2/scenes/living.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 0,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.4
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/d3-bridge/v2/scenes/living.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 0,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.4
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/ontology-constellation/v1/ontology-constellation.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 0,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 1.2
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/rigid-engines/v1/data/avalanche/live.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 45,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 90,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 1.0
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/rigid-engines/v1/data/cradle/live.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 6,
+   "joints": 5,
+   "launch": 0,
+   "follow_constraints": 12,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/rigid-engines/v1/data/gate/live.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 8,
+   "joints": 2,
+   "launch": 4,
+   "follow_constraints": 16,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.demo@19608b7/docs/demos/tether-firehose/v4/data/physics-ledger.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 0,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/control-four-hinges.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 10,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/fourbar-w1.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 10,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/fourbar-w10.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 10,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/fourbar-w3.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 10,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/fourbar-w30.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 10,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/mutant-coupler-plus2pct.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 12,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/mutant-low-transmission.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 12,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.engineering/fourbar/scenes/mutant-nongrashof.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 4,
+   "launch": 12,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/flop-lab/level/carnival-seed-7.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 100,
+   "joints": 121,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 5.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/flop-lab/level/cascade-seed-7.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 105,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 2.3
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/flop-lab/level/default-level.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 255,
+   "joints": 182,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 23.2
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/flop-lab/level/skyline-seed-7.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 40,
+   "joints": 49,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.8
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/flop-lab/level/tidal-seed-7.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 86,
+   "joints": 117,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 3.6
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/demos/dominoes-spiral.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 135,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 268,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "RigidBodyCollection",
+     "disableTime"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 5.6
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/demos/galton-board.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 249,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 480,
+   "physics_losses": 3,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "disableTime"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 26.2
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/demos/musicbox-twinkle.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 33,
+   "joints": 10,
+   "launch": 0,
+   "follow_constraints": 20,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 1.7
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/demos/trebuchet-keep.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 137,
+   "joints": 4,
+   "launch": 0,
+   "follow_constraints": 270,
+   "physics_losses": 3,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "disableTime"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 9.4
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/experiments/machine-with-sound.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 93,
+   "joints": 5,
+   "launch": 0,
+   "follow_constraints": 130,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 2.3
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/experiments/marble-minimal-friction2-zero.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 2,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/experiments/ode-only-fields.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 1,
+   "physics_losses": 7,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "slipFactors"
+    ],
+    [
+     "CollisionCollection",
+     "softnessErrorCorrection"
+    ],
+    [
+     "RigidBody",
+     "disableTime"
+    ],
+    [
+     "RigidBody",
+     "useFiniteRotation"
+    ],
+    [
+     "RigidBodyCollection",
+     "constantForceMix"
+    ],
+    [
+     "RigidBodyCollection",
+     "errorCorrection"
+    ],
+    [
+     "SingleAxisHingeJoint",
+     "stopErrorCorrection"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/experiments/race-ghost.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 93,
+   "joints": 5,
+   "launch": 0,
+   "follow_constraints": 20,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 2.2
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/experiments/race-main.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 93,
+   "joints": 5,
+   "launch": 0,
+   "follow_constraints": 130,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 4.9
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/joints-and-sensors.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 18,
+   "joints": 6,
+   "launch": 3,
+   "follow_constraints": 20,
+   "physics_losses": 0,
+   "route_losses": 3,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/marble-machine.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 93,
+   "joints": 5,
+   "launch": 0,
+   "follow_constraints": 130,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 4.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/marble-minimal.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 2,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/bell.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 1,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/curve.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 1,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/dominoes.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 11,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 20,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/elevator.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 1,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/flipper.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 2,
+   "physics_losses": 4,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "MotorJoint",
+     "(node)"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ],
+    [
+     "SingleAxisHingeJoint",
+     "stopBounce"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/funnel.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 1,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/halfpipe.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 1,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/launcher.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 2,
+   "physics_losses": 3,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ],
+    [
+     "SliderJoint",
+     "sliderForce"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/pendulum.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 2,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/ramp.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 1,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/seesaw.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 2,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/wheel.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 2,
+   "physics_losses": 4,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "DoubleAxisHingeJoint",
+     "desiredAngularVelocity2"
+    ],
+    [
+     "DoubleAxisHingeJoint",
+     "maxTorque2"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/xylophone.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 5,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/physx-bridge/scenes/pieces/zigzag.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 1,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "CollisionCollection",
+     "minBounceSpeed"
+    ],
+    [
+     "RigidBodyCollection",
+     "preferAccuracy"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/billiards-head-on.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 1,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/demo-avalanche.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 45,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 90,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 1.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/demo-cradle.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 6,
+   "joints": 5,
+   "launch": 0,
+   "follow_constraints": 12,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/demo-gate.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 8,
+   "joints": 2,
+   "launch": 4,
+   "follow_constraints": 16,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/drop-bounce.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/hinge-limit.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 3,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/pendulum-ball.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/slider-limit.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 1,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/slope-mu0.2.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.physics/rigid-engines/fixtures/stack3.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.platformer/levels/0-0-feel-lab.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "RigidBodyCollection",
+     "enabled"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 1.1
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.platformer/levels/1-1-tinker-meadow.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 33,
+   "joints": 13,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "RigidBodyCollection",
+     "enabled"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 10.3
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.platformer/levels/2-1-pendulum-gorge.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 24,
+   "joints": 7,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "RigidBodyCollection",
+     "enabled"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 8.6
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.platformer/levels/3-1-clockwork-spire.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 15,
+   "joints": 0,
+   "launch": 4,
+   "follow_constraints": 0,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "RigidBodyCollection",
+     "enabled"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 6.4
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.threejs/bridge/fixtures/BallJoint.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 1,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/BallJoint.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 1,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/CollidableOffset.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/CollidableShape.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 3,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/CollisionCollection.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 4,
+   "joints": 0,
+   "launch": 2,
+   "follow_constraints": 0,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "RigidBody",
+     "useGlobalGravity"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/CollisionSensor.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 3,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/CollisionSpace.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/Contact.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/DoubleAxisHingeJoint.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 1,
+   "follow_constraints": 0,
+   "physics_losses": 2,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "DoubleAxisHingeJoint",
+     "desiredAngularVelocity1"
+    ],
+    [
+     "DoubleAxisHingeJoint",
+     "maxTorque1"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/MotorJoint.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "MotorJoint",
+     "(node)"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/RigidBody.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 3,
+   "joints": 0,
+   "launch": 2,
+   "follow_constraints": 0,
+   "physics_losses": 1,
+   "route_losses": 0,
+   "loss_kinds": [
+    [
+     "RigidBody",
+     "useGlobalGravity"
+    ]
+   ],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/RigidBodyCollection.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 3,
+   "joints": 0,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/SingleAxisHingeJoint.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 1,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/SliderJoint.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  },
+  {
+   "file": "x3d.loom@fc30c89/x3d.webgpu/bridge/fixtures/UniversalJoint.x3d",
+   "result": [
+    "FINISHED"
+   ],
+   "bodies": 2,
+   "joints": 1,
+   "launch": 0,
+   "follow_constraints": 0,
+   "physics_losses": 0,
+   "route_losses": 0,
+   "loss_kinds": [],
+   "errors": [],
+   "nan_or_far": false,
+   "seconds": 0.0
+  }
+ ]
+}

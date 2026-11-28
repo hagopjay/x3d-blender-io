@@ -27,12 +27,14 @@ try:
     from .ir import IRMetadata, IRScene
     from .splat_gltf import splat_glb_bytes
     from .splat_io import sh0_to_rgb
+    from .physics_export import physics_xml
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import display_colour
     from interaction import tour_timeline
     from ir import IRMetadata, IRScene
     from splat_gltf import splat_glb_bytes
     from splat_io import sh0_to_rgb
+    from physics_export import physics_xml
 
 # The head meta name of the loss receipt's line (receipt.RECEIPT_META; tests/test_receipt.py checks they agree).
 RECEIPT_META = "x3d-blender-io.receipt"
@@ -56,6 +58,58 @@ _NMTOKEN_BAD = re.compile(r"[^\w.:-]")
 def _nmtoken(name: str, fallback: str = "Node") -> str:
     """An xs:NMTOKEN value (HAnim ``name`` fields): whitespace and other illegal characters become "_"."""
     return _NMTOKEN_BAD.sub("_", (name or "").strip()) or fallback
+
+
+class _Carried:
+    """The carried XML of a scene, checked once before anything is named: every DEF in it is reserved (so the writer's
+    own names avoid them), and an item that USEs a name no carried item DEFs (it would dangle) is left out. A carried
+    node under a USE'd Transform comes once per copy: the first copy is written, a later one becomes a USE of its DEF."""
+
+    def __init__(self, ir_scene, defs, diagnostics):
+        import xml.etree.ElementTree as ElementTree
+        self.ok, self.written = {}, set()
+        texts = [x for instance in ir_scene.iter_instances() for x in instance.carried] + list(ir_scene.carried_root)
+        parsed = {}
+        for text in texts:
+            try:
+                parsed[text] = ElementTree.fromstring(text)
+            except ElementTree.ParseError:
+                diagnostics.append("A carried node is not well-formed XML; left out.")
+        named = {e.get("DEF") for root in parsed.values() for e in root.iter() if e.get("DEF")}
+        for text, root in parsed.items():
+            missing = {e.get("USE") for e in root.iter() if e.get("USE")} - named
+            if missing:
+                diagnostics.append(f"Carried {root.tag} uses {', '.join(sorted(missing))}, which no carried node defines; "
+                                   "left out (it would dangle).")
+                continue
+            self.ok[text] = (root.tag, root.get("DEF"), {e.get("DEF") for e in root.iter() if e.get("DEF")})
+        for name in named:
+            defs.reserve(name)
+        self.routes = [r for r in getattr(ir_scene, "carried_routes", []) if all(
+            end in named for end in re.findall(r'(?:fromNode|toNode)="([^"]*)"', r))]
+
+    def yield_to(self, nodes_xml, routes_xml):
+        """The behaviour graph keeps some scene nodes in place itself (a ROUTE's end it has no Blender object for) and
+        writes their ROUTEs: those are not written a second time from the carried copy."""
+        taken = set(re.findall(r'\bDEF="([^"]+)"', nodes_xml))
+        self.ok = {text: info for text, info in self.ok.items() if not (info[1] and info[1] in taken)}
+        ends = re.compile(r'fromNode="([^"]*)"\s+fromField="([^"]*)"\s+toNode="([^"]*)"\s+toField="([^"]*)"')
+        written = set(ends.findall(routes_xml))
+        self.routes = [r for r in self.routes if not set(ends.findall(r)) & written]
+
+    def xml(self, texts, indent):
+        out = []
+        for text in texts:
+            if text not in self.ok:
+                continue
+            tag, top_def, its_defs = self.ok[text]
+            if its_defs & self.written:
+                if top_def and top_def in self.written:
+                    out.append(f'{indent}<{tag} USE="{top_def}" />\n')
+                continue
+            self.written |= its_defs
+            out.append(f"{indent}{text}\n")
+        return "".join(out)
 
 
 class _DefNames:
@@ -93,6 +147,10 @@ class _DefNames:
             length += 4
         self._sidecars[name] = digest
         return name
+
+    def reserve(self, name: str) -> None:
+        """A name written as it is (a carried node's DEF): the writer's own names avoid it."""
+        self._used.add(name)
 
     def first_use(self, kind: str, key: str) -> bool:
         lookup = (kind, key)
@@ -269,10 +327,25 @@ def _texture_xml(texture_ref, indent, *, container_field, output_dir=None, defs:
     """An ImageTexture for ``texture_ref``. With ``defs``, the first texture for a url (and wrap mode) gets a DEF and
     later ones a USE with their own containerField, so an image shared by several materials, in any role, is loaded
     once (Web3D's X3D Schematron warns about repeated urls)."""
+    clip = texture_ref.extension == "CLIP"
+    pixels = getattr(texture_ref, "pixel_image", None)
+    if pixels:
+        # a PixelTexture the import read: written back inline (SFImage: width height components, then the pixels)
+        width, height, components, packed = pixels
+        attrs = ""
+        if defs is not None:
+            key = f"pixels:{texture_ref.image_name}|{'clip' if clip else 'repeat'}"
+            texture_def = defs.get("texture", key, "TX_", label=texture_ref.image_name or "PixelTexture")
+            if not defs.first_use("texture", key):
+                return f'{indent}<PixelTexture USE="{texture_def}" containerField="{container_field}" />\n'
+            attrs = f' DEF="{texture_def}"'
+        # decimal integers: SFImage allows hex or decimal, and the x3d.py validator reads every pixel with float()
+        image = " ".join([str(width), str(height), str(components)] + [str(int(v)) for v in packed])
+        wrap = ' repeatS="false" repeatT="false"' if clip else ""
+        return f'{indent}<PixelTexture{attrs} containerField="{container_field}" image="{image}"{wrap} />\n'
     url = _texture_url(texture_ref, output_dir=output_dir)
     if not url:
         return ""
-    clip = texture_ref.extension == "CLIP"
     attrs = ""
     if defs is not None:
         key = f"{url}|{'clip' if clip else 'repeat'}"
@@ -306,6 +379,30 @@ def _texture_transform_xml(material, indent):
     return ""
 
 
+_TWO_SIDED_ORDER = ("backAmbientIntensity", "backDiffuseColor", "backEmissiveColor", "backShininess", "backSpecularColor",
+                    "backTransparency", "separateBackColor")
+
+
+def _two_sided_attrs(material):
+    """The back attributes of a material read from a TwoSidedMaterial (``material.two_sided``, the values the file gave,
+    so in the file's colour space), or None for any other material."""
+    fields = getattr(material, "two_sided", None)
+    if fields is None:
+        return None
+    attrs = []
+    for name in _TWO_SIDED_ORDER:
+        if name not in fields:
+            continue
+        value = fields[name]
+        if isinstance(value, bool):
+            attrs.append(f'{name}="{"true" if value else "false"}"')
+        elif isinstance(value, list):
+            attrs.append(f'{name}="{_fmt3(value)}"')
+        else:
+            attrs.append(f'{name}="{_fmt(value)}"')
+    return attrs
+
+
 def _classic_material_xml(material, material_def, indent, look: _Look, *, output_dir=None, defs=None):
     """``(material xml, appearance texture xml)`` of a Material written for ``material``. The base colour texture goes in
     the Appearance's texture field, the way a classic file has it (X3D 17.2.2: an RGB texture replaces diffuseColor)."""
@@ -333,7 +430,13 @@ def _classic_material_xml(material, material_def, indent, look: _Look, *, output
                            ("occlusionTexture", material.occlusion_texture))
         if ref is not None
     )
-    if inner:
+    two_sided = _two_sided_attrs(material) if not inner else None
+    if two_sided is not None:
+        # a TwoSidedMaterial the import read: the front from the Blender material, the back as the import kept it; it
+        # has no normalScale or occlusionStrength (a material that gained a map of its own writes a Material)
+        attrs = [a for a in attrs if not a.startswith(("normalScale=", "occlusionStrength="))] + two_sided
+        xml = f"{indent}<TwoSidedMaterial {' '.join(attrs)} />\n"
+    elif inner:
         xml = f"{indent}<Material {' '.join(attrs)}>\n{inner}{indent}</Material>\n"
     else:
         xml = f"{indent}<Material {' '.join(attrs)} />\n"
@@ -387,15 +490,33 @@ def _material_xml(material, material_def, indent, *, output_dir=None, defs=None)
     return f"{indent}<{tag} {' '.join(attrs)} />\n"
 
 
-def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK, line_width=None):
+_POINT_PROPERTY_ORDER = ("attenuation", "pointSizeMaxValue", "pointSizeMinValue", "pointSizeScaleFactor")
+
+
+def _point_properties_attrs(fields):
+    """A PointProperties' attributes, in a fixed order; the values are sizes and factors, not lengths."""
+    attrs = []
+    for name in _POINT_PROPERTY_ORDER:
+        if name in fields:
+            value = fields[name]
+            text = " ".join(_fmt_short(v) for v in value) if isinstance(value, list) else _fmt_short(value)
+            attrs.append(f'{name}="{text}"')
+    return attrs
+
+
+def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK, line_width=None,
+                    point_properties=None):
     """The Appearance of ``material``. ``line_width`` (a LineProperties linewidthScaleFactor) gives the line shapes of
     that width an Appearance of their own, with the material written again without a DEF, since a LineProperties is part
-    of the Appearance a shape shares."""
+    of the Appearance a shape shares; ``point_properties`` (PointProperties fields) does the same for point shapes."""
     key = material.name if line_width is None else f"{material.name}@lw{_fmt_short(line_width)}"
+    point_attrs = _point_properties_attrs(point_properties) if point_properties else []
+    if point_attrs:
+        key = f"{key}@pp{'_'.join(point_attrs)}"
     app_def = defs.get("appearance", key, "APP_")
     if not defs.first_use("appearance", key):
         return f'{indent}<Appearance USE="{app_def}" />\n'
-    material_def = defs.get("material", material.name, "MA_") if line_width is None else None
+    material_def = defs.get("material", material.name, "MA_") if line_width is None and not point_attrs else None
     attrs = [f'DEF="{app_def}"']
     if material.alpha_mode == "BLEND":
         attrs.append('alphaMode="BLEND"')
@@ -415,6 +536,8 @@ def _appearance_xml(material, defs: _DefNames, indent, *, output_dir=None, look:
     xml.append(_texture_transform_xml(material, indent + "  "))
     if line_width is not None:
         xml.append(f'{indent}  <LineProperties linewidthScaleFactor="{_fmt_short(line_width)}" />\n')
+    if point_attrs:
+        xml.append(f'{indent}  <PointProperties {" ".join(point_attrs)} />\n')
     xml.append(f"{indent}</Appearance>\n")
     return "".join(xml)
 
@@ -436,8 +559,7 @@ def _default_appearance_xml(indent, look: _Look = _PLAIN_LOOK):
 
 def _point_set_xml(geometry, geometry_def, indent):
     """A vertices-only mesh: a PointSet with one Color / ColorRGBA per point when it has POINT colours."""
-    xml = [f'{indent}<PointSet DEF="{geometry_def}">\n',
-           f'{indent}  <Coordinate point="{" ".join(_fmt3_length(point) for point in geometry.coord)}" />\n']
+    xml = [f'{indent}<PointSet DEF="{geometry_def}">\n', _coordinate_xml(geometry, indent + "  ")]
     if geometry.color and len(geometry.color) == len(geometry.coord):
         if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
             values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
@@ -449,35 +571,183 @@ def _point_set_xml(geometry, geometry_def, indent):
     return "".join(xml)
 
 
+def _triangle_index(coord_index, sides=3):
+    """The IndexedTriangleSet ``index`` for an IndexedFaceSet ``coordIndex`` whose every face is a triangle, else None
+    (``sides=4``: the IndexedQuadSet ``index`` when every face is a quad)."""
+    out, face = [], []
+    for i in coord_index:
+        if i < 0:
+            if face:
+                if len(face) != sides:
+                    return None
+                out.extend(face)
+            face = []
+        else:
+            face.append(i)
+    if face:
+        if len(face) != sides:
+            return None
+        out.extend(face)
+    return out or None
+
+
+def _quad_set_layout(geometry):
+    """(node, attrs, order) for a mesh read from a QuadSet or IndexedQuadSet while every face is still a quad, else
+    None (the caller writes a triangle or face set). A QuadSet carries its arrays in corner order (no index), so a
+    skinned or shape-keyed mesh writes an IndexedQuadSet."""
+    node = getattr(geometry, "geometry_node", None)
+    if node not in ("QuadSet", "IndexedQuadSet"):
+        return None
+    quads = _triangle_index(geometry.coord_index, sides=4)
+    if not quads:
+        return None
+    if node == "QuadSet" and not (geometry.skin_coord_def or geometry.morph_keys):
+        return node, [], quads
+    return "IndexedQuadSet", [f'index="{_fmt_ints(quads)}"'], None
+
+
+def _line_set_layout(geometry):
+    """(vertexCount, order) for line geometry read from a LineSet: each polyline's vertices one after the other, so
+    the arrays follow the mesh's own polylines whatever was edited, else None (an IndexedLineSet)."""
+    if getattr(geometry, "geometry_node", None) != "LineSet" or geometry.skin_coord_def or geometry.morph_keys:
+        return None
+    counts, order, run = [], [], []
+    for i in list(geometry.coord_index) + [-1]:
+        if i < 0:
+            if len(run) >= 2:
+                counts.append(len(run))
+                order.extend(run)
+            elif run:
+                return None
+            run = []
+        else:
+            run.append(i)
+    return (counts, order) if counts else None
+
+
+def _coordinate_xml(geometry, indent, order=None):
+    """The Coordinate of ``geometry``, or a CoordinateDouble with the file's own point text while every coordinate
+    still has exactly its value (``geometry.coord_double``, checked by the extractor)."""
+    double = getattr(geometry, "coord_double", None)
+    if double and len(double) == len(geometry.coord):
+        text = " ".join(" ".join(triple) for triple in _in_order(double, order))
+        return f'{indent}<CoordinateDouble point="{text}" />\n'
+    return f'{indent}<Coordinate point="{_fmt_points(_in_order(geometry.coord, order))}" />\n'
+
+
+def _fan_strip_runs(triangles, strip):
+    """``triangles`` (a flat index, three per triangle, as the mesh has them) as fans or strips, or None.
+
+    The runs are read off the mesh itself: a triangle joins the run before it when it is the run's next triangle
+    (a fan: it shares the first and the last index; a strip: the last two, turned on every other triangle the way
+    a viewer turns them), else it starts a new run. The runs are then unrolled again and must give back the same
+    triangles in the same order and winding; if they do not, None, and the caller writes a triangle set."""
+    tris = [tuple(triangles[i:i + 3]) for i in range(0, len(triangles), 3)]
+    runs = []
+    for a, b, c in tris:
+        if runs:
+            run = runs[-1]
+            if strip:
+                j = len(run) - 2
+                joins = (a, b) == ((run[j], run[j + 1]) if j % 2 == 0 else (run[j + 1], run[j]))
+            else:
+                joins = a == run[0] and b == run[-1]
+            if joins:
+                run.append(c)
+                continue
+        runs.append([a, b, c])
+    unrolled = []
+    for run in runs:
+        for j in range(len(run) - 2):
+            if strip:
+                unrolled.append((run[j], run[j + 1], run[j + 2]) if j % 2 == 0 else (run[j + 1], run[j], run[j + 2]))
+            else:
+                unrolled.append((run[0], run[j + 1], run[j + 2]))
+    return runs if unrolled == tris else None
+
+
+# a triangle set without an index carries its arrays in corner order, so it cannot share a Coordinate by USE (a skin)
+# or have its points moved by a CoordinateInterpolator written for the shared vertices (shape keys)
+_UNINDEXED_SETS = ("TriangleSet", "TriangleFanSet", "TriangleStripSet")
+_TRIANGLE_SETS = _UNINDEXED_SETS + ("IndexedTriangleSet", "IndexedTriangleFanSet", "IndexedTriangleStripSet")
+
+
+def _triangle_set_layout(geometry, triangles):
+    """(node, attrs, order) for a mesh whose every face is a triangle: the node it is written as (the one the import
+    read it from, ``geometry.geometry_node``, else an IndexedTriangleSet), its index or count attributes, and for a
+    set without an index the vertex order its arrays are written in (None: the arrays as they are)."""
+    node = getattr(geometry, "geometry_node", None)
+    node = node if node in _TRIANGLE_SETS else "IndexedTriangleSet"
+    if node in _UNINDEXED_SETS and (geometry.skin_coord_def or geometry.morph_keys):
+        node = "IndexedTriangleSet"
+    runs = None
+    if node in ("TriangleFanSet", "TriangleStripSet", "IndexedTriangleFanSet", "IndexedTriangleStripSet"):
+        runs = _fan_strip_runs(triangles, strip=node.endswith("StripSet"))
+        if runs is None:
+            node = "TriangleSet" if node in _UNINDEXED_SETS else "IndexedTriangleSet"
+    if node == "IndexedTriangleSet":
+        return node, [f'index="{_fmt_ints(triangles)}"'], None
+    if node == "TriangleSet":
+        return node, [], list(triangles)
+    if node in ("IndexedTriangleFanSet", "IndexedTriangleStripSet"):
+        return node, [f'index="{_fmt_ints([i for run in runs for i in run + [-1]])}"'], None
+    count = "stripCount" if node == "TriangleStripSet" else "fanCount"
+    return node, [f'{count}="{_fmt_ints([len(run) for run in runs])}"'], [i for run in runs for i in run]
+
+
+def _in_order(values, order):
+    """``values`` (parallel to the coordinates), or for a triangle set without an index one entry per corner."""
+    return values if order is None else [values[i] for i in order]
+
+
 def _geometry_xml(geometry, defs: _DefNames, indent):
     geometry_def = defs.get("geometry", geometry.name, "ME_")
-    node = "PointSet" if geometry.is_points else "IndexedLineSet" if geometry.is_lines else "IndexedFaceSet"
+    triangles = _triangle_index(geometry.coord_index) if (
+        getattr(geometry, "triangle_set", False) and not geometry.is_points and not geometry.is_lines) else None
+    if triangles and not geometry.normal and geometry.crease_angle is not None and geometry.crease_angle > 0.0:
+        # a smooth mesh written without normals keeps its look only through creaseAngle, which a triangle set lacks
+        triangles = None
+    layout = None if geometry.is_points or geometry.is_lines else _quad_set_layout(geometry)
+    if layout is None and triangles:
+        layout = _triangle_set_layout(geometry, triangles)
+    lines = _line_set_layout(geometry) if geometry.is_lines else None
+    node = "PointSet" if geometry.is_points else ("LineSet" if lines else "IndexedLineSet") if geometry.is_lines else \
+        layout[0] if layout else "IndexedFaceSet"
     if not defs.first_use("geometry", geometry.name):
         return f'{indent}<{node} USE="{geometry_def}" />\n'
     if geometry.is_points:
         return _point_set_xml(geometry, geometry_def, indent)
     if geometry.is_lines:
-        xml = [
-            f'{indent}<IndexedLineSet DEF="{geometry_def}" coordIndex="{_fmt_ints(geometry.coord_index)}">\n',
-            f'{indent}  <Coordinate point="{_fmt_points(geometry.coord)}" />\n',
-        ]
+        # a LineSet (from one: vertexCount, each polyline's vertices in turn) or an IndexedLineSet
+        order = lines[1] if lines else None
+        head = f'vertexCount="{_fmt_ints(lines[0])}"' if lines else f'coordIndex="{_fmt_ints(geometry.coord_index)}"'
+        xml = [f'{indent}<{node} DEF="{geometry_def}" {head}>\n', _coordinate_xml(geometry, indent + "  ", order)]
         if geometry.color and len(geometry.color) == len(geometry.coord):
             # one colour per vertex, which X3D draws in place of the material's emissiveColor (a Color node: colorIndex
             # follows coordIndex); ColorRGBA only when an alpha is below 1
-            if any(len(color) > 3 and color[3] < 1.0 for color in geometry.color):
-                values = " ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)
+            colors = _in_order(geometry.color, order)
+            if any(len(color) > 3 and color[3] < 1.0 for color in colors):
+                values = " ".join(_fmt4(_unit_rgba(color)) for color in colors)
                 xml.append(f'{indent}  <ColorRGBA color="{values}" />\n')
             else:
-                values = " ".join(_fmt3(_sfcolor(color[:3])) for color in geometry.color)
+                values = " ".join(_fmt3(_sfcolor(color[:3])) for color in colors)
                 xml.append(f'{indent}  <Color color="{values}" />\n')
-        xml.append(f"{indent}</IndexedLineSet>\n")
+        xml.append(f"{indent}</{node}>\n")
         return "".join(xml)
-    attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
+    order = None
+    if layout:
+        # a triangle set: one index for every array (or, without an index, the arrays in corner order), no
+        # creaseAngle (its generated normals are per face, so a smooth mesh keeps the look only with its normals,
+        # written when the export writes normals)
+        attrs = [f'DEF="{geometry_def}"'] + layout[1]
+        order = layout[2]
+    else:
+        attrs = [f'DEF="{geometry_def}"', f'coordIndex="{_fmt_ints(geometry.coord_index)}"']
     if not geometry.solid:
         attrs.append('solid="false"')
-    if geometry.crease_angle is not None and geometry.crease_angle > 0.0:
+    if not layout and geometry.crease_angle is not None and geometry.crease_angle > 0.0:
         attrs.append(f'creaseAngle="{_fmt(geometry.crease_angle)}"')
-    xml = [f"{indent}<IndexedFaceSet {' '.join(attrs)}>\n"]
+    xml = [f"{indent}<{node} {' '.join(attrs)}>\n"]
     if geometry.skin_coord_def:
         xml.append(f'{indent}  <Coordinate USE="{geometry.skin_coord_def}" />\n')
     elif geometry.morph_keys:
@@ -487,16 +757,17 @@ def _geometry_xml(geometry, defs: _DefNames, indent):
             f'point="{_fmt_points(geometry.morph_states[0])}" />\n'
         )
     else:
-        xml.append(f'{indent}  <Coordinate point="{_fmt_points(geometry.coord)}" />\n')
+        xml.append(_coordinate_xml(geometry, indent + "  ", order))
     if geometry.normal:
-        xml.append(f'{indent}  <Normal vector="{" ".join(_fmt3(vector) for vector in geometry.normal)}" />\n')
+        vectors = _in_order(geometry.normal, order)
+        xml.append(f'{indent}  <Normal vector="{" ".join(_fmt3(vector) for vector in vectors)}" />\n')
     if geometry.tex_coord:
-        xml.append(
-            f'{indent}  <TextureCoordinate point="{" ".join(_fmt2(point) for point in geometry.tex_coord)}" />\n'
-        )
+        points = _in_order(geometry.tex_coord, order)
+        xml.append(f'{indent}  <TextureCoordinate point="{" ".join(_fmt2(point) for point in points)}" />\n')
     if geometry.color:
-        xml.append(f'{indent}  <ColorRGBA color="{" ".join(_fmt4(_unit_rgba(color)) for color in geometry.color)}" />\n')
-    xml.append(f"{indent}</IndexedFaceSet>\n")
+        colors = _in_order(geometry.color, order)
+        xml.append(f'{indent}  <ColorRGBA color="{" ".join(_fmt4(_unit_rgba(color)) for color in colors)}" />\n')
+    xml.append(f"{indent}</{node}>\n")
     return "".join(xml)
 
 
@@ -506,10 +777,24 @@ def _imported_primitive_xml(primitive, defs: _DefNames, indent):
     default are left out."""
     node, fields = primitive["node"], primitive["fields"]
     key = f'{primitive.get("mesh") or id(primitive)}{"" if fields.get("solid", True) else "_2s"}'
-    primitive_def = defs.get("primitive", key, "GE_")
+    # a mesh imported from this writer's own file is already named GE_...: keep one prefix, so a round trip is stable
+    label = key[3:] if key.startswith("GE_") else key
+    if label.endswith("_2s_2s"):          # the same for the single-sided marker a re-imported two-sided mesh carries
+        label = label[:-3]
+    primitive_def = defs.get("primitive", key, "GE_", label=label)
     if not defs.first_use("primitive", key):
         return f'{indent}<{node} USE="{primitive_def}" />\n'
     attrs = [f'DEF="{primitive_def}"']
+    if node == "GeoElevationGrid":
+        # the fields as the file wrote them (doubles, the geoSystem list) and its GeoOrigin, which placed the grid
+        raw = {k: v for k, v in fields.items() if k not in ("solid", "geoOrigin")}
+        if not fields.get("solid", True):
+            raw["solid"] = "false"
+        origin = fields.get("geoOrigin")
+        if origin is None:
+            return f'{indent}<GeoElevationGrid {" ".join(attrs + _raw_attrs(raw))} />\n'
+        return (f'{indent}<GeoElevationGrid {" ".join(attrs + _raw_attrs(raw))}>\n'
+                f'{_geo_origin_xml(origin, indent + "  ")}{indent}</GeoElevationGrid>\n')
     if node == "Rectangle2D":
         size = tuple(float(v) for v in fields.get("size", (2.0, 2.0)))
         if size != (2.0, 2.0):
@@ -677,10 +962,10 @@ _SKY_ANGLE_MAX = 3.1416
 _GROUND_ANGLE_MAX = 1.5708
 
 
-def _background_xml(background, indent):
+def _background_xml(background, indent, *, output_dir=None):
     """A Background with its sky and ground gradients. Colours are clipped to [0, 1] and angles to the ranges the
     X3D 4.0 schema gives; each angle list is cut to one less than its colours, and the colours to one more than
-    the angles."""
+    the angles. One read from a TextureBackground is written as one, with its face textures (node board batch 9)."""
 
     def clip(values, top):
         return [min(max(float(value), 0.0), top) for value in values]
@@ -702,7 +987,27 @@ def _background_xml(background, indent):
     transparency = clip([background.transparency], 1.0)[0]
     if transparency:
         attrs.append(f'transparency="{_fmt(transparency)}"')
+    if getattr(background, "node", "Background") == "TextureBackground":
+        # no DEF: the faces are written in a fixed order, so the image names a re-import gives them do not move
+        # DEF labels from one round trip to the next (a material sharing the image still writes its own)
+        faces = "".join(_texture_xml(ref, indent + "  ", container_field=face, output_dir=output_dir)
+                        for face, ref in sorted(background.textures.items()))
+        if faces:
+            return f"{indent}<TextureBackground {' '.join(attrs)}>\n{faces}{indent}</TextureBackground>\n"
+        return f"{indent}<TextureBackground {' '.join(attrs)} />\n"
     return f"{indent}<Background {' '.join(attrs)} />\n"
+
+
+def _fog_xml(fog, indent):
+    """A Fog; fields at their X3D default (white, LINEAR, visibilityRange 0) are left out."""
+    attrs = []
+    if tuple(fog.color) != (1.0, 1.0, 1.0):
+        attrs.append(f'color="{_fmt3(fog.color)}"')
+    if fog.fog_type != "LINEAR":
+        attrs.append(f'fogType="{fog.fog_type}"')
+    if fog.visibility_range > 0.0:
+        attrs.append(f'visibilityRange="{_fmt_length(fog.visibility_range)}"')
+    return f"{indent}<Fog{''.join(' ' + a for a in attrs)} />\n"
 
 
 def _metadata_xml(node, indent, container_field=None, defs=None):
@@ -763,8 +1068,246 @@ def _world_info_xml(hosts, defs, indent, diagnostics):
     return "".join(xml)
 
 
+def _raw_attrs(fields):
+    """Attributes kept as the file wrote them (geospatial doubles, quoted string lists), escaped for XML."""
+    return [f"{name}={quoteattr(str(value))}" for name, value in fields.items()]
+
+
+def _geo_origin_xml(origin, indent):
+    return f"{indent}<GeoOrigin {' '.join(_raw_attrs(origin))} />\n" if origin is not None else ""
+
+
+def _with_container(xml, field):
+    """``xml`` (one element) with containerField="field" on its opening tag."""
+    head, sep, rest = xml.partition("<")
+    name = re.match(r"[A-Za-z0-9]+", rest).group(0)
+    return f'{head}{sep}{name} containerField="{field}"{rest[len(name):]}'
+
+
+GROUPS_OF_ONE = ("Billboard", "GeoLocation", "GeoLOD", "StaticGroup")     # one group of children, fields kept as the file wrote them
+
+
+def _own_groups(instance, parent_chain):
+    """The Switch / LOD entries above ``instance`` that its parent is not already inside (matched by key and branch)."""
+    chain = instance.group_chain or []
+    n = 0
+    while (n < len(chain) and n < len(parent_chain) and chain[n].get("key") == parent_chain[n].get("key")
+           and chain[n].get("branch") == parent_chain[n].get("branch")):
+        n += 1
+    return chain[n:]
+
+
+def _grouped_xml(pairs, write_one, defs: _DefNames, indent):
+    """Siblings written in order, those under a Switch or LOD gathered into it at the place of the first one.
+    ``pairs`` is [(instance, the groups above it still to open)]; ``write_one(instance, indent)`` writes one."""
+    out, done = [], set()
+    for i, (instance, rest) in enumerate(pairs):
+        if i in done:
+            continue
+        if not rest:
+            out.append(write_one(instance, indent))
+            continue
+        head = rest[0]
+        group = [(j, pair) for j, pair in enumerate(pairs)
+                 if j not in done and pair[1] and pair[1][0].get("key") == head.get("key")]
+        done.update(j for j, _ in group)
+        out.append(_group_node_xml(head, [pair for _, pair in group], write_one, defs, indent))
+    return "".join(out)
+
+
+def _group_node_xml(head, pairs, write_one, defs: _DefNames, indent):
+    """One Switch or LOD with every branch the import saw: a branch with nothing left on it is an empty Group, so
+    whichChoice and the LOD levels still count the same children."""
+    if head.get("node") in GROUPS_OF_ONE:
+        node = head["node"]
+        attrs = []
+        # DEF on the first copy only: a USE'd grouping node comes back as one copy per use, each with its own children
+        if head.get("def") and defs.first_use(node.lower(), head["key"]):
+            attrs.append(f'DEF="{defs.get(node.lower(), head["key"], "", label=head["def"])}"')
+        attrs += _raw_attrs(head.get("fields") or {})
+        members = [(instance, rest[1:]) for instance, rest in pairs]
+        inner = [_grouped_xml([member], write_one, defs, indent + "  ") for member in members]
+        if node == "GeoLOD":       # the content the import read is the rootNode
+            inner = [_with_container(xml, "rootNode") for xml in inner]
+        # GeoOrigin after the children: x3d-4.0.xsd's sequence for GeoLOD wants it there (and then requires it)
+        return (f"{indent}<{node} {' '.join(attrs)}>\n{''.join(inner)}"
+                f"{_geo_origin_xml(head.get('geoOrigin'), indent + '  ')}{indent}</{node}>\n")
+    node = "Switch" if head.get("node") == "Switch" else "LOD"
+    attrs = []
+    if head.get("def") and defs.first_use(node.lower(), head["key"]):     # DEF on the first copy only (see above)
+        attrs.append(f'DEF="{defs.get(node.lower(), head["key"], "", label=head["def"])}"')
+    if node == "Switch":
+        attrs.append(f'whichChoice="{int(head.get("whichChoice", -1))}"')
+    else:
+        if head.get("range"):
+            attrs.append(f'range="{" ".join(_fmt(v) for v in head["range"])}"')
+        center = head.get("center") or (0.0, 0.0, 0.0)
+        if any(center):
+            attrs.append(f'center="{_fmt3(center)}"')
+    branches = max([int(head.get("branches", 0))] + [int(p[1][0].get("branch", 0)) + 1 for p in pairs])
+    xml = [f"{indent}<{node} {' '.join(attrs)}>\n"]
+    for b in range(branches):
+        members = [(instance, rest[1:]) for instance, rest in pairs if int(rest[0].get("branch", -1)) == b]
+        if not members:
+            xml.append(f"{indent}  <Group />\n")
+        elif len(members) == 1:
+            xml.append(_grouped_xml(members, write_one, defs, indent + "  "))
+        else:
+            xml.append(f"{indent}  <Group>\n{_grouped_xml(members, write_one, defs, indent + '    ')}{indent}  </Group>\n")
+    xml.append(f"{indent}</{node}>\n")
+    return "".join(xml)
+
+
 def _subtree_hidden(instance):
     return not instance.visible and all(_subtree_hidden(child) for child in instance.children)
+
+
+def _shapes_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK,
+                hide_shapes=False, container=None):
+    """The Shapes of ``instance``, one indent deeper than ``indent`` (inside its Transform, or with ``container`` inside a
+    CollidableShape)."""
+    shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
+    if hide_shapes:
+        shape_attrs += ' visible="false"'
+    if container:
+        shape_attrs = f' containerField="{container}"' + shape_attrs
+    xml = []
+    for index, shape in enumerate(instance.iter_shapes()):
+        xml.append(f"{indent}  <Shape{shape_attrs}>\n")
+        if index == 0 and instance.metadata is not None:
+            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata", defs))
+        material = materials.get(shape.material_name) if shape.material_name else None
+        geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
+        line_width = instance.line_width if geometry is not None and geometry.is_lines else None
+        point_properties = instance.point_properties if geometry is not None and geometry.is_points else None
+        if material is not None:
+            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look,
+                                       line_width=line_width, point_properties=point_properties))
+        else:
+            xml.append(_default_appearance_xml(indent + "    ", look))
+        if geometry is not None:
+            xml.append(_geometry_xml(geometry, defs, indent + "    "))
+        elif shape.text:
+            xml.append(_text_xml(shape.text, indent + "    "))
+        elif shape.primitive:
+            xml.append(_imported_primitive_xml(shape.primitive, defs, indent + "    "))
+        else:
+            xml.append(_primitive_geometry_xml(shape.geometry_hint, indent + "    "))
+        xml.append(f"{indent}  </Shape>\n")
+    return "".join(xml)
+
+
+_BODY_NATIVE = ("position", "orientation", "mass", "fixed", "enabled", "autoDamp", "linearDampingFactor",
+                "angularDampingFactor")          # written from Blender's values; the rest of a RigidBody as the file wrote it
+_WORLD_NATIVE = ("gravity", "iterations")
+
+
+def _rigid_bodies_xml(ir_scene, geometries, materials, defs: _DefNames, indent, *, output_dir=None,
+                      look: _Look = _PLAIN_LOOK):
+    """The scene's Blender rigid bodies and hinge constraints as one RigidBodyCollection (node board batch 6): each body
+    a RigidBody around a CollidableShape (inside its CollidableOffsets) holding the object's Shapes; Blender's mass,
+    fixed (PASSIVE), damping, enabled, gravity, iterations and the hinge's anchor, axis and limits; every other field as
+    the import kept it. A CollisionCollection the file had comes back with its fields and collidables; for bodies made
+    in Blender one is written with all their collidables, since X3D bodies collide only through one."""
+    bodies = [instance for instance in ir_scene.iter_instances() if instance.rigid_body is not None]
+    joints = [instance for instance in ir_scene.iter_instances() if instance.rigid_joint is not None]
+    if not bodies:
+        return ""
+    world = ir_scene.rigid_world or {}
+    attrs = []
+    if world.get("def"):
+        attrs.append(f'DEF="{defs.get("rigidworld", world["def"], "", label=world["def"])}"')
+    gravity = world.get("gravity", (0.0, -9.8, 0.0))
+    if any(abs(a - b) > 1e-6 for a, b in zip(gravity, (0.0, -9.8, 0.0))):
+        attrs.append(f'gravity="{_fmt3_length(gravity)}"')
+    if int(world.get("iterations", 10)) != 10:
+        attrs.append(f'iterations="{int(world["iterations"])}"')
+    attrs += _raw_attrs({k: v for k, v in (world.get("fields") or {}).items() if k not in _WORLD_NATIVE})
+    xml = [f"{indent}<RigidBodyCollection{(' ' + ' '.join(attrs)) if attrs else ''}>\n"]
+    body_defs, collidable_defs = {}, []
+    for instance in bodies:
+        body = instance.rigid_body
+        body_def = defs.get("rigidbody", instance.object_name, "", label=body["def"])
+        body_defs[instance.object_name] = body_def
+        battrs = [f'containerField="bodies"', f'DEF="{body_def}"', f'position="{_fmt3_length(body["position"])}"',
+                  f'orientation="{_fmt4(body["orientation"])}"']
+        if abs(body["mass"] - 1.0) > 1e-9:
+            battrs.append(f'mass="{_fmt(body["mass"])}"')
+        if body["fixed"]:
+            battrs.append('fixed="true"')
+        if not body["enabled"]:
+            battrs.append('enabled="false"')
+        if body["linear_damping"] > 0.0 or body["angular_damping"] > 0.0:
+            battrs += ['autoDamp="true"', f'linearDampingFactor="{_fmt(body["linear_damping"])}"',
+                       f'angularDampingFactor="{_fmt(body["angular_damping"])}"']
+        battrs += _raw_attrs({k: v for k, v in body["fields"].items() if k not in _BODY_NATIVE})
+        xml.append(f"{indent}  <RigidBody {' '.join(battrs)}>\n")
+        chain = list(body["offsets"]) + [body.get("collidable") or {"def": "", "fields": {}}]
+        inner = indent + "    "
+        opened = []
+        for depth, item in enumerate(chain):
+            node = "CollidableShape" if depth == len(chain) - 1 else "CollidableOffset"
+            container = "geometry" if depth == 0 else "collidable"
+            cdef = defs.get("collidable", f"{instance.object_name}:{depth}", "", label=item.get("def") or
+                            f"{body['def']}_{'Shape' if node == 'CollidableShape' else 'Offset'}")
+            if depth == 0:
+                collidable_defs.append((cdef, node))
+            cattrs = [f'containerField="{container}"', f'DEF="{cdef}"'] + _raw_attrs(item.get("fields") or {})
+            xml.append(f"{inner}<{node} {' '.join(cattrs)}>\n")
+            opened.append((inner, node))
+            inner += "  "
+        xml.append(_shapes_xml(instance, geometries, materials, defs, inner[:-2], output_dir=output_dir, look=look,
+                               container="shape"))
+        for opened_indent, node in reversed(opened):
+            xml.append(f"{opened_indent}</{node}>\n")
+        xml.append(f"{indent}  </RigidBody>\n")
+    collider = world.get("collider")
+    if collider is not None or not world.get("recorded"):
+        collider = collider or {"def": "", "fields": {}, "collidables": None}
+        cattrs = ['containerField="collider"']
+        if collider.get("def"):
+            cattrs.append(f'DEF="{defs.get("collider", collider["def"], "", label=collider["def"])}"')
+        cattrs += _raw_attrs(collider.get("fields") or {})
+        wanted = collider.get("collidables")
+        uses = collidable_defs if wanted is None else [(d, n) for d, n in collidable_defs if d in set(wanted)]
+        if uses:
+            xml.append(f"{indent}  <CollisionCollection {' '.join(cattrs)}>\n")
+            xml += [f'{indent}    <{n} USE="{d}" containerField="collidables" />\n' for d, n in uses]
+            xml.append(f"{indent}  </CollisionCollection>\n")
+        else:
+            xml.append(f"{indent}  <CollisionCollection {' '.join(cattrs)} />\n")
+    for instance in joints:
+        joint = instance.rigid_joint
+        if joint["body1"] not in body_defs or joint["body2"] not in body_defs:
+            continue        # a body that is not written as a RigidBody (see rigid_body_of): reported there
+        node = joint.get("node", "SingleAxisHingeJoint")
+        jdef = defs.get("joint", instance.object_name, "", label=joint["def"])
+        jattrs = ['containerField="joints"', f'DEF="{jdef}"']
+        native = set()
+        if node != "SliderJoint":
+            jattrs.append(f'anchorPoint="{_fmt3_length(joint["anchor"])}"')
+            native.add("anchorPoint")
+        if "axis" in joint:
+            jattrs.append(f'axis="{_fmt3(joint["axis"])}"')
+            native.add("axis")
+        if "axis1" in joint:
+            jattrs += [f'axis1="{_fmt3(joint["axis1"])}"', f'axis2="{_fmt3(joint["axis2"])}"']
+            native |= {"axis1", "axis2"}
+        if "limits" in joint:
+            names = ("minAngle1", "maxAngle1") if node == "DoubleAxisHingeJoint" else ("minAngle", "maxAngle")
+            jattrs += [f'{names[0]}="{_fmt(joint["limits"][0])}"', f'{names[1]}="{_fmt(joint["limits"][1])}"']
+            native |= set(names)
+        if "separation" in joint:
+            jattrs += [f'minSeparation="{_fmt_length(joint["separation"][0])}"',
+                       f'maxSeparation="{_fmt_length(joint["separation"][1])}"']
+            native |= {"minSeparation", "maxSeparation"}
+        jattrs += _raw_attrs({k: v for k, v in joint["fields"].items() if k not in native})
+        xml.append(f"{indent}  <{node} {' '.join(jattrs)}>\n"
+                   f'{indent}    <RigidBody USE="{body_defs[joint["body1"]]}" containerField="body1" />\n'
+                   f'{indent}    <RigidBody USE="{body_defs[joint["body2"]]}" containerField="body2" />\n'
+                   f"{indent}  </{node}>\n")
+    xml.append(f"{indent}</RigidBodyCollection>\n")
+    return "".join(xml)
 
 
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
@@ -792,35 +1335,14 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(_sensor_xml(instance, defs, indent + "  "))
     for text in getattr(defs, "behaviour_children", {}).get(instance.object_name, ()):
         xml.append(f"{indent}  {text}\n")
-    shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
-    if not instance.visible and not subtree_hidden:
-        shape_attrs += ' visible="false"'
-    for index, shape in enumerate(instance.iter_shapes()):
-        xml.append(f"{indent}  <Shape{shape_attrs}>\n")
-        if index == 0 and instance.metadata is not None:
-            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata", defs))
-        material = materials.get(shape.material_name) if shape.material_name else None
-        geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
-        line_width = instance.line_width if geometry is not None and geometry.is_lines else None
-        if material is not None:
-            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look,
-                                       line_width=line_width))
-        else:
-            xml.append(_default_appearance_xml(indent + "    ", look))
-        if geometry is not None:
-            xml.append(_geometry_xml(geometry, defs, indent + "    "))
-        elif shape.text:
-            xml.append(_text_xml(shape.text, indent + "    "))
-        elif shape.primitive:
-            xml.append(_imported_primitive_xml(shape.primitive, defs, indent + "    "))
-        else:
-            xml.append(_primitive_geometry_xml(shape.geometry_hint, indent + "    "))
-        xml.append(f"{indent}  </Shape>\n")
+    xml.append(_shapes_xml(instance, geometries, materials, defs, indent, output_dir=output_dir, look=look,
+                           hide_shapes=not instance.visible and not subtree_hidden))
     if instance.humanoid_name and instance.humanoid_name in humanoids:
         humanoid = humanoids[instance.humanoid_name]
         placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
                                 standard_joint_count=humanoid.standard_joint_count,
-                                skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes)
+                                skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes,
+                                motions=humanoid.motions)
         xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir, look=look))
     if instance.inline is not None:
         inline_def = defs.get("inline", instance.object_name, "IN_")
@@ -843,18 +1365,139 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(_light_xml(instance.light, defs, indent + "  "))
     if instance.viewpoint is not None:
         xml.append(_viewpoint_xml(instance.viewpoint, defs, indent + "  "))
-    for child in instance.children:
-        xml.append(_instance_xml(child, geometries, materials, defs, indent + "  ", output_dir=output_dir, humanoids=humanoids,
-                                 splats=splats, version=version, look=look, collections=collections))
+    def write_child(child, child_indent):
+        return _instance_xml(child, geometries, materials, defs, child_indent, output_dir=output_dir, humanoids=humanoids,
+                             splats=splats, version=version, look=look, collections=collections)
+    if instance.cad is not None and instance.cad.get("node"):
+        return _cad_xml(instance, xml[0], xml[1:], write_child, defs, indent)
+    xml.append(_grouped_xml([(child, _own_groups(child, instance.group_chain or [])) for child in instance.children],
+                            write_child, defs, indent + "  "))
+    carried = getattr(defs, "carried", None)
+    if carried is not None and instance.carried:
+        xml.append(carried.xml(instance.carried, indent + "  "))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
+
+
+# -- the CAD product structure (node board batch 12) -------------------------------------------------------------------
+# x3d-4.0.xsd: a CADPart holds only CADFace nodes (and Metadata); a CADFace holds one Shape, LOD or Transform and may
+# only stand in a CADPart; CADAssembly and CADLayer hold any children. So everything a part holds is written in a
+# CADFace, its own Shapes in one and each child object in one (the face the import found, or a new one).
+CAD_FACE_CONTENT = ("<Shape", "<LOD", "<Transform")
+
+
+def _reindent(text, extra="  "):
+    return "".join(extra + line if line.strip() else line for line in text.splitlines(keepends=True))
+
+
+def _is_identity(transform) -> bool:
+    rx, ry, rz, angle = transform.rotation_axis_angle
+    return (all(abs(v) < 1e-9 for v in transform.translation) and abs(angle) < 1e-9
+            and all(abs(v - 1.0) < 1e-9 for v in transform.scale))
+
+
+def _cad_head(node, record, defs: _DefNames, def_name, extra=()):
+    attrs = []
+    if def_name:
+        attrs.append(f'DEF="{def_name}"')
+    attrs += _raw_attrs(record.get("fields") or {})
+    attrs += list(extra)
+    return f"<{node} {' '.join(attrs)}>" if attrs else f"<{node}>"
+
+
+def _face_xml(face, content, defs: _DefNames, indent):
+    """``content`` (already written at ``indent`` + 2) in a CADFace: the face's DEF on its first copy, its fields as
+    the file wrote them. A CADFace holds one node, so anything but a single Shape, LOD or Transform goes in a Transform."""
+    face = face or {}
+    name = face.get("def") or ""
+    def_name = name if name and defs.first_use("cadface", name) else ""
+    stripped = content.lstrip()
+    tops = sum(1 for line in content.splitlines() if line.startswith(indent + "  <") and not line.startswith(indent + "  </"))
+    if not stripped.startswith(CAD_FACE_CONTENT) or tops != 1:
+        content = f"{indent}  <Transform>\n{_reindent(content)}{indent}  </Transform>\n"
+    # the node sits in the CADFace's ``shape`` field: a Shape's or Transform's default containerField is children,
+    # which X_ITE rejects there ("Unknown field 'children' in node class CADFace") and drops the face; the XSD does not
+    # check containerField values, so only a browser shows it
+    content = re.sub(r"^(\s*<(?:Shape|LOD|Transform))(?![^>]*\bcontainerField=)", r'\1 containerField="shape"', content,
+                     count=1)
+    return f"{indent}{_cad_head('CADFace', face, defs, def_name)}\n{content}{indent}</CADFace>\n"
+
+
+def _in_file_order(children):
+    """An assembly's parts in the order the file gave them (a bill of materials reads in that order); anything made
+    in Blender after them, in Blender's order."""
+    return sorted(children, key=lambda child: (child.cad or {}).get("order", float("inf")))
+
+
+def _name_cad(ir_scene, defs: _DefNames):
+    """Before the writer names anything else: each CAD node keeps the DEF the file gave it (a CADPart's is also its
+    object's transform DEF, which animation ROUTEs use), and every CADFace DEF is reserved."""
+    for instance in ir_scene.iter_instances():
+        record = instance.cad or {}
+        if record.get("node") and record.get("def"):
+            kind = "transform" if record["node"] == "CADPart" else "cad"
+            defs.get(kind, instance.object_name, "", label=record["def"])
+        face = record.get("face") or {}
+        if face.get("def"):
+            defs.reserve(face["def"])
+
+
+def _cad_xml(instance, transform_head, own, write_child, defs: _DefNames, indent):
+    """An object that stands for a CADPart, CADAssembly or CADLayer, written as that node (its DEF and the fields the
+    file wrote; a part's pose from Blender)."""
+    import dataclasses
+    record = instance.cad
+    node = record["node"]
+    carried = getattr(defs, "carried", None)
+    carried_xml = carried.xml(instance.carried, indent + "  ") if carried is not None and instance.carried else ""
+    if node == "CADPart":
+        # its DEF is the object's transform DEF (assigned from the file's DEF before anything was named), so an
+        # animation ROUTE reaches the part, which has the Transform fields
+        def_name = defs.get("transform", instance.object_name, "OB_")
+        tx = instance.transform
+        pose = [f'translation="{_fmt3_length(tx.translation)}"', f'rotation="{_fmt4(tx.rotation_axis_angle)}"',
+                f'scale="{_fmt3_length(tx.scale)}"']
+        fields = {k: v for k, v in (record.get("fields") or {}).items()}
+        head = _cad_head(node, {"fields": fields}, defs, def_name if defs.first_use("cadpart", def_name) else "", pose)
+        # Metadata goes in the part itself (its metadata field), not in a face; matched without a "<" literal, which
+        # tests/test_io_parity.py would read as an element the writer emits
+        metadata = [part for part in own if part.lstrip()[1:].startswith("Metadata")]
+        body = "".join(part for part in own if part not in metadata) + carried_xml
+        xml = [f"{indent}{head}\n", *metadata]
+        faces = []                              # (place in the file, xml): the part's own face among its children's
+        if body.strip():
+            own_face = record.get("face") or {}
+            faces.append((own_face.get("order", -1), _face_xml(own_face, _reindent(body), defs, indent + "  ")))
+        for child in _in_file_order(instance.children):
+            if child.cad is not None and child.cad.get("node"):
+                # a CAD node cannot stand in a CADFace: written as a plain Transform there
+                getattr(defs, "diagnostics", []).append(
+                    f"{child.cad['node']} {child.object_name!r} is under CADPart {instance.object_name!r} in Blender; "
+                    "X3D allows only CADFace there, so it is written as a Transform inside a CADFace.")
+                child = dataclasses.replace(child, cad={"face": child.cad.get("face")} if child.cad.get("face") else None)
+            face = (child.cad or {}).get("face")
+            faces.append(((face or {}).get("order", float("inf")),
+                          _face_xml(face, write_child(child, indent + "    "), defs, indent + "  ")))
+        xml += [text for _order, text in sorted(faces, key=lambda item: item[0])]
+        xml.append(f"{indent}</{node}>\n")
+        return "".join(xml)
+    # CADAssembly, CADLayer: no fields of their own to place children, so a moved (or animated) object keeps its
+    # Transform inside the node
+    cad_def = defs.get("cad", instance.object_name, "")
+    head = _cad_head(node, record, defs, cad_def if defs.first_use("cad", instance.object_name) else "")
+    children = _grouped_xml([(child, _own_groups(child, instance.group_chain or []))
+                             for child in _in_file_order(instance.children)], write_child, defs, indent + "  ")
+    inner = "".join(own) + children + carried_xml
+    if _is_identity(instance.transform) and not record.get("moves"):
+        return f"{indent}{head}\n{inner}{indent}</{node}>\n"
+    return f"{indent}{head}\n{_reindent(transform_head)}{_reindent(inner)}{indent}  </Transform>\n{indent}</{node}>\n"
 
 
 def _joint_def(defs: _DefNames, humanoid_name, joint_name):
     return defs.get("joint", f"{humanoid_name}:{joint_name}", "hanim_")
 
 
-def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children"):
+def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field="children", write_part=None):
     joint_def = _joint_def(defs, humanoid_name, joint.name)
     attrs = [f'DEF="{joint_def}"', "name=" + quoteattr(_nmtoken(joint.hanim_name or joint.name, "joint")), f'center="{_fmt3(joint.center)}"']
     if container_field != "children":
@@ -862,13 +1505,114 @@ def _joint_xml(joint, humanoid_name, defs: _DefNames, indent, *, container_field
     if joint.skin_coord_index:
         attrs.append(f'skinCoordIndex="{_fmt_ints(joint.skin_coord_index)}"')
         attrs.append(f'skinCoordWeight="{" ".join(_fmt(weight) for weight in joint.skin_coord_weight)}"')
-    if not joint.children:
+    parts = _hanim_joint_parts_xml(joint, humanoid_name, defs, indent + "  ", write_part)
+    if not joint.children and not parts:
         return f"{indent}<HAnimJoint {' '.join(attrs)} />\n"
-    xml = [f"{indent}<HAnimJoint {' '.join(attrs)}>\n"]
+    xml = [f"{indent}<HAnimJoint {' '.join(attrs)}>\n", parts]
     for child in joint.children:
-        xml.append(_joint_xml(child, humanoid_name, defs, indent + "  "))
+        xml.append(_joint_xml(child, humanoid_name, defs, indent + "  ", write_part=write_part))
     xml.append(f"{indent}</HAnimJoint>\n")
     return "".join(xml)
+
+
+# HAnim completion (node board batch 11): HAnimSegment, HAnimSite, HAnimDisplacer and HAnimMotion written back
+
+
+def _hanim_label(stored_def, fallback):
+    """The DEF label of a node the import kept: its DEF as written less the writer's "hanim_" prefix."""
+    stored_def = stored_def or ""
+    return stored_def[6:] if stored_def.startswith("hanim_") and len(stored_def) > 6 else (stored_def or fallback)
+
+
+def _hanim_kept_attrs(fields, names):
+    """``name="value"`` for each of ``names`` in ``fields``: strings as written, numbers (lists) formatted."""
+    out = []
+    for name in names:
+        value = fields.get(name)
+        if value in (None, ""):
+            continue
+        if isinstance(value, (list, tuple)):
+            value = " ".join(_fmt_short(float(v)) for v in value)
+        out.append(f"{name}={quoteattr(str(value))}")
+    return out
+
+
+def _hanim_displacer_xml(displacer, key, defs: _DefNames, indent):
+    fields = displacer.fields
+    label = _hanim_label(fields.get("_def"), displacer.name or "displacer")
+    attrs = [f'DEF="{defs.get("hanim_displacer", key, "hanim_", label=label)}"']
+    if displacer.name:
+        attrs.append("name=" + quoteattr(_nmtoken(displacer.name, "displacer")))
+    attrs += _hanim_kept_attrs(fields, ("description",))
+    if displacer.coord_index or "coordIndex" not in fields:     # a shape key; else kept as written
+        attrs.append(f'coordIndex="{_fmt_ints(displacer.coord_index)}"')
+        attrs.append(f'displacements="{_fmt_points(displacer.displacements)}"')
+        attrs.append(f'weight="{_fmt_short(displacer.weight)}"')
+    else:
+        attrs += _hanim_kept_attrs(fields, ("coordIndex", "displacements", "weight"))
+    return f"{indent}<HAnimDisplacer {' '.join(attrs)} />\n"
+
+
+def _hanim_segment_def(defs: _DefNames, humanoid_name, joint):
+    segment = joint.segment
+    return defs.get("hanim_segment", f"{humanoid_name}:{joint.name}", "hanim_",
+                    label=_hanim_label(segment.fields.get("_def"), segment.name))
+
+
+def _hanim_site_def(defs: _DefNames, site):
+    return defs.get("hanim_site", site.instance.object_name, "hanim_")
+
+
+def _hanim_joint_parts_xml(joint, humanoid_name, defs: _DefNames, indent, write_part):
+    """A joint's HAnimSegment (its Shapes, as the objects bone-parented to the bone, then its HAnimSites) and its
+    HAnimDisplacers."""
+    xml = []
+    segment = joint.segment
+    if segment is not None:
+        attrs = [f'DEF="{_hanim_segment_def(defs, humanoid_name, joint)}"',
+                 "name=" + quoteattr(_nmtoken(segment.name, "segment"))]
+        attrs += _hanim_kept_attrs(segment.fields, ("description", "mass", "centerOfMass", "momentsOfInertia"))
+        inner = []
+        for instance in segment.instances:
+            if write_part is not None:
+                inner.append(write_part(instance, indent + "  "))
+        for site in segment.sites:
+            tx = site.instance.transform
+            site_attrs = [f'DEF="{_hanim_site_def(defs, site)}"', "name=" + quoteattr(_nmtoken(site.name, "site"))]
+            site_attrs += _hanim_kept_attrs(site.fields, ("description",))
+            site_attrs += [f'translation="{_fmt3_length(tx.translation)}"', f'rotation="{_fmt4(tx.rotation_axis_angle)}"',
+                           f'scale="{_fmt3_length(tx.scale)}"']
+            children = "".join(write_part(child, indent + "    ") for child in site.instance.children) \
+                if write_part is not None else ""
+            if children:
+                inner.append(f"{indent}  <HAnimSite {' '.join(site_attrs)}>\n{children}{indent}  </HAnimSite>\n")
+            else:
+                inner.append(f"{indent}  <HAnimSite {' '.join(site_attrs)} />\n")
+        for number, displacer in enumerate(segment.displacers):
+            inner.append(_hanim_displacer_xml(displacer, f"{humanoid_name}:{joint.name}:segment:{number}", defs,
+                                              indent + "  "))
+        if inner:
+            xml.append(f"{indent}<HAnimSegment {' '.join(attrs)}>\n{''.join(inner)}{indent}</HAnimSegment>\n")
+        else:
+            xml.append(f"{indent}<HAnimSegment {' '.join(attrs)} />\n")
+    for number, displacer in enumerate(joint.displacers):
+        xml.append(_hanim_displacer_xml(displacer, f"{humanoid_name}:{joint.name}:{number}", defs, indent))
+    return "".join(xml)
+
+
+def _hanim_motion_xml(motion, key, defs: _DefNames, indent):
+    fields = motion.fields
+    label = _hanim_label(fields.get("_def"), motion.name or "motion")
+    attrs = [f'DEF="{defs.get("hanim_motion", key, "hanim_", label=label)}"']
+    if motion.name:
+        attrs.append("name=" + quoteattr(_nmtoken(motion.name, "motion")))
+    attrs += _hanim_kept_attrs(fields, ("description", "enabled", "loop", "loa", "frameDuration", "frameIncrement",
+                                        "frameIndex", "startFrame", "endFrame", "channels", "channelsEnabled", "joints"))
+    values = motion.raw_values if motion.raw_values is not None else " ".join(_fmt_short(v) for v in motion.values)
+    if values:
+        attrs.append(f"values={quoteattr(values)}")
+    attrs.append('containerField="motions"')
+    return f"{indent}<HAnimMotion {' '.join(attrs)} />\n"
 
 
 def _humanoid_info_attr(humanoid):
@@ -892,10 +1636,22 @@ def _humanoid_xml(humanoid, geometries, materials, defs: _DefNames, indent, *, o
         f'translation="{_fmt3_length(tx.translation)}" rotation="{_fmt4(tx.rotation_axis_angle)}" '
         f'scale="{_fmt3_length(tx.scale)}">\n'
     ]
+    def write_part(instance, part_indent):
+        return _instance_xml(instance, geometries, materials, defs, part_indent, output_dir=output_dir, look=look)
     for root in humanoid.root_joints:
-        xml.append(_joint_xml(root, humanoid.name, defs, indent + "  ", container_field="skeleton"))
+        xml.append(_joint_xml(root, humanoid.name, defs, indent + "  ", container_field="skeleton",
+                              write_part=write_part))
     for joint in humanoid.iter_joints():
         xml.append(f'{indent}  <HAnimJoint USE="{_joint_def(defs, humanoid.name, joint.name)}" containerField="joints" />\n')
+    segmented = [joint for joint in humanoid.iter_joints() if joint.segment is not None]
+    for joint in segmented:
+        xml.append(f'{indent}  <HAnimSegment USE="{_hanim_segment_def(defs, humanoid.name, joint)}" '
+                   'containerField="segments" />\n')
+    for joint in segmented:
+        for site in joint.segment.sites:
+            xml.append(f'{indent}  <HAnimSite USE="{_hanim_site_def(defs, site)}" containerField="sites" />\n')
+    for number, motion in enumerate(humanoid.motions):
+        xml.append(_hanim_motion_xml(motion, f"{humanoid.name}:{number}", defs, indent + "  "))
     if humanoid.skin_coord:
         skin_def = next((geometries[s.geometry_name].skin_coord_def for s in humanoid.skin_shapes
                          if s.geometry_name in geometries and geometries[s.geometry_name].skin_coord_def), None)
@@ -1162,6 +1918,8 @@ def _behaviour_emission(ir_scene, defs: _DefNames, diagnostics, indent):
                 defs.get("behaviour-inner", inner, "", label=inner)
     by_object = {instance.object_name: instance for instance in ir_scene.iter_instances()}
     used_materials = {shape.material_name for instance in by_object.values() for shape in instance.iter_shapes()}
+    written_switches = {entry.get("key") for instance in by_object.values() for entry in instance.group_chain or ()
+                        if entry.get("node") == "Switch" and entry.get("def")}
 
     # Identity: a target is written under the name it has in the graph (for an imported file, the DEF it came with), and
     # a placed sensor's parent under the DEF the importer recorded. Asking ``defs`` first fixes that name for the key, so
@@ -1178,6 +1936,8 @@ def _behaviour_emission(ir_scene, defs: _DefNames, diagnostics, indent):
             return defs.get("light", instance.light.name, "", label=node.id)
         if kind == "material" and name in used_materials:
             return defs.get("material", name, "", label=node.id)
+        if kind == "switch" and name in written_switches:            # the Switch is written back (node board batch 2)
+            return defs.get("switch", name, "", label=node.id)
         return None
 
     for node in graph.nodes.values():
@@ -1307,7 +2067,7 @@ def head_meta(metadata: IRMetadata, generator: str, diagnostics=()) -> list[tupl
     return unique
 
 
-def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
+def _components(ir_scene: IRScene, version: str, look=None) -> list[tuple[str, int]]:
     """(name, level) of every component statement the Immersive header needs, sorted by name.
 
     PhysicalMaterial (Shape 2) and UnlitMaterial (Shape 1) are left out of the
@@ -1318,19 +2078,47 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     has no Appearance. Circle2D is Geometry2D level 2; Immersive has level 1.
     """
     components = {}
+    if getattr(ir_scene, "physics", None):
+        components["RigidBodyPhysics"] = 2      # joints are level 2; Immersive has no RigidBodyPhysics
     if version == "4.1" and ir_scene.splats:
         components["GaussianSplats"] = 1
     if ir_scene.humanoids:
-        components["HAnim"] = 1
+        components["HAnim"] = 2 if any(humanoid.motions for humanoid in ir_scene.humanoids) else 1   # HAnimMotion: 2
     geometries = ir_scene.geometry_by_name()
+    materials = ir_scene.material_by_name()
+    look = look if look is not None else _PLAIN_LOOK
+    if ir_scene.background is not None and getattr(ir_scene.background, "node", "") == "TextureBackground":
+        components["EnvironmentalEffects"] = 3      # TextureBackground; Immersive has level 2 (Fog, Background)
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     for instance in ir_scene.iter_instances():
         shapes = list(instance.iter_shapes())
         humanoid = humanoids.get(instance.humanoid_name)
         if shapes or (humanoid is not None and humanoid.skin_shapes):
-            components["Shape"] = 2
+            components["Shape"] = max(2, components.get("Shape", 0))
         if any(shape.geometry_name not in geometries and shape.geometry_hint == "Circle2D" for shape in shapes):
             components["Geometry2D"] = 2
+        written = [geometries[shape.geometry_name] for shape in shapes if shape.geometry_name in geometries]
+        # QuadSet / IndexedQuadSet (node board batch 8) are CADGeometry level 1, PointProperties Shape level 5: neither
+        # is in Immersive
+        if any(_quad_set_layout(geometry) is not None for geometry in written):
+            components["CADGeometry"] = max(1, components.get("CADGeometry", 0))
+        if instance.point_properties and any(geometry.is_points for geometry in written):
+            components["Shape"] = 5
+        # a TwoSidedMaterial (node board batch 9) is Shape level 4
+        two_sided = [materials.get(shape.material_name) for shape in shapes if shape.material_name]
+        if any(m is not None and m.two_sided is not None and _is_classic(m, look) for m in two_sided):
+            components["Shape"] = max(4, components.get("Shape", 0))
+        # GeoLocation, GeoLOD and GeoElevationGrid written back (node board batch 3): Geospatial level 1, not in Immersive
+        if any(str(entry.get("node", "")).startswith("Geo") for entry in instance.group_chain or ()) or any(
+                (shape.primitive or {}).get("node") == "GeoElevationGrid" for shape in shapes):
+            components["Geospatial"] = 1
+        if instance.rigid_body is not None:
+            components["RigidBodyPhysics"] = 2      # not in Immersive; the joints are level 2
+        # the CAD product structure (node board batch 12): CADGeometry level 2; StaticGroup is Grouping level 3
+        if instance.cad is not None and (instance.cad.get("node") or instance.cad.get("face")):
+            components["CADGeometry"] = 2
+        if any(entry.get("node") == "StaticGroup" for entry in instance.group_chain or ()):
+            components["Grouping"] = 3
         if instance.viewpoint is not None and getattr(instance.viewpoint, "ortho_extents", None) is not None:
             components["Navigation"] = 3   # OrthoViewpoint is Navigation level 3; Immersive gives level 2
         interaction = instance.interaction
@@ -1435,10 +2223,15 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         f'xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-{version}.xsd">\n'
     )
     write("  <head>\n")
-    for name, level in _components(ir_scene, version):
+    for name, level in _components(ir_scene, version, look):
         write(f'    <component name="{name}" level="{level}" />\n')
     defs = _DefNames()
+    defs.carried = _Carried(ir_scene, defs, diagnostics)       # before anything is named: carried DEFs are reserved
+    defs.diagnostics = diagnostics
+    _name_cad(ir_scene, defs)                                  # then the CAD nodes' own DEFs, as the file wrote them
     behaviour = _behaviour_emission(ir_scene, defs, diagnostics, "    ")
+    if behaviour is not None:
+        defs.carried.yield_to("".join(behaviour.root), "".join(behaviour.routes))
     for name, content in head_meta(ir_scene.metadata, generator, diagnostics):
         write(_meta(name, content))
     if receipt_meta:
@@ -1457,19 +2250,29 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         "type='\"EXAMINE\" \"ANY\"' />\n"
     )
     if ir_scene.background is not None:
-        write(_background_xml(ir_scene.background, "    "))
+        write(_background_xml(ir_scene.background, "    ", output_dir=output_dir))
     elif ir_scene.background_color is not None:
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
+    if getattr(ir_scene, "fog", None) is not None:
+        write(_fog_xml(ir_scene.fog, "    "))
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     splats = ir_scene.splats_by_name()
-    for instance in ir_scene.instances:
-        write(_instance_xml(instance, geometries, materials, defs, "    ", output_dir=output_dir, humanoids=humanoids,
-                            splats=splats, version=version, look=look, collections=ir_scene.collections))
+    def write_root(instance, root_indent):
+        return _instance_xml(instance, geometries, materials, defs, root_indent, output_dir=output_dir, humanoids=humanoids,
+                             splats=splats, version=version, look=look, collections=ir_scene.collections)
+    # a body or a hinge's empty is written inside the RigidBodyCollection, not as a Transform of its own
+    plain = [instance for instance in ir_scene.instances if instance.rigid_body is None and instance.rigid_joint is None]
+    write(_grouped_xml([(instance, _own_groups(instance, [])) for instance in plain], write_root, defs, "    "))
+    write(_rigid_bodies_xml(ir_scene, geometries, materials, defs, "    ", output_dir=output_dir, look=look))
+    write(defs.carried.xml(ir_scene.carried_root, "    "))
+    write("".join(f"    {route}\n" for route in defs.carried.routes))
     write(_animation_xml(ir_scene, defs, "    "))
     write(_interaction_xml(ir_scene, defs, "    "))
     if behaviour is not None:
         write("".join(behaviour.root))
         write("".join(behaviour.routes))
+    if getattr(ir_scene, "physics", None):
+        write(physics_xml(ir_scene.physics, defs, "    ", lambda name: defs.get("transform", name, "OB_")))
 
     write("  </Scene>\n")
     write("</X3D>\n")

@@ -93,6 +93,18 @@ class ExportNavigationTests(unittest.TestCase):
         # (habsburg-unlit-color: the silver marks of the cards the page had switched off)
         self._import("<Switch whichChoice='0'><Shape DEF='Shown'><Box/></Shape><Shape DEF='Hidden'><Box/></Shape></Switch>")
         root = self._export()
+        # written back inside their Switch (node board batch 2): it draws choice 0 only, as the page did
+        switch = root.find(".//Switch")
+        self.assertIsNotNone(switch)
+        self.assertEqual(switch.attrib.get("whichChoice"), "0")
+        self.assertEqual([t.attrib.get("DEF") for t in switch.findall("Transform")], ["OB_Shown", "OB_Hidden"])
+        flags = {t.attrib["DEF"]: t.attrib.get("visible", "true") for t in root.iter("Transform")
+                 if t.attrib.get("DEF") in ("OB_Shown", "OB_Hidden")}
+        self.assertEqual(flags, {"OB_Shown": "true", "OB_Hidden": "true"}, "the Switch chooses; neither is also hidden")
+        # a scene imported before the Switch was recorded (no x3d_group_chain) still writes the other choice invisible
+        for name in ("Shown", "Hidden"):
+            del bpy.data.objects[name]["x3d_group_chain"]
+        root = self._export()
         flags = {t.attrib["DEF"]: t.attrib.get("visible", "true") for t in root.iter("Transform")
                  if t.attrib.get("DEF") in ("OB_Shown", "OB_Hidden")}
         self.assertEqual(flags, {"OB_Shown": "true", "OB_Hidden": "false"})
@@ -121,7 +133,13 @@ class ExportNavigationTests(unittest.TestCase):
         transforms = {t.attrib["DEF"]: t for t in root.iter("Transform") if t.attrib.get("DEF", "").startswith("OB_")}
         self.assertNotIn("visible", transforms["OB_Added"].attrib)
         self.assertNotIn("visible", transforms["OB_Hidden"].attrib)           # the subtree is not all hidden
-        self.assertEqual([s.attrib.get("visible") for s in transforms["OB_Hidden"].findall("Shape")], ["false"])
+        # the Switch is written back (node board batch 2), so it, not visible="false", keeps the other choice undrawn;
+        # the child modelled later rides inside its branch
+        switch = root.find(".//Switch")
+        self.assertEqual(switch.attrib.get("whichChoice"), "0")
+        self.assertEqual([t.attrib.get("DEF") for t in switch.findall("Transform")], ["OB_Shown", "OB_Hidden"])
+        self.assertIn(transforms["OB_Added"], list(transforms["OB_Hidden"].iter("Transform")))
+        self.assertEqual([s.attrib.get("visible") for s in transforms["OB_Hidden"].findall("Shape")], [None])
         self.assertEqual(transforms["OB_Shown"].attrib.get("visible", "true"), "true")
 
 

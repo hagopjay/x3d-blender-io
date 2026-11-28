@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <meta name="title" content="Node board gap batch 2: Switch, LOD, IndexedTriangleSet and PixelTexture written back"/>
+    <meta name="description" content="A DEF'd Switch choosing its third branch, with an empty second branch and an un-DEF'd Switch nested in its first; a LOD with range and center, three levels; a textured quad as an IndexedTriangleSet; a 2 x 2 PixelTexture. The export must write each node back, every branch and level in place."/>
+  </head>
+  <Scene>
+    <Switch DEF="Lamp" whichChoice="2">
+      <Transform DEF="LampOff" translation="-2 0 0">
+        <Switch whichChoice="0">
+          <Shape DEF="BulbDim"><Appearance><Material diffuseColor="0.2 0.2 0.2"/></Appearance><Sphere radius="0.3"/></Shape>
+          <Shape DEF="BulbDead"><Appearance><Material diffuseColor="0 0 0"/></Appearance><Sphere radius="0.25"/></Shape>
+        </Switch>
+      </Transform>
+      <Group/>
+      <Transform DEF="LampOn" translation="-2 0 0">
+        <Shape><Appearance><Material diffuseColor="1 0.9 0.4" emissiveColor="1 0.9 0.4"/></Appearance><Sphere radius="0.3"/></Shape>
+      </Transform>
+    </Switch>
+    <LOD DEF="Tree" range="5 15" center="2 0 0">
+      <Transform DEF="TreeNear" translation="2 0 0">
+        <Shape><Appearance><Material diffuseColor="0.1 0.6 0.2"/></Appearance><Cone bottomRadius="0.6" height="1.5"/></Shape>
+      </Transform>
+      <Transform DEF="TreeMid" translation="2 0 0">
+        <Shape><Appearance><Material diffuseColor="0.1 0.5 0.2"/></Appearance><Box size="0.8 1.5 0.8"/></Shape>
+      </Transform>
+      <Transform DEF="TreeFar" translation="2 0 0">
+        <Shape><Appearance><Material diffuseColor="0.1 0.4 0.2"/></Appearance><Box size="0.4 1.5 0.4"/></Shape>
+      </Transform>
+    </LOD>
+    <Transform DEF="Tile" translation="0 -1.5 0">
+      <Shape>
+        <Appearance>
+          <Material/>
+          <PixelTexture image="2 2 3 0xFF0000 0x00FF00 0x0000FF 0xFFFF00" repeatS="false" repeatT="false"/>
+        </Appearance>
+        <IndexedTriangleSet index="0 1 2 0 2 3" solid="false">
+          <Coordinate point="-1 -0.5 0 1 -0.5 0 1 0.5 0 -1 0.5 0"/>
+          <TextureCoordinate point="0 0 1 0 1 1 0 1"/>
+        </IndexedTriangleSet>
+      </Shape>
+    </Transform>
+    <Viewpoint description="Front" position="0 1 8"/>
+  </Scene>
+</X3D>

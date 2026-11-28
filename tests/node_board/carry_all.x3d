@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head><meta name="title" content="Carry: every node type the import carries, at the top of the scene"/></head>
+  <Scene>
+    <Analyser DEF="C_Analyser"/>
+    <AudioDestination DEF="C_AudioDestination"/>
+    <BiquadFilter DEF="C_BiquadFilter"/>
+    <BufferAudioSource DEF="C_BufferAudioSource"/>
+    <ChannelMerger DEF="C_ChannelMerger"/>
+    <ChannelSelector DEF="C_ChannelSelector"/>
+    <ChannelSplitter DEF="C_ChannelSplitter"/>
+    <ClipPlane DEF="C_ClipPlane"/>
+    <Convolver DEF="C_Convolver"/>
+    <Delay DEF="C_Delay"/>
+    <DynamicsCompressor DEF="C_DynamicsCompressor"/>
+    <Gain DEF="C_Gain"/>
+    <GeoMetadata DEF="C_GeoMetadata"/>
+    <IsoSurfaceVolumeData DEF="C_IsoSurfaceVolumeData"/>
+    <ListenerPointSource DEF="C_ListenerPointSource"/>
+    <LocalFog DEF="C_LocalFog"/>
+    <MicrophoneSource DEF="C_MicrophoneSource"/>
+    <NurbsOrientationInterpolator DEF="C_NurbsOrientationInterpolator"/>
+    <NurbsPositionInterpolator DEF="C_NurbsPositionInterpolator"/>
+    <NurbsSet DEF="C_NurbsSet"/>
+    <NurbsSurfaceInterpolator DEF="C_NurbsSurfaceInterpolator"/>
+    <OscillatorSource DEF="C_OscillatorSource"/>
+    <ParticleSystem DEF="C_ParticleSystem"/>
+    <PickableGroup DEF="C_PickableGroup"/>
+    <SegmentedVolumeData DEF="C_SegmentedVolumeData"/>
+    <SpatialSound DEF="C_SpatialSound"/>
+    <StreamAudioDestination DEF="C_StreamAudioDestination"/>
+    <StreamAudioSource DEF="C_StreamAudioSource"/>
+    <TextureProjector DEF="C_TextureProjector"/>
+    <TextureProjectorParallel DEF="C_TextureProjectorParallel"/>
+    <VolumeData DEF="C_VolumeData"/>
+    <WaveShaper DEF="C_WaveShaper"/>
+  </Scene>
+</X3D>

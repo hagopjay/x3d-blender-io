@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="RigidBodyPhysics" level="2"/>
+    <meta name="title" content="Node board gap batch 7: ball, slider, double axis hinge and universal joints as Blender constraints"/>
+    <meta name="description" content="Four pairs of bodies, a fixed anchor body and a free one each, joined by a BallJoint, a SliderJoint along X with separation 1 to 3, a DoubleAxisHingeJoint (axis1 Z, axis2 X, axis1 stops at plus and minus 0.6 rad) and a UniversalJoint (axis1 Y, axis2 X). The import must make POINT, SLIDER and GENERIC constraints; the export must write each joint back as itself."/>
+  </head>
+  <Scene>
+    <RigidBodyCollection DEF="World">
+      <RigidBody DEF="BallBase" containerField="bodies" position="-6 2 0" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.2"/></Shape></CollidableShape></RigidBody>
+      <RigidBody DEF="BallBob" containerField="bodies" position="-6 1 0"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.3"/></Shape></CollidableShape></RigidBody>
+      <RigidBody DEF="RailBase" containerField="bodies" position="-2 2 0" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="0.4 0.4 0.4"/></Shape></CollidableShape></RigidBody>
+      <RigidBody DEF="RailCar" containerField="bodies" position="0 2 0"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="0.6 0.3 0.3"/></Shape></CollidableShape></RigidBody>
+      <RigidBody DEF="GimbalBase" containerField="bodies" position="2 2 0" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.2"/></Shape></CollidableShape></RigidBody>
+      <RigidBody DEF="GimbalArm" containerField="bodies" position="3 2 0"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="1.5 0.2 0.2"/></Shape></CollidableShape></RigidBody>
+      <RigidBody DEF="CardanBase" containerField="bodies" position="6 2 0" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.2"/></Shape></CollidableShape></RigidBody>
+      <RigidBody DEF="CardanShaft" containerField="bodies" position="7 2 0"><CollidableShape containerField="geometry"><Shape containerField="shape"><Cylinder radius="0.1" height="1.5"/></Shape></CollidableShape></RigidBody>
+      <BallJoint DEF="Ball" containerField="joints" anchorPoint="-6 2 0" forceOutput='"ALL"'><RigidBody USE="BallBase" containerField="body1"/><RigidBody USE="BallBob" containerField="body2"/></BallJoint>
+      <SliderJoint DEF="Rail" containerField="joints" axis="1 0 0" minSeparation="1" maxSeparation="3" stopBounce="0.3"><RigidBody USE="RailBase" containerField="body1"/><RigidBody USE="RailCar" containerField="body2"/></SliderJoint>
+      <DoubleAxisHingeJoint DEF="Gimbal" containerField="joints" anchorPoint="2 2 0" axis1="0 0 1" axis2="1 0 0" minAngle1="-0.6" maxAngle1="0.6" suspensionForce="2"><RigidBody USE="GimbalBase" containerField="body1"/><RigidBody USE="GimbalArm" containerField="body2"/></DoubleAxisHingeJoint>
+      <UniversalJoint DEF="Cardan" containerField="joints" anchorPoint="6 2 0" axis1="0 1 0" axis2="1 0 0" stop1Bounce="0.1"><RigidBody USE="CardanBase" containerField="body1"/><RigidBody USE="CardanShaft" containerField="body2"/></UniversalJoint>
+    </RigidBodyCollection>
+    <Viewpoint description="Front" position="0 2 16"/>
+  </Scene>
+</X3D>
