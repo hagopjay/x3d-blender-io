@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><head><component name="RigidBodyPhysics" level="2"/><meta name="title" content="drop-bounce"/></head><Scene>
+<NavigationInfo type='"EXAMINE"' headlight="true"/><Viewpoint position="0 3 14"/>
+<RigidBodyCollection DEF="W" gravity="0 -9.8 0"><CollisionCollection containerField="collider" bounce="0.5" minBounceSpeed="0" appliedParameters='"BOUNCE"'/><RigidBody DEF="G" position="0 -0.5 0" mass="1" fixed="true"><CollidableShape containerField="geometry"><Shape containerField="shape"><Box size="40 1 40"/></Shape></CollidableShape></RigidBody><RigidBody DEF="S" position="0 5 0" mass="1"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.5"/></Shape></CollidableShape></RigidBody></RigidBodyCollection></Scene></X3D>

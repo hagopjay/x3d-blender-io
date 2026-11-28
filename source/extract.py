@@ -16,27 +16,29 @@ import math
 import os
 
 try:
-    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from .ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRFog, IRTextureRef, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from .hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from .interaction import check_interactions, read_interaction, read_tour
-    from .material import analyze_material
+    from .material import analyze_material, pixel_image
     from . import budget
     from . import default_uv
     from .matrix_safety import axis_scales, decompose_exact, inverted64, scale_to_children_matrix
     from .splat_io import rgb_to_sh0
     from .splat_native import extract_native_splats, is_native_splat_object
     from .viewpoint_fov import render_size, x3d_field_of_view
+    from . import physics_export
 except ImportError:  # pragma: no cover - standalone test fallback
-    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
+    from ir import IRAnimation, IRHumanoid, IRInstance, IRJoint, IRLight, IRMeshGeometry, IRMetadata, IRMetadataHost, IRMetadataNode, IRBackground, IRFog, IRTextureRef, IRScene, IRShape, IRTransform, IRViewpoint, IRGaussianSplats, IRInlineAsset
     from hanim_names import HANIM_JOINT_PROPERTY, HANIM_NAMES_PROPERTY, map_bones
     from interaction import check_interactions, read_interaction, read_tour
-    from material import analyze_material
+    from material import analyze_material, pixel_image
     import budget
     import default_uv
     from matrix_safety import axis_scales, decompose_exact, inverted64, scale_to_children_matrix
     from splat_io import rgb_to_sh0
     from splat_native import extract_native_splats, is_native_splat_object
     from viewpoint_fov import render_size, x3d_field_of_view
+    import physics_export
 
 logger = logging.getLogger("export_x3d")
 
@@ -183,13 +185,19 @@ SCENE_METADATA_PROPERTY = "x3d_scene_metadata"
 # The first Background of an imported file, kept on the scene: skyColor, skyAngle, groundColor, groundAngle
 # (flat lists of numbers) and transparency.
 BACKGROUND_PROPERTY = "x3d_background"
+# The first Fog of an imported file, kept on the scene: color, fogType and visibilityRange as the file gave them, and
+# the mist falloff the import set (the export reads the distance and type back from the world's mist settings).
+FOG_PROPERTY = "x3d_fog"
+# A TwoSidedMaterial's back fields (JSON numbers), kept on the Blender material, which draws both sides alike.
+TWO_SIDED_PROPERTY = "x3d_two_sided"
 # The headlight level an import in classic light units matched (a rig and diagnostics value; the export does not read it).
 HEADLIGHT_LUX_PROPERTY = "x3d_headlight_lux"
 # Set by the importer on every object it makes. The scene-level properties below describe what an import brought in, so
 # they stop applying when none of that content is left in the scene (scene_has_imported_content).
 IMPORTED_OBJECT_PROPERTY = "x3d_imported"
 SCENE_IMPORT_PROPERTIES = (COLOUR_SPACE_PROPERTY, LIGHTING_MODEL_PROPERTY, HEADLIGHT_PROPERTY, HEADLIGHT_LUX_PROPERTY,
-                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY, SCENE_METADATA_PROPERTY)
+                           IMPORTED_ANIMATION_PROPERTY, HEAD_META_PROPERTY, BACKGROUND_PROPERTY, SCENE_METADATA_PROPERTY,
+                           FOG_PROPERTY)
 # What marks content of a file imported before IMPORTED_OBJECT_PROPERTY existed: a DEF, USE or Inline record on the
 # object, a primitive, solid, light or splat record on its data (the importer's own names; extract cannot import them).
 _IMPORTED_OBJECT_MARKS = (IMPORTED_OBJECT_PROPERTY, "x3d_def", "x3d_def_path", "x3d_use", INLINE_URL_PROPERTY)
@@ -1151,6 +1159,22 @@ def regrouped(obj, node):
     return False
 
 
+CARRIED_PROPERTY = "x3d_carried"                  # set by the importer (import_x3d.place_carried), JSON list of XML
+CARRIED_ROUTES_PROPERTY = "x3d_carried_routes"
+
+
+def carried_of(owner, name=CARRIED_PROPERTY):
+    """The XML texts carried on an object or the scene (strings only; anything else is ignored)."""
+    raw = owner.get(name) if hasattr(owner, "get") else None
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    return [x for x in value if isinstance(x, str)] if isinstance(value, list) else []
+
+
 RIGID_WORLD_PROPERTY = "x3d_rigid_world"   # set by the importer (import_x3d.import_rigid_bodies), JSON
 RIGID_BODY_PROPERTY = "x3d_rigid_body"
 RIGID_JOINT_PROPERTY = "x3d_rigid_joint"
@@ -1360,7 +1384,49 @@ def _analyzed_material(material):
             analyzed.metadata = object_metadata(material.get(METADATA_PROPERTY))
         except (AttributeError, TypeError):
             pass
+        analyzed.two_sided = two_sided_fields(material)
     return analyzed
+
+
+_TWO_SIDED_DEFAULTS = {"backAmbientIntensity": 0.2, "backDiffuseColor": [0.8, 0.8, 0.8],
+                       "backEmissiveColor": [0.0, 0.0, 0.0], "backShininess": 0.2, "backSpecularColor": [0.0, 0.0, 0.0],
+                       "backTransparency": 0.0, "separateBackColor": False}
+
+
+def two_sided_fields(material):
+    """The TwoSidedMaterial back fields the import kept on ``material`` (TWO_SIDED_PROPERTY), checked: numbers in
+    [0, 1] (colours as three of them), separateBackColor a bool; anything else in the record is dropped. None when
+    the material has no record (it is not from a TwoSidedMaterial)."""
+    try:
+        raw = material.get(TWO_SIDED_PROPERTY)
+    except (AttributeError, TypeError):
+        return None
+    if not isinstance(raw, str):
+        return None
+    try:
+        record = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(record, dict):
+        return None
+    out = {}
+    for name, default in _TWO_SIDED_DEFAULTS.items():
+        value = record.get(name)
+        if value is None:
+            continue
+        if isinstance(default, bool):
+            if isinstance(value, bool):
+                out[name] = value
+            continue
+        try:
+            value = [float(v) for v in value] if isinstance(default, list) else float(value)
+        except (TypeError, ValueError):
+            continue
+        values = value if isinstance(value, list) else [value]
+        if (len(values) == (3 if isinstance(default, list) else 1)
+                and all(math.isfinite(v) and 0.0 <= v <= 1.0 for v in values)):
+            out[name] = value
+    return out
 
 
 def scene_metadata_hosts(scene) -> list[IRMetadataHost]:
@@ -1401,13 +1467,72 @@ def scene_background(scene) -> IRBackground | None:
     if not sky_color:
         return None
     transparency = get("transparency")
+    textures = {}
+    if get("node") == "TextureBackground":
+        faces = get("textures")
+        faces_get = getattr(faces, "get", None)
+        for face in TEXTURE_BACKGROUND_FACES:
+            name = faces_get(face) if faces_get is not None else None
+            image = _image_named(name)
+            if image is not None:
+                textures[face] = IRTextureRef(image_name=image.name, filepath=image.filepath, source=image.source,
+                                              usage=face, pixel_image=pixel_image(image))
     return IRBackground(
         sky_color=sky_color,
         sky_angle=numbers("skyAngle"),
         ground_color=colors("groundColor"),
         ground_angle=numbers("groundAngle"),
         transparency=float(transparency) if isinstance(transparency, (int, float)) else 0.0,
+        node="TextureBackground" if get("node") == "TextureBackground" else "Background",
+        textures=textures,
     )
+
+
+# a TextureBackground's faces, in the order the export writes them
+TEXTURE_BACKGROUND_FACES = ("backTexture", "bottomTexture", "frontTexture", "leftTexture", "rightTexture", "topTexture")
+
+
+def _image_named(name):
+    """The Blender image called ``name``, or None (also outside Blender)."""
+    if not isinstance(name, str) or not name:
+        return None
+    try:
+        import bpy
+    except ImportError:  # pragma: no cover - plain Python
+        return None
+    return bpy.data.images.get(name)
+
+
+# Blender's mist falloff read back as an X3D fogType: LINEAR is the same ramp, the other two curve like EXPONENTIAL
+_FALLOFF_FOG_TYPE = {"LINEAR": "LINEAR", "QUADRATIC": "EXPONENTIAL", "INVERSE_QUADRATIC": "EXPONENTIAL"}
+
+
+def scene_fog(scene) -> IRFog | None:
+    """The Fog the importer kept on ``scene`` (FOG_PROPERTY), with its distance and type read from the world's mist
+    when the scene has a world: visibilityRange is where the mist is full (start + depth), and the falloff gives the
+    fogType. The colour is the record's (mist has none). None when there is no record."""
+    stored = imported_scene_property(scene, FOG_PROPERTY)
+    get = getattr(stored, "get", None)
+    if get is None:
+        return None
+    try:
+        color = tuple(max(0.0, min(1.0, float(v))) for v in get("color"))
+    except (TypeError, ValueError):
+        color = ()
+    color = color if len(color) == 3 else (1.0, 1.0, 1.0)
+    fog_type = get("fogType") if get("fogType") in ("LINEAR", "EXPONENTIAL") else "LINEAR"
+    try:
+        distance = float(get("visibilityRange"))
+    except (TypeError, ValueError):
+        distance = 0.0
+    world = getattr(scene, "world", None)
+    mist = getattr(world, "mist_settings", None) if world is not None else None
+    if mist is not None and get("falloff") is not None:
+        distance = float(mist.start) + float(mist.depth)
+        if mist.falloff != get("falloff"):
+            fog_type = _FALLOFF_FOG_TYPE.get(mist.falloff, fog_type)
+    distance = distance if math.isfinite(distance) and distance > 0.0 else 0.0
+    return IRFog(color=color, fog_type=fog_type, visibility_range=distance)
 
 
 def _unit_interval(value, default):
@@ -1871,11 +1996,14 @@ def extract_scene(
     )
 
     ir_scene = IRScene(name=scene.name, metadata=meta)
+    ir_scene.carried_root = carried_of(scene)
+    ir_scene.carried_routes = carried_of(scene, CARRIED_ROUTES_PROPERTY)
     ir_scene.material_model = resolve_material_model(material_model, scene)
     ir_scene.material_model_forced = str(material_model or "").strip().lower() in MATERIAL_MODELS
     ir_scene.headlight = scene_headlight(scene)
     # An imported Background keeps its gradient; otherwise the world's colour becomes a plain one.
     ir_scene.background = scene_background(scene)
+    ir_scene.fog = scene_fog(scene)
     ir_scene.metadata_hosts = scene_metadata_hosts(scene)
     world = getattr(scene, "world", None)
     if ir_scene.background is None and world is not None and getattr(world, "color", None) is not None:
@@ -1890,6 +2018,13 @@ def extract_scene(
             use_active_collection=use_active_collection,
         )
     )
+    # the rigid body world's helpers and constraint empties are written as physics, not as Transforms
+    if not scene.get(RIGID_WORLD_PROPERTY):    # (a legacy-imported world keeps the batch 6/7 writer, see below)
+        # the import's hidden wire stand-ins for a body (x3d_collidable_only) are written in the RigidBody, not as Transforms
+        physics_scope = [obj for obj in exported if not physics_export.is_helper(obj)]     # what physics_export may write
+        exported = [obj for obj in physics_scope if not obj.get("x3d_collidable_only")]
+    else:
+        physics_scope = exported
     exported_names = {obj.name for obj in exported}
     # Objects imported from an Inline are represented by their placeholder empty's Inline node.
     inline_children = [obj for obj in exported if (root := inline_root(obj)) is not None and root.name in exported_names]
@@ -2126,6 +2261,7 @@ def extract_scene(
             instance.rigid_body = rigid_body_of(obj, x3d_matrix, use_hierarchy and parent is not None,
                                                 ir_scene.diagnostics)
             instance.rigid_joint = rigid_joint_of(obj, global_matrix) if not list(obj.children) else None
+            instance.carried = carried_of(obj)
             if instance.rigid_body is not None and ir_scene.rigid_world is None:
                 ir_scene.rigid_world = rigid_world_of(scene, global_matrix)
             objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
@@ -2294,6 +2430,22 @@ def extract_scene(
         ir_scene.diagnostics.append(
             f"Skipped {count} {object_type} object(s): not yet supported by the X3D 4.0 path."
         )
+
+    try:
+        # a scene the legacy importer made (it carries x3d_rigid_world) keeps the batch 6/7 writer; every other rigid body
+        # world is written by physics_export
+        ir_scene.physics = None if scene.get(RIGID_WORLD_PROPERTY) else physics_export.extract(scene, physics_scope, global_matrix)
+        if ir_scene.physics:
+            ir_scene.diagnostics.extend(ir_scene.physics["diagnostics"])
+            # one writer: physics_export writes the whole rigid body world, so the node board's batch 6 and 7 per-object
+            # RigidBody and joint records (rigid_body_of, rigid_joint_of) stand down and the bodies stay plain Transforms
+            ir_scene.diagnostics[:] = [d for d in ir_scene.diagnostics if "is written as a plain Transform" not in d]
+            for instance in ir_scene.iter_instances():
+                instance.rigid_body = None
+                instance.rigid_joint = None
+            ir_scene.rigid_world = None
+    except Exception as exc:  # physics must never stop an export
+        ir_scene.diagnostics.append(f"Rigid body physics not written: {exc}")
 
     if not ir_scene.object_names:
         ir_scene.diagnostics.append("No exportable objects matched the current filters.")

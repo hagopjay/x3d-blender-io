@@ -472,13 +472,16 @@ class ImportFidelityTests(unittest.TestCase):
         self.assertEqual([round(c, 3) for c in b.inputs["Base Color"].default_value[:3]], [1.0, 0.0, 0.0])
         self.assertGreater(b.inputs["Specular IOR Level"].default_value, 0.0)
 
-    def test_two_sided_material_says_the_back_is_not_carried(self):
+    def test_two_sided_material_says_the_back_is_not_drawn(self):
+        # node board batch 9: the back fields are now kept on the material for the X3D export (they used to be lost),
+        # and the warning still says that Blender draws the back with the front colours
         with self.assertLogs(level="WARNING") as logs:
             self.load(_shape("<IndexedFaceSet solid='false' coordIndex='0 1 2 -1'><Coordinate point='0 0 0 1 0 0 0 1 0'/>"
                              "</IndexedFaceSet>",
                              "<Appearance><TwoSidedMaterial DEF='TS' diffuseColor='1 0 0' backDiffuseColor='0 1 0' "
                              "separateBackColor='true'/></Appearance>"))
-        self.assertTrue(any("back colours are not imported" in line for line in logs.output))
+        self.assertTrue(any("draws the back with the front colours" in line for line in logs.output))
+        self.assertIn('"backDiffuseColor": [0.0, 1.0, 0.0]', self.only_mesh().materials[0]["x3d_two_sided"])
 
     # ------------------------------------------------------------ CADGeometry quads
     def test_indexed_quad_set(self):

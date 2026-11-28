@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0"><head><component name="RigidBodyPhysics" level="2"/><meta name="title" content="billiards"/></head><Scene>
+<NavigationInfo type='"EXAMINE"' headlight="true"/><Viewpoint position="0 3 14"/>
+<RigidBodyCollection DEF="W" gravity="0 0 0"><CollisionCollection containerField="collider" bounce="1" minBounceSpeed="0" appliedParameters='"BOUNCE"'/><RigidBody DEF="A" position="-3 0 0" mass="1" linearVelocity="3 0 0"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.5"/></Shape></CollidableShape></RigidBody><RigidBody DEF="B" position="0 0 0" mass="1"><CollidableShape containerField="geometry"><Shape containerField="shape"><Sphere radius="0.5"/></Shape></CollidableShape></RigidBody></RigidBodyCollection></Scene></X3D>

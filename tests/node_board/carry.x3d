@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Full" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <meta name="title" content="Carry: nodes the import has no handler for come back as written"/>
+    <meta name="description" content="LocalFog and ClipPlane at the top, an OscillatorSource, a Gain and a WaveShaper; inside a Transform with a box, a ParticleSystem and a VolumeData. A ROUTE between two carried nodes is carried; a ROUTE from a built node to a carried one is reported; a TextureProjector that USEs a texture of a built Shape is left out (it would dangle)."/>
+  </head>
+  <Scene>
+    <LocalFog DEF="Haze" color="0.8 0.8 0.9" visibilityRange="30"/>
+    <ClipPlane DEF="Cut" plane="0 1 0 -1"/>
+    <OscillatorSource DEF="Tone" frequency="440"/>
+    <Gain DEF="Amp" gain="0.5"/>
+    <WaveShaper DEF="Fuzz" oversample="2X"/>
+    <Transform DEF="Rig" translation="1 0 0">
+      <Shape DEF="Crate"><Appearance><Material/><ImageTexture DEF="Wood" url='"wood.png"'/></Appearance><Box/></Shape>
+      <ParticleSystem DEF="Sparks" maxParticles="50" particleLifetime="2"><PointEmitter containerField="emitter" speed="0.5"/></ParticleSystem>
+      <VolumeData DEF="Scan" dimensions="1 2 1"><ImageTexture3D containerField="voxels" url='"scan.nrrd"'/></VolumeData>
+      <TextureProjector DEF="Slide" location="0 2 0"><ImageTexture USE="Wood" containerField="texture"/></TextureProjector>
+    </Transform>
+    <TimeSensor DEF="Clock" loop="true"/>
+    <ROUTE fromNode="Cut" fromField="enabled_changed" toNode="Haze" toField="set_enabled"/>
+    <ROUTE fromNode="Clock" fromField="isActive" toNode="Haze" toField="set_enabled"/>
+    <Viewpoint description="Front" position="0 1 8"/>
+  </Scene>
+</X3D>

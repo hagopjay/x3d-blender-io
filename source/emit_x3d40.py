@@ -27,12 +27,14 @@ try:
     from .ir import IRMetadata, IRScene
     from .splat_gltf import splat_glb_bytes
     from .splat_io import sh0_to_rgb
+    from .physics_export import physics_xml
 except ImportError:  # pragma: no cover - standalone test fallback
     from extract import display_colour
     from interaction import tour_timeline
     from ir import IRMetadata, IRScene
     from splat_gltf import splat_glb_bytes
     from splat_io import sh0_to_rgb
+    from physics_export import physics_xml
 
 # The head meta name of the loss receipt's line (receipt.RECEIPT_META; tests/test_receipt.py checks they agree).
 RECEIPT_META = "x3d-blender-io.receipt"
@@ -56,6 +58,58 @@ _NMTOKEN_BAD = re.compile(r"[^\w.:-]")
 def _nmtoken(name: str, fallback: str = "Node") -> str:
     """An xs:NMTOKEN value (HAnim ``name`` fields): whitespace and other illegal characters become "_"."""
     return _NMTOKEN_BAD.sub("_", (name or "").strip()) or fallback
+
+
+class _Carried:
+    """The carried XML of a scene, checked once before anything is named: every DEF in it is reserved (so the writer's
+    own names avoid them), and an item that USEs a name no carried item DEFs (it would dangle) is left out. A carried
+    node under a USE'd Transform comes once per copy: the first copy is written, a later one becomes a USE of its DEF."""
+
+    def __init__(self, ir_scene, defs, diagnostics):
+        import xml.etree.ElementTree as ElementTree
+        self.ok, self.written = {}, set()
+        texts = [x for instance in ir_scene.iter_instances() for x in instance.carried] + list(ir_scene.carried_root)
+        parsed = {}
+        for text in texts:
+            try:
+                parsed[text] = ElementTree.fromstring(text)
+            except ElementTree.ParseError:
+                diagnostics.append("A carried node is not well-formed XML; left out.")
+        named = {e.get("DEF") for root in parsed.values() for e in root.iter() if e.get("DEF")}
+        for text, root in parsed.items():
+            missing = {e.get("USE") for e in root.iter() if e.get("USE")} - named
+            if missing:
+                diagnostics.append(f"Carried {root.tag} uses {', '.join(sorted(missing))}, which no carried node defines; "
+                                   "left out (it would dangle).")
+                continue
+            self.ok[text] = (root.tag, root.get("DEF"), {e.get("DEF") for e in root.iter() if e.get("DEF")})
+        for name in named:
+            defs.reserve(name)
+        self.routes = [r for r in getattr(ir_scene, "carried_routes", []) if all(
+            end in named for end in re.findall(r'(?:fromNode|toNode)="([^"]*)"', r))]
+
+    def yield_to(self, nodes_xml, routes_xml):
+        """The behaviour graph keeps some scene nodes in place itself (a ROUTE's end it has no Blender object for) and
+        writes their ROUTEs: those are not written a second time from the carried copy."""
+        taken = set(re.findall(r'\bDEF="([^"]+)"', nodes_xml))
+        self.ok = {text: info for text, info in self.ok.items() if not (info[1] and info[1] in taken)}
+        ends = re.compile(r'fromNode="([^"]*)"\s+fromField="([^"]*)"\s+toNode="([^"]*)"\s+toField="([^"]*)"')
+        written = set(ends.findall(routes_xml))
+        self.routes = [r for r in self.routes if not set(ends.findall(r)) & written]
+
+    def xml(self, texts, indent):
+        out = []
+        for text in texts:
+            if text not in self.ok:
+                continue
+            tag, top_def, its_defs = self.ok[text]
+            if its_defs & self.written:
+                if top_def and top_def in self.written:
+                    out.append(f'{indent}<{tag} USE="{top_def}" />\n')
+                continue
+            self.written |= its_defs
+            out.append(f"{indent}{text}\n")
+        return "".join(out)
 
 
 class _DefNames:
@@ -93,6 +147,10 @@ class _DefNames:
             length += 4
         self._sidecars[name] = digest
         return name
+
+    def reserve(self, name: str) -> None:
+        """A name written as it is (a carried node's DEF): the writer's own names avoid it."""
+        self._used.add(name)
 
     def first_use(self, kind: str, key: str) -> bool:
         lookup = (kind, key)
@@ -321,6 +379,30 @@ def _texture_transform_xml(material, indent):
     return ""
 
 
+_TWO_SIDED_ORDER = ("backAmbientIntensity", "backDiffuseColor", "backEmissiveColor", "backShininess", "backSpecularColor",
+                    "backTransparency", "separateBackColor")
+
+
+def _two_sided_attrs(material):
+    """The back attributes of a material read from a TwoSidedMaterial (``material.two_sided``, the values the file gave,
+    so in the file's colour space), or None for any other material."""
+    fields = getattr(material, "two_sided", None)
+    if fields is None:
+        return None
+    attrs = []
+    for name in _TWO_SIDED_ORDER:
+        if name not in fields:
+            continue
+        value = fields[name]
+        if isinstance(value, bool):
+            attrs.append(f'{name}="{"true" if value else "false"}"')
+        elif isinstance(value, list):
+            attrs.append(f'{name}="{_fmt3(value)}"')
+        else:
+            attrs.append(f'{name}="{_fmt(value)}"')
+    return attrs
+
+
 def _classic_material_xml(material, material_def, indent, look: _Look, *, output_dir=None, defs=None):
     """``(material xml, appearance texture xml)`` of a Material written for ``material``. The base colour texture goes in
     the Appearance's texture field, the way a classic file has it (X3D 17.2.2: an RGB texture replaces diffuseColor)."""
@@ -348,7 +430,13 @@ def _classic_material_xml(material, material_def, indent, look: _Look, *, output
                            ("occlusionTexture", material.occlusion_texture))
         if ref is not None
     )
-    if inner:
+    two_sided = _two_sided_attrs(material) if not inner else None
+    if two_sided is not None:
+        # a TwoSidedMaterial the import read: the front from the Blender material, the back as the import kept it; it
+        # has no normalScale or occlusionStrength (a material that gained a map of its own writes a Material)
+        attrs = [a for a in attrs if not a.startswith(("normalScale=", "occlusionStrength="))] + two_sided
+        xml = f"{indent}<TwoSidedMaterial {' '.join(attrs)} />\n"
+    elif inner:
         xml = f"{indent}<Material {' '.join(attrs)}>\n{inner}{indent}</Material>\n"
     else:
         xml = f"{indent}<Material {' '.join(attrs)} />\n"
@@ -874,10 +962,10 @@ _SKY_ANGLE_MAX = 3.1416
 _GROUND_ANGLE_MAX = 1.5708
 
 
-def _background_xml(background, indent):
+def _background_xml(background, indent, *, output_dir=None):
     """A Background with its sky and ground gradients. Colours are clipped to [0, 1] and angles to the ranges the
     X3D 4.0 schema gives; each angle list is cut to one less than its colours, and the colours to one more than
-    the angles."""
+    the angles. One read from a TextureBackground is written as one, with its face textures (node board batch 9)."""
 
     def clip(values, top):
         return [min(max(float(value), 0.0), top) for value in values]
@@ -899,7 +987,27 @@ def _background_xml(background, indent):
     transparency = clip([background.transparency], 1.0)[0]
     if transparency:
         attrs.append(f'transparency="{_fmt(transparency)}"')
+    if getattr(background, "node", "Background") == "TextureBackground":
+        # no DEF: the faces are written in a fixed order, so the image names a re-import gives them do not move
+        # DEF labels from one round trip to the next (a material sharing the image still writes its own)
+        faces = "".join(_texture_xml(ref, indent + "  ", container_field=face, output_dir=output_dir)
+                        for face, ref in sorted(background.textures.items()))
+        if faces:
+            return f"{indent}<TextureBackground {' '.join(attrs)}>\n{faces}{indent}</TextureBackground>\n"
+        return f"{indent}<TextureBackground {' '.join(attrs)} />\n"
     return f"{indent}<Background {' '.join(attrs)} />\n"
+
+
+def _fog_xml(fog, indent):
+    """A Fog; fields at their X3D default (white, LINEAR, visibilityRange 0) are left out."""
+    attrs = []
+    if tuple(fog.color) != (1.0, 1.0, 1.0):
+        attrs.append(f'color="{_fmt3(fog.color)}"')
+    if fog.fog_type != "LINEAR":
+        attrs.append(f'fogType="{fog.fog_type}"')
+    if fog.visibility_range > 0.0:
+        attrs.append(f'visibilityRange="{_fmt_length(fog.visibility_range)}"')
+    return f"{indent}<Fog{''.join(' ' + a for a in attrs)} />\n"
 
 
 def _metadata_xml(node, indent, container_field=None, defs=None):
@@ -1261,6 +1369,9 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
                              splats=splats, version=version, look=look, collections=collections)
     xml.append(_grouped_xml([(child, _own_groups(child, instance.group_chain or [])) for child in instance.children],
                             write_child, defs, indent + "  "))
+    carried = getattr(defs, "carried", None)
+    if carried is not None and instance.carried:
+        xml.append(carried.xml(instance.carried, indent + "  "))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
 
@@ -1726,7 +1837,7 @@ def head_meta(metadata: IRMetadata, generator: str, diagnostics=()) -> list[tupl
     return unique
 
 
-def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
+def _components(ir_scene: IRScene, version: str, look=None) -> list[tuple[str, int]]:
     """(name, level) of every component statement the Immersive header needs, sorted by name.
 
     PhysicalMaterial (Shape 2) and UnlitMaterial (Shape 1) are left out of the
@@ -1737,11 +1848,17 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     has no Appearance. Circle2D is Geometry2D level 2; Immersive has level 1.
     """
     components = {}
+    if getattr(ir_scene, "physics", None):
+        components["RigidBodyPhysics"] = 2      # joints are level 2; Immersive has no RigidBodyPhysics
     if version == "4.1" and ir_scene.splats:
         components["GaussianSplats"] = 1
     if ir_scene.humanoids:
         components["HAnim"] = 1
     geometries = ir_scene.geometry_by_name()
+    materials = ir_scene.material_by_name()
+    look = look if look is not None else _PLAIN_LOOK
+    if ir_scene.background is not None and getattr(ir_scene.background, "node", "") == "TextureBackground":
+        components["EnvironmentalEffects"] = 3      # TextureBackground; Immersive has level 2 (Fog, Background)
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     for instance in ir_scene.iter_instances():
         shapes = list(instance.iter_shapes())
@@ -1757,6 +1874,10 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
             components["CADGeometry"] = 1
         if instance.point_properties and any(geometry.is_points for geometry in written):
             components["Shape"] = 5
+        # a TwoSidedMaterial (node board batch 9) is Shape level 4
+        two_sided = [materials.get(shape.material_name) for shape in shapes if shape.material_name]
+        if any(m is not None and m.two_sided is not None and _is_classic(m, look) for m in two_sided):
+            components["Shape"] = max(4, components.get("Shape", 0))
         # GeoLocation, GeoLOD and GeoElevationGrid written back (node board batch 3): Geospatial level 1, not in Immersive
         if any(str(entry.get("node", "")).startswith("Geo") for entry in instance.group_chain or ()) or any(
                 (shape.primitive or {}).get("node") == "GeoElevationGrid" for shape in shapes):
@@ -1867,10 +1988,13 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         f'xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-{version}.xsd">\n'
     )
     write("  <head>\n")
-    for name, level in _components(ir_scene, version):
+    for name, level in _components(ir_scene, version, look):
         write(f'    <component name="{name}" level="{level}" />\n')
     defs = _DefNames()
+    defs.carried = _Carried(ir_scene, defs, diagnostics)       # before anything is named: carried DEFs are reserved
     behaviour = _behaviour_emission(ir_scene, defs, diagnostics, "    ")
+    if behaviour is not None:
+        defs.carried.yield_to("".join(behaviour.root), "".join(behaviour.routes))
     for name, content in head_meta(ir_scene.metadata, generator, diagnostics):
         write(_meta(name, content))
     if receipt_meta:
@@ -1889,9 +2013,11 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         "type='\"EXAMINE\" \"ANY\"' />\n"
     )
     if ir_scene.background is not None:
-        write(_background_xml(ir_scene.background, "    "))
+        write(_background_xml(ir_scene.background, "    ", output_dir=output_dir))
     elif ir_scene.background_color is not None:
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
+    if getattr(ir_scene, "fog", None) is not None:
+        write(_fog_xml(ir_scene.fog, "    "))
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     splats = ir_scene.splats_by_name()
     def write_root(instance, root_indent):
@@ -1901,11 +2027,15 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     plain = [instance for instance in ir_scene.instances if instance.rigid_body is None and instance.rigid_joint is None]
     write(_grouped_xml([(instance, _own_groups(instance, [])) for instance in plain], write_root, defs, "    "))
     write(_rigid_bodies_xml(ir_scene, geometries, materials, defs, "    ", output_dir=output_dir, look=look))
+    write(defs.carried.xml(ir_scene.carried_root, "    "))
+    write("".join(f"    {route}\n" for route in defs.carried.routes))
     write(_animation_xml(ir_scene, defs, "    "))
     write(_interaction_xml(ir_scene, defs, "    "))
     if behaviour is not None:
         write("".join(behaviour.root))
         write("".join(behaviour.routes))
+    if getattr(ir_scene, "physics", None):
+        write(physics_xml(ir_scene.physics, defs, "    ", lambda name: defs.get("transform", name, "OB_")))
 
     write("  </Scene>\n")
     write("</X3D>\n")

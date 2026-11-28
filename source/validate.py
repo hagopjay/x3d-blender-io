@@ -233,6 +233,20 @@ def _coerce_field(value: str, declaration):
     return numbers
 
 
+def _each_enumeration_value_valid(node_class, py_name, coerced, exc) -> bool:
+    """x3d.py 4.0.65.8 checks an MFString enumeration field as one string against its single-value choices, so a field
+    that lists several allowed values (CollisionCollection appliedParameters '"BOUNCE" "FRICTION_COEFFICIENT_2"', which
+    the standard allows) was refused. Such a field is valid when each of its values is."""
+    if "does not match allowed enumerations" not in str(exc) or not isinstance(coerced, (list, tuple)) or len(coerced) < 2:
+        return False
+    try:
+        for item in coerced:
+            node_class(**{py_name: [item]})
+    except Exception:
+        return False
+    return True
+
+
 def validate_tree_with_x3d_py(root, x3d_module) -> ValidationResult:
     errors: list[str] = []
     warnings: list[str] = []
@@ -257,12 +271,15 @@ def validate_tree_with_x3d_py(root, x3d_module) -> ValidationResult:
                 if py_name not in declared:
                     warnings.append(f"<{tag}>: unknown field {name!r}")
                     continue
+                coerced = None
                 try:
-                    node_class(**{py_name: _coerce_field(value, declared[py_name])})
+                    coerced = _coerce_field(value, declared[py_name])
+                    node_class(**{py_name: coerced})
                 except SystemExit as exc:  # x3d.py halts on some HAnim problems
                     errors.append(f"<{tag} {name}=...>: x3d.py halted ({exc})")
                 except Exception as exc:
-                    errors.append(f"<{tag} {name}=...>: {exc}")
+                    if not _each_enumeration_value_valid(node_class, py_name, coerced, exc):
+                        errors.append(f"<{tag} {name}=...>: {exc}")
         return True
 
     # An explicit stack, not recursion: a scene nested 1,200 Groups deep (legal X3D) raised RecursionError here, so

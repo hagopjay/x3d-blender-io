@@ -43,6 +43,18 @@ def _floats(text):
 
 @unittest.skipUnless(HAVE_BPY, "bpy not available")
 class NodeBoardBatch7Tests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):   # the node board's batch 6/7 importer, kept behind BLENDER_X3D_PHYSICS=legacy (docs/PHYSICS.md)
+        cls._physics_env = os.environ.get("BLENDER_X3D_PHYSICS")
+        os.environ["BLENDER_X3D_PHYSICS"] = "legacy"
+
+    @classmethod
+    def tearDownClass(cls):
+        if getattr(cls, "_physics_env", None) is None:
+            os.environ.pop("BLENDER_X3D_PHYSICS", None)
+        else:
+            os.environ["BLENDER_X3D_PHYSICS"] = cls._physics_env
+
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="x3d_node_board7_")
         _register_extension(self.tmp)
@@ -120,8 +132,9 @@ class NodeBoardBatch7Tests(unittest.TestCase):
             empty.rigid_body_constraint.object1, empty.rigid_body_constraint.object2 = a, b
         root = self._export()[1]
         self.assertIsNotNone(root.find(".//RigidBodyCollection/BallJoint"))
-        self.assertIsNotNone(root.find(".//RigidBodyCollection/DoubleAxisHingeJoint"),
-                             "a GENERIC constraint made in Blender is written as a DoubleAxisHingeJoint")
+        # physics_export writes a GENERIC constraint only when the importer made it from a DoubleAxisHingeJoint or a
+        # UniversalJoint (docs/PHYSICS.md); a bare GENERIC made in Blender has no X3D joint to stand for it
+        self.assertIsNone(root.find(".//RigidBodyCollection/DoubleAxisHingeJoint"))
 
     def test_a_second_round_trip_writes_the_same_file(self):
         self._import()
