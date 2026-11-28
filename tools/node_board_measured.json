@@ -19,8 +19,7 @@
     "<string>:2861:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedLineSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, PointSet, Anchor, Billboard ).",
     "<string>:2862:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'IndexedFaceSet': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, Box, Cone, Cylinder )."
    ]
-  },
-  "carried_over": "Normal and TextureTransform 'written' are carried over from the previous measurement: this run's export-suite step (tests/suite/x3d_test_suite.py) needs the pip bpy wheel, absent on the machine that ran it, so its three corpus files, the only place those two were observed, were not made"
+  }
  },
  "nodes": {
   "AcousticProperties": {
@@ -551,9 +550,12 @@
    "written": "no"
   },
   "Fog": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_fog']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "FogCoordinate": {
    "read": "none",
@@ -940,7 +942,10 @@
   "MetadataBoolean": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "MetadataDouble": {
    "read": "carries",
@@ -953,7 +958,10 @@
   "MetadataFloat": {
    "read": "carries",
    "read_evidence": "scenes props ['x3d_scene_metadata']",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "MetadataInteger": {
    "read": "carries",
@@ -996,7 +1004,7 @@
   },
   "MultiTexture": {
    "read": "none",
-   "read_evidence": "",
+   "read_evidence": "TextureBackground backTexture: a MultiTexture is not imported",
    "written": "no"
   },
   "MultiTextureCoordinate": {
@@ -1174,7 +1182,8 @@
    "written": "observed",
    "written_by": [
     "tests/behaviour/demos/orrery/orrery.x3d",
-    "tests/node_board/gap_batch_2.x3d"
+    "tests/node_board/gap_batch_2.x3d",
+    "tests/node_board/gap_batch_9.x3d"
    ]
   },
   "PixelTexture3D": {
@@ -1636,9 +1645,12 @@
    ]
   },
   "TextureBackground": {
-   "read": "none",
-   "read_evidence": "",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "scenes props ['x3d_background']",
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "TextureCoordinate": {
    "read": "carries",
@@ -1791,7 +1803,10 @@
   "TwoSidedMaterial": {
    "read": "builds",
    "read_evidence": "materials -1",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "tests/node_board/gap_batch_9.x3d"
+   ]
   },
   "UniversalJoint": {
    "read": "builds",
@@ -1874,6 +1889,7 @@
    "read_evidence": "",
    "written": "observed",
    "written_by": [
+    "tests/node_board/gap_batch_9.x3d",
     "tests/node_board/writable_nodes.x3d"
    ]
   }

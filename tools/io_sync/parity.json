@@ -166,6 +166,21 @@
       "import": "yes",
       "round_trip": "exact"
     },
+    "Fog": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "the world's mist (start 0, depth visibilityRange, LINEAR or inverse quadratic falloff for EXPONENTIAL, Mist pass on) plus x3d_fog on the scene for the colour; written back from the mist (visibilityRange = start + depth, falloff -> fogType) and the record's colour; a scene without a world keeps the record only (node board batch 9). Round trip pinned by tests/test_node_board_batch9_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "TextureBackground": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "its gradient in x3d_background (node TextureBackground) as Background's is, its ImageTexture and PixelTexture faces as Blender images; written back with each face that still has its image, urls through the export's path mode; declares EnvironmentalEffects 3 (node board batch 9). Round trip pinned by tests/test_node_board_batch9_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "TwoSidedMaterial": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "the Blender material is the front (both sides drawn alike); the back fields kept as x3d_two_sided (JSON numbers) and written back with the classic material model, else a Material; declares Shape 4 (node board batch 9). Round trip pinned by tests/test_node_board_batch9_bpy.py; the fixed-point corpus does not contain it yet."
+    },
     "TimeSensor": {
       "import": "yes",
       "round_trip": "exact"

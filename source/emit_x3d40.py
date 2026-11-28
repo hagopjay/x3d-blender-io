@@ -323,6 +323,30 @@ def _texture_transform_xml(material, indent):
     return ""
 
 
+_TWO_SIDED_ORDER = ("backAmbientIntensity", "backDiffuseColor", "backEmissiveColor", "backShininess", "backSpecularColor",
+                    "backTransparency", "separateBackColor")
+
+
+def _two_sided_attrs(material):
+    """The back attributes of a material read from a TwoSidedMaterial (``material.two_sided``, the values the file gave,
+    so in the file's colour space), or None for any other material."""
+    fields = getattr(material, "two_sided", None)
+    if fields is None:
+        return None
+    attrs = []
+    for name in _TWO_SIDED_ORDER:
+        if name not in fields:
+            continue
+        value = fields[name]
+        if isinstance(value, bool):
+            attrs.append(f'{name}="{"true" if value else "false"}"')
+        elif isinstance(value, list):
+            attrs.append(f'{name}="{_fmt3(value)}"')
+        else:
+            attrs.append(f'{name}="{_fmt(value)}"')
+    return attrs
+
+
 def _classic_material_xml(material, material_def, indent, look: _Look, *, output_dir=None, defs=None):
     """``(material xml, appearance texture xml)`` of a Material written for ``material``. The base colour texture goes in
     the Appearance's texture field, the way a classic file has it (X3D 17.2.2: an RGB texture replaces diffuseColor)."""
@@ -350,7 +374,13 @@ def _classic_material_xml(material, material_def, indent, look: _Look, *, output
                            ("occlusionTexture", material.occlusion_texture))
         if ref is not None
     )
-    if inner:
+    two_sided = _two_sided_attrs(material) if not inner else None
+    if two_sided is not None:
+        # a TwoSidedMaterial the import read: the front from the Blender material, the back as the import kept it; it
+        # has no normalScale or occlusionStrength (a material that gained a map of its own writes a Material)
+        attrs = [a for a in attrs if not a.startswith(("normalScale=", "occlusionStrength="))] + two_sided
+        xml = f"{indent}<TwoSidedMaterial {' '.join(attrs)} />\n"
+    elif inner:
         xml = f"{indent}<Material {' '.join(attrs)}>\n{inner}{indent}</Material>\n"
     else:
         xml = f"{indent}<Material {' '.join(attrs)} />\n"
@@ -876,10 +906,10 @@ _SKY_ANGLE_MAX = 3.1416
 _GROUND_ANGLE_MAX = 1.5708
 
 
-def _background_xml(background, indent):
+def _background_xml(background, indent, *, output_dir=None):
     """A Background with its sky and ground gradients. Colours are clipped to [0, 1] and angles to the ranges the
     X3D 4.0 schema gives; each angle list is cut to one less than its colours, and the colours to one more than
-    the angles."""
+    the angles. One read from a TextureBackground is written as one, with its face textures (node board batch 9)."""
 
     def clip(values, top):
         return [min(max(float(value), 0.0), top) for value in values]
@@ -901,7 +931,27 @@ def _background_xml(background, indent):
     transparency = clip([background.transparency], 1.0)[0]
     if transparency:
         attrs.append(f'transparency="{_fmt(transparency)}"')
+    if getattr(background, "node", "Background") == "TextureBackground":
+        # no DEF: the faces are written in a fixed order, so the image names a re-import gives them do not move
+        # DEF labels from one round trip to the next (a material sharing the image still writes its own)
+        faces = "".join(_texture_xml(ref, indent + "  ", container_field=face, output_dir=output_dir)
+                        for face, ref in sorted(background.textures.items()))
+        if faces:
+            return f"{indent}<TextureBackground {' '.join(attrs)}>\n{faces}{indent}</TextureBackground>\n"
+        return f"{indent}<TextureBackground {' '.join(attrs)} />\n"
     return f"{indent}<Background {' '.join(attrs)} />\n"
+
+
+def _fog_xml(fog, indent):
+    """A Fog; fields at their X3D default (white, LINEAR, visibilityRange 0) are left out."""
+    attrs = []
+    if tuple(fog.color) != (1.0, 1.0, 1.0):
+        attrs.append(f'color="{_fmt3(fog.color)}"')
+    if fog.fog_type != "LINEAR":
+        attrs.append(f'fogType="{fog.fog_type}"')
+    if fog.visibility_range > 0.0:
+        attrs.append(f'visibilityRange="{_fmt_length(fog.visibility_range)}"')
+    return f"{indent}<Fog{''.join(' ' + a for a in attrs)} />\n"
 
 
 def _metadata_xml(node, indent, container_field=None, defs=None):
@@ -1728,7 +1778,7 @@ def head_meta(metadata: IRMetadata, generator: str, diagnostics=()) -> list[tupl
     return unique
 
 
-def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
+def _components(ir_scene: IRScene, version: str, look=None) -> list[tuple[str, int]]:
     """(name, level) of every component statement the Immersive header needs, sorted by name.
 
     PhysicalMaterial (Shape 2) and UnlitMaterial (Shape 1) are left out of the
@@ -1746,6 +1796,10 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
     if ir_scene.humanoids:
         components["HAnim"] = 1
     geometries = ir_scene.geometry_by_name()
+    materials = ir_scene.material_by_name()
+    look = look if look is not None else _PLAIN_LOOK
+    if ir_scene.background is not None and getattr(ir_scene.background, "node", "") == "TextureBackground":
+        components["EnvironmentalEffects"] = 3      # TextureBackground; Immersive has level 2 (Fog, Background)
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     for instance in ir_scene.iter_instances():
         shapes = list(instance.iter_shapes())
@@ -1761,6 +1815,10 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
             components["CADGeometry"] = 1
         if instance.point_properties and any(geometry.is_points for geometry in written):
             components["Shape"] = 5
+        # a TwoSidedMaterial (node board batch 9) is Shape level 4
+        two_sided = [materials.get(shape.material_name) for shape in shapes if shape.material_name]
+        if any(m is not None and m.two_sided is not None and _is_classic(m, look) for m in two_sided):
+            components["Shape"] = max(4, components.get("Shape", 0))
         # GeoLocation, GeoLOD and GeoElevationGrid written back (node board batch 3): Geospatial level 1, not in Immersive
         if any(str(entry.get("node", "")).startswith("Geo") for entry in instance.group_chain or ()) or any(
                 (shape.primitive or {}).get("node") == "GeoElevationGrid" for shape in shapes):
@@ -1871,7 +1929,7 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         f'xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-{version}.xsd">\n'
     )
     write("  <head>\n")
-    for name, level in _components(ir_scene, version):
+    for name, level in _components(ir_scene, version, look):
         write(f'    <component name="{name}" level="{level}" />\n')
     defs = _DefNames()
     behaviour = _behaviour_emission(ir_scene, defs, diagnostics, "    ")
@@ -1893,9 +1951,11 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         "type='\"EXAMINE\" \"ANY\"' />\n"
     )
     if ir_scene.background is not None:
-        write(_background_xml(ir_scene.background, "    "))
+        write(_background_xml(ir_scene.background, "    ", output_dir=output_dir))
     elif ir_scene.background_color is not None:
         write(f'    <Background skyColor="{_fmt3(ir_scene.background_color)}" />\n')
+    if getattr(ir_scene, "fog", None) is not None:
+        write(_fog_xml(ir_scene.fog, "    "))
     humanoids = {humanoid.name: humanoid for humanoid in ir_scene.humanoids}
     splats = ir_scene.splats_by_name()
     def write_root(instance, root_indent):

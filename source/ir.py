@@ -129,6 +129,9 @@ class IRPBRMaterial:
     alpha_mode: str = "OPAQUE"
     alpha_cutoff: float | None = None
     double_sided: bool | None = None
+    # A TwoSidedMaterial's back fields the import kept ({field: number, [3 numbers] or bool}); the classic writer
+    # writes a TwoSidedMaterial with them, its front from this material.
+    two_sided: dict | None = None
     unlit: bool = False
     # Metadata* node (IRMetadataNode) read by the importer from the X3D material; written as its metadata field.
     metadata: object | None = None
@@ -278,6 +281,19 @@ class IRBackground:
     ground_color: list[tuple[float, float, float]] = field(default_factory=list)
     ground_angle: list[float] = field(default_factory=list)
     transparency: float = 0.0
+    # "TextureBackground" for one read from a TextureBackground, whose faces are ``textures`` (containerField ->
+    # texture: frontTexture, backTexture, leftTexture, rightTexture, topTexture, bottomTexture)
+    node: str = "Background"
+    textures: dict = field(default_factory=dict)
+
+
+@dataclass
+class IRFog:
+    """An X3D Fog: ``fog_type`` LINEAR or EXPONENTIAL, ``visibility_range`` 0 for no fog."""
+
+    color: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    fog_type: str = "LINEAR"
+    visibility_range: float = 0.0
 
 
 @dataclass
@@ -487,6 +503,8 @@ class IRScene:
     background_color: tuple[float, float, float] | None = None
     # A Background read by the importer; written instead of ``background_color`` (the world's colour) when set.
     background: IRBackground | None = None
+    # A Fog read by the importer (its distance and type now from the world's mist), written after the Background.
+    fog: IRFog | None = None
     # How the exported materials are lit: 'classic' (X3D Material, Phong; X_ITE shades it in display space) or
     # 'physical' (PhysicalMaterial, glTF style). Taken from the scene's x3d_lighting_model unless the export option sets it.
     material_model: str = "physical"
@@ -532,3 +550,5 @@ class IRScene:
         for material in self.materials:
             for _container_field, texture_ref in material.texture_refs():
                 yield texture_ref
+        if self.background is not None:
+            yield from self.background.textures.values()
