@@ -75,7 +75,7 @@ The anchor and motors are in the collection "X3D physics helpers" and are not ex
 
 Seven scenes, each with an analytic answer, from x3d.loom's `x3d.physics/rigid-engines` (lib/scenes.js at fc30c89). The measurements are ported unchanged to `tools/physics_judge.py`.
 
-- **Limits:** `tests/physics/limits.json`, committed before the measured run (f69cb82, sha256 07eb76d0…).
+- **Limits:** `tests/physics/limits.json`, committed before the measured run, in the first of this change's commits (sha256 07eb76d0…; the session's commit was f69cb82).
 - **Receipt:** `tests/physics/receipts.json`: metrics, verdicts, replays and trace hashes for both engines.
 - **Fixed step:** X_ITE is run on a fixed 1/60 s clock by `tools/physics_record.cjs`, the same step as Blender. Its own clock is the frame rate, averaged from zero, so its results depend on how fast the machine draws.
 
