@@ -285,8 +285,8 @@ def prepare_collider(c):
            "dir": direction, "r0": r0, "r1": r1, "prepared": True}
     if out["shape"] == "CAPSULE":
         seg = max(h - r0 - r1, 0)
-        out["a"] = add(center, mul(direction, -seg / 2))
-        out["b"] = add(center, mul(direction, seg / 2))
+        out["a"] = add(center, mul(direction, -(h / 2 - r0)))      # caps inside height, centred: r0 at -axis, r1 at +axis
+        out["b"] = add(center, mul(direction, h / 2 - r1))
         out["segLen"] = seg
         if seg <= 0:
             out["shape"] = "SPHERE"

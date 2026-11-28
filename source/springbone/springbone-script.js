@@ -193,10 +193,11 @@
     const h = (c.height || 0) * sc;
     const out = { shape: c.shape || 'SPHERE', inside: (c.bound || 'OUTSIDE') === 'INSIDE', center, dir, r0, r1, prepared: true };
     if (out.shape === 'CAPSULE') {
-      // `height` is the whole length, end caps included: the sphere centres are height - r0 - r1 apart
+      // `height` is the whole length, end caps included, centred on `center`: radius at the -axis end, radius2 at
+      // the +axis end, so the sphere centres sit at -(height/2 - r0) and +(height/2 - r1)
       const segLen = Math.max(h - r0 - r1, 0);
-      out.a = add(center, mul(dir, -segLen / 2));
-      out.b = add(center, mul(dir, segLen / 2));
+      out.a = add(center, mul(dir, -(h / 2 - r0)));
+      out.b = add(center, mul(dir, h / 2 - r1));
       out.segLen = segLen;
       if (segLen <= 0) { out.shape = 'SPHERE'; out.r0 = Math.max(r0, r1); }
     }

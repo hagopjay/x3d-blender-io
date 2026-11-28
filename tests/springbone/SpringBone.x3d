@@ -92,7 +92,7 @@
       <ProtoBody>
         <Group>
           <TimeSensor DEF='SpringClock' loop='true'/>
-          <Script DEF='SpringSolver' directOutput='true' mustEvaluate='true' url='"springbone-script.js" "https://hagopjay.github.io/x3d.demo/demos/spring-bones/v1/x3d/springbone-script.js"'>
+          <Script DEF='SpringSolver' directOutput='true' mustEvaluate='true' url='"springbone-script.js" "https://hagopjay.github.io/x3d.demo/demos/spring-bone/v1/x3d/springbone-script.js"'>
           <field name='enabled' type='SFBool' accessType='inputOutput' value='true'/>
           <field name='clock' type='SFBool' accessType='inputOutput' value='true'/>
           <field name='roots' type='MFNode' accessType='inputOutput'/>

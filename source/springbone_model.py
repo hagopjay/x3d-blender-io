@@ -46,7 +46,7 @@ COLLIDER_FIELDS = {
 }
 NODE_LISTS = ("roots", "ancestors", "reference", "colliders", "exclusions")
 LIBRARY = "SpringBone.x3d"
-LIBRARY_ONLINE = "https://hagopjay.github.io/x3d.demo/demos/spring-bones/v1/x3d/SpringBone.x3d"
+LIBRARY_ONLINE = "https://hagopjay.github.io/x3d.demo/demos/spring-bone/v1/x3d/SpringBone.x3d"
 
 
 def _elements(el):
