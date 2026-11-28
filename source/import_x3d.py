@@ -22,7 +22,7 @@ from . import default_uv
 from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
-from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
+from .extract import (BACKGROUND_PROPERTY, FOG_PROPERTY, TWO_SIDED_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
                       HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, POINT_PROPERTIES_PROPERTY, COORDINATE_DOUBLE_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY, VISIBLE_FALSE_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
@@ -4861,6 +4861,30 @@ def importMesh_TriangleSet2D(geom, ancestry):
 
 
 # Textures are processed elsewhere.
+# TwoSidedMaterial's back fields and their X3D defaults: Blender gives one material to both sides of a face, so they are
+# kept on the material as numbers (TWO_SIDED_PROPERTY) and written back; the front fields are the Blender material's
+TWO_SIDED_BACK_FIELDS = {"backAmbientIntensity": 0.2, "backDiffuseColor": [0.8, 0.8, 0.8], "backEmissiveColor": [0.0, 0.0, 0.0],
+                         "backShininess": 0.2, "backSpecularColor": [0.0, 0.0, 0.0], "backTransparency": 0.0,
+                         "separateBackColor": False}
+
+
+def two_sided_back_fields(mat, ancestry):
+    """A TwoSidedMaterial's back fields that differ from the defaults, as numbers (colours as 3 numbers)."""
+    fields = {}
+    for name, default in TWO_SIDED_BACK_FIELDS.items():
+        if isinstance(default, bool):
+            value = mat.getFieldAsBool(name, default, ancestry)
+        elif isinstance(default, list):
+            value = [float(v) for v in mat.getFieldAsArray(name, 0, ancestry)[:3]]
+            value = value if len(value) == 3 and all(math.isfinite(v) for v in value) else default
+        else:
+            value = mat.getFieldAsFloat(name, default, ancestry)
+            value = float(value) if value is not None and math.isfinite(value) else default
+        if value != default:
+            fields[name] = value
+    return fields
+
+
 def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     # Given an X3D material, creates a Blender material.
     # texture is applied later, in appearance_Create().
@@ -4887,6 +4911,8 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     if mat:
         keep_host_metadata(bpymat, mat)
         bpymat[MATERIAL_MODEL_PROPERTY] = 'classic'   # a Material or TwoSidedMaterial: the 4.0 export writes one again
+        if mat.getSpec() == 'TwoSidedMaterial':
+            bpymat[TWO_SIDED_PROPERTY] = json.dumps(two_sided_back_fields(mat, ancestry), sort_keys=True)
     bpymat_wrap = node_shader_utils.PrincipledBSDFWrapper(bpymat, is_readonly=False)
 
     bpymat_wrap.base_color = diff_color
@@ -5545,12 +5571,13 @@ def importShape_LoadAppearance(vrmlname, appr, ancestry, node, is_vcol):
     tex_node = appr.getChildBySpec(('ImageTexture', 'PixelTexture', 'MovieTexture'))
     # Other texture nodes are: MultiTexture
     # TwoSidedMaterial's front fields are Material's (ambientIntensity, diffuseColor, emissiveColor, shininess,
-    # specularColor, transparency); its back* fields have no Blender counterpart on one mesh and are not carried.
+    # specularColor, transparency); its back* fields have no Blender counterpart on one mesh: they are kept on the
+    # material for the export (TWO_SIDED_PROPERTY), and Blender draws both sides with the front.
     material = appr.getChildBySpec(('Material', 'TwoSidedMaterial'))
     if material is not None and material.getSpec() == 'TwoSidedMaterial' \
             and material.getFieldAsBool('separateBackColor', False, ancestry):
-        logger.warning('ImportX3D: TwoSidedMaterial "%s": the back colours are not imported; both sides use the front',
-                       material.getDefName() or vrmlname)
+        logger.warning('ImportX3D: TwoSidedMaterial "%s": Blender draws the back with the front colours; the back '
+                       'fields are kept for the X3D export', material.getDefName() or vrmlname)
     # We're ignoring FillProperties, LineProperties, and shaders
 
     # Check the USE-based material cache for textureless materials
@@ -6595,7 +6622,56 @@ def importBackground(bpyscene, node, ancestry):
     transparency = node.getFieldAsFloat('transparency', None, ancestry)
     if transparency is not None:
         background["transparency"] = transparency
+    if node.getSpec() == 'TextureBackground':
+        # the six faces are X3DTextureNodes: each ImageTexture or PixelTexture is loaded as a Blender image (the export
+        # writes it from that image, through the same path handling as a material's textures); others are not kept
+        background["node"] = 'TextureBackground'
+        faces = {}
+        for child in node.getRealNode().children:
+            element = getattr(child, "x3dNode", None)
+            field = element.getAttribute('containerField') if element is not None else ""
+            if field not in TEXTURE_BACKGROUND_FIELDS:
+                continue
+            if child.getSpec() not in ('ImageTexture', 'PixelTexture'):
+                logger.warning("TextureBackground %s: a %s is not imported", field, child.getSpec())
+                continue
+            image = appearance_LoadTexture(child, ancestry, node)
+            if image is not None:
+                faces[field] = image.name
+        if faces:
+            background["textures"] = faces
     bpyscene[BACKGROUND_PROPERTY] = background
+
+
+TEXTURE_BACKGROUND_FIELDS = ('backTexture', 'bottomTexture', 'frontTexture', 'leftTexture', 'rightTexture', 'topTexture')
+# what an X3D fogType becomes in Blender's mist falloff: LINEAR is the same ramp; X3D's EXPONENTIAL rises fastest near
+# the viewer, as Blender's inverse quadratic does (there is no exponential falloff)
+FOG_FALLOFF = {'LINEAR': 'LINEAR', 'EXPONENTIAL': 'INVERSE_QUADRATIC'}
+
+
+def importFog(bpyscene, node, ancestry):
+    """A Fog as the scene world's mist (Blender's Mist pass: start 0, depth visibilityRange, the falloff closest to
+    fogType), with the Mist pass turned on so it can be seen; mist has no colour, so the colour is kept on the scene
+    (FOG_PROPERTY) with the fogType the file gave. The X3D 4.0 export writes the Fog back from the mist and that record.
+    A scene without a world keeps the record only (a new world would add a Background the file did not have)."""
+    fog_type = (node.getFieldAsString('fogType', 'LINEAR', ancestry) or 'LINEAR').strip().upper()
+    fog_type = fog_type if fog_type in FOG_FALLOFF else 'LINEAR'
+    color = [float(v) for v in node.getFieldAsArray('color', 0, ancestry)[:3]]
+    color = color if len(color) == 3 and all(math.isfinite(v) for v in color) else [1.0, 1.0, 1.0]
+    distance = node.getFieldAsFloat('visibilityRange', 0.0, ancestry)
+    distance = max(0.0, float(distance)) if distance is not None and math.isfinite(distance) else 0.0
+    distance *= conversion_scale
+    record = {"color": color, "fogType": fog_type, "visibilityRange": distance}
+    world = bpyscene.world
+    if world is not None:
+        mist = world.mist_settings
+        mist.start = 0.0
+        mist.depth = distance
+        mist.falloff = FOG_FALLOFF[fog_type]
+        record["falloff"] = mist.falloff
+        for layer in bpyscene.view_layers:
+            layer.use_pass_mist = True
+    bpyscene[FOG_PROPERTY] = record
 
 
 def importTransform(bpycollection, node, ancestry, global_matrix):
@@ -8992,6 +9068,7 @@ def load_web3d(
     created = []  # (object, ancestry) of every object this file's nodes made, for rebuild_hierarchy
     # the first Background of the file is the one a browser shows; an inlined file's does not count
     background_seen = bool(_INLINE_STACK)
+    fog_seen = bool(_INLINE_STACK)     # Fog is bindable too: the file's first one
     # objects a Switch does not choose; collected as each is made, since a node under a USE'd Switch (or a USE'd Shape)
     # makes one object per instance and keeps only the last in node.blendObject
     switch_hidden = []
@@ -9041,9 +9118,12 @@ def load_web3d(
                 importTransform(bpycollection, node, ancestry, global_matrix)
         elif spec == 'NavigationInfo' and not _INLINE_STACK and navigation_headlight is None:
             navigation_headlight = node.getFieldAsBool('headlight', True, ancestry)
-        elif spec == 'Background' and not background_seen:
+        elif spec in ('Background', 'TextureBackground') and not background_seen:
             importBackground(bpyscene, node, ancestry)
             background_seen = True
+        elif spec == 'Fog' and not fog_seen:
+            importFog(bpyscene, node, ancestry)
+            fog_seen = True
         elif spec == 'Sound':
             importAudio(bpycollection, node, ancestry, global_matrix)
             '''
