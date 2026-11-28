@@ -549,10 +549,23 @@ def _imported_primitive_xml(primitive, defs: _DefNames, indent):
     node, fields = primitive["node"], primitive["fields"]
     key = f'{primitive.get("mesh") or id(primitive)}{"" if fields.get("solid", True) else "_2s"}'
     # a mesh imported from this writer's own file is already named GE_...: keep one prefix, so a round trip is stable
-    primitive_def = defs.get("primitive", key, "GE_", label=key[3:] if key.startswith("GE_") else key)
+    label = key[3:] if key.startswith("GE_") else key
+    if label.endswith("_2s_2s"):          # the same for the single-sided marker a re-imported two-sided mesh carries
+        label = label[:-3]
+    primitive_def = defs.get("primitive", key, "GE_", label=label)
     if not defs.first_use("primitive", key):
         return f'{indent}<{node} USE="{primitive_def}" />\n'
     attrs = [f'DEF="{primitive_def}"']
+    if node == "GeoElevationGrid":
+        # the fields as the file wrote them (doubles, the geoSystem list) and its GeoOrigin, which placed the grid
+        raw = {k: v for k, v in fields.items() if k not in ("solid", "geoOrigin")}
+        if not fields.get("solid", True):
+            raw["solid"] = "false"
+        origin = fields.get("geoOrigin")
+        if origin is None:
+            return f'{indent}<GeoElevationGrid {" ".join(attrs + _raw_attrs(raw))} />\n'
+        return (f'{indent}<GeoElevationGrid {" ".join(attrs + _raw_attrs(raw))}>\n'
+                f'{_geo_origin_xml(origin, indent + "  ")}{indent}</GeoElevationGrid>\n')
     if node == "Rectangle2D":
         size = tuple(float(v) for v in fields.get("size", (2.0, 2.0)))
         if size != (2.0, 2.0):
@@ -806,6 +819,25 @@ def _world_info_xml(hosts, defs, indent, diagnostics):
     return "".join(xml)
 
 
+def _raw_attrs(fields):
+    """Attributes kept as the file wrote them (geospatial doubles, quoted string lists), escaped for XML."""
+    return [f"{name}={quoteattr(str(value))}" for name, value in fields.items()]
+
+
+def _geo_origin_xml(origin, indent):
+    return f"{indent}<GeoOrigin {' '.join(_raw_attrs(origin))} />\n" if origin is not None else ""
+
+
+def _with_container(xml, field):
+    """``xml`` (one element) with containerField="field" on its opening tag."""
+    head, sep, rest = xml.partition("<")
+    name = re.match(r"[A-Za-z0-9]+", rest).group(0)
+    return f'{head}{sep}{name} containerField="{field}"{rest[len(name):]}'
+
+
+GROUPS_OF_ONE = ("Billboard", "GeoLocation", "GeoLOD")     # one group of children, fields kept as the file wrote them
+
+
 def _own_groups(instance, parent_chain):
     """The Switch / LOD entries above ``instance`` that its parent is not already inside (matched by key and branch)."""
     chain = instance.group_chain or []
@@ -837,9 +869,23 @@ def _grouped_xml(pairs, write_one, defs: _DefNames, indent):
 def _group_node_xml(head, pairs, write_one, defs: _DefNames, indent):
     """One Switch or LOD with every branch the import saw: a branch with nothing left on it is an empty Group, so
     whichChoice and the LOD levels still count the same children."""
+    if head.get("node") in GROUPS_OF_ONE:
+        node = head["node"]
+        attrs = []
+        # DEF on the first copy only: a USE'd grouping node comes back as one copy per use, each with its own children
+        if head.get("def") and defs.first_use(node.lower(), head["key"]):
+            attrs.append(f'DEF="{defs.get(node.lower(), head["key"], "", label=head["def"])}"')
+        attrs += _raw_attrs(head.get("fields") or {})
+        members = [(instance, rest[1:]) for instance, rest in pairs]
+        inner = [_grouped_xml([member], write_one, defs, indent + "  ") for member in members]
+        if node == "GeoLOD":       # the content the import read is the rootNode
+            inner = [_with_container(xml, "rootNode") for xml in inner]
+        # GeoOrigin after the children: x3d-4.0.xsd's sequence for GeoLOD wants it there (and then requires it)
+        return (f"{indent}<{node} {' '.join(attrs)}>\n{''.join(inner)}"
+                f"{_geo_origin_xml(head.get('geoOrigin'), indent + '  ')}{indent}</{node}>\n")
     node = "Switch" if head.get("node") == "Switch" else "LOD"
     attrs = []
-    if head.get("def"):
+    if head.get("def") and defs.first_use(node.lower(), head["key"]):     # DEF on the first copy only (see above)
         attrs.append(f'DEF="{defs.get(node.lower(), head["key"], "", label=head["def"])}"')
     if node == "Switch":
         attrs.append(f'whichChoice="{int(head.get("whichChoice", -1))}"')
@@ -1437,6 +1483,10 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
             components["Shape"] = 2
         if any(shape.geometry_name not in geometries and shape.geometry_hint == "Circle2D" for shape in shapes):
             components["Geometry2D"] = 2
+        # GeoLocation, GeoLOD and GeoElevationGrid written back (node board batch 3): Geospatial level 1, not in Immersive
+        if any(str(entry.get("node", "")).startswith("Geo") for entry in instance.group_chain or ()) or any(
+                (shape.primitive or {}).get("node") == "GeoElevationGrid" for shape in shapes):
+            components["Geospatial"] = 1
         if instance.viewpoint is not None and getattr(instance.viewpoint, "ortho_extents", None) is not None:
             components["Navigation"] = 3   # OrthoViewpoint is Navigation level 3; Immersive gives level 2
         interaction = instance.interaction

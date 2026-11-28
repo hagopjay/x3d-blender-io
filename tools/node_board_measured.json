@@ -5,6 +5,9 @@
   "validator": "lxml XMLSchema over x3d-4.0.xsd (x3d-4.1.xsd for a version=\"4.1\" file)",
   "tool": "tools/node_board_probe.py",
   "fixtures_invalid": {
+   "docs/showcase/scenes/geolod-no-origin.x3d": [
+    "<string>:23:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'GeoLOD': Missing child element(s). Expected is one of ( Background, ColorInterpolator, CoordinateInterpolator, DirectionalLight, Group, NavigationInfo, NormalInterpolator, OrientationInterpolator, PositionInterpolator, ScalarInterpolator )."
+   ],
    "tests/behaviour/pick-fallback/probe-pick-fallback.x3d": [
     "<string>:1108:0:ERROR:SCHEMASV:SCHEMAV_ELEMENT_CONTENT: Element 'Coordinate': This element is not expected."
    ],
@@ -86,9 +89,13 @@
    "written": "no"
   },
   "Billboard": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/annotation-standard.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "BiquadFilter": {
    "read": "none",
@@ -329,9 +336,9 @@
    "read_evidence": "materials +2, meshes +1, objects +1",
    "written": "observed",
    "written_by": [
-    "docs/showcase/scenes/geolod-no-origin.x3d",
     "docs/showcase/scenes/geolod-origin.x3d",
-    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d"
+    "tests/behaviour/demos/gallery-03-rube-goldberg/gallery-03-rube-goldberg.x3d",
+    "tests/behaviour/demos/gallery-06-solar-gauntlet-v2/gallery-06-solar-gauntlet-v2.x3d"
    ]
   },
   "ConeEmitter": {
@@ -540,7 +547,7 @@
    "written_by": [
     "docs/showcase/scenes/annotation-standard.x3d",
     "docs/showcase/scenes/annotation.x3d",
-    "docs/showcase/scenes/geolod-no-origin.x3d"
+    "docs/showcase/scenes/geolod-origin.x3d"
    ]
   },
   "ForcePhysicsModel": {
@@ -566,17 +573,30 @@
   "GeoElevationGrid": {
    "read": "builds",
    "read_evidence": "materials +2",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/ellipsoid-earth.x3d",
+    "docs/showcase/scenes/ellipsoid-moon.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoLOD": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/geolod-origin.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoLocation": {
-   "read": "structural",
-   "read_evidence": "children are read, the node itself is not kept",
-   "written": "no"
+   "read": "carries",
+   "read_evidence": "objects props ['x3d_group_chain']",
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/geolod-origin.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoMetadata": {
    "read": "none",
@@ -586,7 +606,11 @@
   "GeoOrigin": {
    "read": "none",
    "read_evidence": "",
-   "written": "no"
+   "written": "observed",
+   "written_by": [
+    "docs/showcase/scenes/geolod-origin.x3d",
+    "tests/node_board/gap_batch_3.x3d"
+   ]
   },
   "GeoPositionInterpolator": {
    "read": "none",
@@ -1550,7 +1574,7 @@
    "written_by": [
     "docs/showcase/scenes/annotation-standard.x3d",
     "docs/showcase/scenes/annotation.x3d",
-    "docs/showcase/scenes/geolod-no-origin.x3d"
+    "docs/showcase/scenes/geolod-origin.x3d"
    ]
   },
   "TextureBackground": {

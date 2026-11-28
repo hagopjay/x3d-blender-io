@@ -466,7 +466,8 @@ def _color_values(mesh):
 # Set by the import on a mesh it tessellated from a Box, Sphere, Cylinder, Cone, Rectangle2D, Extrusion or ElevationGrid
 # (import_x3d.mark_primitive).
 PRIMITIVE_PROPERTY = "x3d_primitive"
-_PRIMITIVE_NODES = frozenset(("Box", "Sphere", "Cylinder", "Cone", "Rectangle2D", "Extrusion", "ElevationGrid"))
+_PRIMITIVE_NODES = frozenset(("Box", "Sphere", "Cylinder", "Cone", "Rectangle2D", "Extrusion", "ElevationGrid",
+                              "GeoElevationGrid"))
 
 
 def _position_signature(mesh):

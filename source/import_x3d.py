@@ -2866,7 +2866,20 @@ def importMesh_GeoElevationGrid(geom, ancestry):
                            len(points) if per_vertex else len(cells), "vertices" if per_vertex else "cells")
 
     bpymesh.update()
+    # written back as a GeoElevationGrid while unedited (extract.primitive_for_mesh), its fields as the file wrote them,
+    # when nothing the record cannot carry is there: a unit scale, no Color, Normal or TextureCoordinate child
+    if conversion_scale == 1.0 and getattr(geom.getRealNode(), "x3dNode", None) is not None and not any(
+            geom.getChildBySpec(child) is not None for child in ('Color', 'ColorRGBA', 'Normal', 'TextureCoordinate')):
+        fields = raw_fields(geom, GEO_GRID_FIELDS)
+        origin = geom.getChildBySpec('GeoOrigin')
+        if origin is not None:
+            fields["geoOrigin"] = raw_fields(origin, GEO_ORIGIN_FIELDS)
+        mark_primitive(bpymesh, geom, ancestry, 'GeoElevationGrid', **fields)
     return bpymesh
+
+
+GEO_GRID_FIELDS = ('geoSystem', 'geoGridOrigin', 'xDimension', 'zDimension', 'xSpacing', 'zSpacing', 'yScale', 'height',
+                   'ccw', 'creaseAngle')
 
 
 def importMesh_Extrusion(geom, ancestry):
@@ -8402,25 +8415,52 @@ GROUP_CHAIN_PROPERTY = "x3d_group_chain"     # on an object made under a Switch 
 group_keys = {}                              # id(real Switch/LOD node) -> its key in GROUP_CHAIN_PROPERTY (DEF, else made up)
 
 
+# Grouping nodes the import dissolves but records for the export (group_chain), with the fields kept as the file wrote
+# them (their attribute text: geospatial values are doubles, and a string list keeps its quoting)
+GROUP_RAW_FIELDS = {
+    'Billboard': ('axisOfRotation',),
+    'GeoLocation': ('geoCoords', 'geoSystem'),
+    'GeoLOD': ('center', 'geoSystem', 'range', 'rootUrl', 'child1Url', 'child2Url', 'child3Url', 'child4Url'),
+}
+GEO_ORIGIN_FIELDS = ('geoCoords', 'geoSystem', 'rotateYUp')
+
+
+def raw_fields(node, names):
+    """{field: attribute text} for the fields the file sets on ``node`` (XML encoding only; empty otherwise)."""
+    out = {}
+    for name in names:
+        value = _attribute_raw(node, name)
+        if value is not None:
+            out[name] = value
+    return out
+
+
 def group_chain(node, ancestry):
     """Every Switch and LOD above ``node``, outermost first, as the exporter needs them to write the node back: its type,
     DEF (or a key unique in this import), the branch ``node`` sits on, how many branches there are, and the Switch's
-    whichChoice or the LOD's range and center (in the file's units). A GeoLOD is left out (not written back)."""
+    whichChoice or the LOD's range and center (in the file's units). Billboard, GeoLocation and GeoLOD come with their fields
+    as the file wrote them (GROUP_RAW_FIELDS) and their GeoOrigin, as one group of children."""
     chain = tuple(ancestry) + (node,)
     out = []
     for i, anc in enumerate(ancestry):
         spec = anc.getSpec()
-        if spec not in ('Switch', 'LOD'):
+        if spec not in ('Switch', 'LOD', *GROUP_RAW_FIELDS):
             continue
         real = anc.getRealNode()
-        kids = [c for c in real.children if _switch_child_counts(c)]
+        kids = [c for c in real.children if _switch_child_counts(c) and c.getSpec() != 'GeoOrigin']
         index = next((n for n, kid in enumerate(kids) if kid is chain[i + 1]), None)
         if index is None:
             continue
         name = anc.getDefName() or real.getDefName() or ""
         key = group_keys.setdefault(id(real), name or f"{spec}_{len(group_keys) + 1}")
         entry = {"node": spec, "key": key, "def": name, "branch": index, "branches": len(kids)}
-        if spec == 'Switch':
+        if spec in GROUP_RAW_FIELDS:
+            # one group of children (no branches): the fields as written, and a GeoOrigin child if there is one
+            entry.update(branch=0, branches=1, fields=raw_fields(anc, GROUP_RAW_FIELDS[spec]))
+            origin = real.getChildBySpec('GeoOrigin')
+            if origin is not None:
+                entry["geoOrigin"] = raw_fields(origin, GEO_ORIGIN_FIELDS)
+        elif spec == 'Switch':
             entry["whichChoice"] = anc.getFieldAsInt('whichChoice', -1, ancestry[:i])
         else:
             entry["range"] = [float(v) for v in (anc.getFieldAsArray('range', 0, ancestry[:i], 1.0) or [])]
@@ -8736,7 +8776,7 @@ def load_web3d(
                 for item, chain in [(anc, ancestry[:i]) for i, anc in enumerate(ancestry)] + [(node, ancestry)]):
             visible_false.append(node.blendObject)
         if node.blendObject is not None and node.blendObject is not made_before \
-                and any(anc.getSpec() in ('Switch', 'LOD') for anc in ancestry):
+                and any(anc.getSpec() in ('Switch', 'LOD', *GROUP_RAW_FIELDS) for anc in ancestry):
             chain = group_chain(node, ancestry)
             if chain:
                 node.blendObject[GROUP_CHAIN_PROPERTY] = json.dumps(chain)

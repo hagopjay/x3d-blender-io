@@ -267,6 +267,31 @@
       "import": "yes",
       "round_trip": "unmeasured",
       "note": "an image with x3d_pixel_texture (its components), written back inline up to 256 x 256 (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "Billboard": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "dissolved into its children; x3d_group_chain keeps axisOfRotation as written and the 4.0 export puts the children back inside (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoLocation": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "dissolved into its children (not placed on the globe); x3d_group_chain keeps geoCoords and geoSystem as written, and the 4.0 export puts the children back inside (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoLOD": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "the rootNode content is imported; x3d_group_chain keeps center, range, geoSystem and the URLs as written, and the 4.0 export writes the content back as rootNode (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoElevationGrid": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_primitive keeps the fields as written; written back while the mesh is unedited and has no Color, Normal or TextureCoordinate (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoOrigin": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "read on a GeoElevationGrid (it places the grid) and kept, with a GeoLocation's or GeoLOD's, as written; written after a GeoLOD's children, where x3d-4.0.xsd wants it (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
     }
   },
   "asymmetries": [
