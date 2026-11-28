@@ -7864,6 +7864,11 @@ def _join_material_parts(objs, name):
     return first
 
 
+def _group_has_metadata(node):
+    """True for a Group whose own metadata field holds a Metadata* node (host_metadata reads the same field)."""
+    return host_metadata(node) is not None
+
+
 def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
     """Give the flat import the file's Transform hierarchy back (the import option keep_hierarchy).
 
@@ -7873,7 +7878,8 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
     its Shapes), the export's Shapes of one multi-material mesh joined back into one object (_join_material_parts),
     or else an Empty named after the Transform (several objects, child Transforms only, or an exported Empty: a
     Transform DEF'd OB_ with nothing in it). Every object is then parented to the object of its nearest Transform.
-    Group, Switch, LOD and the other grouping nodes have no matrix and are not kept as objects. Objects that already
+    Group, Switch, LOD and the other grouping nodes have no matrix and are not kept as objects, except a Group that
+    carries its own Metadata, which gets an Empty so its Metadata and its place in the tree survive. Objects that already
     have a parent (a skin on its armature, an Inline's content on its placeholder) keep it.
 
     World matrices come from the file, shear included: the flat import bakes the shear of a rotated child under a
@@ -7900,10 +7906,15 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
             previous = key
         return previous
 
+    def frame_like(a):
+        # a Transform, or a Group that carries its own Metadata: IFC's spatial tree (Site, Building, Storey) travels
+        # as such Groups, and without an Empty of its own the Group's Metadata and the nesting are lost on export.
+        return a.getSpec() == 'Transform' or (a.getSpec() == 'Group' and _group_has_metadata(a))
+
     for ob, ancestry in created:
         if ob is None or ob.parent is not None:
             continue
-        transform_indices = [i for i, a in enumerate(ancestry) if a.getSpec() == 'Transform']
+        transform_indices = [i for i, a in enumerate(ancestry) if frame_like(a)]
         nearest = register(ancestry, transform_indices)
         if nearest is not None and any(a.getSpec() in {'Switch', 'LOD', 'GeoLOD'}
                                        for a in ancestry[transform_indices[-1] + 1:]):
@@ -7928,7 +7939,7 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
         if node.getSpec() == 'Transform' and (node.getDefName() or "").startswith("OB_") \
                 and not any(a.getSpec() == 'HAnimHumanoid' for a in ancestry):
             path = list(ancestry) + [node]
-            register(path, [i for i, a in enumerate(path) if a.getSpec() == 'Transform'])
+            register(path, [i for i, a in enumerate(path) if frame_like(a)])
 
     has_children = {k for k in parent_key.values() if k is not None}
     owners = {}
