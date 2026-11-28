@@ -86,7 +86,8 @@ class CheckParityTests(unittest.TestCase):
 
     def test_an_undeclared_element_fails(self):
         with tempfile.TemporaryDirectory() as folder:
-            self._file(folder, '<X3D><Scene><Billboard/></Scene></X3D>')
+            # an element the export does not write (Billboard was the example until node board batch 3 wrote it)
+            self._file(folder, '<X3D><Scene><EspduTransform/></Scene></X3D>')
             self.assertEqual(check_parity.main([folder]), 1)
 
     def test_no_files_fails(self):

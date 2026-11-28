@@ -57,6 +57,9 @@ class IRTextureRef:
     # after path-mode resolution (COPY / RELATIVE / STRIP); when None the
     # emitter falls back to ``filepath``.
     url: str | None = None
+    # A PixelTexture the import read (``x3d_pixel_texture`` on the image, its component count): (width, height,
+    # components, pixel ints as SFImage packs them), written back inline; None for an image with a file.
+    pixel_image: tuple | None = None
 
 
 @dataclass
@@ -95,6 +98,16 @@ class IRMeshGeometry:
     # per key, each parallel to ``coord``.
     morph_keys: list[float] = field(default_factory=list)
     morph_states: list[list[tuple[float, float, float]]] = field(default_factory=list)
+    # Written as an IndexedTriangleSet (the arrays already share one index) when every face is a triangle: set for a
+    # mesh the import read from one (``x3d_geometry`` on the mesh) or when the export triangulates.
+    triangle_set: bool = False
+    # The triangle-set node the import read the mesh from (``x3d_geometry``: IndexedTriangleSet, TriangleSet,
+    # TriangleFanSet, TriangleStripSet, IndexedTriangleFanSet or IndexedTriangleStripSet), written back as that node
+    # while every face is a triangle; None writes an IndexedTriangleSet when ``triangle_set`` is set.
+    geometry_node: str | None = None
+    # The CoordinateDouble point text for each coordinate (x, y, z tokens), when the import read one and every
+    # coordinate still has exactly that value in float32: written as a CoordinateDouble, else a Coordinate.
+    coord_double: list[tuple[str, str, str]] | None = None
 
 
 @dataclass
@@ -370,11 +383,24 @@ class IRInstance:
     visible: bool = True
     # LineProperties linewidthScaleFactor of the instance's line geometry, kept by the import; written as a LineProperties.
     line_width: float | None = None
+    # PointProperties fields of the instance's point geometry, kept by the import ({field: value}); written as a
+    # PointProperties in its Appearance.
+    point_properties: dict | None = None
     # Name of an IRScene.collections entry this Empty instances (Blender "Collection" instance); written as a Group that
     # is DEF'd at its first use and USE'd after, so N linked copies cost N Transforms, not N copies of the content.
     collection_name: str | None = None
     # The ROUTE interaction authored on this object (a sensor inside its Transform), if any.
     interaction: IRInteraction | None = None
+    # The Switch and LOD nodes the import found above this object, outermost first (``x3d_group_chain``): dicts with
+    # node, key, def, branch, branches, and whichChoice (Switch) or range and center (LOD). The writer regroups siblings
+    # into those nodes again.
+    group_chain: list | None = None
+    # A Blender rigid body written as an X3D RigidBody (node board batch 6): Blender's own values (mass, fixed, damping,
+    # enabled), the body frame in X3D space, and the fields the import kept as written. None for a plain object.
+    rigid_body: dict | None = None
+    # A Blender HINGE rigid body constraint written as a SingleAxisHingeJoint: anchor and axis in X3D space, limits,
+    # the two bodies' object names, the fields kept as written. Its empty is not written as a Transform.
+    rigid_joint: dict | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -468,6 +494,9 @@ class IRScene:
     material_model_forced: bool = False
     # The NavigationInfo headlight the scene had when it was imported (True/False), None when it never had one.
     headlight: bool | None = None
+    # The scene's rigid body world, written as a RigidBodyCollection: gravity (X3D space), iterations, and the fields
+    # and CollisionCollection the import kept as written. None when no object is written as a RigidBody.
+    rigid_world: dict | None = None
     # Metadata of imported hosts with no Blender counterpart; WorldInfo ones are written, the rest reported.
     metadata_hosts: list[IRMetadataHost] = field(default_factory=list)
 

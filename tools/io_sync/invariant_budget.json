@@ -13,10 +13,12 @@
    },
    "instancing": {
     "lost": {
-     "Group": 1
+     "Group": 1,
+     "IndexedFaceSet": 1
     },
     "gained": {
-     "Appearance": 5
+     "Appearance": 5,
+     "IndexedTriangleSet": 1
     }
    }
   },

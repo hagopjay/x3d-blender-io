@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import json
 import logging
 from http.cookiejar import debug
 
@@ -22,7 +23,7 @@ from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
 from . import geospatial, matrix_safety, mfstring
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
-                      HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
+                      HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, POINT_PROPERTIES_PROPERTY, COORDINATE_DOUBLE_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY, VISIBLE_FALSE_PROPERTY,
                       LIGHT_INTENSITY_PROPERTY,
                       LIGHT_RADIUS_PROPERTY, LIGHT_REFERENCE_DISTANCE_PROPERTY, LIGHT_SHADOW_INTENSITY_PROPERTY,
@@ -2293,6 +2294,7 @@ def importMesh_IndexedTriangleSet(geom, ancestry):
     triangles = [t for t in triangles if -1 not in t]
     corners = [t[j] for t in triangles for j in ((0, 1, 2) if ccw else (1, 0, 2))]
     _set_triangles(bpymesh, corners, 'IndexedTriangleSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleSet"     # the X3D 4.0 export writes it back as one (extract.GEOMETRY_NODE_PROPERTY)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2306,6 +2308,7 @@ def importMesh_IndexedTriangleStripSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleStripSet'))
     _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'IndexedTriangleStripSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleStripSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2321,6 +2324,7 @@ def importMesh_IndexedTriangleFanSet(geom, ancestry):
     # three or more fans asked Blender for more corners than it had made (RuntimeError, receipt-to-rule engine)
     runs = _fan_strip_runs(_triangle_set_index(geom, ancestry, 'IndexedTriangleFanSet'))
     _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'IndexedTriangleFanSet')
+    bpymesh["x3d_geometry"] = "IndexedTriangleFanSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2352,6 +2356,7 @@ def importMesh_TriangleSet(geom, ancestry):
     n = len(bpymesh.vertices)
     corners = [3 * i + j for i in range(n // 3) for j in ((0, 1, 2) if ccw else (1, 0, 2))]
     _set_triangles(bpymesh, corners, 'TriangleSet')
+    bpymesh["x3d_geometry"] = "TriangleSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2365,6 +2370,7 @@ def importMesh_TriangleStripSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _counted_runs(geom.getFieldAsArray('stripCount', 0, ancestry), len(bpymesh.vertices), 'stripCount')
     _set_triangles(bpymesh, [c for run in runs for c in _strip_triangles(run, cw)], 'TriangleStripSet')
+    bpymesh["x3d_geometry"] = "TriangleStripSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2378,6 +2384,7 @@ def importMesh_TriangleFanSet(geom, ancestry):
     importMesh_ReadVertices(bpymesh, geom, ancestry)
     runs = _counted_runs(geom.getFieldAsArray('fanCount', 0, ancestry), len(bpymesh.vertices), 'fanCount')
     _set_triangles(bpymesh, [c for run in runs for c in _fan_triangles(run, cw)], 'TriangleFanSet')
+    bpymesh["x3d_geometry"] = "TriangleFanSet"     # written back as one by the X3D 4.0 export (node board batch 5)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -2864,7 +2871,20 @@ def importMesh_GeoElevationGrid(geom, ancestry):
                            len(points) if per_vertex else len(cells), "vertices" if per_vertex else "cells")
 
     bpymesh.update()
+    # written back as a GeoElevationGrid while unedited (extract.primitive_for_mesh), its fields as the file wrote them,
+    # when nothing the record cannot carry is there: a unit scale, no Color, Normal or TextureCoordinate child
+    if conversion_scale == 1.0 and getattr(geom.getRealNode(), "x3dNode", None) is not None and not any(
+            geom.getChildBySpec(child) is not None for child in ('Color', 'ColorRGBA', 'Normal', 'TextureCoordinate')):
+        fields = raw_fields(geom, GEO_GRID_FIELDS)
+        origin = geom.getChildBySpec('GeoOrigin')
+        if origin is not None:
+            fields["geoOrigin"] = raw_fields(origin, GEO_ORIGIN_FIELDS)
+        mark_primitive(bpymesh, geom, ancestry, 'GeoElevationGrid', **fields)
     return bpymesh
+
+
+GEO_GRID_FIELDS = ('geoSystem', 'geoGridOrigin', 'xDimension', 'zDimension', 'xSpacing', 'zSpacing', 'yScale', 'height',
+                   'ccw', 'creaseAngle')
 
 
 def importMesh_Extrusion(geom, ancestry):
@@ -3128,6 +3148,7 @@ def importMesh_LineSet(geom, ancestry):
         made = _coloured_line_mesh("LineSet", polylines)
         if made is not None:
             set_point_colours(made[0], made[1], kind)
+            made[0]["x3d_geometry"] = "LineSet"     # written back as one by the X3D 4.0 export (node board batch 8)
             made[0].update()
             return made[0]
     elif kind:
@@ -3149,6 +3170,7 @@ def importMesh_LineSet(geom, ancestry):
                 yield 0
         sp.points.foreach_set('co', [x for x in points()])
         b += n
+    bpycurve["x3d_geometry"] = "LineSet"     # written back as one by the X3D 4.0 export (node board batch 8)
     return bpycurve
 
 
@@ -4327,6 +4349,67 @@ def position_signature(bpymesh):
     return [count, len(bpymesh.polygons), round(weighted, 5)]
 
 
+def _float32(value):
+    import struct
+    return struct.unpack("f", struct.pack("f", value))[0]
+
+
+def _data_points(bpydata):
+    """The vertex positions of a mesh, or the points of a curve's splines in order (its evaluated mesh's vertices)."""
+    if isinstance(bpydata, bpy.types.Mesh):
+        flat = [0.0] * (3 * len(bpydata.vertices))
+        bpydata.vertices.foreach_get("co", flat)
+        return flat
+    if isinstance(bpydata, bpy.types.Curve):
+        flat = []
+        for spline in bpydata.splines:
+            if spline.type != 'POLY':
+                return None
+            for point in spline.points:
+                flat.extend(point.co[:3])
+        return flat
+    return None
+
+
+def mark_coordinate_double(bpydata, geom):
+    """Keep a CoordinateDouble's point text on ``bpydata`` (COORDINATE_DOUBLE_PROPERTY) when its vertices are the file's
+    points one to one, in order, at unit scale: then the export can write the doubles back for the vertices nobody has
+    moved. Anything else (a face set that culled its points, a USE of the coordinates elsewhere, another scale) keeps
+    nothing and the export writes a Coordinate, as before."""
+    coord = _coordinate_of(geom)
+    if coord is None or coord.getRealNode().getSpec() != 'CoordinateDouble' or conversion_scale != 1.0:
+        return
+    text = _attribute_raw(coord, 'point')
+    if not text:
+        return
+    tokens = text.replace(',', ' ').split()
+    flat = _data_points(bpydata)
+    if flat is None or len(tokens) != len(flat) or not flat:
+        return
+    try:
+        if any(_float32(float(token)) != value for token, value in zip(tokens, flat)):
+            return
+    except ValueError:
+        return
+    bpydata[COORDINATE_DOUBLE_PROPERTY] = json.dumps(tokens)
+
+
+def point_properties_fields(node, ancestry):
+    """A PointProperties node's fields as numbers ({} when all are the X3D defaults), for POINT_PROPERTIES_PROPERTY."""
+    from .extract import POINT_PROPERTIES_DEFAULTS
+    fields = {}
+    for name, default in POINT_PROPERTIES_DEFAULTS.items():
+        if isinstance(default, list):
+            value = [float(v) for v in node.getFieldAsArray(name, 0, ancestry)]
+            value = value if len(value) == 3 and all(math.isfinite(v) for v in value) else default
+        else:
+            value = node.getFieldAsFloat(name, default, ancestry)
+            value = float(value) if value is not None and math.isfinite(value) else default
+        if value != default:
+            fields[name] = value
+    return fields
+
+
 def mark_primitive(bpymesh, geom, ancestry, node_type, **fields):
     """Remember the primitive node behind ``bpymesh`` (see PRIMITIVE_PROPERTY)."""
     import json
@@ -4646,6 +4729,7 @@ def _quad_mesh(name, geom, ancestry, index=None):
     bpymesh.polygons.add(count)
     bpymesh.polygons.foreach_set("loop_start", range(0, 4 * count, 4))
     bpymesh.polygons.foreach_set("vertices", [v for q in quads for v in q])
+    bpymesh["x3d_geometry"] = name     # QuadSet or IndexedQuadSet, written back as one by the X3D 4.0 export (batch 8)
     return importMesh_FinalizeTriangleMesh(bpymesh, geom, ancestry)
 
 
@@ -5535,6 +5619,7 @@ def appearance_LoadPixelTexture(pixelTexture, ancestry):
         logger.warning(f"ImportX3D warning: pixel count in PixelTexture is off. Pixels: {len(pixels)}, Width: {w}, Height: {h}")
 
     bpyima = bpy.data.images.new("PixelTexture", w, h, alpha=has_alpha, float_buffer=True)
+    bpyima["x3d_pixel_texture"] = plane_count     # written back as a PixelTexture (material.PIXEL_TEXTURE_PROPERTY)
     if not has_alpha:
         bpyima.alpha_mode = 'NONE'
 
@@ -6193,6 +6278,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         if isinstance(bpydata, bpy.types.Mesh) and geom_spec not in LINE_POINT_SPECS:
             # the file's solid for the export to write back (D14): a classic Material's surface stays two-sided in Blender
             bpydata[SOLID_PROPERTY] = geometry_solid(geom, ancestry)
+        if shared is None:
+            mark_coordinate_double(bpydata, geom)
 
         if geom_spec in LINE_POINT_SPECS:
             rgb, alpha = x3d_unlit_colour(appr, ancestry)
@@ -6201,6 +6288,8 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
             bpymat = line_point_material(name, rgb, alpha, line_colour_kind(bpydata), source=bpymat)
             line_properties = appr.getChildBySpec('LineProperties') if appr is not None else None
             line_width = line_properties.getFieldAsFloat('linewidthScaleFactor', None, ancestry) if line_properties else None
+            point_properties = appr.getChildBySpec('PointProperties') if appr is not None else None
+            point_properties = point_properties_fields(point_properties, ancestry) if point_properties else None
 
         # There are no geometry importers that can legally return
         # no object.  It's either a bpy object, or an exception
@@ -6226,6 +6315,9 @@ def importShape(bpycollection, node, ancestry, global_matrix, solidify, solidify
         tag_x3d_identity(node.blendObject, node, ancestry)
         if geom_spec in LINE_POINT_SPECS and line_width is not None and node.blendObject is not None:
             node.blendObject[LINE_WIDTH_PROPERTY] = line_width   # Blender draws no line width; the 4.0 export writes it back
+        if geom_spec in LINE_POINT_SPECS and point_properties and node.blendObject is not None:
+            # Blender draws no point size either: kept as a custom property the 4.0 export writes back (batch 8)
+            node.blendObject[POINT_PROPERTIES_PROPERTY] = json.dumps(point_properties, sort_keys=True)
         if not node.getFieldAsBool('castShadow', True, ancestry):
             # X3D 4.0 Shape castShadow: the object's shadow visibility in Blender
             node.blendObject.visible_shadow = False
@@ -7955,6 +8047,9 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
             worlds[empty] = getFinalMatrix(node, None, ancestry, global_matrix)
             empty.matrix_world = worlds[empty]
             tag_x3d_identity(empty, node, ancestry)
+            chain = group_chain(node, ancestry)       # a Transform on a Switch branch or LOD level: the export regroups it
+            if chain:
+                empty[GROUP_CHAIN_PROPERTY] = json.dumps(chain)
             owners[key] = empty
 
     def owner_above(key):
@@ -8392,6 +8487,280 @@ def switch_branches(node, ancestry):
     return " ".join(entries)
 
 
+GROUP_CHAIN_PROPERTY = "x3d_group_chain"     # on an object made under a Switch or LOD: JSON, outermost first, for the export
+group_keys = {}                              # id(real Switch/LOD node) -> its key in GROUP_CHAIN_PROPERTY (DEF, else made up)
+
+
+# Grouping nodes the import dissolves but records for the export (group_chain), with the fields kept as the file wrote
+# them (their attribute text: geospatial values are doubles, and a string list keeps its quoting)
+GROUP_RAW_FIELDS = {
+    'Billboard': ('axisOfRotation',),
+    'GeoLocation': ('geoCoords', 'geoSystem'),
+    'GeoLOD': ('center', 'geoSystem', 'range', 'rootUrl', 'child1Url', 'child2Url', 'child3Url', 'child4Url'),
+}
+GEO_ORIGIN_FIELDS = ('geoCoords', 'geoSystem', 'rotateYUp')
+
+
+def raw_fields(node, names):
+    """{field: attribute text} for the fields the file sets on ``node`` (XML encoding only; empty otherwise)."""
+    out = {}
+    for name in names:
+        value = _attribute_raw(node, name)
+        if value is not None:
+            out[name] = value
+    return out
+
+
+def group_chain(node, ancestry):
+    """Every Switch and LOD above ``node``, outermost first, as the exporter needs them to write the node back: its type,
+    DEF (or a key unique in this import), the branch ``node`` sits on, how many branches there are, and the Switch's
+    whichChoice or the LOD's range and center (in the file's units). Billboard, GeoLocation and GeoLOD come with their fields
+    as the file wrote them (GROUP_RAW_FIELDS) and their GeoOrigin, as one group of children."""
+    chain = tuple(ancestry) + (node,)
+    out = []
+    for i, anc in enumerate(ancestry):
+        spec = anc.getSpec()
+        if spec not in ('Switch', 'LOD', *GROUP_RAW_FIELDS):
+            continue
+        real = anc.getRealNode()
+        kids = [c for c in real.children if _switch_child_counts(c) and c.getSpec() != 'GeoOrigin']
+        index = next((n for n, kid in enumerate(kids) if kid is chain[i + 1]), None)
+        if index is None:
+            continue
+        name = anc.getDefName() or real.getDefName() or ""
+        key = group_keys.setdefault(id(real), name or f"{spec}_{len(group_keys) + 1}")
+        entry = {"node": spec, "key": key, "def": name, "branch": index, "branches": len(kids)}
+        if spec in GROUP_RAW_FIELDS:
+            # one group of children (no branches): the fields as written, and a GeoOrigin child if there is one
+            entry.update(branch=0, branches=1, fields=raw_fields(anc, GROUP_RAW_FIELDS[spec]))
+            origin = real.getChildBySpec('GeoOrigin')
+            if origin is not None:
+                entry["geoOrigin"] = raw_fields(origin, GEO_ORIGIN_FIELDS)
+        elif spec == 'Switch':
+            entry["whichChoice"] = anc.getFieldAsInt('whichChoice', -1, ancestry[:i])
+        else:
+            entry["range"] = [float(v) for v in (anc.getFieldAsArray('range', 0, ancestry[:i], 1.0) or [])]
+            entry["center"] = [float(v) for v in anc.getFieldAsFloatTuple('center', (0.0, 0.0, 0.0), ancestry[:i])]
+        out.append(entry)
+    return out
+
+
+# -- rigid body physics as Blender rigid bodies (node board batch 6) ---------------------------------------------------
+# A RigidBodyCollection becomes the scene's rigid body world, each RigidBody's object a Blender rigid body, and a
+# SingleAxisHingeJoint an empty with a HINGE constraint. What Blender holds (mass, fixed, damping, gravity, the hinge's
+# anchor, axis and limits) is read back from Blender on export, so editing it in Blender reaches the file; every field
+# is also kept as the file wrote it (RIGID_*_PROPERTY, JSON) for what Blender cannot hold (linearVelocity, the
+# CollisionCollection, a joint's forceOutput...).
+RIGID_WORLD_PROPERTY = "x3d_rigid_world"      # on the scene
+RIGID_BODY_PROPERTY = "x3d_rigid_body"        # on a body's object
+RIGID_JOINT_PROPERTY = "x3d_rigid_joint"      # on a joint's empty
+RIGID_COLLECTION_FIELDS = ('autoDisable', 'constantForceMix', 'contactSurfaceThickness', 'disableAngularSpeed',
+                           'disableLinearSpeed', 'disableTime', 'enabled', 'errorCorrection', 'gravity', 'iterations',
+                           'maxCorrectionSpeed', 'preferAccuracy')
+RIGID_BODY_FIELDS = ('angularDampingFactor', 'angularVelocity', 'autoDamp', 'autoDisable', 'centerOfMass',
+                     'disableAngularSpeed', 'disableLinearSpeed', 'disableTime', 'enabled', 'finiteRotationAxis', 'fixed',
+                     'forces', 'inertia', 'linearDampingFactor', 'linearVelocity', 'mass', 'orientation', 'position',
+                     'torques', 'useFiniteRotation', 'useGlobalGravity')
+COLLIDABLE_FIELDS = ('enabled', 'rotation', 'translation')
+COLLISION_COLLECTION_FIELDS = ('appliedParameters', 'bounce', 'enabled', 'frictionCoefficients', 'minBounceSpeed',
+                               'slipFactors', 'softnessConstantForceMix', 'softnessErrorCorrection', 'surfaceSpeed')
+HINGE_FIELDS = ('anchorPoint', 'axis', 'forceOutput', 'maxAngle', 'minAngle', 'stopBounce', 'stopErrorCorrection')
+# the settable fields of the other joints (their output-only ones, such as separation or hinge1Angle, are never kept)
+JOINT_FIELDS = {
+    'SingleAxisHingeJoint': HINGE_FIELDS,
+    'BallJoint': ('anchorPoint', 'forceOutput'),
+    'SliderJoint': ('axis', 'forceOutput', 'maxSeparation', 'minSeparation', 'stopBounce', 'stopErrorCorrection'),
+    'DoubleAxisHingeJoint': ('anchorPoint', 'axis1', 'axis2', 'desiredAngularVelocity1', 'desiredAngularVelocity2',
+                             'forceOutput', 'maxAngle1', 'maxTorque1', 'maxTorque2', 'minAngle1', 'stop1Bounce',
+                             'stop1ConstantForceMix', 'stop1ErrorCorrection', 'suspensionErrorCorrection',
+                             'suspensionForce'),
+    'UniversalJoint': ('anchorPoint', 'axis1', 'axis2', 'forceOutput', 'stop1Bounce', 'stop1ErrorCorrection',
+                       'stop2Bounce', 'stop2ErrorCorrection'),
+}
+JOINT_CONSTRAINT = {'SingleAxisHingeJoint': 'HINGE', 'BallJoint': 'POINT', 'SliderJoint': 'SLIDER',
+                    'DoubleAxisHingeJoint': 'GENERIC', 'UniversalJoint': 'GENERIC'}
+COLLISION_SHAPE_OF = {'Box': 'BOX', 'Sphere': 'SPHERE', 'Cylinder': 'CYLINDER', 'Cone': 'CONE'}
+
+
+def _container_of(node):
+    element = getattr(node, "x3dNode", None)
+    return element.getAttribute('containerField') if element is not None and element.hasAttribute('containerField') else ""
+
+
+def _floats(text, default):
+    try:
+        values = [float(v) for v in str(text).replace(",", " ").split()]
+    except ValueError:
+        return default
+    return values if len(values) == len(default) else default
+
+
+def import_rigid_bodies(all_nodes, global_matrix, bpycontext):
+    """Every RigidBodyCollection: Blender's rigid body world, rigid bodies and hinge constraints (see above). The
+    objects already stand where the bodies place them (RigidBody is a frame, PHYSICS_FRAME_SPECS)."""
+    import json
+    scene = bpycontext.scene
+    axes = global_matrix.to_3x3().normalized()
+    for node, ancestry in all_nodes:
+        if node.getSpec() != 'RigidBodyCollection' or node.node_type == NODE_REFERENCE:
+            continue
+        real = node.getRealNode()
+        if scene.rigidbody_world is None:
+            with bpycontext.temp_override(scene=scene):
+                bpy.ops.rigidbody.world_add()
+        world = scene.rigidbody_world
+        fields = raw_fields(node, RIGID_COLLECTION_FIELDS)
+        scene.gravity = axes @ Vector(_floats(fields.get('gravity', '0 -9.8 0'), [0.0, -9.8, 0.0]))
+        if 'iterations' in fields:
+            world.solver_iterations = max(1, int(_floats(fields['iterations'], [10.0])[0]))
+        record = {"def": node.getDefName() or real.getDefName() or "", "fields": fields, "collider": None}
+        objects = {}           # id(real RigidBody node) -> object
+        for body in real.children:
+            if body.getSpec() == 'CollisionCollection':
+                record["collider"] = {"def": body.getDefName() or "", "fields": raw_fields(body, COLLISION_COLLECTION_FIELDS),
+                                      "collidables": [c.getRealNode().getDefName() for c in body.getRealNode().children
+                                                      if c.getSpec() in ('CollidableShape', 'CollidableOffset')
+                                                      and c.getRealNode().getDefName()]}
+            if body.getSpec() != 'RigidBody' or body.node_type == NODE_REFERENCE:
+                continue
+            ob, collidable, offsets = _body_object(body)
+            if ob is None:
+                logger.warning("RigidBody %s: no shape was imported for it; not made a Blender rigid body",
+                               body.getDefName() or "(no DEF)")
+                continue
+            objects[id(body.getRealNode())] = ob
+            body_fields = raw_fields(body, RIGID_BODY_FIELDS)
+            with bpycontext.temp_override(scene=scene, object=ob, active_object=ob, selected_objects=[ob]):
+                bpy.ops.rigidbody.object_add(type='PASSIVE' if body_fields.get('fixed', 'false') == 'true' else 'ACTIVE')
+            rb = ob.rigid_body
+            rb.mass = max(0.001, _floats(body_fields.get('mass', '1'), [1.0])[0])
+            auto = body_fields.get('autoDamp', 'false') == 'true'
+            rb.linear_damping = _floats(body_fields.get('linearDampingFactor', '0.001'), [0.001])[0] if auto else 0.0
+            rb.angular_damping = _floats(body_fields.get('angularDampingFactor', '0.001'), [0.001])[0] if auto else 0.0
+            rb.enabled = body_fields.get('enabled', 'true') != 'false'
+            primitive = json.loads(ob.data.get(PRIMITIVE_PROPERTY, "{}") or "{}") if ob.type == 'MESH' else {}
+            rb.collision_shape = COLLISION_SHAPE_OF.get(primitive.get("node"), 'CONVEX_HULL')
+            ob[RIGID_BODY_PROPERTY] = json.dumps({"def": body.getDefName() or "", "fields": body_fields,
+                                                  "collidable": collidable, "offsets": offsets})
+        for joint in real.children:
+            if joint.getSpec() in JOINT_CONSTRAINT and joint.node_type != NODE_REFERENCE:
+                _joint(joint, objects, axes, global_matrix, bpycontext, scene)
+            elif joint.getSpec() == 'MotorJoint':
+                logger.info("MotorJoint %s: not made a Blender constraint (Blender has no motor joint between two "
+                            "bodies with three axes)", joint.getDefName() or "")
+        scene[RIGID_WORLD_PROPERTY] = json.dumps(record)
+
+
+def _body_object(body):
+    """(the object the import made for a RigidBody's first collidable shape, that collidable's record, the
+    CollidableOffsets between the body and it, outermost first)."""
+    offsets = []
+    for geometry in body.getRealNode().children:
+        node = geometry
+        while node is not None and node.getSpec() == 'CollidableOffset':
+            offsets.append({"def": node.getRealNode().getDefName() or "", "fields": raw_fields(node, COLLIDABLE_FIELDS)})
+            node = next((c for c in node.getRealNode().children if c.getSpec() in ('CollidableShape', 'CollidableOffset')),
+                        None)
+        if node is None or node.getSpec() != 'CollidableShape':
+            offsets = []
+            continue
+        shape = next((c for c in node.getRealNode().children if c.getSpec() == 'Shape'), None)
+        ob = getattr(shape.getRealNode(), "blendObject", None) if shape is not None else None
+        try:
+            if ob is not None and ob.name:
+                return ob, {"def": node.getRealNode().getDefName() or "", "fields": raw_fields(node, COLLIDABLE_FIELDS)}, offsets
+        except ReferenceError:
+            pass
+        offsets = []
+    return None, None, []
+
+
+def _joint(joint, objects, axes, global_matrix, bpycontext, scene):
+    """A joint as an empty with a Blender rigid body constraint between its two bodies (JOINT_CONSTRAINT): at the
+    anchor (a SliderJoint, which has none, at its first body), turned so the constraint's own axes are the joint's:
+    HINGE turns about Z (axis); SLIDER slides along X (axis), limited by min/maxSeparation; GENERIC (Double axis hinge,
+    Universal) frees Z (axis1) and X (axis2), Z limited by min/maxAngle1 on a DoubleAxisHingeJoint; POINT is a ball."""
+    import json
+    import math
+    spec = joint.getSpec()
+    fields = raw_fields(joint, JOINT_FIELDS[spec])
+    ends = {}
+    for child in joint.getRealNode().children:
+        if child.getSpec() == 'RigidBody':
+            ends[_container_of(child) or ("body1" if "body1" not in ends else "body2")] = objects.get(id(child.getRealNode()))
+    zero = [0.0, 0.0, 0.0]
+    if 'anchorPoint' in JOINT_FIELDS[spec]:
+        anchor = global_matrix @ Vector(_floats(fields.get('anchorPoint', '0 0 0'), zero))
+    else:
+        first = ends.get("body1") or ends.get("body2")
+        anchor = first.matrix_world.translation.copy() if first is not None else global_matrix @ Vector(zero)
+
+    def direction(name, default):
+        v = axes @ Vector(_floats(fields.get(name, default), zero))
+        return v.normalized() if v.length > 1e-9 else None
+    if spec == 'SingleAxisHingeJoint':
+        z, x = direction('axis', '0 0 0'), None
+    elif spec == 'SliderJoint':
+        z, x = None, direction('axis', '0 1 0')
+    elif spec in ('DoubleAxisHingeJoint', 'UniversalJoint'):
+        z, x = direction('axis1', '0 0 0'), direction('axis2', '0 0 0')
+    else:
+        z = x = None
+    rotation = _frame_rotation(z, x)
+    empty = bpy.data.objects.new(joint.getDefName() or spec, None)
+    scene.collection.objects.link(empty)
+    empty.empty_display_type, empty.empty_display_size = 'ARROWS', 0.3
+    empty.matrix_world = Matrix.Translation(anchor) @ rotation.to_4x4()
+    # the operator reads the view layer's active object: an override alone leaves the joint without a constraint on
+    # Blender 5.1 and older (or crashes it), so the empty is made active there too
+    scene.view_layers[0].objects.active = empty
+    with bpycontext.temp_override(scene=scene, object=empty, active_object=empty, selected_objects=[empty]):
+        bpy.ops.rigidbody.constraint_add(type=JOINT_CONSTRAINT[spec])
+    con = empty.rigid_body_constraint
+    con.object1, con.object2 = ends.get("body1"), ends.get("body2")
+    if spec == 'SingleAxisHingeJoint':
+        low = _floats(fields.get('minAngle', str(-math.pi)), [-math.pi])[0]
+        high = _floats(fields.get('maxAngle', str(math.pi)), [math.pi])[0]
+        if low > -math.pi or high < math.pi:          # X3D's default is no stop
+            con.use_limit_ang_z = True
+            con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
+    elif spec == 'SliderJoint':
+        # X3D's separation is the bodies' distance along the axis; Blender's slider limits count from where they start
+        b1, b2 = ends.get("body1"), ends.get("body2")
+        start = ((b2.matrix_world.translation - b1.matrix_world.translation).dot(x)
+                 if b1 is not None and b2 is not None and x is not None else 0.0)
+        low = _floats(fields.get('minSeparation', '0'), [0.0])[0] * conversion_scale
+        high = _floats(fields.get('maxSeparation', '1'), [1.0])[0] * conversion_scale
+        con.use_limit_lin_x = True
+        con.limit_lin_x_lower, con.limit_lin_x_upper = low - start, high - start
+    elif spec in ('DoubleAxisHingeJoint', 'UniversalJoint'):
+        # a two-axis joint: no sliding, no turning about Y; free about Z (axis1) and X (axis2)
+        for name in ('lin_x', 'lin_y', 'lin_z', 'ang_y'):
+            setattr(con, f"use_limit_{name}", True)
+            setattr(con, f"limit_{name}_lower", 0.0)
+            setattr(con, f"limit_{name}_upper", 0.0)
+        if spec == 'DoubleAxisHingeJoint':
+            low = _floats(fields.get('minAngle1', str(-math.pi)), [-math.pi])[0]
+            high = _floats(fields.get('maxAngle1', str(math.pi)), [math.pi])[0]
+            if low > -math.pi or high < math.pi:
+                con.use_limit_ang_z = True
+                con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
+    empty[RIGID_JOINT_PROPERTY] = json.dumps({"node": spec, "def": joint.getDefName() or "", "fields": fields})
+
+
+def _frame_rotation(z, x):
+    """A rotation whose local Z is ``z`` and local X ``x`` (either may be None; x is made square to z)."""
+    if z is None and x is None:
+        return Matrix.Identity(3)
+    if z is None:
+        return Vector((1.0, 0.0, 0.0)).rotation_difference(x).to_matrix()
+    if x is None or abs(x.dot(z)) > 1.0 - 1e-9:
+        return Vector((0.0, 0.0, 1.0)).rotation_difference(z).to_matrix()
+    x = (x - z * x.dot(z)).normalized()
+    y = z.cross(x)
+    return Matrix((x, y, z)).transposed()
+
+
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
 X3D_LOD_PROPERTY = "x3d_lod"                  # on the same object: "<LOD name>:<level>"
 
@@ -8698,6 +9067,11 @@ def load_web3d(
                 item.getFieldAsBool('visible', True, chain) is not False
                 for item, chain in [(anc, ancestry[:i]) for i, anc in enumerate(ancestry)] + [(node, ancestry)]):
             visible_false.append(node.blendObject)
+        if node.blendObject is not None and node.blendObject is not made_before \
+                and any(anc.getSpec() in ('Switch', 'LOD', *GROUP_RAW_FIELDS) for anc in ancestry):
+            chain = group_chain(node, ancestry)
+            if chain:
+                node.blendObject[GROUP_CHAIN_PROPERTY] = json.dumps(chain)
         if spec in ('LOD', 'GeoLOD'):
             lod_records[lod_key(node, ancestry)] = {
                 "node": node, "ancestry": list(ancestry), "global_matrix": global_matrix,
@@ -8725,6 +9099,10 @@ def load_web3d(
         keep_scene_metadata(bpyscene, all_nodes)
     except Exception as exc:  # metadata must never stop an import
         logger.error("Scene-level Metadata not kept: %s", exc, exc_info=True)
+    try:
+        import_rigid_bodies(all_nodes, global_matrix, bpycontext)
+    except Exception as exc:  # physics must never stop the geometry import
+        logger.error("Rigid body physics not made: %s", exc, exc_info=True)
     report_import_losses(all_nodes, bpycontext, defer_routes_to_caller)
 
     # Switch: every child is imported, so nothing is lost on the way back out, but only the chosen one is shown; the others
@@ -8915,6 +9293,7 @@ def load(context,
     lit_by_node.clear()
     lod_records.clear()
     lod_members.clear()
+    group_keys.clear()
     navigation_headlight = None
     bound_view = default_view = None
 

@@ -247,6 +247,151 @@
       "import": "yes",
       "round_trip": "unmeasured",
       "note": "written for meshes the import made from an ElevationGrid without Color, Normal or TextureCoordinate children, while no vertex moved"
+    },
+    "Switch": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "every branch imported, the unchosen ones hidden; x3d_group_chain on each object lets the 4.0 export regroup them with whichChoice, an empty branch as an empty Group (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "LOD": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "every level imported, the ones the first Viewpoint does not see hidden; range and center kept in x3d_group_chain (file units) and written back with all levels (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedTriangleSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, else as an IndexedFaceSet (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "TriangleSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, its arrays in corner order (no index), else as an IndexedFaceSet; a skinned or shape-keyed mesh writes an IndexedTriangleSet (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "TriangleFanSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, fanCount read off the mesh's triangles (a fan that no longer chains is cut there), arrays in fan order; else an IndexedFaceSet, an IndexedTriangleSet for a skinned or shape-keyed mesh (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "TriangleStripSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, stripCount read off the mesh's triangles (a strip that no longer chains is cut there), arrays in strip order; else an IndexedFaceSet, an IndexedTriangleSet for a skinned or shape-keyed mesh (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedTriangleFanSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, the fans (index, -1 after each) read off the mesh's triangles, else as an IndexedFaceSet (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedTriangleStripSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a triangle, the strips (index, -1 after each) read off the mesh's triangles, else as an IndexedFaceSet (node board batch 5). Round trip pinned by tests/test_node_board_batch5_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "LineSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the curve or line mesh; written back with vertexCount read off the object's own polylines (each polyline's vertices in turn), so an edited curve still matches; an untagged line object is an IndexedLineSet as before (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "QuadSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a quad, its arrays in corner order (no index), else as an IndexedFaceSet; a skinned or shape-keyed mesh writes an IndexedQuadSet; declares CADGeometry 1 (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "IndexedQuadSet": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_geometry on the mesh; written back while every face is a quad, else as an IndexedFaceSet; declares CADGeometry 1 (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CoordinateDouble": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_coordinate_double on the mesh or curve (the file's point text) when its vertices are the file's points one to one at unit scale; written with those tokens while every coordinate still equals its token in float32, else a Coordinate from the mesh (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "PointProperties": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_point_properties on the point object (JSON numbers), written in the point shape's Appearance; declares Shape 5; Blender draws no point size (node board batch 8). Round trip pinned by tests/test_node_board_batch8_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "PixelTexture": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an image with x3d_pixel_texture (its components), written back inline up to 256 x 256 (node board batch 2). Round trip pinned by tests/test_node_board_batch2_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "Billboard": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "dissolved into its children; x3d_group_chain keeps axisOfRotation as written and the 4.0 export puts the children back inside (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoLocation": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "dissolved into its children (not placed on the globe); x3d_group_chain keeps geoCoords and geoSystem as written, and the 4.0 export puts the children back inside (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoLOD": {
+      "import": "structural",
+      "round_trip": "unmeasured",
+      "note": "the rootNode content is imported; x3d_group_chain keeps center, range, geoSystem and the URLs as written, and the 4.0 export writes the content back as rootNode (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoElevationGrid": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "x3d_primitive keeps the fields as written; written back while the mesh is unedited and has no Color, Normal or TextureCoordinate (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "GeoOrigin": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "read on a GeoElevationGrid (it places the grid) and kept, with a GeoLocation's or GeoLOD's, as written; written after a GeoLOD's children, where x3d-4.0.xsd wants it (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "RigidBodyCollection": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "the scene's Blender rigid body world: gravity (axes converted) and iterations from Blender, other fields as written (x3d_rigid_world on the scene) (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "RigidBody": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "a Blender rigid body on the object of its first CollidableShape: fixed is PASSIVE; mass, damping (autoDamp) and enabled from Blender; position and orientation from the object without its collidables' frames; other fields as written (x3d_rigid_body). A body with a parent, children or a scale other than 1 is written as a plain Transform, reported (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CollidableShape": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "its Shape is the body object's mesh; the collision shape is set from the primitive (BOX, SPHERE, CYLINDER, CONE, else CONVEX_HULL); written back around the object's Shapes, fields as written (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CollidableOffset": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "its frame stays between the body and the shape; written back with the fields as written (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CollisionCollection": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "fields and the DEFs of its collidables kept as written and written back with USEs, in body order; bodies made in Blender get one naming all their collidables (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "SingleAxisHingeJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty with a HINGE rigid body constraint (Z along axis, angle limits from minAngle and maxAngle); anchor, axis and limits read back from Blender, other fields as written (x3d_rigid_joint) (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "BallJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty at anchorPoint with a POINT rigid body constraint; the anchor read back from Blender, other fields as written (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "SliderJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty at its first body with a SLIDER constraint, X along axis; min/maxSeparation become Blender's travel limits less the bodies' starting separation, and back (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "DoubleAxisHingeJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty with a GENERIC constraint, Z along axis1 and X along axis2 free, the rest locked, Z limited by min/maxAngle1; a GENERIC constraint made in Blender is written as one (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "UniversalJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "as a DoubleAxisHingeJoint without stops; written back as a UniversalJoint when the import made it from one (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
     }
   },
   "asymmetries": [

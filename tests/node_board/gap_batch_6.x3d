@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<X3D profile="Immersive" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <component name="RigidBodyPhysics" level="2"/>
+    <meta name="title" content="Node board gap batch 6: rigid bodies and a hinge as Blender rigid bodies"/>
+    <meta name="description" content="A RigidBodyCollection with lunar gravity and 20 iterations: a fixed ground box, a ball whose sphere sits in a CollidableOffset half a metre below its body, a fixed pivot and an arm joined by a SingleAxisHingeJoint about Z with stops at plus and minus 0.8 rad, and a CollisionCollection naming three of the collidables. The import must make Blender rigid bodies and a HINGE constraint; the export must write the physics back from them."/>
+  </head>
+  <Scene>
+    <RigidBodyCollection DEF="World" gravity="0 -1.62 0" iterations="20">
+      <RigidBody DEF="Ground" containerField="bodies" position="0 -0.5 0" fixed="true">
+        <CollidableShape DEF="GroundShape" containerField="geometry">
+          <Shape containerField="shape"><Appearance><Material diffuseColor="0.4 0.4 0.4"/></Appearance><Box size="10 1 10"/></Shape>
+        </CollidableShape>
+      </RigidBody>
+      <RigidBody DEF="Ball" containerField="bodies" position="-2 3 0" mass="2.5" linearVelocity="1 0 0">
+        <CollidableOffset DEF="BallOffset" containerField="geometry" translation="0 -0.5 0">
+          <CollidableShape DEF="BallShape" containerField="collidable">
+            <Shape containerField="shape"><Appearance><Material diffuseColor="0.9 0.3 0.2"/></Appearance><Sphere radius="0.4"/></Shape>
+          </CollidableShape>
+        </CollidableOffset>
+      </RigidBody>
+      <RigidBody DEF="Pivot" containerField="bodies" position="2 3 0" fixed="true">
+        <CollidableShape DEF="PivotShape" containerField="geometry">
+          <Shape containerField="shape"><Appearance><Material diffuseColor="0.2 0.2 0.8"/></Appearance><Sphere radius="0.1"/></Shape>
+        </CollidableShape>
+      </RigidBody>
+      <RigidBody DEF="Arm" containerField="bodies" position="3 3 0" autoDamp="true" linearDampingFactor="0.05" angularDampingFactor="0.1">
+        <CollidableShape DEF="ArmShape" containerField="geometry">
+          <Shape containerField="shape"><Appearance><Material diffuseColor="0.2 0.7 0.9"/></Appearance><Box size="2 0.2 0.2"/></Shape>
+        </CollidableShape>
+      </RigidBody>
+      <CollisionCollection DEF="Contacts" containerField="collider" bounce="0.2">
+        <CollidableShape USE="GroundShape" containerField="collidables"/>
+        <CollidableShape USE="ArmShape" containerField="collidables"/>
+        <CollidableOffset USE="BallOffset" containerField="collidables"/>
+      </CollisionCollection>
+      <SingleAxisHingeJoint DEF="Hinge" containerField="joints" anchorPoint="2 3 0" axis="0 0 1" minAngle="-0.8" maxAngle="0.8" forceOutput='"angle"'>
+        <RigidBody USE="Pivot" containerField="body1"/>
+        <RigidBody USE="Arm" containerField="body2"/>
+      </SingleAxisHingeJoint>
+    </RigidBodyCollection>
+    <Viewpoint description="Front" position="0 2 14"/>
+  </Scene>
+</X3D>

@@ -186,6 +186,32 @@ def _texture_transform_from_mapping(mapping_node):
     )
 
 
+PIXEL_TEXTURE_PROPERTY = "x3d_pixel_texture"   # set by the importer on an image read from a PixelTexture: its components
+PIXEL_TEXTURE_MAX = 256 * 256                    # larger ones are written as files, as any other image
+
+
+def pixel_image(image):
+    """(width, height, components, [SFImage pixel ints]) for an image the import read from a PixelTexture, else None.
+    Rows run from the bottom, as in both Blender and SFImage."""
+    components = image.get(PIXEL_TEXTURE_PROPERTY) if hasattr(image, "get") else None
+    try:
+        components = int(components)
+        width, height = (int(v) for v in image.size[:2])
+    except (TypeError, ValueError):
+        return None
+    if components not in (1, 2, 3, 4) or not 0 < width * height <= PIXEL_TEXTURE_MAX:
+        return None
+    rgba = list(image.pixels[:])
+    if len(rgba) != 4 * width * height:
+        return None
+    to8 = lambda v: max(0, min(255, int(round(v * 255.0))))
+    packed = []
+    for i in range(0, len(rgba), 4):
+        r, g, b, a = (to8(v) for v in rgba[i:i + 4])
+        packed.append({1: r, 2: (r << 8) | a, 3: (r << 16) | (g << 8) | b, 4: (r << 24) | (g << 16) | (b << 8) | a}[components])
+    return width, height, components, packed
+
+
 def _texture_ref_from_image_node(image_node, usage):
     if not image_node or not getattr(image_node, "image", None):
         return None
@@ -205,6 +231,7 @@ def _texture_ref_from_image_node(image_node, usage):
         extension=getattr(image_node, "extension", None),
         transform=_texture_transform_from_mapping(_find_mapping_node(image_node)),
         usage=usage,
+        pixel_image=pixel_image(image),
     )
 
 

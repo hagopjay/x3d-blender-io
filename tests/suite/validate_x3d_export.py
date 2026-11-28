@@ -376,7 +376,12 @@ def ifs_data(doc, geo):
     g = doc.res(geo)
     if g is None:
         return None
-    ci = [int(v) for v in floats(g.get("coordIndex"))]
+    if g.tag == "IndexedTriangleSet":
+        # the triangle set the writer emits for a triangulated export: every three indices are one face
+        flat = [int(v) for v in floats(g.get("index"))]
+        ci = [i for k in range(0, len(flat) - 2, 3) for i in flat[k:k + 3] + [-1]]
+    else:
+        ci = [int(v) for v in floats(g.get("coordIndex"))]
     coord_el = g.find("Coordinate")
     coord_el = doc.res(coord_el) if coord_el is not None else None
     pts = floats(coord_el.get("point")) if coord_el is not None else []
