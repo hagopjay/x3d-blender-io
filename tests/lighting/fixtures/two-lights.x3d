@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile='Interchange' version='4.0'>
+  <head>
+    <meta name='title' content='lighting probe: two-lights'/>
+    <meta name='description' content="a red PointLight of 1.5 and a blue DirectionalLight with a specular Material: the sum, and the clamp"/>
+    <meta name='generator' content='tools/lighting_oracle.py'/>
+  </head>
+  <Scene>
+    <NavigationInfo headlight='false'/>
+    <Background skyColor='0 0 0'/>
+    <Viewpoint position='0 0 4' fieldOfView='0.785398' description='probe'/>
+    <PointLight location='-0.7 0 0.6' color='1 0.2 0.1' intensity='1.5'/>
+    <DirectionalLight direction='0.5 0 -1' color='0.2 0.3 1' intensity='0.8'/>
+    <Shape>
+      <Appearance>
+        <Material diffuseColor='0.9 0.9 0.9' specularColor='0.5 0.5 0.5' shininess='0.1'/>
+      </Appearance>
+      <IndexedFaceSet solid='false' coordIndex='0 1 2 3 -1'>
+        <Coordinate point='-2 -2 0 2 -2 0 2 2 0 -2 2 0'/>
+        <Normal vector='0 0 1 0 0 1 0 0 1 0 0 1'/>
+      </IndexedFaceSet>
+    </Shape>
+  </Scene>
+</X3D>

@@ -182,6 +182,19 @@ class ImportX3D(bpy.types.Operator, ImportHelper):
         description=translate(lang, "light_units_description"),
     )
 
+    x3d_lighting: EnumProperty(
+        name=translate(lang, "x3d_lighting"),
+        items=(('AUTO', translate(lang, "x3d_lighting_auto"), translate(lang, "x3d_lighting_auto_description")),
+               ('OFF', translate(lang, "x3d_lighting_off"), translate(lang, "x3d_lighting_off_description")),
+               ('LINEAR_VALUES', translate(lang, "x3d_lighting_linear_values"),
+                translate(lang, "x3d_lighting_linear_values_description")),
+               ('DISPLAY', translate(lang, "x3d_lighting_display"), translate(lang, "x3d_lighting_display_description")),
+               ('SRGB_DECODED', translate(lang, "x3d_lighting_srgb_decoded"),
+                translate(lang, "x3d_lighting_srgb_decoded_description"))),
+        default='AUTO',
+        description=translate(lang, "x3d_lighting_description"),
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
@@ -282,6 +295,9 @@ def import_ui_mesh(layout, operator):
 
         line = body.row(align=True)
         line.prop(operator, "light_units")
+
+        line = body.row(align=True)
+        line.prop(operator, "x3d_lighting")
 
 
 def _kept_route_test(graph):
@@ -837,9 +853,15 @@ def register():
     behaviour_presets.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    from . import x3d_phong   # a turned X3D SpotLight keeps its cone where it points (X3D lighting import option)
+    if x3d_phong.on_depsgraph_update not in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(x3d_phong.on_depsgraph_update)
 
 
 def unregister():
+    from . import x3d_phong
+    if x3d_phong.on_depsgraph_update in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(x3d_phong.on_depsgraph_update)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 

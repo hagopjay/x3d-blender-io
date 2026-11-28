@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile='Interchange' version='4.0'>
+  <head>
+    <meta name='title' content='lighting probe: physical-directional'/>
+    <meta name='description' content="a DirectionalLight of 1.2 lux on a rough dielectric: Lambert, Fresnel and GGX in the plain case"/>
+    <meta name='generator' content='tools/lighting_oracle.py'/>
+  </head>
+  <Scene>
+    <NavigationInfo headlight='false'/>
+    <Background skyColor='0 0 0'/>
+    <Viewpoint position='0 0 4' fieldOfView='0.785398' description='probe'/>
+    <DirectionalLight direction='-0.3 -0.4 -1' intensity='1.2'/>
+    <Shape>
+      <Appearance>
+        <PhysicalMaterial baseColor='0.8 0.5 0.3' metallic='0' roughness='0.5'/>
+      </Appearance>
+      <IndexedFaceSet solid='false' coordIndex='0 1 2 3 -1'>
+        <Coordinate point='-2 -2 0 2 -2 0 2 2 0 -2 2 0'/>
+        <Normal vector='0 0 1 0 0 1 0 0 1 0 0 1'/>
+      </IndexedFaceSet>
+    </Shape>
+  </Scene>
+</X3D>

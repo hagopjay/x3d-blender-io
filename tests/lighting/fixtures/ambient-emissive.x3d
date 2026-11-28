@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile='Interchange' version='4.0'>
+  <head>
+    <meta name='title' content='lighting probe: ambient-emissive'/>
+    <meta name='description' content="ambientIntensity on two lights (the PointLight's ambient is attenuated, 0 1 0) and an emissiveColor"/>
+    <meta name='generator' content='tools/lighting_oracle.py'/>
+  </head>
+  <Scene>
+    <NavigationInfo headlight='false'/>
+    <Background skyColor='0 0 0'/>
+    <Viewpoint position='0 0 4' fieldOfView='0.785398' description='probe'/>
+    <DirectionalLight direction='0 0 -1' intensity='0.3' ambientIntensity='0.6'/>
+    <PointLight location='-0.8 0 0.5' intensity='0.4' ambientIntensity='0.5' attenuation='0 1 0'/>
+    <Shape>
+      <Appearance>
+        <Material ambientIntensity='0.5' diffuseColor='0.6 0.3 0.8' emissiveColor='0.1 0.2 0'/>
+      </Appearance>
+      <IndexedFaceSet solid='false' coordIndex='0 1 2 3 -1'>
+        <Coordinate point='-2 -2 0 2 -2 0 2 2 0 -2 2 0'/>
+        <Normal vector='0 0 1 0 0 1 0 0 1 0 0 1'/>
+      </IndexedFaceSet>
+    </Shape>
+  </Scene>
+</X3D>

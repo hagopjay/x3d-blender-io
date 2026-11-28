@@ -1,0 +1,145 @@
+{
+  "what": "Limits for the X3D Phong lighting ladder (tools/lighting_judge.py), committed before any measured run. Every probe scene is a lit 4 x 4 quad seen square-on from a Viewpoint; each witness's picture (8-bit display values, 64 x 64) is compared with the spec oracle's (tools/lighting_oracle.py, X3D 4.0 17.2.2.5) pixel by pixel. Pixels within one pixel of a jump in the oracle's picture (a radius edge, a spot cut-off) are left out of every comparison. Errors are in 8-bit display levels.",
+  "readings": {
+    "linear": "colours (Material, light color) are sRGB-coded: decoded, lit, the sum encoded for the display (X3DOM 1.8.3's default, gammaCorrectionDefault 'linear')",
+    "display": "the lighting equations run on the file's numbers as they are and the sum is shown as it is (the classic OpenGL way)",
+    "linear-values": "the file's numbers are linear values: lit as they are, the sum encoded for the display (X3DOM 1.8.3 as it ships, X_ITE 16.8.1 with ColorSpace LINEAR). Added 27 Nov 2026 after the first browser recording and before any Blender run."
+  },
+  "curves": {
+    "srgb": "the sRGB piecewise curve (IEC 61966-2-1), what Blender's Standard view transform uses",
+    "pow22": "x^2.2 and x^(1/2.2), what X_ITE 16.8.1 (GAMMA = 2.2) and X3DOM 1.8.3 ('linear') use"
+  },
+  "gates": {
+    "blender_exact": {
+      "witness": "blender_srgb_decoded",
+      "reading": "linear",
+      "curve": "srgb",
+      "mean_max": 0.6,
+      "p99_max": 2.0,
+      "why": "the add-on's opt-in X3D lighting (EEVEE Material Lighting nodes) must draw the oracle's picture; 8-bit rounding is 0.5 at most"
+    },
+    "blender_display": {
+      "witness": "blender_display",
+      "reading": "display",
+      "curve": "srgb",
+      "mean_max": 0.6,
+      "p99_max": 2.0,
+      "why": "the same with the display reading (Raw view transform)"
+    },
+    "browser_agrees": {
+      "witness": [
+        "x_ite",
+        "x3dom"
+      ],
+      "reading": "best of the three readings",
+      "curve": "pow22",
+      "mean_max": 1.5,
+      "p99_max": 4.0,
+      "why": "a browser is a witness for a reading when it lands this close to the oracle's picture in that reading; which reading each lands on is a finding, not a gate"
+    },
+    "wrong_twin_default_import": {
+      "witness": "blender_default",
+      "reading": "linear",
+      "curve": "srgb",
+      "mean_min": 8.0,
+      "scenes": [
+        "point-attenuation",
+        "spot"
+      ],
+      "why": "the add-on's default import (Principled BSDF, BLENDER light units) must MISS the oracle by this much on falloff and cone scenes, or the probes are too weak to catch an error"
+    },
+    "expected_fail_cycles_plain": {
+      "witness": "blender_cycles",
+      "reading": "linear",
+      "curve": "srgb",
+      "mean_max": 0.6,
+      "expected": "fail",
+      "why": "with the X3D lighting on, Cycles renders the plain Principled fallback; held to blender_exact's limit it is expected to fail (Jason, 27 Nov 2026: plain for now)"
+    },
+    "blender_linear_values": {
+      "witness": "blender",
+      "reading": "linear-values",
+      "curve": "srgb",
+      "mean_max": 0.6,
+      "p99_max": 2.0,
+      "why": "the add-on's default X3D lighting reading (linear values) must draw the oracle's picture. Added with the reading, before any Blender run."
+    }
+  },
+  "scenes": [
+    "directional",
+    "point-attenuation",
+    "point-radius",
+    "spot",
+    "specular",
+    "ambient-emissive",
+    "two-lights"
+  ],
+  "physical": {
+    "what": "PhysicalMaterial (X3D 4.0 17.2.2.6): X3D's o_i x color x attenuation_i x spot_i around glTF 2.0's metallic-roughness BRDF (Appendix B). Committed 28 Nov 2026 before any PhysicalMaterial run.",
+    "spec_reading": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable",
+      "why": "candela and lux imply 1/d^2 for point and spot lights; radius is X3D's on_i (no range window); spot_i is Table 17.4 for every lighting model; glTF Appendix B writes V as separable Smith-GGX"
+    },
+    "knobs": {
+      "inverse_square": [
+        true,
+        false
+      ],
+      "radius": [
+        "hard",
+        "window",
+        "window2"
+      ],
+      "spot": [
+        "x3d",
+        "gltf"
+      ],
+      "visibility": [
+        "separable",
+        "correlated"
+      ]
+    },
+    "scenes": [
+      "physical-directional",
+      "physical-metal",
+      "physical-dielectric",
+      "physical-spot",
+      "physical-radius"
+    ],
+    "gates": {
+      "blender_physical": {
+        "witness": "blender",
+        "oracle": "spec_reading",
+        "curve": "srgb",
+        "mean_max": 0.6,
+        "p99_max": 2.0,
+        "why": "the X3D lighting option's PhysicalMaterial path must draw the spec reading (Blender follows the spec where the spec is clear)"
+      },
+      "browser_physical": {
+        "witness": [
+          "x_ite",
+          "x3dom"
+        ],
+        "oracle": "best knob setting",
+        "curve": "pow22",
+        "mean_max": 1.5,
+        "p99_max": 4.0,
+        "why": "a browser witnesses a knob setting when it lands this close; which setting is a finding"
+      },
+      "wrong_twin_physical_default": {
+        "witness": "blender_default",
+        "oracle": "spec_reading",
+        "curve": "srgb",
+        "p99_min": 8.0,
+        "scenes": [
+          "physical-dielectric",
+          "physical-spot"
+        ],
+        "why": "the default import (Principled BSDF) must miss the spec picture somewhere by 8 levels (p99, not the mean: the Phong wrong twin's mean was too forgiving on a mostly dark picture)"
+      }
+    }
+  }
+}

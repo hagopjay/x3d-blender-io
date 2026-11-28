@@ -1600,6 +1600,14 @@ def rigid_world_of(scene, global_matrix):
             "gravity": tuple(gravity), "iterations": int(world.solver_iterations) if world is not None else 10,
             "recorded": bool(record)}
 
+PHONG_HEADLIGHT_PROPERTY = "x3d_phong_headlight"
+
+
+def is_phong_headlight(obj):
+    """The sun the X3D lighting import option puts on the camera to stand for the NavigationInfo headlight (see
+    x3d_phong.make_headlight): the file's headlight is written back by NavigationInfo, not as a DirectionalLight."""
+    return bool(obj.get(PHONG_HEADLIGHT_PROPERTY))
+
 
 def is_lod_hidden(obj):
     """An object of an LOD level the importer hid (and the user has not unhidden): written as geometry it would be
@@ -1620,6 +1628,8 @@ def _iter_export_objects(scene, view_layer, *, use_selection, use_visible, use_a
         if is_lod_hidden(obj) and not regrouped(obj, "LOD"):
             # a level of a LOD the import recorded is written inside that LOD; one it did not (an older import) is
             # not written: unhide it (hide_render off) to export it
+            continue
+        if is_phong_headlight(obj):
             continue
         yield obj
 
