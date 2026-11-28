@@ -73,5 +73,73 @@
     "specular",
     "ambient-emissive",
     "two-lights"
-  ]
+  ],
+  "physical": {
+    "what": "PhysicalMaterial (X3D 4.0 17.2.2.6): X3D's o_i x color x attenuation_i x spot_i around glTF 2.0's metallic-roughness BRDF (Appendix B). Committed 28 Nov 2026 before any PhysicalMaterial run.",
+    "spec_reading": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable",
+      "why": "candela and lux imply 1/d^2 for point and spot lights; radius is X3D's on_i (no range window); spot_i is Table 17.4 for every lighting model; glTF Appendix B writes V as separable Smith-GGX"
+    },
+    "knobs": {
+      "inverse_square": [
+        true,
+        false
+      ],
+      "radius": [
+        "hard",
+        "window",
+        "window2"
+      ],
+      "spot": [
+        "x3d",
+        "gltf"
+      ],
+      "visibility": [
+        "separable",
+        "correlated"
+      ]
+    },
+    "scenes": [
+      "physical-directional",
+      "physical-metal",
+      "physical-dielectric",
+      "physical-spot",
+      "physical-radius"
+    ],
+    "gates": {
+      "blender_physical": {
+        "witness": "blender",
+        "oracle": "spec_reading",
+        "curve": "srgb",
+        "mean_max": 0.6,
+        "p99_max": 2.0,
+        "why": "the X3D lighting option's PhysicalMaterial path must draw the spec reading (Blender follows the spec where the spec is clear)"
+      },
+      "browser_physical": {
+        "witness": [
+          "x_ite",
+          "x3dom"
+        ],
+        "oracle": "best knob setting",
+        "curve": "pow22",
+        "mean_max": 1.5,
+        "p99_max": 4.0,
+        "why": "a browser witnesses a knob setting when it lands this close; which setting is a finding"
+      },
+      "wrong_twin_physical_default": {
+        "witness": "blender_default",
+        "oracle": "spec_reading",
+        "curve": "srgb",
+        "p99_min": 8.0,
+        "scenes": [
+          "physical-dielectric",
+          "physical-spot"
+        ],
+        "why": "the default import (Principled BSDF) must miss the spec picture somewhere by 8 levels (p99, not the mean: the Phong wrong twin's mean was too forgiving on a mostly dark picture)"
+      }
+    }
+  }
 }
