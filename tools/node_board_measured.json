@@ -71,11 +71,13 @@
    ]
   },
   "AudioDestination": {
-   "read": "carries",
-   "read_evidence": "scenes props ['x3d_carried']",
+   "read": "builds",
+   "read_evidence": "sounds +1",
    "written": "observed",
    "written_by": [
-    "tests/node_board/carry_all.x3d"
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/merger_two_osc.x3d",
+    "tests/sound/osc_lowpass_gain.x3d"
    ]
   },
   "Background": {
@@ -110,7 +112,8 @@
    "read_evidence": "scenes props ['x3d_carried']",
    "written": "observed",
    "written_by": [
-    "tests/node_board/carry_all.x3d"
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/osc_lowpass_gain.x3d"
    ]
   },
   "BlendedVolumeStyle": {
@@ -216,7 +219,8 @@
    "read_evidence": "scenes props ['x3d_carried']",
    "written": "observed",
    "written_by": [
-    "tests/node_board/carry_all.x3d"
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/merger_two_osc.x3d"
    ]
   },
   "ChannelSelector": {
@@ -498,7 +502,8 @@
    "read_evidence": "scenes props ['x3d_carried']",
    "written": "observed",
    "written_by": [
-    "tests/node_board/carry_all.x3d"
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/spatial_delay_window.x3d"
    ]
   },
   "DirectionalLight": {
@@ -617,7 +622,8 @@
    "written": "observed",
    "written_by": [
     "tests/node_board/carry.x3d",
-    "tests/node_board/carry_all.x3d"
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/osc_lowpass_gain.x3d"
    ]
   },
   "GeneratedCubeMapTexture": {
@@ -1216,7 +1222,8 @@
    "written": "observed",
    "written_by": [
     "tests/node_board/carry.x3d",
-    "tests/node_board/carry_all.x3d"
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/merger_two_osc.x3d"
    ]
   },
   "PackagedShader": {
@@ -1593,11 +1600,12 @@
    ]
   },
   "SpatialSound": {
-   "read": "carries",
-   "read_evidence": "scenes props ['x3d_carried']",
+   "read": "builds",
+   "read_evidence": "objects +1, sounds +1, speakers +1",
    "written": "observed",
    "written_by": [
-    "tests/node_board/carry_all.x3d"
+    "tests/node_board/carry_all.x3d",
+    "tests/sound/spatial_delay_window.x3d"
    ]
   },
   "Sphere": {
@@ -1672,8 +1680,8 @@
    "written": "no"
   },
   "StreamAudioDestination": {
-   "read": "carries",
-   "read_evidence": "scenes props ['x3d_carried']",
+   "read": "builds",
+   "read_evidence": "sounds +1",
    "written": "observed",
    "written_by": [
     "tests/node_board/carry_all.x3d"
