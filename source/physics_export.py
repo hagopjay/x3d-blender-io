@@ -286,8 +286,9 @@ def physics_xml(physics, defs, indent, transform_def):
         return ""
     world_def = defs.get("rigidbodycollection", physics["name"], "", physics["name"])
     body_defs = {b["name"]: defs.get("rigidbody", b["name"], "", b["name"]) for b in physics["bodies"]}
+    disabled = "" if physics["enabled"] else ' enabled="false"'      # (a backslash in an f-string needs Python 3.12)
     out = [f'{indent}<RigidBodyCollection DEF="{world_def}" gravity="{_fmt3(physics["gravity"])}" '
-           f'iterations="{int(physics["iterations"])}"{"" if physics["enabled"] else " enabled=\"false\""}>\n']
+           f'iterations="{int(physics["iterations"])}"{disabled}>\n']
     i2, i3, i4, i5 = indent + "  ", indent + "    ", indent + "      ", indent + "        "
     # "FRICTION_COEFFICIENT_2": the spelling of X3DUOM-generated tools (x3d.py, X3DJSAIL), which the export's x3d.py
     # check enforces, and of X_ITE; the standard's text and XSD documentation spell it "FRICTION_COEFFICIENT-2"
