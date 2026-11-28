@@ -36,7 +36,9 @@
     "lost": {},
     "gained": {
      "PositionInterpolator.value_changed -> Transform.set_translation": 2,
-     "TimeSensor.fraction_changed -> PositionInterpolator.set_fraction": 2
+     "TimeSensor.fraction_changed -> PositionInterpolator.set_fraction": 2,
+     "OrientationInterpolator.value_changed -> Transform.set_rotation": 1,
+     "TimeSensor.fraction_changed -> OrientationInterpolator.set_fraction": 1
     }
    },
    "instancing": {

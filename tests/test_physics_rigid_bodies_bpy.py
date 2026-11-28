@@ -159,6 +159,26 @@ class Import(unittest.TestCase):
         self.assertIsNone(scene.rigidbody_world)
         self.assertFalse(any(ob.rigid_body for ob in bpy.data.objects))
 
+    def test_the_shapes_that_are_not_bodies_keep_their_parents(self):
+        # the import un-parents a body's shapes (a body simulates in world space), not every shape of the file
+        self.load("body-and-hierarchy.x3d")
+        children = [ob for ob in bpy.data.objects if ob.type == "MESH" and ob.parent is not None
+                    and not ob.rigid_body and "x3d_collidable_only" not in ob.keys()]
+        self.assertEqual(len(children), 1, [ob.name for ob in children])      # the sphere under Parent
+
+    def test_a_body_stand_in_is_not_written_as_a_transform(self):
+        # the hidden wire stand-in of a ROUTE-followed body is written in its RigidBody and not as a Transform of its own
+        # (it made every round trip add one more). The ground, which no ROUTE shows, is drawn after the import and so
+        # is written as a Transform: a known asymmetry, not part of this test.
+        self.load("body-and-hierarchy.x3d")
+        out = Path(tempfile.mkdtemp(prefix="x3d_physics_")) / "out.x3d"
+        self.assertEqual(bpy.ops.export_scene.x3d(filepath=str(out), x3d_version="X3D40", use_selection=False), {"FINISHED"})
+        text = out.read_text(encoding="utf-8")
+        self.assertEqual(text.count("<RigidBody "), 2)
+        self.assertNotIn('DEF="OB_BoxBody"', text)
+        self.assertEqual(text.count("<Transform "), 5)        # the viewpoint's, Parent, Child, BoxT, and the drawn ground
+        self.assertEqual(text.count("<ROUTE "), 4)         # position and orientation of BoxT and of the ground
+
     def test_world_settings(self):
         scene = self.load("drop-bounce.x3d")
         world = scene.rigidbody_world

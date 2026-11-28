@@ -9009,9 +9009,24 @@ def import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, b
             shape_objects.setdefault(id(el), node.blendObject)
         elif spec == "RigidBodyCollection":
             matrices.setdefault(id(el), getFinalMatrix(node, Matrix(), ancestry, global_matrix))
-    # a rigid body simulates in world space: a body the hierarchy rebuild parented keeps its world matrix, without parent
-    for ob in shape_objects.values():
-        if ob.parent is not None:
+    # a Shape's object can be gone by now (the importer removes the ones it merged or replaced): leave those out
+    def alive(ob):
+        try:
+            return ob.name in bpy.data.objects
+        except ReferenceError:
+            return False
+    shape_objects = {key: ob for key, ob in shape_objects.items() if alive(ob)}
+    def in_collection(el):
+        while el is not None:
+            if getattr(el, "tagName", "") == "RigidBodyCollection":
+                return True
+            el = el.parentNode
+        return False
+    # a rigid body simulates in world space: a body the hierarchy rebuild parented keeps its world matrix, without parent.
+    # Only the shapes inside a RigidBodyCollection; every other object of the file keeps the hierarchy it was given.
+    shape_elements = {id(node.x3dNode): node.x3dNode for node, _a in all_nodes if getattr(node, "x3dNode", None) is not None}
+    for key, ob in shape_objects.items():
+        if ob.parent is not None and in_collection(shape_elements.get(key)):
             world = ob.matrix_world.copy()
             ob.parent = None
             ob.matrix_world = world
