@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile='Immersive' version='4.0' xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance' xsd:noNamespaceSchemaLocation='https://www.web3d.org/specifications/x3d-4.0.xsd'>
+  <head>
+    <component name='HAnim' level='1'/>
+    <component name='Scripting' level='1'/>
+    <meta name='title' content='SpringBone.x3d'/>
+    <meta name='description' content='SpringBoneChain and SpringBoneCollider: spring bones (secondary motion for hair, tails, cloth strips, jiggle) over HAnimJoint or Transform chains, as standard X3D PROTOs with an ECMAScript solver.'/>
+    <meta name='creator' content='x3d.loom (own code, written from SPEC.md)'/>
+    <meta name='created' content='28 November 2026'/>
+    <meta name='license' content='MIT'/>
+    <meta name='reference' content='https://github.com/hagopjay/x3d.loom/tree/main/x3d.springbone'/>
+    <meta name='generator' content='x3d.springbone/tools/build.mjs'/>
+  </head>
+  <Scene>
+    <WorldInfo title='SpringBone PROTO library'/>
+    <ProtoDeclare name='SpringBoneCollider' appinfo='A sphere, (tapered) capsule or plane that SpringBoneChain particles stay outside (or inside). It rides on the frame its ancestors list ends with.'>
+      <ProtoInterface>
+      <field name='enabled' type='SFBool' accessType='inputOutput' value='true'/>
+      <field name='shape' type='SFString' accessType='inputOutput' value='SPHERE' appinfo='SPHERE, CAPSULE or PLANE'/>
+      <field name='bound' type='SFString' accessType='inputOutput' value='OUTSIDE' appinfo='OUTSIDE keeps particles out; INSIDE keeps them in'/>
+      <field name='center' type='SFVec3f' accessType='inputOutput' value='0 0 0' appinfo='in the frame of the last ancestor'/>
+      <field name='radius' type='SFFloat' accessType='inputOutput' value='0.5' appinfo='sphere radius; capsule radius at the -direction end'/>
+      <field name='radius2' type='SFFloat' accessType='inputOutput' value='0' appinfo='capsule radius at the +direction end (0: same as radius): a tapered capsule, solved exactly'/>
+      <field name='height' type='SFFloat' accessType='inputOutput' value='0' appinfo='capsule length, caps included'/>
+      <field name='direction' type='SFString' accessType='inputOutput' value='Y' appinfo='capsule axis, or plane normal: X, Y or Z of the frame'/>
+      <field name='axis' type='SFVec3f' accessType='inputOutput' value='0 0 0' appinfo='capsule axis or plane normal as a vector in the frame; overrides direction when not zero'/>
+      <field name='ancestors' type='MFNode' accessType='inputOutput' appinfo='the nodes from the scene root down to the node the collider rides on, outermost first'/>
+      </ProtoInterface>
+      <ProtoBody>
+        <Group/>
+      </ProtoBody>
+    </ProtoDeclare>
+    <ProtoDeclare name='SpringBoneChain' appinfo='Spring bones over HAnimJoint or Transform chains. Parameters carry over by name from the common Unity spring-bone component; see x3d.springbone/SPEC.md.'>
+      <ProtoInterface>
+      <field name='enabled' type='SFBool' accessType='inputOutput' value='true' appinfo='off: the bones keep their animated pose'/>
+      <field name='clock' type='SFBool' accessType='inputOutput' value='true' appinfo='step on the PROTO&apos;s own TimeSensor; false: step only on set_time (replays, tests, a shared clock)'/>
+      <field name='roots' type='MFNode' accessType='inputOutput' appinfo='first bone of each chain (HAnimJoint or Transform, by USE); the tree below it is walked'/>
+      <field name='ancestors' type='MFNode' accessType='inputOutput' appinfo='the nodes from the scene root down to the roots&apos; parent, outermost first (their fields give the world frame)'/>
+      <field name='reference' type='MFNode' accessType='inputOutput' appinfo='optional: the frame whose motion `inert` cancels (default: ancestors)'/>
+      <field name='colliders' type='MFNode' accessType='inputOutput' appinfo='SpringBoneCollider instances'/>
+      <field name='exclusions' type='MFNode' accessType='inputOutput' appinfo='bones (and the trees below them) that are not simulated'/>
+      <field name='boneTypes' type='MFString' accessType='inputOutput' value='"HAnimJoint" "Transform"' appinfo='node types followed as bones when walking children'/>
+      <field name='updateRate' type='SFFloat' accessType='inputOutput' value='60' appinfo='solver steps per second'/>
+      <field name='timeMode' type='SFString' accessType='inputOutput' value='FIXED' appinfo='FIXED: steps of 1/updateRate (display-rate free); VARIABLE: one step per frame scaled by dt (the Unity asset default)'/>
+      <field name='maxSubsteps' type='SFInt32' accessType='inputOutput' value='3' appinfo='FIXED: most steps in one frame; the rest is dropped and reported in droppedTime'/>
+      <field name='interpolate' type='SFBool' accessType='inputOutput' value='false' appinfo='FIXED: draw between the last two solver states'/>
+      <field name='springModel' type='SFString' accessType='inputOutput' value='POSITION' appinfo='POSITION: pull toward the rest place after the move (the asset&apos;s); FORCE: pull as a force (any damping ratio)'/>
+      <field name='damping' type='SFFloat' accessType='inputOutput' value='0.1' appinfo='share of velocity lost per step, 0..1'/>
+      <field name='elasticity' type='SFFloat' accessType='inputOutput' value='0.1' appinfo='pull toward the animated pose per step, 0..1'/>
+      <field name='stiffness' type='SFFloat' accessType='inputOutput' value='0.1' appinfo='how far a bone may leave its animated place: allowance = 2 (1 - stiffness) bone length'/>
+      <field name='inert' type='SFFloat' accessType='inputOutput' value='0' appinfo='share of the reference&apos;s motion carried rigidly, 0..1'/>
+      <field name='friction' type='SFFloat' accessType='inputOutput' value='0' appinfo='extra damping on the step after a collision, 0..1'/>
+      <field name='radius' type='SFFloat' accessType='inputOutput' value='0' appinfo='particle radius for colliders, metres (scaled with the reference)'/>
+      <field name='angleLimit' type='SFFloat' accessType='inputOutput' value='0' appinfo='degrees a bone may swing from its animated direction (0: no limit)'/>
+      <field name='stretch' type='SFFloat' accessType='inputOutput' value='0' appinfo='0: rigid bones; 1: free length (jiggle); writes translation when above 0'/>
+      <field name='dampingCurve' type='MFVec2f' accessType='inputOutput' appinfo='multiplier over depth: (depth 0..1, factor) keys, linear'/>
+      <field name='elasticityCurve' type='MFVec2f' accessType='inputOutput'/>
+      <field name='stiffnessCurve' type='MFVec2f' accessType='inputOutput'/>
+      <field name='inertCurve' type='MFVec2f' accessType='inputOutput'/>
+      <field name='frictionCurve' type='MFVec2f' accessType='inputOutput'/>
+      <field name='radiusCurve' type='MFVec2f' accessType='inputOutput'/>
+      <field name='angleLimitCurve' type='MFVec2f' accessType='inputOutput'/>
+      <field name='stretchCurve' type='MFVec2f' accessType='inputOutput'/>
+      <field name='frequency' type='SFFloat' accessType='inputOutput' value='0' appinfo='physical tuning, Hz: above 0 it sets damping and elasticity exactly (see SPEC section 4)'/>
+      <field name='dampingRatio' type='SFFloat' accessType='inputOutput' value='0.2' appinfo='physical tuning: 0 never settles, 1 critically damped'/>
+      <field name='endLength' type='SFFloat' accessType='inputOutput' value='0' appinfo='adds a tip particle on each leaf: the last bone continued by this share of its length'/>
+      <field name='endOffset' type='SFVec3f' accessType='inputOutput' value='0 0 0' appinfo='adds a tip particle at this offset in the leaf bone&apos;s frame (when endLength is 0)'/>
+      <field name='gravity' type='SFVec3f' accessType='inputOutput' value='0 0 0' appinfo='world gravity; per step (PER_STEP) or m/s^2 (M_PER_S2)'/>
+      <field name='force' type='SFVec3f' accessType='inputOutput' value='0 0 0' appinfo='extra world force, same units as gravity'/>
+      <field name='forceUnits' type='SFString' accessType='inputOutput' value='PER_STEP' appinfo='PER_STEP (the asset&apos;s units: metres per step at updateRate) or M_PER_S2'/>
+      <field name='gravityRestCompensation' type='SFBool' accessType='inputOutput' value='true' appinfo='remove the part of gravity the rest pose already holds (the asset does this)'/>
+      <field name='wind' type='SFVec3f' accessType='inputOutput' value='0 0 0' appinfo='world wind force, same units as gravity'/>
+      <field name='windTurbulence' type='SFFloat' accessType='inputOutput' value='0' appinfo='gust strength, share of wind'/>
+      <field name='windFrequency' type='SFFloat' accessType='inputOutput' value='1' appinfo='gust rate, Hz'/>
+      <field name='seed' type='SFInt32' accessType='inputOutput' value='1' appinfo='gust phase seed'/>
+      <field name='freezeAxis' type='SFString' accessType='inputOutput' value='NONE' appinfo='NONE, X, Y or Z: keep each bone in the plane normal to its parent&apos;s axis'/>
+      <field name='branchMode' type='SFString' accessType='inputOutput' value='SKIP' appinfo='a bone with several child bones: SKIP leaves it (the asset&apos;s rule), MEAN turns it to the mean child direction'/>
+      <field name='weight' type='SFFloat' accessType='inputOutput' value='1' appinfo='blend: 0 animated pose, 1 simulated'/>
+      <field name='resetDistance' type='SFFloat' accessType='inputOutput' value='0' appinfo='snap to the animated pose when the reference jumps further than this in one frame (0: never)'/>
+      <field name='substepRoots' type='SFBool' accessType='inputOutput' value='true' appinfo='move the roots in even shares across the steps of one frame'/>
+      <field name='set_reset' type='SFBool' accessType='inputOnly' appinfo='TRUE rebuilds the chain from the scene (after the bones change)'/>
+      <field name='set_time' type='SFTime' accessType='inputOnly' appinfo='step to this time (used when clock is false)'/>
+      <field name='stateHash' type='SFString' accessType='outputOnly' appinfo='FNV-1a of the particle positions to 1 nm, for replay checks'/>
+      <field name='steps' type='SFInt32' accessType='outputOnly' appinfo='solver steps so far'/>
+      <field name='droppedTime' type='SFTime' accessType='outputOnly' appinfo='seconds dropped by maxSubsteps so far'/>
+      <field name='collided' type='SFBool' accessType='outputOnly' appinfo='a particle touched a collider in this frame'/>
+      <field name='positions' type='MFVec3f' accessType='outputOnly' appinfo='particle positions, world'/>
+      <field name='equivalentFrequency' type='SFFloat' accessType='outputOnly' appinfo='what oscillator damping + elasticity at updateRate behave like (small motion), Hz'/>
+      <field name='equivalentDampingRatio' type='SFFloat' accessType='outputOnly' appinfo='its damping ratio'/>
+      </ProtoInterface>
+      <ProtoBody>
+        <Group>
+          <TimeSensor DEF='SpringClock' loop='true'/>
+          <Script DEF='SpringSolver' directOutput='true' mustEvaluate='true' url='"springbone-script.js" "https://hagopjay.github.io/x3d.demo/demos/spring-bone/v1/x3d/springbone-script.js"'>
+          <field name='enabled' type='SFBool' accessType='inputOutput' value='true'/>
+          <field name='clock' type='SFBool' accessType='inputOutput' value='true'/>
+          <field name='roots' type='MFNode' accessType='inputOutput'/>
+          <field name='ancestors' type='MFNode' accessType='inputOutput'/>
+          <field name='reference' type='MFNode' accessType='inputOutput'/>
+          <field name='colliders' type='MFNode' accessType='inputOutput'/>
+          <field name='exclusions' type='MFNode' accessType='inputOutput'/>
+          <field name='boneTypes' type='MFString' accessType='inputOutput' value='"HAnimJoint" "Transform"'/>
+          <field name='updateRate' type='SFFloat' accessType='inputOutput' value='60'/>
+          <field name='timeMode' type='SFString' accessType='inputOutput' value='FIXED'/>
+          <field name='maxSubsteps' type='SFInt32' accessType='inputOutput' value='3'/>
+          <field name='interpolate' type='SFBool' accessType='inputOutput' value='false'/>
+          <field name='springModel' type='SFString' accessType='inputOutput' value='POSITION'/>
+          <field name='damping' type='SFFloat' accessType='inputOutput' value='0.1'/>
+          <field name='elasticity' type='SFFloat' accessType='inputOutput' value='0.1'/>
+          <field name='stiffness' type='SFFloat' accessType='inputOutput' value='0.1'/>
+          <field name='inert' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='friction' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='radius' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='angleLimit' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='stretch' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='dampingCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='elasticityCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='stiffnessCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='inertCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='frictionCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='radiusCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='angleLimitCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='stretchCurve' type='MFVec2f' accessType='inputOutput'/>
+          <field name='frequency' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='dampingRatio' type='SFFloat' accessType='inputOutput' value='0.2'/>
+          <field name='endLength' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='endOffset' type='SFVec3f' accessType='inputOutput' value='0 0 0'/>
+          <field name='gravity' type='SFVec3f' accessType='inputOutput' value='0 0 0'/>
+          <field name='force' type='SFVec3f' accessType='inputOutput' value='0 0 0'/>
+          <field name='forceUnits' type='SFString' accessType='inputOutput' value='PER_STEP'/>
+          <field name='gravityRestCompensation' type='SFBool' accessType='inputOutput' value='true'/>
+          <field name='wind' type='SFVec3f' accessType='inputOutput' value='0 0 0'/>
+          <field name='windTurbulence' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='windFrequency' type='SFFloat' accessType='inputOutput' value='1'/>
+          <field name='seed' type='SFInt32' accessType='inputOutput' value='1'/>
+          <field name='freezeAxis' type='SFString' accessType='inputOutput' value='NONE'/>
+          <field name='branchMode' type='SFString' accessType='inputOutput' value='SKIP'/>
+          <field name='weight' type='SFFloat' accessType='inputOutput' value='1'/>
+          <field name='resetDistance' type='SFFloat' accessType='inputOutput' value='0'/>
+          <field name='substepRoots' type='SFBool' accessType='inputOutput' value='true'/>
+          <field name='tick' type='SFTime' accessType='inputOnly'/>
+          <field name='set_time' type='SFTime' accessType='inputOnly'/>
+          <field name='set_reset' type='SFBool' accessType='inputOnly'/>
+          <field name='stateHash' type='SFString' accessType='outputOnly'/>
+          <field name='steps' type='SFInt32' accessType='outputOnly'/>
+          <field name='droppedTime' type='SFTime' accessType='outputOnly'/>
+          <field name='collided' type='SFBool' accessType='outputOnly'/>
+          <field name='positions' type='MFVec3f' accessType='outputOnly'/>
+          <field name='equivalentFrequency' type='SFFloat' accessType='outputOnly'/>
+          <field name='equivalentDampingRatio' type='SFFloat' accessType='outputOnly'/>
+            <IS>
+              <connect nodeField='enabled' protoField='enabled'/>
+              <connect nodeField='clock' protoField='clock'/>
+              <connect nodeField='roots' protoField='roots'/>
+              <connect nodeField='ancestors' protoField='ancestors'/>
+              <connect nodeField='reference' protoField='reference'/>
+              <connect nodeField='colliders' protoField='colliders'/>
+              <connect nodeField='exclusions' protoField='exclusions'/>
+              <connect nodeField='boneTypes' protoField='boneTypes'/>
+              <connect nodeField='updateRate' protoField='updateRate'/>
+              <connect nodeField='timeMode' protoField='timeMode'/>
+              <connect nodeField='maxSubsteps' protoField='maxSubsteps'/>
+              <connect nodeField='interpolate' protoField='interpolate'/>
+              <connect nodeField='springModel' protoField='springModel'/>
+              <connect nodeField='damping' protoField='damping'/>
+              <connect nodeField='elasticity' protoField='elasticity'/>
+              <connect nodeField='stiffness' protoField='stiffness'/>
+              <connect nodeField='inert' protoField='inert'/>
+              <connect nodeField='friction' protoField='friction'/>
+              <connect nodeField='radius' protoField='radius'/>
+              <connect nodeField='angleLimit' protoField='angleLimit'/>
+              <connect nodeField='stretch' protoField='stretch'/>
+              <connect nodeField='dampingCurve' protoField='dampingCurve'/>
+              <connect nodeField='elasticityCurve' protoField='elasticityCurve'/>
+              <connect nodeField='stiffnessCurve' protoField='stiffnessCurve'/>
+              <connect nodeField='inertCurve' protoField='inertCurve'/>
+              <connect nodeField='frictionCurve' protoField='frictionCurve'/>
+              <connect nodeField='radiusCurve' protoField='radiusCurve'/>
+              <connect nodeField='angleLimitCurve' protoField='angleLimitCurve'/>
+              <connect nodeField='stretchCurve' protoField='stretchCurve'/>
+              <connect nodeField='frequency' protoField='frequency'/>
+              <connect nodeField='dampingRatio' protoField='dampingRatio'/>
+              <connect nodeField='endLength' protoField='endLength'/>
+              <connect nodeField='endOffset' protoField='endOffset'/>
+              <connect nodeField='gravity' protoField='gravity'/>
+              <connect nodeField='force' protoField='force'/>
+              <connect nodeField='forceUnits' protoField='forceUnits'/>
+              <connect nodeField='gravityRestCompensation' protoField='gravityRestCompensation'/>
+              <connect nodeField='wind' protoField='wind'/>
+              <connect nodeField='windTurbulence' protoField='windTurbulence'/>
+              <connect nodeField='windFrequency' protoField='windFrequency'/>
+              <connect nodeField='seed' protoField='seed'/>
+              <connect nodeField='freezeAxis' protoField='freezeAxis'/>
+              <connect nodeField='branchMode' protoField='branchMode'/>
+              <connect nodeField='weight' protoField='weight'/>
+              <connect nodeField='resetDistance' protoField='resetDistance'/>
+              <connect nodeField='substepRoots' protoField='substepRoots'/>
+              <connect nodeField='set_reset' protoField='set_reset'/>
+              <connect nodeField='set_time' protoField='set_time'/>
+              <connect nodeField='stateHash' protoField='stateHash'/>
+              <connect nodeField='steps' protoField='steps'/>
+              <connect nodeField='droppedTime' protoField='droppedTime'/>
+              <connect nodeField='collided' protoField='collided'/>
+              <connect nodeField='positions' protoField='positions'/>
+              <connect nodeField='equivalentFrequency' protoField='equivalentFrequency'/>
+              <connect nodeField='equivalentDampingRatio' protoField='equivalentDampingRatio'/>
+            </IS>
+          </Script>
+          <ROUTE fromNode='SpringClock' fromField='time' toNode='SpringSolver' toField='tick'/>
+        </Group>
+      </ProtoBody>
+    </ProtoDeclare>
+  </Scene>
+</X3D>

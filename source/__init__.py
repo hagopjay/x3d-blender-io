@@ -57,6 +57,7 @@ from . import behaviour_style
 from . import behaviour_nodes
 from . import behaviour_play
 from . import behaviour_presets
+from . import springbone_blender
 
 blender_version = bpy.app.version
 blender_version_higher_279 = blender_version[0] > 2 or (blender_version[0] == 2 and blender_version[1] >= 79)
@@ -851,6 +852,7 @@ def register():
     behaviour_activity.register()
     behaviour_style.register()
     behaviour_presets.register()
+    springbone_blender.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     from . import x3d_phong   # a turned X3D SpotLight keeps its cone where it points (X3D lighting import option)
@@ -865,6 +867,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
+    springbone_blender.unregister()
     behaviour_presets.unregister()
     behaviour_style.unregister()
     behaviour_activity.unregister()
