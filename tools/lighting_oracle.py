@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from pathlib import Path
 from xml.sax.saxutils import quoteattr
@@ -96,6 +97,38 @@ SCENES = {
         "material": {"diffuseColor": (0.5, 0.7, 0.3), "specularColor": (0.6, 0.6, 0.6), "shininess": 0.25},
     },
 }
+
+# PhysicalMaterial probes (X3D 4.0 17.2.2.6): X3D's per-light factors around glTF 2.0's metallic-roughness BRDF.
+PHYSICAL_SCENES = {
+    "physical-directional": {
+        "what": "a DirectionalLight of 1.2 lux on a rough dielectric: Lambert, Fresnel and GGX in the plain case",
+        "lights": [{"type": "DirectionalLight", "direction": (-0.3, -0.4, -1.0), "intensity": 1.2}],
+        "material": {"baseColor": (0.8, 0.5, 0.3), "metallic": 0.0, "roughness": 0.5},
+    },
+    "physical-metal": {
+        "what": "a PointLight of 2 cd over a smooth metal: the GGX highlight and the inverse square",
+        "lights": [{"type": "PointLight", "location": (0.6, 0.6, 1.2), "intensity": 2.0}],
+        "material": {"baseColor": (0.9, 0.7, 0.4), "metallic": 1.0, "roughness": 0.3},
+    },
+    "physical-dielectric": {
+        "what": "a PointLight with attenuation 1 0.5 0 on a rough dielectric with an emissiveColor: X3D's attenuation on the physical path",
+        "lights": [{"type": "PointLight", "location": (-0.5, 0.2, 0.8), "intensity": 1.5, "attenuation": (1.0, 0.5, 0.0)}],
+        "material": {"baseColor": (0.3, 0.6, 0.9), "metallic": 0.0, "roughness": 0.8, "emissiveColor": (0.05, 0.0, 0.1)},
+    },
+    "physical-spot": {
+        "what": "a tilted SpotLight of 4 cd, beamWidth 0.25, cutOffAngle 0.5: whose spot ramp the physical path uses",
+        "lights": [{"type": "SpotLight", "location": (0.0, 0.0, 2.0), "direction": (0.2, 0.0, -1.0), "intensity": 4.0,
+                    "beamWidth": 0.25, "cutOffAngle": 0.5}],
+        "material": {"baseColor": (0.8, 0.8, 0.8), "metallic": 0.2, "roughness": 0.6},
+    },
+    "physical-radius": {
+        "what": "a PointLight with radius 1.2 at 0.8 above a fully rough surface: a hard edge, or glTF's range window",
+        "lights": [{"type": "PointLight", "location": (0.0, 0.0, 0.8), "radius": 1.2, "intensity": 1.0}],
+        "material": {"baseColor": (0.9, 0.5, 0.3), "metallic": 0.0, "roughness": 1.0},
+    },
+}
+PHYSICAL_DEFAULTS = {"baseColor": (1.0, 1.0, 1.0), "metallic": 1.0, "roughness": 1.0, "emissiveColor": (0.0, 0.0, 0.0)}
+SPEC_KNOBS = {"inverse_square": True, "radius": "hard", "spot": "x3d", "visibility": "separable"}
 
 READINGS = ("linear", "display", "linear-values")
 LIGHT_DEFAULTS = {"intensity": 1.0, "ambientIntensity": 0.0, "color": (1.0, 1.0, 1.0), "attenuation": (1.0, 0.0, 0.0),
@@ -194,6 +227,99 @@ def evaluate(scene, reading="linear", curve="srgb", size=SIZE):
     return picture, np.stack(reached, axis=-1)
 
 
+def evaluate_physical(scene, knobs=None, curve="srgb", size=SIZE):
+    """(picture, on) for a PhysicalMaterial probe. Colours are linear values (glTF's reading, and both browsers',
+    see docs/LIGHTING.md); the clamped sum is encoded for the display. The BRDF is glTF 2.0 Appendix B:
+    c_diff = lerp(base, 0, metallic), f0 = lerp(0.04, base, metallic), alpha = roughness^2,
+    F = f0 + (1 - f0)(1 - V.H)^5, D = alpha^2 / (pi ((N.H)^2 (alpha^2 - 1) + 1)^2),
+    f = (1 - F) c_diff / pi + F D Vis, radiance = f x E x (N . L), E = intensity x color (/ d^2 for a point or spot
+    light when inverse_square). knobs (SPEC_KNOBS is the spec's reading):
+      inverse_square  True / False
+      radius          'hard' (X3D on_i) / 'window' (KHR_lights_punctual: clamp(1 - (d/r)^4)) / 'window2' (its square)
+      spot            'x3d' (Table 17.4, linear in the angle) / 'gltf' (t^2 in the cosine) / 'smooth' (smoothstep in the cosine)
+      visibility      'separable' (Smith G1(L) G1(V) / (4 N.L N.V), as Appendix B writes it) / 'correlated' (height-correlated)"""
+    knobs = dict(SPEC_KNOBS, **(knobs or {}))
+    spec = PHYSICAL_SCENES[scene] if isinstance(scene, str) else scene
+    material = dict(PHYSICAL_DEFAULTS)
+    material.update(spec["material"])
+    point, view = surface(size)
+    normal = np.array((0.0, 0.0, 1.0))
+    base = np.asarray(material["baseColor"], dtype=float)
+    metallic, roughness = float(material["metallic"]), float(material["roughness"])
+    c_diff = base * (1.0 - metallic)
+    f0 = 0.04 * (1.0 - metallic) + base * metallic
+    alpha = roughness * roughness
+    a2 = alpha * alpha
+    n_dot_v = np.maximum(view @ normal, 1e-6)
+    total = np.broadcast_to(np.asarray(material["emissiveColor"], dtype=float), point.shape).copy()
+    reached = []
+    for light in spec["lights"]:
+        fields = light_fields(light)
+        kind = fields["type"]
+        if kind == "DirectionalLight":
+            towards = -np.array(fields["direction"], dtype=float)
+            towards = np.broadcast_to(towards / np.linalg.norm(towards), point.shape)
+            distance = np.ones(point.shape[:2])
+            irradiance = np.full(point.shape[:2], fields["intensity"])
+            on = np.ones(point.shape[:2])
+        else:
+            offset = np.array(fields["location"], dtype=float) - point
+            distance = np.linalg.norm(offset, axis=-1)
+            towards = offset / distance[..., None]
+            c1, c2, c3 = fields["attenuation"]
+            irradiance = fields["intensity"] / np.maximum(c1 + c2 * distance + c3 * distance * distance, 1.0)
+            if knobs["inverse_square"]:
+                irradiance = irradiance / (distance * distance)
+            radius = fields["radius"]
+            if knobs["radius"] == "hard" or radius < 0.0:
+                on = np.where((radius < 0.0) | (distance <= radius), 1.0, 0.0)
+            else:
+                window = np.clip(1.0 - (distance / radius) ** 4, 0.0, 1.0)
+                on = window if knobs["radius"] == "window" else window * window
+        if kind == "SpotLight":
+            axis = np.array(fields["direction"], dtype=float)
+            axis /= np.linalg.norm(axis)
+            cosine = np.clip(-(towards @ axis), -1.0, 1.0)
+            cut_off = fields["cutOffAngle"]
+            beam = min(fields["beamWidth"], cut_off)
+            if knobs["spot"] == "x3d":
+                angle = np.arccos(cosine)
+                ramp = (angle - cut_off) / (beam - cut_off) if beam < cut_off else (angle < cut_off).astype(float)
+                spot = np.clip(ramp, 0.0, 1.0)
+            else:
+                outer, inner = math.cos(cut_off), math.cos(beam)
+                t = np.clip((cosine - outer) / max(inner - outer, 1e-3), 0.0, 1.0)
+                spot = t * t if knobs["spot"] == "gltf" else t * t * (3.0 - 2.0 * t)
+            irradiance = irradiance * spot
+        n_dot_l = np.maximum(towards @ normal, 0.0)
+        half = towards + view
+        half /= np.linalg.norm(half, axis=-1, keepdims=True)
+        n_dot_h = np.maximum(half @ normal, 0.0)
+        v_dot_h = np.maximum(np.einsum("...i,...i", view, half), 0.0)
+        fresnel = f0 + (1.0 - f0) * ((1.0 - v_dot_h) ** 5)[..., None]
+        distribution = a2 / (math.pi * (n_dot_h * n_dot_h * (a2 - 1.0) + 1.0) ** 2)
+        safe_l = np.maximum(n_dot_l, 1e-6)
+        if knobs["visibility"] == "separable":
+            g1 = lambda x: 2.0 * x / (x + np.sqrt(a2 + (1.0 - a2) * x * x))
+            visibility = g1(safe_l) * g1(n_dot_v) / (4.0 * safe_l * n_dot_v)
+        else:
+            visibility = 0.5 / (safe_l * np.sqrt(n_dot_v * n_dot_v * (1.0 - a2) + a2)
+                                + n_dot_v * np.sqrt(safe_l * safe_l * (1.0 - a2) + a2))
+        brdf = (1.0 - fresnel) * c_diff / math.pi + fresnel * (distribution * visibility)[..., None]
+        radiance = brdf * (irradiance * on * n_dot_l)[..., None] * np.asarray(fields["color"], dtype=float)
+        total += radiance
+        reached.append(on > 0.0 if knobs["radius"] == "hard" else np.ones(point.shape[:2], dtype=bool))
+    return encode(total, curve), np.stack(reached, axis=-1).astype(float)
+
+
+def physical_fixture(scene):
+    spec = PHYSICAL_SCENES[scene]
+    text = fixture(scene, spec)
+    material = " ".join(f"{key}='{_vec(value) if isinstance(value, (tuple, list)) else f'{value:g}'}'"
+                        for key, value in spec["material"].items())
+    return re.sub(r"<Material [^>]*/>", f"<PhysicalMaterial {material}/>", text)
+
+
 def jump_mask(on):
     """True where a pixel or one of its 8 neighbours is reached by a different set of lights (a radius edge)."""
     keep = np.ones(on.shape[:2], dtype=bool)
@@ -210,9 +336,9 @@ def _vec(values):
     return " ".join(f"{float(v):g}" for v in values)
 
 
-def fixture(scene):
+def fixture(scene, spec=None):
     """The probe scene as an X3D 4.0 file: no headlight, a black background, the quad with explicit normals."""
-    spec = SCENES[scene]
+    spec = spec or SCENES[scene]
     lights = []
     for light in ([] if spec.get("headlight") else spec["lights"]):
         fields = {key: value for key, value in light.items() if key != "type"}
@@ -260,6 +386,9 @@ def main():
         folder.mkdir(parents=True, exist_ok=True)
         for scene in SCENES:
             (folder / f"{scene}.x3d").write_text(fixture(scene), encoding="utf-8")
+            print(folder / f"{scene}.x3d")
+        for scene in PHYSICAL_SCENES:
+            (folder / f"{scene}.x3d").write_text(physical_fixture(scene), encoding="utf-8")
             print(folder / f"{scene}.x3d")
         return
     picture, on = evaluate(args.scene, args.reading, args.curve)
