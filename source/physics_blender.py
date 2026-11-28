@@ -62,6 +62,13 @@ def _override(scene, ob=None):
         kw.update(object=ob, active_object=ob, selected_objects=[ob])
     view_layer = bpy.context.view_layer if bpy.context.view_layer is not None else scene.view_layers[0]
     kw["view_layer"] = view_layer
+    if ob is not None:
+        # Blender 5.1.2 ignores the override's object: rigidbody.constraint_add then acted on the view layer's active
+        # object (a body, not the new empty) and the next line crashed. Make the object active as well.
+        try:
+            view_layer.objects.active = ob
+        except (RuntimeError, ReferenceError):
+            pass
     return bpy.context.temp_override(**kw)
 
 
