@@ -1084,7 +1084,7 @@ def _with_container(xml, field):
     return f'{head}{sep}{name} containerField="{field}"{rest[len(name):]}'
 
 
-GROUPS_OF_ONE = ("Billboard", "GeoLocation", "GeoLOD")     # one group of children, fields kept as the file wrote them
+GROUPS_OF_ONE = ("Billboard", "GeoLocation", "GeoLOD", "StaticGroup")     # one group of children, fields kept as the file wrote them
 
 
 def _own_groups(instance, parent_chain):
@@ -1367,6 +1367,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     def write_child(child, child_indent):
         return _instance_xml(child, geometries, materials, defs, child_indent, output_dir=output_dir, humanoids=humanoids,
                              splats=splats, version=version, look=look, collections=collections)
+    if instance.cad is not None and instance.cad.get("node"):
+        return _cad_xml(instance, xml[0], xml[1:], write_child, defs, indent)
     xml.append(_grouped_xml([(child, _own_groups(child, instance.group_chain or [])) for child in instance.children],
                             write_child, defs, indent + "  "))
     carried = getattr(defs, "carried", None)
@@ -1374,6 +1376,120 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(carried.xml(instance.carried, indent + "  "))
     xml.append(f"{indent}</Transform>\n")
     return "".join(xml)
+
+
+# -- the CAD product structure (node board batch 12) -------------------------------------------------------------------
+# x3d-4.0.xsd: a CADPart holds only CADFace nodes (and Metadata); a CADFace holds one Shape, LOD or Transform and may
+# only stand in a CADPart; CADAssembly and CADLayer hold any children. So everything a part holds is written in a
+# CADFace, its own Shapes in one and each child object in one (the face the import found, or a new one).
+CAD_FACE_CONTENT = ("<Shape", "<LOD", "<Transform")
+
+
+def _reindent(text, extra="  "):
+    return "".join(extra + line if line.strip() else line for line in text.splitlines(keepends=True))
+
+
+def _is_identity(transform) -> bool:
+    rx, ry, rz, angle = transform.rotation_axis_angle
+    return (all(abs(v) < 1e-9 for v in transform.translation) and abs(angle) < 1e-9
+            and all(abs(v - 1.0) < 1e-9 for v in transform.scale))
+
+
+def _cad_head(node, record, defs: _DefNames, def_name, extra=()):
+    attrs = []
+    if def_name:
+        attrs.append(f'DEF="{def_name}"')
+    attrs += _raw_attrs(record.get("fields") or {})
+    attrs += list(extra)
+    return f"<{node} {' '.join(attrs)}>" if attrs else f"<{node}>"
+
+
+def _face_xml(face, content, defs: _DefNames, indent):
+    """``content`` (already written at ``indent`` + 2) in a CADFace: the face's DEF on its first copy, its fields as
+    the file wrote them. A CADFace holds one node, so anything but a single Shape, LOD or Transform goes in a Transform."""
+    face = face or {}
+    name = face.get("def") or ""
+    def_name = name if name and defs.first_use("cadface", name) else ""
+    stripped = content.lstrip()
+    tops = sum(1 for line in content.splitlines() if line.startswith(indent + "  <") and not line.startswith(indent + "  </"))
+    if not stripped.startswith(CAD_FACE_CONTENT) or tops != 1:
+        content = f"{indent}  <Transform>\n{_reindent(content)}{indent}  </Transform>\n"
+    # the node sits in the CADFace's ``shape`` field: a Shape's or Transform's default containerField is children,
+    # which X_ITE rejects there ("Unknown field 'children' in node class CADFace") and drops the face; the XSD does not
+    # check containerField values, so only a browser shows it
+    content = re.sub(r"^(\s*<(?:Shape|LOD|Transform))(?![^>]*\bcontainerField=)", r'\1 containerField="shape"', content,
+                     count=1)
+    return f"{indent}{_cad_head('CADFace', face, defs, def_name)}\n{content}{indent}</CADFace>\n"
+
+
+def _in_file_order(children):
+    """An assembly's parts in the order the file gave them (a bill of materials reads in that order); anything made
+    in Blender after them, in Blender's order."""
+    return sorted(children, key=lambda child: (child.cad or {}).get("order", float("inf")))
+
+
+def _name_cad(ir_scene, defs: _DefNames):
+    """Before the writer names anything else: each CAD node keeps the DEF the file gave it (a CADPart's is also its
+    object's transform DEF, which animation ROUTEs use), and every CADFace DEF is reserved."""
+    for instance in ir_scene.iter_instances():
+        record = instance.cad or {}
+        if record.get("node") and record.get("def"):
+            kind = "transform" if record["node"] == "CADPart" else "cad"
+            defs.get(kind, instance.object_name, "", label=record["def"])
+        face = record.get("face") or {}
+        if face.get("def"):
+            defs.reserve(face["def"])
+
+
+def _cad_xml(instance, transform_head, own, write_child, defs: _DefNames, indent):
+    """An object that stands for a CADPart, CADAssembly or CADLayer, written as that node (its DEF and the fields the
+    file wrote; a part's pose from Blender)."""
+    import dataclasses
+    record = instance.cad
+    node = record["node"]
+    carried = getattr(defs, "carried", None)
+    carried_xml = carried.xml(instance.carried, indent + "  ") if carried is not None and instance.carried else ""
+    if node == "CADPart":
+        # its DEF is the object's transform DEF (assigned from the file's DEF before anything was named), so an
+        # animation ROUTE reaches the part, which has the Transform fields
+        def_name = defs.get("transform", instance.object_name, "OB_")
+        tx = instance.transform
+        pose = [f'translation="{_fmt3_length(tx.translation)}"', f'rotation="{_fmt4(tx.rotation_axis_angle)}"',
+                f'scale="{_fmt3_length(tx.scale)}"']
+        fields = {k: v for k, v in (record.get("fields") or {}).items()}
+        head = _cad_head(node, {"fields": fields}, defs, def_name if defs.first_use("cadpart", def_name) else "", pose)
+        # Metadata goes in the part itself (its metadata field), not in a face; matched without a "<" literal, which
+        # tests/test_io_parity.py would read as an element the writer emits
+        metadata = [part for part in own if part.lstrip()[1:].startswith("Metadata")]
+        body = "".join(part for part in own if part not in metadata) + carried_xml
+        xml = [f"{indent}{head}\n", *metadata]
+        faces = []                              # (place in the file, xml): the part's own face among its children's
+        if body.strip():
+            own_face = record.get("face") or {}
+            faces.append((own_face.get("order", -1), _face_xml(own_face, _reindent(body), defs, indent + "  ")))
+        for child in _in_file_order(instance.children):
+            if child.cad is not None and child.cad.get("node"):
+                # a CAD node cannot stand in a CADFace: written as a plain Transform there
+                getattr(defs, "diagnostics", []).append(
+                    f"{child.cad['node']} {child.object_name!r} is under CADPart {instance.object_name!r} in Blender; "
+                    "X3D allows only CADFace there, so it is written as a Transform inside a CADFace.")
+                child = dataclasses.replace(child, cad={"face": child.cad.get("face")} if child.cad.get("face") else None)
+            face = (child.cad or {}).get("face")
+            faces.append(((face or {}).get("order", float("inf")),
+                          _face_xml(face, write_child(child, indent + "    "), defs, indent + "  ")))
+        xml += [text for _order, text in sorted(faces, key=lambda item: item[0])]
+        xml.append(f"{indent}</{node}>\n")
+        return "".join(xml)
+    # CADAssembly, CADLayer: no fields of their own to place children, so a moved (or animated) object keeps its
+    # Transform inside the node
+    cad_def = defs.get("cad", instance.object_name, "")
+    head = _cad_head(node, record, defs, cad_def if defs.first_use("cad", instance.object_name) else "")
+    children = _grouped_xml([(child, _own_groups(child, instance.group_chain or []))
+                             for child in _in_file_order(instance.children)], write_child, defs, indent + "  ")
+    inner = "".join(own) + children + carried_xml
+    if _is_identity(instance.transform) and not record.get("moves"):
+        return f"{indent}{head}\n{inner}{indent}</{node}>\n"
+    return f"{indent}{head}\n{_reindent(transform_head)}{_reindent(inner)}{indent}  </Transform>\n{indent}</{node}>\n"
 
 
 def _joint_def(defs: _DefNames, humanoid_name, joint_name):
@@ -1871,7 +1987,7 @@ def _components(ir_scene: IRScene, version: str, look=None) -> list[tuple[str, i
         # QuadSet / IndexedQuadSet (node board batch 8) are CADGeometry level 1, PointProperties Shape level 5: neither
         # is in Immersive
         if any(_quad_set_layout(geometry) is not None for geometry in written):
-            components["CADGeometry"] = 1
+            components["CADGeometry"] = max(1, components.get("CADGeometry", 0))
         if instance.point_properties and any(geometry.is_points for geometry in written):
             components["Shape"] = 5
         # a TwoSidedMaterial (node board batch 9) is Shape level 4
@@ -1884,6 +2000,11 @@ def _components(ir_scene: IRScene, version: str, look=None) -> list[tuple[str, i
             components["Geospatial"] = 1
         if instance.rigid_body is not None:
             components["RigidBodyPhysics"] = 2      # not in Immersive; the joints are level 2
+        # the CAD product structure (node board batch 12): CADGeometry level 2; StaticGroup is Grouping level 3
+        if instance.cad is not None and (instance.cad.get("node") or instance.cad.get("face")):
+            components["CADGeometry"] = 2
+        if any(entry.get("node") == "StaticGroup" for entry in instance.group_chain or ()):
+            components["Grouping"] = 3
         if instance.viewpoint is not None and getattr(instance.viewpoint, "ortho_extents", None) is not None:
             components["Navigation"] = 3   # OrthoViewpoint is Navigation level 3; Immersive gives level 2
         interaction = instance.interaction
@@ -1992,6 +2113,8 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
         write(f'    <component name="{name}" level="{level}" />\n')
     defs = _DefNames()
     defs.carried = _Carried(ir_scene, defs, diagnostics)       # before anything is named: carried DEFs are reserved
+    defs.diagnostics = diagnostics
+    _name_cad(ir_scene, defs)                                  # then the CAD nodes' own DEFs, as the file wrote them
     behaviour = _behaviour_emission(ir_scene, defs, diagnostics, "    ")
     if behaviour is not None:
         defs.carried.yield_to("".join(behaviour.root), "".join(behaviour.routes))

@@ -1175,6 +1175,50 @@ def carried_of(owner, name=CARRIED_PROPERTY):
     return [x for x in value if isinstance(x, str)] if isinstance(value, list) else []
 
 
+CAD_PROPERTY = "x3d_cad"            # set by the importer (import_x3d._record_cad), JSON
+CAD_NODES = ("CADLayer", "CADAssembly", "CADPart")
+
+
+def cad_of(obj):
+    """The CAD record of an object (node board batch 12), checked: a node the writer knows, string fields only."""
+    raw = obj.get(CAD_PROPERTY) if hasattr(obj, "get") else None
+    if not raw:
+        return None
+    try:
+        record = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(record, dict):
+        return None
+
+    def clean(part):
+        fields = part.get("fields") if isinstance(part.get("fields"), dict) else {}
+        return {"def": str(part.get("def") or ""), "fields": {str(k): str(v) for k, v in fields.items()
+                                                             if isinstance(v, (str, int, float))}}
+    out = {}
+    if record.get("node") in CAD_NODES:
+        out.update(clean(record), node=record["node"])
+    if isinstance(record.get("face"), dict):
+        out["face"] = clean(record["face"])
+        if isinstance(record["face"].get("order"), int):
+            out["face"]["order"] = record["face"]["order"]
+    if not out:
+        return None
+    if isinstance(record.get("order"), int):
+        out["order"] = record["order"]
+    animation = getattr(obj, "animation_data", None)
+    out["moves"] = bool(animation is not None and (animation.action is not None or animation.nla_tracks))
+    return out
+
+
+def snap_float32_residue(values):
+    """Components of a translation more than a million times smaller than its largest are float32 rounding left by
+    the parent's inverse (1e-8 next to 0.3): Blender's float32 holds about 7 significant digits, so they are no data,
+    and they would change on every round trip. Zeroed. Relative, not absolute: a molecule at 1e-10 keeps every digit."""
+    largest = max((abs(v) for v in values), default=0.0)
+    return tuple(0.0 if largest and abs(v) < 1e-6 * largest else float(v) for v in values)
+
+
 def _sound_bridge():
     try:
         from . import sound_bridge
@@ -2265,6 +2309,9 @@ def extract_scene(
                                                 ir_scene.diagnostics)
             instance.rigid_joint = rigid_joint_of(obj, global_matrix) if not list(obj.children) else None
             instance.carried = carried_of(obj)
+            instance.cad = cad_of(obj)
+            if instance.cad is not None or (parent is not None and cad_of(parent) is not None):
+                instance.transform.translation = snap_float32_residue(instance.transform.translation)
             if instance.rigid_body is not None and ir_scene.rigid_world is None:
                 ir_scene.rigid_world = rigid_world_of(scene, global_matrix)
             objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)

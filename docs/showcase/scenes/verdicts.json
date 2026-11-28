@@ -1,5 +1,5 @@
 {
- "validator": "hagopjay/x3d_mcp integration/validator-fixes @ c9c9788 (XSD by declared version + semantic + X3DUOM profile check)",
+ "validator": "hagopjay/x3d_mcp integration/validator-fixes @ fa0b389 (XSD by declared version + semantic + X3DUOM profile check)",
  "scenes": {
   "annotation-standard.x3d": {
    "version": "4.0",
@@ -23,6 +23,30 @@
     "Line 5: Element 'component', attribute 'name': [facet 'enumeration'] The value 'Annotation' is not an element of the set {'Core', 'CADGeometry', 'CubeMapTexturing', 'DIS', 'EnvironmentalEffects', 'EnvironmentalSensor', '",
     "Line 44: Element 'AnnotationTarget': This element is not expected. Expected is one of ( IS, MetadataBoolean, MetadataDouble, MetadataFloat, MetadataInteger, MetadataSet, MetadataString, Background, ColorInterpolator, Coo"
    ],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "cad-lamp-after.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 6808,
+   "sha256": "3b3c4859addc11c3",
+   "xsd": true,
+   "xsd_errors": [],
+   "semantic_errors": 0,
+   "semantic_warnings": 0,
+   "profile_ok": true,
+   "profile_missing": []
+  },
+  "cad-lamp-before.x3d": {
+   "version": "4.0",
+   "profile": "Immersive",
+   "bytes": 4928,
+   "sha256": "f59bbc9432d52558",
+   "xsd": true,
+   "xsd_errors": [],
    "semantic_errors": 0,
    "semantic_warnings": 0,
    "profile_ok": true,
