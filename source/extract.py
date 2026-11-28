@@ -1173,6 +1173,19 @@ def carried_of(owner, name=CARRIED_PROPERTY):
     return [x for x in value if isinstance(x, str)] if isinstance(value, list) else []
 
 
+def _sound_bridge():
+    try:
+        from . import sound_bridge
+    except ImportError:  # pragma: no cover - standalone test fallback
+        import sound_bridge
+    return sound_bridge
+
+
+def is_bridged_speaker(obj) -> bool:
+    """A Speaker the import made for a SpatialSound graph: written back as that graph, not as a Transform."""
+    return getattr(obj, "type", None) == "SPEAKER" and isinstance(obj.get("x3d_sound_graph"), str)
+
+
 RIGID_WORLD_PROPERTY = "x3d_rigid_world"   # set by the importer (import_x3d.import_rigid_bodies), JSON
 RIGID_BODY_PROPERTY = "x3d_rigid_body"
 RIGID_JOINT_PROPERTY = "x3d_rigid_joint"
@@ -2342,7 +2355,12 @@ def extract_scene(
 
         if use_hierarchy:
             for child in exported:
-                if exported_parent(child) is obj:
+                if exported_parent(child) is obj and is_bridged_speaker(child):
+                    graph = _sound_bridge().speaker_graph_xml(
+                        child, inverted64(obj.matrix_world, obj.name) @ child.matrix_world, ir_scene.diagnostics)
+                    if graph:
+                        instance.carried.append(graph)       # inside this Transform, with its other carried nodes
+                elif exported_parent(child) is obj:
                     child_instance = build_instance(child, obj)
                     if child_instance is not None:
                         instance.children.append(child_instance)
@@ -2351,14 +2369,26 @@ def extract_scene(
     if use_hierarchy:
         roots = [obj for obj in exported if exported_parent(obj) is None]
         for obj in roots:
+            if is_bridged_speaker(obj):
+                continue
             instance = build_instance(obj, None)
             if instance is not None:
                 ir_scene.instances.append(instance)
     else:
         for obj in exported:
+            if is_bridged_speaker(obj):
+                continue
             instance = build_instance(obj, None)
             if instance is not None:
                 ir_scene.instances.append(instance)
+
+    # bridged Speakers at the top of the scene (or every one, flat): their graphs among the scene's carried nodes
+    for obj in exported:
+        if is_bridged_speaker(obj) and (not use_hierarchy or exported_parent(obj) is None):
+            matrix = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+            graph = _sound_bridge().speaker_graph_xml(obj, matrix, ir_scene.diagnostics)
+            if graph:
+                ir_scene.carried_root = [*ir_scene.carried_root, graph]
 
     active = getattr(scene, "camera", None)
     if active is not None:
