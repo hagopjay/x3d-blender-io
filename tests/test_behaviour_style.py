@@ -73,7 +73,9 @@ class StylePaint(unittest.TestCase):
         from test_roundtrip_bpy import _register_extension
         _register_extension(tempfile.mkdtemp(prefix="x3d_style_"))
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        _register_extension(tempfile.mkdtemp(prefix="x3d_style_"))
+        module = _register_extension(tempfile.mkdtemp(prefix="x3d_style_"))
+        if not hasattr(bpy.types.Scene, "x3d_style"):   # register() stops at the first class an earlier test left registered
+            module.behaviour_style.register()
         world = Path(__file__).resolve().parent / "behaviour" / "door.x3d"
         self.assertEqual(bpy.ops.import_scene.x3d(filepath=str(world), use_behaviour_graph=True), {"FINISHED"})
         tree = bpy.context.scene.x3d_behaviour_tree
