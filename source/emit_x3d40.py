@@ -1098,17 +1098,32 @@ def _rigid_bodies_xml(ir_scene, geometries, materials, defs: _DefNames, indent, 
         joint = instance.rigid_joint
         if joint["body1"] not in body_defs or joint["body2"] not in body_defs:
             continue        # a body that is not written as a RigidBody (see rigid_body_of): reported there
+        node = joint.get("node", "SingleAxisHingeJoint")
         jdef = defs.get("joint", instance.object_name, "", label=joint["def"])
-        jattrs = ['containerField="joints"', f'DEF="{jdef}"', f'anchorPoint="{_fmt3_length(joint["anchor"])}"',
-                  f'axis="{_fmt3(joint["axis"])}"']
+        jattrs = ['containerField="joints"', f'DEF="{jdef}"']
+        native = set()
+        if node != "SliderJoint":
+            jattrs.append(f'anchorPoint="{_fmt3_length(joint["anchor"])}"')
+            native.add("anchorPoint")
+        if "axis" in joint:
+            jattrs.append(f'axis="{_fmt3(joint["axis"])}"')
+            native.add("axis")
+        if "axis1" in joint:
+            jattrs += [f'axis1="{_fmt3(joint["axis1"])}"', f'axis2="{_fmt3(joint["axis2"])}"']
+            native |= {"axis1", "axis2"}
         if "limits" in joint:
-            jattrs += [f'minAngle="{_fmt(joint["limits"][0])}"', f'maxAngle="{_fmt(joint["limits"][1])}"']
-        native = ("anchorPoint", "axis", "minAngle", "maxAngle")
+            names = ("minAngle1", "maxAngle1") if node == "DoubleAxisHingeJoint" else ("minAngle", "maxAngle")
+            jattrs += [f'{names[0]}="{_fmt(joint["limits"][0])}"', f'{names[1]}="{_fmt(joint["limits"][1])}"']
+            native |= set(names)
+        if "separation" in joint:
+            jattrs += [f'minSeparation="{_fmt_length(joint["separation"][0])}"',
+                       f'maxSeparation="{_fmt_length(joint["separation"][1])}"']
+            native |= {"minSeparation", "maxSeparation"}
         jattrs += _raw_attrs({k: v for k, v in joint["fields"].items() if k not in native})
-        xml.append(f"{indent}  <SingleAxisHingeJoint {' '.join(jattrs)}>\n"
+        xml.append(f"{indent}  <{node} {' '.join(jattrs)}>\n"
                    f'{indent}    <RigidBody USE="{body_defs[joint["body1"]]}" containerField="body1" />\n'
                    f'{indent}    <RigidBody USE="{body_defs[joint["body2"]]}" containerField="body2" />\n'
-                   f"{indent}  </SingleAxisHingeJoint>\n")
+                   f"{indent}  </{node}>\n")
     xml.append(f"{indent}</RigidBodyCollection>\n")
     return "".join(xml)
 

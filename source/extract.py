@@ -1142,21 +1142,51 @@ def rigid_body_of(obj, x3d_matrix, has_parent, diagnostics):
             "linear_damping": float(rb.linear_damping), "angular_damping": float(rb.angular_damping)}
 
 
+JOINT_OF_CONSTRAINT = {"HINGE": "SingleAxisHingeJoint", "POINT": "BallJoint", "SLIDER": "SliderJoint",
+                       "GENERIC": "DoubleAxisHingeJoint"}
+
+
 def rigid_joint_of(obj, global_matrix):
-    """The SingleAxisHingeJoint to write for an empty with a HINGE rigid body constraint between two objects, or None."""
+    """The joint to write for an empty with a rigid body constraint between two objects, or None: HINGE is a
+    SingleAxisHingeJoint, POINT a BallJoint, SLIDER a SliderJoint, GENERIC a DoubleAxisHingeJoint (a UniversalJoint when
+    the import made it from one). The anchor, axes and limits are Blender's, in X3D space."""
     from mathutils import Vector
     con = getattr(obj, "rigid_body_constraint", None)
-    if con is None or con.type != "HINGE" or con.object1 is None or con.object2 is None:
+    if con is None or con.object1 is None or con.object2 is None or con.type not in JOINT_OF_CONSTRAINT:
         return None
-    world = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
-    axis = (world.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
     record = _record(obj, RIGID_JOINT_PROPERTY)
-    joint = {"def": record.get("def") or obj.name, "fields": record.get("fields") or {},
-             "anchor": tuple(0.0 if abs(v) < 1e-6 else v for v in world.to_translation()),
-             "axis": tuple(0.0 if abs(v) < 1e-9 else v for v in axis),
-             "body1": con.object1.name, "body2": con.object2.name, "enabled": bool(con.enabled)}
-    if con.use_limit_ang_z:
-        joint["limits"] = (float(con.limit_ang_z_lower), float(con.limit_ang_z_upper))
+    node = JOINT_OF_CONSTRAINT[con.type]
+    if con.type == "GENERIC" and record.get("node") == "UniversalJoint":
+        node = "UniversalJoint"
+    world = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+    clean = lambda v, eps: tuple(0.0 if abs(c) < eps else c for c in v)
+    axis_of = lambda local: clean((world.to_3x3() @ Vector(local)).normalized(), 1e-9)
+    joint = {"node": node, "def": record.get("def") or obj.name,
+             # the fields as written belong to the joint the file had: a constraint turned into another kind drops them
+             "fields": (record.get("fields") or {}) if record.get("node", node) == node else {},
+             "anchor": clean(world.to_translation(), 1e-6), "body1": con.object1.name, "body2": con.object2.name,
+             "enabled": bool(con.enabled)}
+    if node == "SingleAxisHingeJoint":
+        joint["axis"] = axis_of((0.0, 0.0, 1.0))
+        if con.use_limit_ang_z:
+            joint["limits"] = (float(con.limit_ang_z_lower), float(con.limit_ang_z_upper))
+    elif node == "SliderJoint":
+        joint["axis"] = axis_of((1.0, 0.0, 0.0))
+        if con.use_limit_lin_x:
+            # back from Blender's travel to X3D's separation: add how far apart the bodies start along the axis
+            to_x3d = global_matrix if global_matrix is not None else None
+            p1, p2 = con.object1.matrix_world.translation, con.object2.matrix_world.translation
+            if to_x3d is not None:
+                p1, p2 = to_x3d @ p1, to_x3d @ p2
+            start = (Vector(p2) - Vector(p1)).dot(Vector(joint["axis"]))
+            scale = global_matrix.to_3x3().col[0].length if global_matrix is not None else 1.0    # Blender to X3D units
+            joint["separation"] = (float(con.limit_lin_x_lower) * scale + start,
+                                   float(con.limit_lin_x_upper) * scale + start)
+    elif node in ("DoubleAxisHingeJoint", "UniversalJoint"):
+        joint["axis1"] = axis_of((0.0, 0.0, 1.0))
+        joint["axis2"] = axis_of((1.0, 0.0, 0.0))
+        if node == "DoubleAxisHingeJoint" and con.use_limit_ang_z:
+            joint["limits"] = (float(con.limit_ang_z_lower), float(con.limit_ang_z_upper))
     return joint
 
 

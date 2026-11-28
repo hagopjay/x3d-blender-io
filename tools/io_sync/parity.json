@@ -347,6 +347,26 @@
       "import": "yes",
       "round_trip": "unmeasured",
       "note": "an empty with a HINGE rigid body constraint (Z along axis, angle limits from minAngle and maxAngle); anchor, axis and limits read back from Blender, other fields as written (x3d_rigid_joint) (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "BallJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty at anchorPoint with a POINT rigid body constraint; the anchor read back from Blender, other fields as written (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "SliderJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty at its first body with a SLIDER constraint, X along axis; min/maxSeparation become Blender's travel limits less the bodies' starting separation, and back (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "DoubleAxisHingeJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty with a GENERIC constraint, Z along axis1 and X along axis2 free, the rest locked, Z limited by min/maxAngle1; a GENERIC constraint made in Blender is written as one (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "UniversalJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "as a DoubleAxisHingeJoint without stops; written back as a UniversalJoint when the import made it from one (node board batch 7). Round trip pinned by tests/test_node_board_batch7_bpy.py; the fixed-point corpus does not contain it yet."
     }
   },
   "asymmetries": [

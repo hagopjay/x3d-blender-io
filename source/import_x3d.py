@@ -8494,6 +8494,20 @@ COLLIDABLE_FIELDS = ('enabled', 'rotation', 'translation')
 COLLISION_COLLECTION_FIELDS = ('appliedParameters', 'bounce', 'enabled', 'frictionCoefficients', 'minBounceSpeed',
                                'slipFactors', 'softnessConstantForceMix', 'softnessErrorCorrection', 'surfaceSpeed')
 HINGE_FIELDS = ('anchorPoint', 'axis', 'forceOutput', 'maxAngle', 'minAngle', 'stopBounce', 'stopErrorCorrection')
+# the settable fields of the other joints (their output-only ones, such as separation or hinge1Angle, are never kept)
+JOINT_FIELDS = {
+    'SingleAxisHingeJoint': HINGE_FIELDS,
+    'BallJoint': ('anchorPoint', 'forceOutput'),
+    'SliderJoint': ('axis', 'forceOutput', 'maxSeparation', 'minSeparation', 'stopBounce', 'stopErrorCorrection'),
+    'DoubleAxisHingeJoint': ('anchorPoint', 'axis1', 'axis2', 'desiredAngularVelocity1', 'desiredAngularVelocity2',
+                             'forceOutput', 'maxAngle1', 'maxTorque1', 'maxTorque2', 'minAngle1', 'stop1Bounce',
+                             'stop1ConstantForceMix', 'stop1ErrorCorrection', 'suspensionErrorCorrection',
+                             'suspensionForce'),
+    'UniversalJoint': ('anchorPoint', 'axis1', 'axis2', 'forceOutput', 'stop1Bounce', 'stop1ErrorCorrection',
+                       'stop2Bounce', 'stop2ErrorCorrection'),
+}
+JOINT_CONSTRAINT = {'SingleAxisHingeJoint': 'HINGE', 'BallJoint': 'POINT', 'SliderJoint': 'SLIDER',
+                    'DoubleAxisHingeJoint': 'GENERIC', 'UniversalJoint': 'GENERIC'}
 COLLISION_SHAPE_OF = {'Box': 'BOX', 'Sphere': 'SPHERE', 'Cylinder': 'CYLINDER', 'Cone': 'CONE'}
 
 
@@ -8558,11 +8572,11 @@ def import_rigid_bodies(all_nodes, global_matrix, bpycontext):
             ob[RIGID_BODY_PROPERTY] = json.dumps({"def": body.getDefName() or "", "fields": body_fields,
                                                   "collidable": collidable, "offsets": offsets})
         for joint in real.children:
-            if joint.getSpec() == 'SingleAxisHingeJoint' and joint.node_type != NODE_REFERENCE:
-                _hinge(joint, objects, axes, global_matrix, bpycontext, scene)
-            elif joint.getSpec() in ('BallJoint', 'DoubleAxisHingeJoint', 'SliderJoint', 'UniversalJoint', 'MotorJoint'):
-                logger.info("%s %s: not made a Blender constraint yet (node board: a later batch)", joint.getSpec(),
-                            joint.getDefName() or "")
+            if joint.getSpec() in JOINT_CONSTRAINT and joint.node_type != NODE_REFERENCE:
+                _joint(joint, objects, axes, global_matrix, bpycontext, scene)
+            elif joint.getSpec() == 'MotorJoint':
+                logger.info("MotorJoint %s: not made a Blender constraint (Blender has no motor joint between two "
+                            "bodies with three axes)", joint.getDefName() or "")
         scene[RIGID_WORLD_PROPERTY] = json.dumps(record)
 
 
@@ -8590,32 +8604,87 @@ def _body_object(body):
     return None, None, []
 
 
-def _hinge(joint, objects, axes, global_matrix, bpycontext, scene):
+def _joint(joint, objects, axes, global_matrix, bpycontext, scene):
+    """A joint as an empty with a Blender rigid body constraint between its two bodies (JOINT_CONSTRAINT): at the
+    anchor (a SliderJoint, which has none, at its first body), turned so the constraint's own axes are the joint's:
+    HINGE turns about Z (axis); SLIDER slides along X (axis), limited by min/maxSeparation; GENERIC (Double axis hinge,
+    Universal) frees Z (axis1) and X (axis2), Z limited by min/maxAngle1 on a DoubleAxisHingeJoint; POINT is a ball."""
     import json
     import math
-    fields = raw_fields(joint, HINGE_FIELDS)
+    spec = joint.getSpec()
+    fields = raw_fields(joint, JOINT_FIELDS[spec])
     ends = {}
     for child in joint.getRealNode().children:
         if child.getSpec() == 'RigidBody':
             ends[_container_of(child) or ("body1" if "body1" not in ends else "body2")] = objects.get(id(child.getRealNode()))
-    anchor = global_matrix @ Vector(_floats(fields.get('anchorPoint', '0 0 0'), [0.0, 0.0, 0.0]))
-    axis = (axes @ Vector(_floats(fields.get('axis', '0 0 0'), [0.0, 0.0, 0.0])))
-    empty = bpy.data.objects.new(joint.getDefName() or "SingleAxisHingeJoint", None)
+    zero = [0.0, 0.0, 0.0]
+    if 'anchorPoint' in JOINT_FIELDS[spec]:
+        anchor = global_matrix @ Vector(_floats(fields.get('anchorPoint', '0 0 0'), zero))
+    else:
+        first = ends.get("body1") or ends.get("body2")
+        anchor = first.matrix_world.translation.copy() if first is not None else global_matrix @ Vector(zero)
+
+    def direction(name, default):
+        v = axes @ Vector(_floats(fields.get(name, default), zero))
+        return v.normalized() if v.length > 1e-9 else None
+    if spec == 'SingleAxisHingeJoint':
+        z, x = direction('axis', '0 0 0'), None
+    elif spec == 'SliderJoint':
+        z, x = None, direction('axis', '0 1 0')
+    elif spec in ('DoubleAxisHingeJoint', 'UniversalJoint'):
+        z, x = direction('axis1', '0 0 0'), direction('axis2', '0 0 0')
+    else:
+        z = x = None
+    rotation = _frame_rotation(z, x)
+    empty = bpy.data.objects.new(joint.getDefName() or spec, None)
     scene.collection.objects.link(empty)
     empty.empty_display_type, empty.empty_display_size = 'ARROWS', 0.3
-    rotation = Vector((0.0, 0.0, 1.0)).rotation_difference(axis.normalized()) if axis.length > 1e-9 else Quaternion()
-    empty.matrix_world = Matrix.Translation(anchor) @ rotation.to_matrix().to_4x4()
+    empty.matrix_world = Matrix.Translation(anchor) @ rotation.to_4x4()
     with bpycontext.temp_override(scene=scene, object=empty, active_object=empty, selected_objects=[empty]):
-        bpy.ops.rigidbody.constraint_add(type='HINGE')
+        bpy.ops.rigidbody.constraint_add(type=JOINT_CONSTRAINT[spec])
     con = empty.rigid_body_constraint
     con.object1, con.object2 = ends.get("body1"), ends.get("body2")
-    low = _floats(fields.get('minAngle', str(-math.pi)), [-math.pi])[0]
-    high = _floats(fields.get('maxAngle', str(math.pi)), [math.pi])[0]
-    if low > -math.pi or high < math.pi:          # X3D's default is no stop
-        con.use_limit_ang_z = True
-        con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
-    empty[RIGID_JOINT_PROPERTY] = json.dumps({"node": "SingleAxisHingeJoint", "def": joint.getDefName() or "",
-                                              "fields": fields})
+    if spec == 'SingleAxisHingeJoint':
+        low = _floats(fields.get('minAngle', str(-math.pi)), [-math.pi])[0]
+        high = _floats(fields.get('maxAngle', str(math.pi)), [math.pi])[0]
+        if low > -math.pi or high < math.pi:          # X3D's default is no stop
+            con.use_limit_ang_z = True
+            con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
+    elif spec == 'SliderJoint':
+        # X3D's separation is the bodies' distance along the axis; Blender's slider limits count from where they start
+        b1, b2 = ends.get("body1"), ends.get("body2")
+        start = ((b2.matrix_world.translation - b1.matrix_world.translation).dot(x)
+                 if b1 is not None and b2 is not None and x is not None else 0.0)
+        low = _floats(fields.get('minSeparation', '0'), [0.0])[0] * conversion_scale
+        high = _floats(fields.get('maxSeparation', '1'), [1.0])[0] * conversion_scale
+        con.use_limit_lin_x = True
+        con.limit_lin_x_lower, con.limit_lin_x_upper = low - start, high - start
+    elif spec in ('DoubleAxisHingeJoint', 'UniversalJoint'):
+        # a two-axis joint: no sliding, no turning about Y; free about Z (axis1) and X (axis2)
+        for name in ('lin_x', 'lin_y', 'lin_z', 'ang_y'):
+            setattr(con, f"use_limit_{name}", True)
+            setattr(con, f"limit_{name}_lower", 0.0)
+            setattr(con, f"limit_{name}_upper", 0.0)
+        if spec == 'DoubleAxisHingeJoint':
+            low = _floats(fields.get('minAngle1', str(-math.pi)), [-math.pi])[0]
+            high = _floats(fields.get('maxAngle1', str(math.pi)), [math.pi])[0]
+            if low > -math.pi or high < math.pi:
+                con.use_limit_ang_z = True
+                con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
+    empty[RIGID_JOINT_PROPERTY] = json.dumps({"node": spec, "def": joint.getDefName() or "", "fields": fields})
+
+
+def _frame_rotation(z, x):
+    """A rotation whose local Z is ``z`` and local X ``x`` (either may be None; x is made square to z)."""
+    if z is None and x is None:
+        return Matrix.Identity(3)
+    if z is None:
+        return Vector((1.0, 0.0, 0.0)).rotation_difference(x).to_matrix()
+    if x is None or abs(x.dot(z)) > 1.0 - 1e-9:
+        return Vector((0.0, 0.0, 1.0)).rotation_difference(z).to_matrix()
+    x = (x - z * x.dot(z)).normalized()
+    y = z.cross(x)
+    return Matrix((x, y, z)).transposed()
 
 
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
