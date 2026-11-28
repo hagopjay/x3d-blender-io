@@ -8037,7 +8037,7 @@ def _group_has_metadata(node):
     return host_metadata(node) is not None
 
 
-def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
+def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=(), carried=()):
     """Give the flat import the file's Transform hierarchy back (the import option keep_hierarchy).
 
     ``created`` lists (object, ancestry) for every object the import made, in the file's order, each already at its
@@ -8108,6 +8108,10 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
                 and not any(a.getSpec() == 'HAnimHumanoid' for a in ancestry):
             path = list(ancestry) + [node]
             register(path, [i for i, a in enumerate(path) if frame_like(a)])
+    # a Transform holding only carried nodes (find_carried): it needs an object for them to ride on (place_carried
+    # looks for the nearest Transform, so the key is the Transform's, not a metadata Group's)
+    holds_carried = {register(ancestry, [i for i, a in enumerate(ancestry) if a.getSpec() == 'Transform'])
+                     for _node, ancestry, _xml in carried} - {None}
 
     has_children = {k for k in parent_key.values() if k is not None}
     owners = {}
@@ -8126,7 +8130,7 @@ def rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes=()):
                 members[key] = objs = [joined]
         if len(objs) == 1 and key not in branch_owners:
             owners[key] = objs[0]
-        elif objs or key in has_children or (node.getDefName() or "").startswith("OB_"):
+        elif objs or key in has_children or key in holds_carried or (node.getDefName() or "").startswith("OB_"):
             empty = bpy.data.objects.new(name, None)
             bpycollection.objects.link(empty)
             empty.empty_display_type = 'PLAIN_AXES'
@@ -8894,12 +8898,18 @@ def find_carried(all_nodes):
     return items, inside
 
 
-def place_carried(items, bpyscene):
+def place_carried(items, bpyscene, global_matrix=None, base_dir=".", collection=None):
     """Each carried node's XML onto its nearest Transform's object (the one made for that ancestry), else the scene.
-    ROUTEs between carried nodes are kept with them; one with a single carried end is reported, not guessed at."""
+    ROUTEs between carried nodes are kept with them; one with a single carried end is reported, not guessed at.
+    An audio graph the sound bridge models is made audible (sound_bridge): a SpatialSound becomes a Speaker that keeps
+    its XML instead, a destination graph stays carried and gets a sound strip."""
     import json
     if not items:
         return
+    document = items[0][0].x3dNode.ownerDocument
+    routed = {route.getAttribute(end) for route in document.getElementsByTagName('ROUTE')
+              for end in ('fromNode', 'toNode')}
+    speakers = strips = 0
     for node, ancestry, xml in items:
         top = next((i for i in range(len(ancestry) - 1, -1, -1) if ancestry[i].getSpec() == 'Transform'), None)
         owner = bpyscene
@@ -8911,6 +8921,11 @@ def place_carried(items, bpyscene):
             if owner is None:
                 logger.warning("%s %s: its Transform made no object; not carried", node.getSpec(), node.getDefName() or "")
                 continue
+        bridged = _bridge_sound(xml, owner, ancestry, top, routed, bpyscene, global_matrix, base_dir, collection)
+        if bridged == "speaker":
+            speakers += 1
+            continue                             # the Speaker keeps the XML
+        strips += bridged == "strip"
         kept = json.loads(owner.get(CARRIED_PROPERTY, "[]") or "[]")
         kept.append(xml)
         owner[CARRIED_PROPERTY] = json.dumps(kept)
@@ -8919,7 +8934,6 @@ def place_carried(items, bpyscene):
         for element in [node.x3dNode, *node.x3dNode.getElementsByTagName('*')]:
             if element.hasAttribute('DEF'):
                 carried_defs.add(element.getAttribute('DEF'))
-    document = items[0][0].x3dNode.ownerDocument
     routes, half = [], 0
     for route in document.getElementsByTagName('ROUTE'):
         ends = (route.getAttribute('fromNode'), route.getAttribute('toNode'))
@@ -8932,6 +8946,29 @@ def place_carried(items, bpyscene):
     if half:
         logger.warning("%d ROUTE(s) join a carried node to one the import builds; they are not carried", half)
     logger.info("carried %d node(s) the import has no handler for (written back as the file wrote them)", len(items))
+    if speakers or strips:
+        logger.info("sound bridge: %d SpatialSound graph(s) as Speakers, %d destination graph(s) as sound strips",
+                    speakers, strips)
+
+
+def _bridge_sound(xml, owner, ancestry, top, routed, bpyscene, global_matrix, base_dir, collection):
+    """"speaker", "strip" or None (left to carry alone). Never stops the import."""
+    from . import sound_bridge
+    root = sound_bridge.bridgeable(xml, routed)
+    if root is None:
+        return None
+    try:
+        if root.tag in sound_bridge.SPEAKER_ROOTS:
+            if top is not None and len(getattr(ancestry[top].getRealNode(), "hierarchy_owners", None) or []) > 1:
+                return None                      # under a USE'd Transform: one graph, several places
+            sound_bridge.make_speaker(root, xml, owner, bpyscene, global_matrix or Matrix(), base_dir,
+                                      collection or bpyscene.collection)
+            return "speaker"
+        sound_bridge.make_strip(root, bpyscene, base_dir)
+        return "strip"
+    except Exception as exc:                     # the graph is still carried as written
+        logger.warning("%s %s: not rendered (%s); carried as written", root.tag, root.get("DEF") or "", exc)
+        return None
 
 
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
@@ -9381,11 +9418,11 @@ def load_web3d(
 
     if PREF_HIERARCHY and PREF_FLAT:
         try:
-            rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes)
+            rebuild_hierarchy(created, global_matrix, bpycollection, all_nodes, carried)
         except Exception as exc:  # the objects are already in place; a failed rebuild leaves the flat import
             logger.error("Hierarchy rebuild failed, objects stay flat: %s", exc, exc_info=True)
     try:
-        place_carried(carried, bpyscene)
+        place_carried(carried, bpyscene, global_matrix, os.path.dirname(os.path.abspath(filepath)), bpycollection)
     except Exception as exc:  # carrying must never stop an import
         logger.error("Carried nodes not kept: %s", exc, exc_info=True)
 

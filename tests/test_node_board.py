@@ -25,7 +25,7 @@ import node_board as nb   # noqa: E402
 X3DUOM = Path("/home/user/x3d_mcp/src/validation/schemas/X3dUnifiedObjectModel-4.0.xml")
 
 # PINNED. Re-measure with tools/node_board_probe.py in Blender, then tools/node_board.py --write.
-PINNED = {"nodes": 260, "read_builds": 69, "read_graph": 2, "read_carries": 53, "read_structural": 15, "read_reported": 17,
+PINNED = {"nodes": 260, "read_builds": 72, "read_graph": 2, "read_carries": 50, "read_structural": 15, "read_reported": 17,
           "read_none": 103, "read_unprobed": 1, "written": 167, "writable": 1, "events": 57,
           "event_wired": 57, "event_simulated": 57, "event_judged": 56, "event_played": 50}
 PINNED_COMPONENTS = 36
