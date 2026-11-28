@@ -317,6 +317,36 @@
       "import": "yes",
       "round_trip": "unmeasured",
       "note": "read on a GeoElevationGrid (it places the grid) and kept, with a GeoLocation's or GeoLOD's, as written; written after a GeoLOD's children, where x3d-4.0.xsd wants it (node board batch 3). Round trip pinned by tests/test_node_board_batch3_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "RigidBodyCollection": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "the scene's Blender rigid body world: gravity (axes converted) and iterations from Blender, other fields as written (x3d_rigid_world on the scene) (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "RigidBody": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "a Blender rigid body on the object of its first CollidableShape: fixed is PASSIVE; mass, damping (autoDamp) and enabled from Blender; position and orientation from the object without its collidables' frames; other fields as written (x3d_rigid_body). A body with a parent, children or a scale other than 1 is written as a plain Transform, reported (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CollidableShape": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "its Shape is the body object's mesh; the collision shape is set from the primitive (BOX, SPHERE, CYLINDER, CONE, else CONVEX_HULL); written back around the object's Shapes, fields as written (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CollidableOffset": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "its frame stays between the body and the shape; written back with the fields as written (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "CollisionCollection": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "fields and the DEFs of its collidables kept as written and written back with USEs, in body order; bodies made in Blender get one naming all their collidables (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
+    },
+    "SingleAxisHingeJoint": {
+      "import": "yes",
+      "round_trip": "unmeasured",
+      "note": "an empty with a HINGE rigid body constraint (Z along axis, angle limits from minAngle and maxAngle); anchor, axis and limits read back from Blender, other fields as written (x3d_rigid_joint) (node board batch 6). Round trip pinned by tests/test_node_board_batch6_bpy.py; the fixed-point corpus does not contain it yet."
     }
   },
   "asymmetries": [

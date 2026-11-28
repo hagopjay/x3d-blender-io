@@ -389,6 +389,12 @@ class IRInstance:
     # node, key, def, branch, branches, and whichChoice (Switch) or range and center (LOD). The writer regroups siblings
     # into those nodes again.
     group_chain: list | None = None
+    # A Blender rigid body written as an X3D RigidBody (node board batch 6): Blender's own values (mass, fixed, damping,
+    # enabled), the body frame in X3D space, and the fields the import kept as written. None for a plain object.
+    rigid_body: dict | None = None
+    # A Blender HINGE rigid body constraint written as a SingleAxisHingeJoint: anchor and axis in X3D space, limits,
+    # the two bodies' object names, the fields kept as written. Its empty is not written as a Transform.
+    rigid_joint: dict | None = None
 
     def iter_shapes(self):
         """Yield the shapes of this instance.
@@ -482,6 +488,9 @@ class IRScene:
     material_model_forced: bool = False
     # The NavigationInfo headlight the scene had when it was imported (True/False), None when it never had one.
     headlight: bool | None = None
+    # The scene's rigid body world, written as a RigidBodyCollection: gravity (X3D space), iterations, and the fields
+    # and CollisionCollection the import kept as written. None when no object is written as a RigidBody.
+    rigid_world: dict | None = None
     # Metadata of imported hosts with no Blender counterpart; WorldInfo ones are written, the rest reported.
     metadata_hosts: list[IRMetadataHost] = field(default_factory=list)
 

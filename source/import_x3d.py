@@ -8474,6 +8474,150 @@ def group_chain(node, ancestry):
     return out
 
 
+# -- rigid body physics as Blender rigid bodies (node board batch 6) ---------------------------------------------------
+# A RigidBodyCollection becomes the scene's rigid body world, each RigidBody's object a Blender rigid body, and a
+# SingleAxisHingeJoint an empty with a HINGE constraint. What Blender holds (mass, fixed, damping, gravity, the hinge's
+# anchor, axis and limits) is read back from Blender on export, so editing it in Blender reaches the file; every field
+# is also kept as the file wrote it (RIGID_*_PROPERTY, JSON) for what Blender cannot hold (linearVelocity, the
+# CollisionCollection, a joint's forceOutput...).
+RIGID_WORLD_PROPERTY = "x3d_rigid_world"      # on the scene
+RIGID_BODY_PROPERTY = "x3d_rigid_body"        # on a body's object
+RIGID_JOINT_PROPERTY = "x3d_rigid_joint"      # on a joint's empty
+RIGID_COLLECTION_FIELDS = ('autoDisable', 'constantForceMix', 'contactSurfaceThickness', 'disableAngularSpeed',
+                           'disableLinearSpeed', 'disableTime', 'enabled', 'errorCorrection', 'gravity', 'iterations',
+                           'maxCorrectionSpeed', 'preferAccuracy')
+RIGID_BODY_FIELDS = ('angularDampingFactor', 'angularVelocity', 'autoDamp', 'autoDisable', 'centerOfMass',
+                     'disableAngularSpeed', 'disableLinearSpeed', 'disableTime', 'enabled', 'finiteRotationAxis', 'fixed',
+                     'forces', 'inertia', 'linearDampingFactor', 'linearVelocity', 'mass', 'orientation', 'position',
+                     'torques', 'useFiniteRotation', 'useGlobalGravity')
+COLLIDABLE_FIELDS = ('enabled', 'rotation', 'translation')
+COLLISION_COLLECTION_FIELDS = ('appliedParameters', 'bounce', 'enabled', 'frictionCoefficients', 'minBounceSpeed',
+                               'slipFactors', 'softnessConstantForceMix', 'softnessErrorCorrection', 'surfaceSpeed')
+HINGE_FIELDS = ('anchorPoint', 'axis', 'forceOutput', 'maxAngle', 'minAngle', 'stopBounce', 'stopErrorCorrection')
+COLLISION_SHAPE_OF = {'Box': 'BOX', 'Sphere': 'SPHERE', 'Cylinder': 'CYLINDER', 'Cone': 'CONE'}
+
+
+def _container_of(node):
+    element = getattr(node, "x3dNode", None)
+    return element.getAttribute('containerField') if element is not None and element.hasAttribute('containerField') else ""
+
+
+def _floats(text, default):
+    try:
+        values = [float(v) for v in str(text).replace(",", " ").split()]
+    except ValueError:
+        return default
+    return values if len(values) == len(default) else default
+
+
+def import_rigid_bodies(all_nodes, global_matrix, bpycontext):
+    """Every RigidBodyCollection: Blender's rigid body world, rigid bodies and hinge constraints (see above). The
+    objects already stand where the bodies place them (RigidBody is a frame, PHYSICS_FRAME_SPECS)."""
+    import json
+    scene = bpycontext.scene
+    axes = global_matrix.to_3x3().normalized()
+    for node, ancestry in all_nodes:
+        if node.getSpec() != 'RigidBodyCollection' or node.node_type == NODE_REFERENCE:
+            continue
+        real = node.getRealNode()
+        if scene.rigidbody_world is None:
+            with bpycontext.temp_override(scene=scene):
+                bpy.ops.rigidbody.world_add()
+        world = scene.rigidbody_world
+        fields = raw_fields(node, RIGID_COLLECTION_FIELDS)
+        scene.gravity = axes @ Vector(_floats(fields.get('gravity', '0 -9.8 0'), [0.0, -9.8, 0.0]))
+        if 'iterations' in fields:
+            world.solver_iterations = max(1, int(_floats(fields['iterations'], [10.0])[0]))
+        record = {"def": node.getDefName() or real.getDefName() or "", "fields": fields, "collider": None}
+        objects = {}           # id(real RigidBody node) -> object
+        for body in real.children:
+            if body.getSpec() == 'CollisionCollection':
+                record["collider"] = {"def": body.getDefName() or "", "fields": raw_fields(body, COLLISION_COLLECTION_FIELDS),
+                                      "collidables": [c.getRealNode().getDefName() for c in body.getRealNode().children
+                                                      if c.getSpec() in ('CollidableShape', 'CollidableOffset')
+                                                      and c.getRealNode().getDefName()]}
+            if body.getSpec() != 'RigidBody' or body.node_type == NODE_REFERENCE:
+                continue
+            ob, collidable, offsets = _body_object(body)
+            if ob is None:
+                logger.warning("RigidBody %s: no shape was imported for it; not made a Blender rigid body",
+                               body.getDefName() or "(no DEF)")
+                continue
+            objects[id(body.getRealNode())] = ob
+            body_fields = raw_fields(body, RIGID_BODY_FIELDS)
+            with bpycontext.temp_override(scene=scene, object=ob, active_object=ob, selected_objects=[ob]):
+                bpy.ops.rigidbody.object_add(type='PASSIVE' if body_fields.get('fixed', 'false') == 'true' else 'ACTIVE')
+            rb = ob.rigid_body
+            rb.mass = max(0.001, _floats(body_fields.get('mass', '1'), [1.0])[0])
+            auto = body_fields.get('autoDamp', 'false') == 'true'
+            rb.linear_damping = _floats(body_fields.get('linearDampingFactor', '0.001'), [0.001])[0] if auto else 0.0
+            rb.angular_damping = _floats(body_fields.get('angularDampingFactor', '0.001'), [0.001])[0] if auto else 0.0
+            rb.enabled = body_fields.get('enabled', 'true') != 'false'
+            primitive = json.loads(ob.data.get(PRIMITIVE_PROPERTY, "{}") or "{}") if ob.type == 'MESH' else {}
+            rb.collision_shape = COLLISION_SHAPE_OF.get(primitive.get("node"), 'CONVEX_HULL')
+            ob[RIGID_BODY_PROPERTY] = json.dumps({"def": body.getDefName() or "", "fields": body_fields,
+                                                  "collidable": collidable, "offsets": offsets})
+        for joint in real.children:
+            if joint.getSpec() == 'SingleAxisHingeJoint' and joint.node_type != NODE_REFERENCE:
+                _hinge(joint, objects, axes, global_matrix, bpycontext, scene)
+            elif joint.getSpec() in ('BallJoint', 'DoubleAxisHingeJoint', 'SliderJoint', 'UniversalJoint', 'MotorJoint'):
+                logger.info("%s %s: not made a Blender constraint yet (node board: a later batch)", joint.getSpec(),
+                            joint.getDefName() or "")
+        scene[RIGID_WORLD_PROPERTY] = json.dumps(record)
+
+
+def _body_object(body):
+    """(the object the import made for a RigidBody's first collidable shape, that collidable's record, the
+    CollidableOffsets between the body and it, outermost first)."""
+    offsets = []
+    for geometry in body.getRealNode().children:
+        node = geometry
+        while node is not None and node.getSpec() == 'CollidableOffset':
+            offsets.append({"def": node.getRealNode().getDefName() or "", "fields": raw_fields(node, COLLIDABLE_FIELDS)})
+            node = next((c for c in node.getRealNode().children if c.getSpec() in ('CollidableShape', 'CollidableOffset')),
+                        None)
+        if node is None or node.getSpec() != 'CollidableShape':
+            offsets = []
+            continue
+        shape = next((c for c in node.getRealNode().children if c.getSpec() == 'Shape'), None)
+        ob = getattr(shape.getRealNode(), "blendObject", None) if shape is not None else None
+        try:
+            if ob is not None and ob.name:
+                return ob, {"def": node.getRealNode().getDefName() or "", "fields": raw_fields(node, COLLIDABLE_FIELDS)}, offsets
+        except ReferenceError:
+            pass
+        offsets = []
+    return None, None, []
+
+
+def _hinge(joint, objects, axes, global_matrix, bpycontext, scene):
+    import json
+    import math
+    fields = raw_fields(joint, HINGE_FIELDS)
+    ends = {}
+    for child in joint.getRealNode().children:
+        if child.getSpec() == 'RigidBody':
+            ends[_container_of(child) or ("body1" if "body1" not in ends else "body2")] = objects.get(id(child.getRealNode()))
+    anchor = global_matrix @ Vector(_floats(fields.get('anchorPoint', '0 0 0'), [0.0, 0.0, 0.0]))
+    axis = (axes @ Vector(_floats(fields.get('axis', '0 0 0'), [0.0, 0.0, 0.0])))
+    empty = bpy.data.objects.new(joint.getDefName() or "SingleAxisHingeJoint", None)
+    scene.collection.objects.link(empty)
+    empty.empty_display_type, empty.empty_display_size = 'ARROWS', 0.3
+    rotation = Vector((0.0, 0.0, 1.0)).rotation_difference(axis.normalized()) if axis.length > 1e-9 else Quaternion()
+    empty.matrix_world = Matrix.Translation(anchor) @ rotation.to_matrix().to_4x4()
+    with bpycontext.temp_override(scene=scene, object=empty, active_object=empty, selected_objects=[empty]):
+        bpy.ops.rigidbody.constraint_add(type='HINGE')
+    con = empty.rigid_body_constraint
+    con.object1, con.object2 = ends.get("body1"), ends.get("body2")
+    low = _floats(fields.get('minAngle', str(-math.pi)), [-math.pi])[0]
+    high = _floats(fields.get('maxAngle', str(math.pi)), [math.pi])[0]
+    if low > -math.pi or high < math.pi:          # X3D's default is no stop
+        con.use_limit_ang_z = True
+        con.limit_ang_z_lower, con.limit_ang_z_upper = low, high
+    empty[RIGID_JOINT_PROPERTY] = json.dumps({"node": "SingleAxisHingeJoint", "def": joint.getDefName() or "",
+                                              "fields": fields})
+
+
 X3D_LOD_HIDDEN_PROPERTY = LOD_HIDDEN_PROPERTY   # "x3d_lod_hidden", on an object of an LOD / GeoLOD level a viewer at the first Viewpoint does not see
 X3D_LOD_PROPERTY = "x3d_lod"                  # on the same object: "<LOD name>:<level>"
 
@@ -8812,6 +8956,10 @@ def load_web3d(
         keep_scene_metadata(bpyscene, all_nodes)
     except Exception as exc:  # metadata must never stop an import
         logger.error("Scene-level Metadata not kept: %s", exc, exc_info=True)
+    try:
+        import_rigid_bodies(all_nodes, global_matrix, bpycontext)
+    except Exception as exc:  # physics must never stop the geometry import
+        logger.error("Rigid body physics not made: %s", exc, exc_info=True)
     report_import_losses(all_nodes, bpycontext, defer_routes_to_caller)
 
     # Switch: every child is imported, so nothing is lost on the way back out, but only the chosen one is shown; the others

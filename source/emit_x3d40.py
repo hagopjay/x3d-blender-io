@@ -981,6 +981,138 @@ def _subtree_hidden(instance):
     return not instance.visible and all(_subtree_hidden(child) for child in instance.children)
 
 
+def _shapes_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, look: _Look = _PLAIN_LOOK,
+                hide_shapes=False, container=None):
+    """The Shapes of ``instance``, one indent deeper than ``indent`` (inside its Transform, or with ``container`` inside a
+    CollidableShape)."""
+    shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
+    if hide_shapes:
+        shape_attrs += ' visible="false"'
+    if container:
+        shape_attrs = f' containerField="{container}"' + shape_attrs
+    xml = []
+    for index, shape in enumerate(instance.iter_shapes()):
+        xml.append(f"{indent}  <Shape{shape_attrs}>\n")
+        if index == 0 and instance.metadata is not None:
+            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata", defs))
+        material = materials.get(shape.material_name) if shape.material_name else None
+        geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
+        line_width = instance.line_width if geometry is not None and geometry.is_lines else None
+        if material is not None:
+            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look,
+                                       line_width=line_width))
+        else:
+            xml.append(_default_appearance_xml(indent + "    ", look))
+        if geometry is not None:
+            xml.append(_geometry_xml(geometry, defs, indent + "    "))
+        elif shape.text:
+            xml.append(_text_xml(shape.text, indent + "    "))
+        elif shape.primitive:
+            xml.append(_imported_primitive_xml(shape.primitive, defs, indent + "    "))
+        else:
+            xml.append(_primitive_geometry_xml(shape.geometry_hint, indent + "    "))
+        xml.append(f"{indent}  </Shape>\n")
+    return "".join(xml)
+
+
+_BODY_NATIVE = ("position", "orientation", "mass", "fixed", "enabled", "autoDamp", "linearDampingFactor",
+                "angularDampingFactor")          # written from Blender's values; the rest of a RigidBody as the file wrote it
+_WORLD_NATIVE = ("gravity", "iterations")
+
+
+def _rigid_bodies_xml(ir_scene, geometries, materials, defs: _DefNames, indent, *, output_dir=None,
+                      look: _Look = _PLAIN_LOOK):
+    """The scene's Blender rigid bodies and hinge constraints as one RigidBodyCollection (node board batch 6): each body
+    a RigidBody around a CollidableShape (inside its CollidableOffsets) holding the object's Shapes; Blender's mass,
+    fixed (PASSIVE), damping, enabled, gravity, iterations and the hinge's anchor, axis and limits; every other field as
+    the import kept it. A CollisionCollection the file had comes back with its fields and collidables; for bodies made
+    in Blender one is written with all their collidables, since X3D bodies collide only through one."""
+    bodies = [instance for instance in ir_scene.iter_instances() if instance.rigid_body is not None]
+    joints = [instance for instance in ir_scene.iter_instances() if instance.rigid_joint is not None]
+    if not bodies:
+        return ""
+    world = ir_scene.rigid_world or {}
+    attrs = []
+    if world.get("def"):
+        attrs.append(f'DEF="{defs.get("rigidworld", world["def"], "", label=world["def"])}"')
+    gravity = world.get("gravity", (0.0, -9.8, 0.0))
+    if any(abs(a - b) > 1e-6 for a, b in zip(gravity, (0.0, -9.8, 0.0))):
+        attrs.append(f'gravity="{_fmt3_length(gravity)}"')
+    if int(world.get("iterations", 10)) != 10:
+        attrs.append(f'iterations="{int(world["iterations"])}"')
+    attrs += _raw_attrs({k: v for k, v in (world.get("fields") or {}).items() if k not in _WORLD_NATIVE})
+    xml = [f"{indent}<RigidBodyCollection{(' ' + ' '.join(attrs)) if attrs else ''}>\n"]
+    body_defs, collidable_defs = {}, []
+    for instance in bodies:
+        body = instance.rigid_body
+        body_def = defs.get("rigidbody", instance.object_name, "", label=body["def"])
+        body_defs[instance.object_name] = body_def
+        battrs = [f'containerField="bodies"', f'DEF="{body_def}"', f'position="{_fmt3_length(body["position"])}"',
+                  f'orientation="{_fmt4(body["orientation"])}"']
+        if abs(body["mass"] - 1.0) > 1e-9:
+            battrs.append(f'mass="{_fmt(body["mass"])}"')
+        if body["fixed"]:
+            battrs.append('fixed="true"')
+        if not body["enabled"]:
+            battrs.append('enabled="false"')
+        if body["linear_damping"] > 0.0 or body["angular_damping"] > 0.0:
+            battrs += ['autoDamp="true"', f'linearDampingFactor="{_fmt(body["linear_damping"])}"',
+                       f'angularDampingFactor="{_fmt(body["angular_damping"])}"']
+        battrs += _raw_attrs({k: v for k, v in body["fields"].items() if k not in _BODY_NATIVE})
+        xml.append(f"{indent}  <RigidBody {' '.join(battrs)}>\n")
+        chain = list(body["offsets"]) + [body.get("collidable") or {"def": "", "fields": {}}]
+        inner = indent + "    "
+        opened = []
+        for depth, item in enumerate(chain):
+            node = "CollidableShape" if depth == len(chain) - 1 else "CollidableOffset"
+            container = "geometry" if depth == 0 else "collidable"
+            cdef = defs.get("collidable", f"{instance.object_name}:{depth}", "", label=item.get("def") or
+                            f"{body['def']}_{'Shape' if node == 'CollidableShape' else 'Offset'}")
+            if depth == 0:
+                collidable_defs.append((cdef, node))
+            cattrs = [f'containerField="{container}"', f'DEF="{cdef}"'] + _raw_attrs(item.get("fields") or {})
+            xml.append(f"{inner}<{node} {' '.join(cattrs)}>\n")
+            opened.append((inner, node))
+            inner += "  "
+        xml.append(_shapes_xml(instance, geometries, materials, defs, inner[:-2], output_dir=output_dir, look=look,
+                               container="shape"))
+        for opened_indent, node in reversed(opened):
+            xml.append(f"{opened_indent}</{node}>\n")
+        xml.append(f"{indent}  </RigidBody>\n")
+    collider = world.get("collider")
+    if collider is not None or not world.get("recorded"):
+        collider = collider or {"def": "", "fields": {}, "collidables": None}
+        cattrs = ['containerField="collider"']
+        if collider.get("def"):
+            cattrs.append(f'DEF="{defs.get("collider", collider["def"], "", label=collider["def"])}"')
+        cattrs += _raw_attrs(collider.get("fields") or {})
+        wanted = collider.get("collidables")
+        uses = collidable_defs if wanted is None else [(d, n) for d, n in collidable_defs if d in set(wanted)]
+        if uses:
+            xml.append(f"{indent}  <CollisionCollection {' '.join(cattrs)}>\n")
+            xml += [f'{indent}    <{n} USE="{d}" containerField="collidables" />\n' for d, n in uses]
+            xml.append(f"{indent}  </CollisionCollection>\n")
+        else:
+            xml.append(f"{indent}  <CollisionCollection {' '.join(cattrs)} />\n")
+    for instance in joints:
+        joint = instance.rigid_joint
+        if joint["body1"] not in body_defs or joint["body2"] not in body_defs:
+            continue        # a body that is not written as a RigidBody (see rigid_body_of): reported there
+        jdef = defs.get("joint", instance.object_name, "", label=joint["def"])
+        jattrs = ['containerField="joints"', f'DEF="{jdef}"', f'anchorPoint="{_fmt3_length(joint["anchor"])}"',
+                  f'axis="{_fmt3(joint["axis"])}"']
+        if "limits" in joint:
+            jattrs += [f'minAngle="{_fmt(joint["limits"][0])}"', f'maxAngle="{_fmt(joint["limits"][1])}"']
+        native = ("anchorPoint", "axis", "minAngle", "maxAngle")
+        jattrs += _raw_attrs({k: v for k, v in joint["fields"].items() if k not in native})
+        xml.append(f"{indent}  <SingleAxisHingeJoint {' '.join(jattrs)}>\n"
+                   f'{indent}    <RigidBody USE="{body_defs[joint["body1"]]}" containerField="body1" />\n'
+                   f'{indent}    <RigidBody USE="{body_defs[joint["body2"]]}" containerField="body2" />\n'
+                   f"{indent}  </SingleAxisHingeJoint>\n")
+    xml.append(f"{indent}</RigidBodyCollection>\n")
+    return "".join(xml)
+
+
 def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, output_dir=None, humanoids=None,
                   splats=None, version="4.0", look: _Look = _PLAIN_LOOK, collections=None):
     humanoids = humanoids or {}
@@ -1006,30 +1138,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
         xml.append(_sensor_xml(instance, defs, indent + "  "))
     for text in getattr(defs, "behaviour_children", {}).get(instance.object_name, ()):
         xml.append(f"{indent}  {text}\n")
-    shape_attrs = "" if instance.cast_shadow else ' castShadow="false"'
-    if not instance.visible and not subtree_hidden:
-        shape_attrs += ' visible="false"'
-    for index, shape in enumerate(instance.iter_shapes()):
-        xml.append(f"{indent}  <Shape{shape_attrs}>\n")
-        if index == 0 and instance.metadata is not None:
-            xml.append(_metadata_xml(instance.metadata, indent + "    ", "metadata", defs))
-        material = materials.get(shape.material_name) if shape.material_name else None
-        geometry = geometries.get(shape.geometry_name) if shape.geometry_name else None
-        line_width = instance.line_width if geometry is not None and geometry.is_lines else None
-        if material is not None:
-            xml.append(_appearance_xml(material, defs, indent + "    ", output_dir=output_dir, look=look,
-                                       line_width=line_width))
-        else:
-            xml.append(_default_appearance_xml(indent + "    ", look))
-        if geometry is not None:
-            xml.append(_geometry_xml(geometry, defs, indent + "    "))
-        elif shape.text:
-            xml.append(_text_xml(shape.text, indent + "    "))
-        elif shape.primitive:
-            xml.append(_imported_primitive_xml(shape.primitive, defs, indent + "    "))
-        else:
-            xml.append(_primitive_geometry_xml(shape.geometry_hint, indent + "    "))
-        xml.append(f"{indent}  </Shape>\n")
+    xml.append(_shapes_xml(instance, geometries, materials, defs, indent, output_dir=output_dir, look=look,
+                           hide_shapes=not instance.visible and not subtree_hidden))
     if instance.humanoid_name and instance.humanoid_name in humanoids:
         humanoid = humanoids[instance.humanoid_name]
         placed = type(humanoid)(name=humanoid.name, root_joints=humanoid.root_joints,
@@ -1555,6 +1665,8 @@ def _components(ir_scene: IRScene, version: str) -> list[tuple[str, int]]:
         if any(str(entry.get("node", "")).startswith("Geo") for entry in instance.group_chain or ()) or any(
                 (shape.primitive or {}).get("node") == "GeoElevationGrid" for shape in shapes):
             components["Geospatial"] = 1
+        if instance.rigid_body is not None:
+            components["RigidBodyPhysics"] = 2      # not in Immersive; the joints are level 2
         if instance.viewpoint is not None and getattr(instance.viewpoint, "ortho_extents", None) is not None:
             components["Navigation"] = 3   # OrthoViewpoint is Navigation level 3; Immersive gives level 2
         interaction = instance.interaction
@@ -1689,7 +1801,10 @@ def export_ir_scene(file, ir_scene: IRScene, *, generator: str = "io_scene_x3d",
     def write_root(instance, root_indent):
         return _instance_xml(instance, geometries, materials, defs, root_indent, output_dir=output_dir, humanoids=humanoids,
                              splats=splats, version=version, look=look, collections=ir_scene.collections)
-    write(_grouped_xml([(instance, _own_groups(instance, [])) for instance in ir_scene.instances], write_root, defs, "    "))
+    # a body or a hinge's empty is written inside the RigidBodyCollection, not as a Transform of its own
+    plain = [instance for instance in ir_scene.instances if instance.rigid_body is None and instance.rigid_joint is None]
+    write(_grouped_xml([(instance, _own_groups(instance, [])) for instance in plain], write_root, defs, "    "))
+    write(_rigid_bodies_xml(ir_scene, geometries, materials, defs, "    ", output_dir=output_dir, look=look))
     write(_animation_xml(ir_scene, defs, "    "))
     write(_interaction_xml(ir_scene, defs, "    "))
     if behaviour is not None:

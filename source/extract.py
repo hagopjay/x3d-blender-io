@@ -1079,6 +1079,100 @@ def regrouped(obj, node):
     return False
 
 
+RIGID_WORLD_PROPERTY = "x3d_rigid_world"   # set by the importer (import_x3d.import_rigid_bodies), JSON
+RIGID_BODY_PROPERTY = "x3d_rigid_body"
+RIGID_JOINT_PROPERTY = "x3d_rigid_joint"
+
+
+def _record(owner, name):
+    raw = owner.get(name) if hasattr(owner, "get") else None
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _frame_of(fields):
+    """The matrix of a collidable's translation and rotation as the file wrote them (X3D space)."""
+    from mathutils import Matrix, Quaternion, Vector
+
+    def numbers(text, n, default):
+        try:
+            values = [float(v) for v in str(text).replace(",", " ").split()]
+        except ValueError:
+            return default
+        return values if len(values) == n else default
+    t = numbers(fields.get("translation", ""), 3, [0.0, 0.0, 0.0])
+    r = numbers(fields.get("rotation", ""), 4, [0.0, 0.0, 1.0, 0.0])
+    axis = Vector(r[:3])
+    rotation = Quaternion(axis.normalized(), r[3]) if axis.length > 1e-12 else Quaternion()
+    return Matrix.Translation(Vector(t)) @ rotation.to_matrix().to_4x4()
+
+
+def rigid_body_of(obj, x3d_matrix, has_parent, diagnostics):
+    """The RigidBody to write for ``obj`` (IRInstance.rigid_body), or None. ``x3d_matrix`` is the object's matrix in
+    X3D space. Only a root object without children and at unit scale is written as a body; another keeps its Transform."""
+    rb = getattr(obj, "rigid_body", None)
+    if rb is None:
+        return None
+    if has_parent or list(getattr(obj, "children", ()) or ()):
+        diagnostics.append(f"Object {obj.name!r}: a rigid body with a parent or children is written as a plain Transform.")
+        return None
+    scale = x3d_matrix.to_scale()
+    if any(abs(v - 1.0) > 1e-5 for v in scale):
+        diagnostics.append(f"Object {obj.name!r}: a rigid body at scale {tuple(round(v, 4) for v in scale)} is written as a "
+                           "plain Transform (a RigidBody has no scale).")
+        return None
+    record = _record(obj, RIGID_BODY_PROPERTY)
+    chain = list(record.get("offsets") or []) + ([record["collidable"]] if record.get("collidable") else [])
+    frame = x3d_matrix.copy()
+    for item in reversed(chain):            # the body is the object's frame without the collidables' own frames
+        frame = frame @ _frame_of(item.get("fields") or {}).inverted()
+    translation, rotation = frame.to_translation(), frame.to_quaternion()
+    # the axis conversion leaves float noise (1e-8 where the file had 0), which would grow on every round trip
+    translation = [0.0 if abs(v) < 1e-6 else v for v in translation]
+    axis, angle = rotation.to_axis_angle()
+    return {"def": record.get("def") or obj.name, "fields": record.get("fields") or {},
+            "collidable": record.get("collidable"), "offsets": record.get("offsets") or [],
+            "position": tuple(translation), "orientation": canonical_axis_angle(tuple(axis), angle),
+            "fixed": rb.type == "PASSIVE", "mass": float(rb.mass), "enabled": bool(rb.enabled),
+            "linear_damping": float(rb.linear_damping), "angular_damping": float(rb.angular_damping)}
+
+
+def rigid_joint_of(obj, global_matrix):
+    """The SingleAxisHingeJoint to write for an empty with a HINGE rigid body constraint between two objects, or None."""
+    from mathutils import Vector
+    con = getattr(obj, "rigid_body_constraint", None)
+    if con is None or con.type != "HINGE" or con.object1 is None or con.object2 is None:
+        return None
+    world = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+    axis = (world.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+    record = _record(obj, RIGID_JOINT_PROPERTY)
+    joint = {"def": record.get("def") or obj.name, "fields": record.get("fields") or {},
+             "anchor": tuple(0.0 if abs(v) < 1e-6 else v for v in world.to_translation()),
+             "axis": tuple(0.0 if abs(v) < 1e-9 else v for v in axis),
+             "body1": con.object1.name, "body2": con.object2.name, "enabled": bool(con.enabled)}
+    if con.use_limit_ang_z:
+        joint["limits"] = (float(con.limit_ang_z_lower), float(con.limit_ang_z_upper))
+    return joint
+
+
+def rigid_world_of(scene, global_matrix):
+    """The RigidBodyCollection's own values: gravity in X3D space, iterations, and what the import kept."""
+    from mathutils import Vector
+    record = _record(scene, RIGID_WORLD_PROPERTY)
+    gravity = Vector(scene.gravity)
+    if global_matrix is not None:
+        gravity = global_matrix.to_3x3().normalized() @ gravity
+    world = getattr(scene, "rigidbody_world", None)
+    return {"def": record.get("def") or "", "fields": record.get("fields") or {}, "collider": record.get("collider"),
+            "gravity": tuple(gravity), "iterations": int(world.solver_iterations) if world is not None else 10,
+            "recorded": bool(record)}
+
+
 def is_lod_hidden(obj):
     """An object of an LOD level the importer hid (and the user has not unhidden): written as geometry it would be
     drawn on top of the level that is shown, so neither writer exports it."""
@@ -1916,6 +2010,12 @@ def extract_scene(
             or obj.get(VISIBLE_FALSE_PROPERTY) is not None))
         instance.group_chain = group_chain(obj)
         if not name_prefix:
+            x3d_matrix = (global_matrix @ obj.matrix_world) if global_matrix is not None else obj.matrix_world
+            instance.rigid_body = rigid_body_of(obj, x3d_matrix, use_hierarchy and parent is not None,
+                                                ir_scene.diagnostics)
+            instance.rigid_joint = rigid_joint_of(obj, global_matrix) if not list(obj.children) else None
+            if instance.rigid_body is not None and ir_scene.rigid_world is None:
+                ir_scene.rigid_world = rigid_world_of(scene, global_matrix)
             objects_by_name[obj.name] = (obj, parent if use_hierarchy else None)
             instance.interaction = read_interaction(obj, ir_scene.diagnostics)
 
