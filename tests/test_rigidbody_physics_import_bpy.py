@@ -44,6 +44,18 @@ def _x3d(body: str) -> str:
 @unittest.skipUnless(HAVE_BPY, "bpy is not available")
 class RigidBodyImportTests(unittest.TestCase):
     @classmethod
+    def setUpClass(cls):   # the node board's batch 6/7 importer, kept behind BLENDER_X3D_PHYSICS=legacy (docs/PHYSICS.md)
+        cls._physics_env = os.environ.get("BLENDER_X3D_PHYSICS")
+        os.environ["BLENDER_X3D_PHYSICS"] = "legacy"
+
+    @classmethod
+    def tearDownClass(cls):
+        if getattr(cls, "_physics_env", None) is None:
+            os.environ.pop("BLENDER_X3D_PHYSICS", None)
+        else:
+            os.environ["BLENDER_X3D_PHYSICS"] = cls._physics_env
+
+    @classmethod
     def setUpClass(cls):
         cls.tmpdir = tempfile.mkdtemp(prefix="x3d_rigidbody_")
         _register_extension(cls.tmpdir)

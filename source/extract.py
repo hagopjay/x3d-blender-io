@@ -1883,7 +1883,8 @@ def extract_scene(
         )
     )
     # the rigid body world's helpers and constraint empties are written as physics, not as Transforms
-    exported = [obj for obj in exported if not physics_export.is_helper(obj)]
+    if not scene.get(RIGID_WORLD_PROPERTY):    # (a legacy-imported world keeps the batch 6/7 writer, see below)
+        exported = [obj for obj in exported if not physics_export.is_helper(obj)]
     exported_names = {obj.name for obj in exported}
     # Objects imported from an Inline are represented by their placeholder empty's Inline node.
     inline_children = [obj for obj in exported if (root := inline_root(obj)) is not None and root.name in exported_names]
@@ -2290,9 +2291,17 @@ def extract_scene(
         )
 
     try:
-        ir_scene.physics = physics_export.extract(scene, exported, global_matrix)
+        # a scene the legacy importer made (it carries x3d_rigid_world) keeps the batch 6/7 writer; every other rigid body
+        # world is written by physics_export
+        ir_scene.physics = None if scene.get(RIGID_WORLD_PROPERTY) else physics_export.extract(scene, exported, global_matrix)
         if ir_scene.physics:
             ir_scene.diagnostics.extend(ir_scene.physics["diagnostics"])
+            # one writer: physics_export writes the whole rigid body world, so the node board's batch 6 and 7 per-object
+            # RigidBody and joint records (rigid_body_of, rigid_joint_of) stand down and the bodies stay plain Transforms
+            for instance in ir_scene.iter_instances():
+                instance.rigid_body = None
+                instance.rigid_joint = None
+            ir_scene.rigid_world = None
     except Exception as exc:  # physics must never stop an export
         ir_scene.diagnostics.append(f"Rigid body physics not written: {exc}")
 

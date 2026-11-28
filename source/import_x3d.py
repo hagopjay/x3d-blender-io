@@ -8927,6 +8927,7 @@ def finalize_lod():
             member[X3D_LOD_PROPERTY] = f"{name}:{index}"
 
 
+import_legacy_rigid_bodies = False   # BLENDER_X3D_PHYSICS=legacy: the node board's batch 6/7 importer instead of the physics one
 import_physics = True      # set by load(physics=...): RigidBodyPhysics becomes Blender's rigid body world
 _PHYSICS_ROUTES = set()    # ROUTE tuples a body's motion now drives in Blender (not import losses)
 _BODY_TO_TRANSFORM = {("position", "translation"): "COPY_LOCATION", ("orientation", "rotation"): "COPY_ROTATION"}
@@ -9218,7 +9219,10 @@ def load_web3d(
     except Exception as exc:  # metadata must never stop an import
         logger.error("Scene-level Metadata not kept: %s", exc, exc_info=True)
     try:
-        import_rigid_bodies(all_nodes, global_matrix, bpycontext)
+        # the node board's batch 6/7 importer (field records, no simulation model) is kept behind BLENDER_X3D_PHYSICS=legacy;
+        # the physics importer above replaced it as the default, and running both would make every body twice
+        if import_legacy_rigid_bodies:
+            import_rigid_bodies(all_nodes, global_matrix, bpycontext)
     except Exception as exc:  # physics must never stop the geometry import
         logger.error("Rigid body physics not made: %s", exc, exc_info=True)
     report_import_losses(all_nodes, bpycontext, defer_routes_to_caller)
@@ -9404,11 +9408,14 @@ def load(context,
     physics: RigidBodyCollections become Blender's rigid body world (import_rigid_body_physics); None reads
     BLENDER_X3D_PHYSICS (default on), False keeps only their geometry, as before."""
     global colour_space, lighting_units, navigation_headlight, bound_view, default_view, defer_routes_to_caller
-    global import_physics
+    global import_physics, import_legacy_rigid_bodies
     defer_routes_to_caller = bool(defer_route_losses)
     # physics: RigidBodyPhysics as Blender's rigid body world (None: BLENDER_X3D_PHYSICS, else on)
-    import_physics = (os.environ.get("BLENDER_X3D_PHYSICS", "1").strip().lower() not in ("0", "false", "no", "off")
+    import_physics = (os.environ.get("BLENDER_X3D_PHYSICS", "1").strip().lower() not in ("0", "false", "no", "off", "legacy")
                       if physics is None else bool(physics))
+    import_legacy_rigid_bodies = os.environ.get("BLENDER_X3D_PHYSICS", "").strip().lower() == "legacy"
+    if import_legacy_rigid_bodies:
+        import_physics = False
     import_target = os.environ.get("BLENDER_X3D_IMPORT_TARGET", "AUTO").upper()
     divisions = resolve_circle_divisions(circle_divisions or None)       # the operator's 0 means: not set here
     colour_space = resolve_colour_space(color_space)
