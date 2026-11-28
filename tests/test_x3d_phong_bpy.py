@@ -74,6 +74,19 @@ class Ladder(unittest.TestCase):
     def test_srgb_decoded(self):
         self.check("SRGB_DECODED", "blender_exact")
 
+    def test_physical_material(self):
+        """PhysicalMaterial (X3D 4.0 17.2.2.6): the spec reading, in every Phong reading (its colours are linear)."""
+        import lighting_judge as judge
+        import lighting_oracle as oracle
+        part = LIMITS["physical"]
+        gate = part["gates"]["blender_physical"]
+        for option in ("LINEAR_VALUES", "SRGB_DECODED"):
+            for scene_name in part["scenes"]:
+                with self.subTest(scene=scene_name, reading=option):
+                    result = judge.physical_compare(_render(scene_name, option), scene_name, oracle.SPEC_KNOBS, "srgb")
+                    self.assertLessEqual(result["mean"], gate["mean_max"], result)
+                    self.assertLessEqual(result["p99"], gate["p99_max"], result)
+
 
 @unittest.skipUnless(HAVE_BPY, "bpy not importable")
 class WrongTwin(unittest.TestCase):
@@ -83,6 +96,14 @@ class WrongTwin(unittest.TestCase):
     def setUpClass(cls):
         import lighting_blender_record as recorder
         recorder._register()
+
+    def test_default_import_misses_physical(self):
+        import lighting_judge as judge
+        import lighting_oracle as oracle
+        gate = LIMITS["physical"]["gates"]["wrong_twin_physical_default"]
+        worst = max(judge.physical_compare(_render(scene_name, "OFF"), scene_name, oracle.SPEC_KNOBS, "srgb")["p99"]
+                    for scene_name in gate["scenes"])
+        self.assertGreaterEqual(worst, gate["p99_min"])
 
     def test_default_import_misses(self):
         import lighting_judge as judge

@@ -3702,13 +3702,17 @@ def finish_phong_lighting(scene, reading, headlight, camera_for_headlight=None):
     if reading is None or scene is None:
         return
     for bpymat in bpy.data.materials:
+        if bpymat.node_tree is None or any(
+                node.bl_idname == 'ShaderNodeGroup' and node.node_tree is not None
+                and node.node_tree.name in (x3d_phong.GROUP_NAME, x3d_phong.PHYSICAL_GROUP_NAME)
+                for node in bpymat.node_tree.nodes):
+            continue   # not a node material, or an earlier import's
         fields = bpymat.get(x3d_phong.MATERIAL_PROPERTY)
-        if fields is None or bpymat.node_tree is None:
-            continue
-        if any(node.bl_idname == 'ShaderNodeGroup' and node.node_tree is not None
-               and node.node_tree.name == x3d_phong.GROUP_NAME for node in bpymat.node_tree.nodes):
-            continue   # an earlier import's
-        x3d_phong.apply_material(bpymat, fields.to_dict() if hasattr(fields, 'to_dict') else dict(fields), reading)
+        if fields is not None:
+            x3d_phong.apply_material(bpymat, fields.to_dict() if hasattr(fields, 'to_dict') else dict(fields), reading)
+        physical = bpymat.get(x3d_phong.PHYSICAL_PROPERTY)
+        if physical is not None:
+            x3d_phong.apply_physical(bpymat, physical.to_dict() if hasattr(physical, 'to_dict') else dict(physical))
     if headlight:
         camera = camera_for_headlight if camera_for_headlight is not None else scene.camera
         try:
@@ -5375,6 +5379,9 @@ def appearance_CreatePBRMaterial(vrmlname, mat, appr, ancestry, node):
 
     transparency = mat.getFieldAsFloat('transparency', 0.0, ancestry)
     alpha = max(0.0, min(1.0, 1.0 - transparency))
+    if phong_reading is not None and spec == 'PhysicalMaterial':   # X3D lighting: finish_phong_lighting adds X3D Physical
+        bpymat[x3d_phong.PHYSICAL_PROPERTY] = {key: list(value) if isinstance(value, tuple) else value
+                                               for key, value in x3d_phong.physical_fields(mat, ancestry).items()}
 
     if unlit:
         emissive = classic_colour(mat.getFieldAsFloatTuple('emissiveColor', [1.0, 1.0, 1.0], ancestry))

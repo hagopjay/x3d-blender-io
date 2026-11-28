@@ -1,6 +1,6 @@
 # X3D lighting in EEVEE (import option "X3D Lighting")
 
-Classic X3D materials (`Material`, `TwoSidedMaterial`) can now be lit by X3D's own Phong equation (X3D 4.0, ISO/IEC 19775-1:2023, 17.2.2.5) instead of by Blender's lights. It works in EEVEE through Blender 5.3's Material Lighting nodes. It is **opt-in**, and Cycles keeps the Principled BSDF it always had (the plain fallback).
+Classic X3D materials (`Material`, `TwoSidedMaterial`) and `PhysicalMaterial` can now be lit by X3D 4.0's own equations (ISO/IEC 19775-1:2023: Phong, 17.2.2.5; physical, 17.2.2.6) instead of by Blender's lights. It works in EEVEE through Blender 5.3's Material Lighting nodes. It is **opt-in**, and Cycles keeps the Principled BSDF it always had (the plain fallback).
 
 | Option | What the file's colour numbers are | Who draws it that way (measured) |
 |---|---|---|
@@ -80,6 +80,10 @@ Max error per witness in each reading, over the seven ladder scenes:
 | browser_agrees, X3DOM | pass | pass | linear values |
 | expected_fail_cycles_plain | fail | **fail** | Cycles renders the Principled fallback: 65.8 / 107 at worst |
 | wrong_twin_default_import | **fail** | pass | see below |
+| blender_physical | pass | pass | worst: physical-directional, 0.25 / 0.51 |
+| browser_physical, X_ITE | pass | pass | with its two switches (range window, glTF spot) |
+| browser_physical, X3DOM | **fail** | pass | X3DOM 1.8.3 has no X3D 4.0 PhysicalMaterial (see PhysicalMaterial) |
+| wrong_twin_physical_default | pass | pass | the default import misses by p99 35.7 (spot) |
 
 **The wrong twin failed as written.**
 - I wrote the gate against the `linear` (sRGB-decoded) reading, the only gamma-correct reading on the list when it was committed. Against that reading the default import misses spot by a mean of only 4.93 levels (p99 28.8), under the 8 required. Most of that picture is black outside the cone, which dilutes the mean.
@@ -96,9 +100,45 @@ The spec leaves the choice open, so this is a choice, written down, with the oth
 - It is Blender's own model, numbers lit linearly and encoded by the Standard view transform, so it needs no Raw view.
 - **Display values** is the classic look most existing X3D content was tuned for, X_ITE's default. Choose it to see a file as X_ITE shows it.
 
+## PhysicalMaterial (X3D 4.0 17.2.2.6)
+
+The same option gives a PhysicalMaterial an EEVEE output with the node group **X3D Physical**. It reads the same light properties as X3D Phong and computes:
+- X3D's `on_i × color × attenuation_i × spot_i` (hard radius, Table 17.4's linear spot ramp);
+- around glTF 2.0 Appendix B's BRDF: the mix of the dielectric (f0 0.04) and metal BRDFs, GGX, separable Smith;
+- E = intensity, divided by d² for a point or spot light (candela), not for a DirectionalLight (lux). Distances are measured in the light's own frame.
+
+PhysicalMaterial colours are linear values in every reading. With the display-values reading (Raw view) a PhysicalMaterial is therefore not drawn as any browser draws it: X_ITE lights it linearly and encodes it while it shows Phong as display values, and one view transform cannot do both.
+
+**The spec.** 17.2.2.6 gives the per-light frame (o_i, attenuation_i, spot_i) and hands the BRDF to glTF. Units are candela and lux, the radius cut-off is hard, Table 17.4 covers every light, and KHR_lights_punctual is not cited. The oracle (`evaluate_physical`) carries four switches for where readers could differ. The spec reading (`SPEC_KNOBS`) and the gates were committed before any PhysicalMaterial run, in `902f39b`.
+
+**One correction to the oracle, made after the X_ITE run.** I first coded the common shortcut `(1 − F) c_diff / π`, with F from the mixed f0. Appendix B as written weights the dielectric's diffuse by its own Fresnel: `(1 − metallic)(1 − F_dielectric) base / π`. The two differ by about 11 % at metallic 0.2 (the spot probe). The oracle now uses Appendix B's form, and the shortcut is the switch `mix: shortcut`. The limits were not changed.
+
+Mean / p99, 8-bit levels (`tests/lighting/receipts.json`, key `physical`):
+
+| Witness | directional | metal | dielectric | spot | radius | closest setting |
+|---|---|---|---|---|---|---|
+| X_ITE 16.8.1 as shipped | 0.25 / 0.49 | 0.24 / 0.49 | 0.25 / 0.49 | 4.20 / 25.40 | 5.73 / 49.88 | spec reading, but range window (radius) and glTF t² (spot) |
+| X_ITE, ColorSpace LINEAR | 0.25 / 0.49 | 0.24 / 0.49 | 0.25 / 0.49 | 4.20 / 25.40 | 5.73 / 49.88 | spec reading, but range window (radius) and glTF t² (spot) |
+| X3DOM 1.8.3 as shipped | 135.51 / 164.18 | 220.43 / 246.40 | 92.61 / 134.13 | 52.37 / 192.36 | 26.62 / 151.48 | none within 14 levels |
+| X3DOM, fields renamed to X3DOM's | 75.07 / 98.04 | 30.36 / 108.71 | 63.97 / 84.05 | 48.21 / 178.44 | 14.58 / 97.45 | none within 14 levels |
+| **Blender: X3D lighting** | 0.25 / 0.51 | 0.25 / 0.50 | 0.25 / 0.50 | 0.10 / 0.50 | 0.05 / 0.47 | the spec reading |
+| Blender: X3D lighting, sRGB-decoded reading | 0.25 / 0.51 | 0.25 / 0.50 | 0.25 / 0.50 | 0.10 / 0.50 | 0.05 / 0.47 | the spec reading |
+| Blender: default import (off) | 1.43 / 4.72 | 6.86 / 39.00 | 5.80 / 14.39 | 5.14 / 35.72 | 11.26 / 91.39 | none |
+| Blender: Cycles fallback | 0.30 / 0.85 | 0.35 / 2.23 | 4.40 / 8.07 | 5.33 / 36.08 | 38.94 / 92.00 | none (Principled BSDF) |
+
+Each cell is the error against the spec reading (browsers on the pow 2.2 curve, Blender on sRGB). With X_ITE's two switches set (range window, glTF spot), X_ITE is 0.05 / 0.47 on radius and 0.09 / 0.48 on spot.
+
+What the table says:
+- **X_ITE 16.8.1 matches the spec reading exactly where the spec and glTF agree:** the BRDF, 1/d² on top of X3D's attenuation, and lux for a DirectionalLight.
+- **It departs where the spec is clear and glTF differs.** X_ITE's physical shader uses KHR_lights_punctual's range window `clamp(1 − (d/r)⁴)` for the radius, and `t²` in the cosine for the spot (`getRangeAttenuation` and `getSpotAttenuation` in x_ite.js). With those two switches it lands within rounding.
+- **X_ITE uses two cone and radius rules.** Its Phong shader follows X3D's hard radius and linear angle ramp.
+- **Blender follows the spec** (the flowchart's "browser departs from a clear spec" branch), as the gate says.
+- **X3DOM 1.8.3 is no witness here.** Its PhysicalMaterial is its own older node with glTF's field names (`baseColorFactor`, `metallicFactor`, `roughnessFactor`, `emissiveFactor`), so X3D 4.0's fields are ignored and every probe draws white. Even with the fields renamed it is 15–75 levels off. The directional probe is about π times too bright, as if glTF's 1/π were missing.
+- **The probes cannot separate the two Smith visibility forms.** They differ by under 0.0001 of a level at these roughnesses, and the metal highlight clips at 255.
+
 ## Not covered yet
 
-- **PhysicalMaterial, UnlitMaterial, fog, shadows, light scoping** (`global FALSE` lights only their siblings: Blender has light linking, not wired here) and `occlusionTexture`.
+- **PhysicalMaterial textures** (metallicRoughness, occlusion, normal), **UnlitMaterial, fog, shadows, light scoping** (`global FALSE` lights only their siblings: Blender has light linking, not wired here) and `occlusionTexture`.
 - **Back faces:** the probes see front faces only.
 - **Textures:** passed through untested. With display values a texture is re-encoded with gamma 1/2.2.
 - **Headlight:** with no Viewpoint (no camera) there is none. It stays on the first Viewpoint's camera when you switch cameras.

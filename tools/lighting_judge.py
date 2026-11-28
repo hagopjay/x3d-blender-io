@@ -41,7 +41,7 @@ def judge(folders):
     for folder in folders:
         for png in sorted(Path(folder).glob("*/*.png")):
             witness, scene = png.parent.name, png.stem
-            if scene not in oracle.SCENES:
+            if scene not in oracle.SCENES:   # PhysicalMaterial probes: judge_physical
                 continue
             picture = np.asarray(Image.open(png).convert("RGB"))
             rows = {}
@@ -51,6 +51,66 @@ def judge(folders):
             best = min(rows, key=lambda key: rows[key]["mean"])
             witnesses.setdefault(witness, {})[scene] = {"closest": best, **rows[best], "all": rows}
     return witnesses
+
+
+def physical_knob_settings(limits):
+    import itertools
+    knobs = limits["physical"]["knobs"]
+    return [dict(zip(knobs, values)) for values in itertools.product(*knobs.values())]
+
+
+def physical_compare(picture, scene, knobs, curve):
+    expected, on = oracle.evaluate_physical(scene, knobs, curve)
+    keep = ~oracle.jump_mask(on) if knobs.get("radius", "hard") == "hard" else np.ones(on.shape[:2], dtype=bool)
+    error = np.abs(picture.astype(float) - expected * 255.0)[keep]
+    return {"mean": round(float(error.mean()), 3), "p99": round(float(np.percentile(error, 99)), 3),
+            "max": round(float(error.max()), 3)}
+
+
+def judge_physical(folders, limits):
+    """Per witness and PhysicalMaterial probe: the spec reading (both curves) and the closest knob setting."""
+    settings = physical_knob_settings(limits)
+    witnesses = {}
+    for folder in folders:
+        for png in sorted(Path(folder).glob("*/physical-*.png")):
+            witness, scene = png.parent.name, png.stem
+            picture = np.asarray(Image.open(png).convert("RGB"))
+            rows = {f"spec/{curve}": physical_compare(picture, scene, oracle.SPEC_KNOBS, curve)
+                    for curve in ("srgb", "pow22")}
+            best = None
+            for knobs in settings:
+                for curve in ("srgb", "pow22"):
+                    row = physical_compare(picture, scene, knobs, curve)
+                    if best is None or row["mean"] < best[0]["mean"]:
+                        best = (row, knobs, curve)
+            rows["closest"] = dict(best[0], knobs=best[1], curve=best[2])
+            witnesses.setdefault(witness, {})[scene] = rows
+    return witnesses
+
+
+def physical_gates(witnesses, limits):
+    part = limits["physical"]
+    verdicts = {}
+    for name, gate in part["gates"].items():
+        for witness in (gate["witness"] if isinstance(gate["witness"], list) else [gate["witness"]]):
+            rows = witnesses.get(witness)
+            if rows is None:
+                verdicts[f"{name}:{witness}"] = {"result": None, "why": "not recorded"}
+                continue
+            scenes = gate.get("scenes", part["scenes"])
+            if gate["oracle"] == "spec_reading":
+                measured = {scene: rows[scene][f"spec/{gate['curve']}"] for scene in scenes}
+            else:
+                measured = {scene: rows[scene]["closest"] for scene in scenes}
+            if "p99_min" in gate:
+                passed = any(row["p99"] >= gate["p99_min"] for row in measured.values())
+                worst = max(measured, key=lambda scene: measured[scene]["p99"])
+            else:
+                passed = all(row["mean"] <= gate["mean_max"] and row["p99"] <= gate["p99_max"] for row in measured.values())
+                worst = max(measured, key=lambda scene: measured[scene]["mean"])
+            verdicts[f"{name}:{witness}"] = {"result": "pass" if passed else "fail", "worst_scene": worst,
+                                             "worst": measured[worst]}
+    return verdicts
 
 
 READING_KEYS = {"linear": "linear", "display": "display", "linear-values": "linear-values"}
@@ -95,5 +155,7 @@ if __name__ == "__main__":
         notes = Path(folder) / "versions.json"
         if notes.exists():
             versions[Path(folder).name] = json.loads(notes.read_text())
-    json.dump({"oracle": "tools/lighting_oracle.py (X3D 4.0, ISO/IEC 19775-1:2023, 17.2.2.5)",
-               "versions": versions, "gates": gates(witnesses, limits), "witnesses": witnesses}, sys.stdout, indent=1)
+    physical = judge_physical(sys.argv[1:], limits)
+    json.dump({"oracle": "tools/lighting_oracle.py (X3D 4.0, ISO/IEC 19775-1:2023, 17.2.2.5 and 17.2.2.6)",
+               "versions": versions, "gates": gates(witnesses, limits), "physical_gates": physical_gates(physical, limits),
+               "witnesses": witnesses, "physical": physical}, sys.stdout, indent=1)

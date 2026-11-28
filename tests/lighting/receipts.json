@@ -1,5 +1,5 @@
 {
- "oracle": "tools/lighting_oracle.py (X3D 4.0, ISO/IEC 19775-1:2023, 17.2.2.5)",
+ "oracle": "tools/lighting_oracle.py (X3D 4.0, ISO/IEC 19775-1:2023, 17.2.2.5 and 17.2.2.6)",
  "versions": {
   "browsers": {
    "chromium": "158.0.8127.36",
@@ -28,6 +28,10 @@
    "x3dom-none": {
     "library": "X3DOM 1.8.3 build 7482 (03da6d3870)",
     "webgl": "ANGLE (Mesa, Vulkan 1.4.335 (llvmpipe (LLVM 20.1.2 256 bits) (0x00000000)), llvmpipe)"
+   },
+   "x3dom-physical-renamed": {
+    "library": "X3DOM 1.8.3 build 7482 (03da6d3870)",
+    "webgl": "ANGLE (Mesa, Vulkan 1.4.335 (llvmpipe (LLVM 20.1.2 256 bits) (0x00000000)), llvmpipe)"
    }
   },
   "blender": {
@@ -48,6 +52,41 @@
     "camera": "Viewpoint"
    },
    "blender:headlight": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:physical-dielectric": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:physical-directional": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:physical-metal": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:physical-radius": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:physical-spot": {
     "view_transform": "Standard",
     "engine": "BLENDER_EEVEE",
     "reading": "LINEAR_VALUES",
@@ -110,6 +149,41 @@
     "field_of_view": 0.785398,
     "camera": "Viewpoint"
    },
+   "blender_display:physical-dielectric": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:physical-directional": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:physical-metal": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:physical-radius": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:physical-spot": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
    "blender_display:point-attenuation": {
     "view_transform": "Raw",
     "engine": "BLENDER_EEVEE",
@@ -160,6 +234,41 @@
     "camera": "Viewpoint"
    },
    "blender_srgb_decoded:headlight": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:physical-dielectric": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:physical-directional": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:physical-metal": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:physical-radius": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:physical-spot": {
     "view_transform": "Standard",
     "engine": "BLENDER_EEVEE",
     "reading": "SRGB_DECODED",
@@ -222,6 +331,41 @@
     "field_of_view": 0.785398,
     "camera": "Viewpoint"
    },
+   "blender_default:physical-dielectric": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:physical-directional": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:physical-metal": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:physical-radius": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:physical-spot": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
    "blender_default:point-attenuation": {
     "view_transform": "AgX",
     "engine": "BLENDER_EEVEE",
@@ -272,6 +416,41 @@
     "camera": "Viewpoint"
    },
    "blender_cycles:headlight": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:physical-dielectric": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:physical-directional": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:physical-metal": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:physical-radius": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:physical-spot": {
     "view_transform": "Standard",
     "engine": "CYCLES",
     "reading": "LINEAR_VALUES",
@@ -482,6 +661,58 @@
    "closest": [
     "linear-values/srgb"
    ]
+  }
+ },
+ "physical_gates": {
+  "blender_physical:blender": {
+   "result": "pass",
+   "worst_scene": "physical-directional",
+   "worst": {
+    "mean": 0.251,
+    "p99": 0.512,
+    "max": 0.555
+   }
+  },
+  "browser_physical:x_ite": {
+   "result": "pass",
+   "worst_scene": "physical-directional",
+   "worst": {
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "knobs": {
+     "inverse_square": true,
+     "radius": "hard",
+     "spot": "x3d",
+     "visibility": "separable"
+    },
+    "curve": "pow22"
+   }
+  },
+  "browser_physical:x3dom": {
+   "result": "fail",
+   "worst_scene": "physical-metal",
+   "worst": {
+    "mean": 205.618,
+    "p99": 236.526,
+    "max": 237.928,
+    "knobs": {
+     "inverse_square": false,
+     "radius": "hard",
+     "spot": "x3d",
+     "visibility": "separable"
+    },
+    "curve": "pow22"
+   }
+  },
+  "wrong_twin_physical_default:blender_default": {
+   "result": "pass",
+   "worst_scene": "physical-spot",
+   "worst": {
+    "mean": 5.139,
+    "p99": 35.718,
+    "max": 38.555
+   }
   }
  },
  "witnesses": {
@@ -1093,6 +1324,312 @@
       "mean": 34.759,
       "p99": 71.389,
       "max": 72.015
+     }
+    }
+   }
+  },
+  "x3dom-physical-renamed": {
+   "ambient-emissive": {
+    "closest": "linear-values/pow22",
+    "mean": 0.248,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 59.012,
+      "p99": 98.118,
+      "max": 99.458
+     },
+     "linear/pow22": {
+      "mean": 60.051,
+      "p99": 100.678,
+      "max": 102.08
+     },
+     "display/srgb": {
+      "mean": 47.205,
+      "p99": 65.113,
+      "max": 65.782
+     },
+     "display/pow22": {
+      "mean": 47.205,
+      "p99": 65.113,
+      "max": 65.782
+     },
+     "linear-values/srgb": {
+      "mean": 1.181,
+      "p99": 1.941,
+      "max": 1.988
+     },
+     "linear-values/pow22": {
+      "mean": 0.248,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "directional": {
+    "closest": "linear-values/pow22",
+    "mean": 0.252,
+    "p99": 0.347,
+    "max": 0.347,
+    "all": {
+     "linear/srgb": {
+      "mean": 42.768,
+      "p99": 60.027,
+      "max": 60.027
+     },
+     "linear/pow22": {
+      "mean": 42.7,
+      "p99": 59.578,
+      "max": 59.578
+     },
+     "display/srgb": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "display/pow22": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "linear-values/srgb": {
+      "mean": 1.437,
+      "p99": 1.751,
+      "max": 1.751
+     },
+     "linear-values/pow22": {
+      "mean": 0.252,
+      "p99": 0.347,
+      "max": 0.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "linear-values/pow22",
+    "mean": 0.161,
+    "p99": 0.493,
+    "max": 0.499,
+    "all": {
+     "linear/srgb": {
+      "mean": 60.244,
+      "p99": 74.719,
+      "max": 75.309
+     },
+     "linear/pow22": {
+      "mean": 60.29,
+      "p99": 75.445,
+      "max": 76.029
+     },
+     "display/srgb": {
+      "mean": 17.127,
+      "p99": 55.045,
+      "max": 58.93
+     },
+     "display/pow22": {
+      "mean": 17.127,
+      "p99": 55.045,
+      "max": 58.93
+     },
+     "linear-values/srgb": {
+      "mean": 0.461,
+      "p99": 1.63,
+      "max": 1.804
+     },
+     "linear-values/pow22": {
+      "mean": 0.161,
+      "p99": 0.493,
+      "max": 0.499
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "linear-values/pow22",
+    "mean": 0.251,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.46,
+      "p99": 29.367,
+      "max": 30.06
+     },
+     "linear/pow22": {
+      "mean": 20.194,
+      "p99": 29.385,
+      "max": 30.103
+     },
+     "display/srgb": {
+      "mean": 67.916,
+      "p99": 72.487,
+      "max": 72.594
+     },
+     "display/pow22": {
+      "mean": 67.916,
+      "p99": 72.487,
+      "max": 72.594
+     },
+     "linear-values/srgb": {
+      "mean": 0.838,
+      "p99": 1.933,
+      "max": 2.667
+     },
+     "linear-values/pow22": {
+      "mean": 0.251,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "linear-values/pow22",
+    "mean": 0.053,
+    "p99": 0.48,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 8.339,
+      "p99": 62.77,
+      "max": 64.858
+     },
+     "linear/pow22": {
+      "mean": 8.265,
+      "p99": 61.855,
+      "max": 64.172
+     },
+     "display/srgb": {
+      "mean": 13.385,
+      "p99": 72.042,
+      "max": 72.578
+     },
+     "display/pow22": {
+      "mean": 13.385,
+      "p99": 72.042,
+      "max": 72.578
+     },
+     "linear-values/srgb": {
+      "mean": 0.253,
+      "p99": 1.803,
+      "max": 1.937
+     },
+     "linear-values/pow22": {
+      "mean": 0.053,
+      "p99": 0.48,
+      "max": 0.5
+     }
+    }
+   },
+   "specular": {
+    "closest": "linear-values/pow22",
+    "mean": 0.244,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 51.935,
+      "p99": 64.442,
+      "max": 65.047
+     },
+     "linear/pow22": {
+      "mean": 51.314,
+      "p99": 63.619,
+      "max": 64.316
+     },
+     "display/srgb": {
+      "mean": 63.902,
+      "p99": 72.395,
+      "max": 72.584
+     },
+     "display/pow22": {
+      "mean": 63.902,
+      "p99": 72.395,
+      "max": 72.584
+     },
+     "linear-values/srgb": {
+      "mean": 0.831,
+      "p99": 1.914,
+      "max": 1.988
+     },
+     "linear-values/pow22": {
+      "mean": 0.244,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "spot": {
+    "closest": "linear-values/pow22",
+    "mean": 0.094,
+    "p99": 0.489,
+    "max": 0.741,
+    "all": {
+     "linear/srgb": {
+      "mean": 12.187,
+      "p99": 66.817,
+      "max": 67.718
+     },
+     "linear/pow22": {
+      "mean": 11.5,
+      "p99": 65.468,
+      "max": 66.377
+     },
+     "display/srgb": {
+      "mean": 21.402,
+      "p99": 72.213,
+      "max": 72.58
+     },
+     "display/pow22": {
+      "mean": 21.402,
+      "p99": 72.213,
+      "max": 72.58
+     },
+     "linear-values/srgb": {
+      "mean": 0.548,
+      "p99": 5.592,
+      "max": 8.863
+     },
+     "linear-values/pow22": {
+      "mean": 0.094,
+      "p99": 0.489,
+      "max": 0.741
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "linear-values/pow22",
+    "mean": 0.201,
+    "p99": 0.494,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 51.947,
+      "p99": 119.527,
+      "max": 129.317
+     },
+     "linear/pow22": {
+      "mean": 52.548,
+      "p99": 121.501,
+      "max": 131.762
+     },
+     "display/srgb": {
+      "mean": 34.762,
+      "p99": 71.37,
+      "max": 72.03
+     },
+     "display/pow22": {
+      "mean": 34.762,
+      "p99": 71.37,
+      "max": 72.03
+     },
+     "linear-values/srgb": {
+      "mean": 0.822,
+      "p99": 1.924,
+      "max": 1.987
+     },
+     "linear-values/pow22": {
+      "mean": 0.201,
+      "p99": 0.494,
+      "max": 0.5
      }
     }
    }
@@ -3542,6 +4079,1350 @@
       "p99": 119.813,
       "max": 129.298
      }
+    }
+   }
+  }
+ },
+ "physical": {
+  "x3dom": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 93.85,
+     "p99": 133.555,
+     "max": 135.115
+    },
+    "spec/pow22": {
+     "mean": 92.613,
+     "p99": 134.13,
+     "max": 135.872
+    },
+    "closest": {
+     "mean": 77.874,
+     "p99": 145.259,
+     "max": 147.91,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "correlated"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 134.889,
+     "p99": 164.602,
+     "max": 165.066
+    },
+    "spec/pow22": {
+     "mean": 135.515,
+     "p99": 164.18,
+     "max": 164.62
+    },
+    "closest": {
+     "mean": 134.889,
+     "p99": 164.602,
+     "max": 165.066,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 226.652,
+     "p99": 253.099,
+     "max": 253.518
+    },
+    "spec/pow22": {
+     "mean": 220.427,
+     "p99": 246.403,
+     "max": 247.324
+    },
+    "closest": {
+     "mean": 205.618,
+     "p99": 236.526,
+     "max": 237.928,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 26.617,
+     "p99": 153.076,
+     "max": 153.371
+    },
+    "spec/pow22": {
+     "mean": 26.622,
+     "p99": 151.478,
+     "max": 151.759
+    },
+    "closest": {
+     "mean": 26.617,
+     "p99": 153.076,
+     "max": 153.371,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 52.888,
+     "p99": 195.273,
+     "max": 200.903
+    },
+    "spec/pow22": {
+     "mean": 52.368,
+     "p99": 192.363,
+     "max": 198.009
+    },
+    "closest": {
+     "mean": 20.554,
+     "p99": 119.316,
+     "max": 125.067,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   }
+  },
+  "x3dom-none": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 44.437,
+     "p99": 128.329,
+     "max": 134.867
+    },
+    "spec/pow22": {
+     "mean": 43.377,
+     "p99": 129.185,
+     "max": 135.63
+    },
+    "closest": {
+     "mean": 37.919,
+     "p99": 141.047,
+     "max": 147.76,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "correlated"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 134.889,
+     "p99": 164.602,
+     "max": 165.066
+    },
+    "spec/pow22": {
+     "mean": 135.515,
+     "p99": 164.18,
+     "max": 164.62
+    },
+    "closest": {
+     "mean": 134.889,
+     "p99": 164.602,
+     "max": 165.066,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 224.187,
+     "p99": 253.072,
+     "max": 253.452
+    },
+    "spec/pow22": {
+     "mean": 217.962,
+     "p99": 246.348,
+     "max": 247.17
+    },
+    "closest": {
+     "mean": 203.153,
+     "p99": 236.444,
+     "max": 237.728,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 21.648,
+     "p99": 140.852,
+     "max": 148.995
+    },
+    "spec/pow22": {
+     "mean": 21.653,
+     "p99": 140.773,
+     "max": 149.276
+    },
+    "closest": {
+     "mean": 21.648,
+     "p99": 140.852,
+     "max": 148.995,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 47.357,
+     "p99": 194.399,
+     "max": 200.903
+    },
+    "spec/pow22": {
+     "mean": 46.915,
+     "p99": 191.887,
+     "max": 198.009
+    },
+    "closest": {
+     "mean": 15.81,
+     "p99": 116.751,
+     "max": 124.972,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   }
+  },
+  "x3dom-physical-renamed": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 65.205,
+     "p99": 87.137,
+     "max": 87.419
+    },
+    "spec/pow22": {
+     "mean": 63.968,
+     "p99": 84.047,
+     "max": 84.338
+    },
+    "closest": {
+     "mean": 49.23,
+     "p99": 87.946,
+     "max": 90.638,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "correlated"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 74.445,
+     "p99": 96.802,
+     "max": 97.068
+    },
+    "spec/pow22": {
+     "mean": 75.071,
+     "p99": 98.044,
+     "max": 98.305
+    },
+    "closest": {
+     "mean": 74.445,
+     "p99": 96.802,
+     "max": 97.068,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 36.582,
+     "p99": 108.169,
+     "max": 132.186
+    },
+    "spec/pow22": {
+     "mean": 30.357,
+     "p99": 108.713,
+     "max": 132.969
+    },
+    "closest": {
+     "mean": 15.548,
+     "p99": 75.615,
+     "max": 94.773,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 14.574,
+     "p99": 96.947,
+     "max": 98.922
+    },
+    "spec/pow22": {
+     "mean": 14.579,
+     "p99": 97.452,
+     "max": 99.32
+    },
+    "closest": {
+     "mean": 14.574,
+     "p99": 96.947,
+     "max": 98.922,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 48.732,
+     "p99": 179.738,
+     "max": 186.192
+    },
+    "spec/pow22": {
+     "mean": 48.213,
+     "p99": 178.442,
+     "max": 184.459
+    },
+    "closest": {
+     "mean": 16.398,
+     "p99": 92.523,
+     "max": 97.417,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   }
+  },
+  "x_ite": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 1.709,
+     "p99": 6.916,
+     "max": 8.095
+    },
+    "spec/pow22": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.501
+    },
+    "closest": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.501,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 0.787,
+     "p99": 1.777,
+     "max": 1.908
+    },
+    "spec/pow22": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.5
+    },
+    "closest": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.5,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 6.31,
+     "p99": 8.923,
+     "max": 9.044
+    },
+    "spec/pow22": {
+     "mean": 0.244,
+     "p99": 0.494,
+     "max": 0.5
+    },
+    "closest": {
+     "mean": 0.244,
+     "p99": 0.494,
+     "max": 0.5,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 5.733,
+     "p99": 50.395,
+     "max": 60.194
+    },
+    "spec/pow22": {
+     "mean": 5.728,
+     "p99": 49.879,
+     "max": 59.867
+    },
+    "closest": {
+     "mean": 0.054,
+     "p99": 0.467,
+     "max": 0.498,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "window",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 3.663,
+     "p99": 22.831,
+     "max": 24.838
+    },
+    "spec/pow22": {
+     "mean": 4.202,
+     "p99": 25.4,
+     "max": 27.472
+    },
+    "closest": {
+     "mean": 0.091,
+     "p99": 0.484,
+     "max": 0.499,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "gltf",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   }
+  },
+  "x_ite-phong": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 1.709,
+     "p99": 6.916,
+     "max": 8.095
+    },
+    "spec/pow22": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.501
+    },
+    "closest": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.501,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 0.787,
+     "p99": 1.777,
+     "max": 1.908
+    },
+    "spec/pow22": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.5
+    },
+    "closest": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.5,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 6.31,
+     "p99": 8.923,
+     "max": 9.044
+    },
+    "spec/pow22": {
+     "mean": 0.244,
+     "p99": 0.494,
+     "max": 0.5
+    },
+    "closest": {
+     "mean": 0.244,
+     "p99": 0.494,
+     "max": 0.5,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 5.733,
+     "p99": 50.395,
+     "max": 60.194
+    },
+    "spec/pow22": {
+     "mean": 5.728,
+     "p99": 49.879,
+     "max": 59.867
+    },
+    "closest": {
+     "mean": 0.054,
+     "p99": 0.467,
+     "max": 0.498,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "window",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 3.663,
+     "p99": 22.831,
+     "max": 24.838
+    },
+    "spec/pow22": {
+     "mean": 4.202,
+     "p99": 25.4,
+     "max": 27.472
+    },
+    "closest": {
+     "mean": 0.091,
+     "p99": 0.484,
+     "max": 0.499,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "gltf",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   }
+  },
+  "x_ite-phong-linear": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 1.709,
+     "p99": 6.916,
+     "max": 8.095
+    },
+    "spec/pow22": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.501
+    },
+    "closest": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.501,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 0.787,
+     "p99": 1.777,
+     "max": 1.908
+    },
+    "spec/pow22": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.5
+    },
+    "closest": {
+     "mean": 0.25,
+     "p99": 0.495,
+     "max": 0.5,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 6.31,
+     "p99": 8.923,
+     "max": 9.044
+    },
+    "spec/pow22": {
+     "mean": 0.244,
+     "p99": 0.494,
+     "max": 0.5
+    },
+    "closest": {
+     "mean": 0.244,
+     "p99": 0.494,
+     "max": 0.5,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 5.733,
+     "p99": 50.395,
+     "max": 60.194
+    },
+    "spec/pow22": {
+     "mean": 5.728,
+     "p99": 49.879,
+     "max": 59.867
+    },
+    "closest": {
+     "mean": 0.054,
+     "p99": 0.467,
+     "max": 0.498,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "window",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 3.663,
+     "p99": 22.831,
+     "max": 24.838
+    },
+    "spec/pow22": {
+     "mean": 4.202,
+     "p99": 25.4,
+     "max": 27.472
+    },
+    "closest": {
+     "mean": 0.091,
+     "p99": 0.484,
+     "max": 0.499,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "gltf",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   }
+  },
+  "blender": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 0.249,
+     "p99": 0.503,
+     "max": 0.571
+    },
+    "spec/pow22": {
+     "mean": 1.711,
+     "p99": 6.931,
+     "max": 8.339
+    },
+    "closest": {
+     "mean": 0.249,
+     "p99": 0.503,
+     "max": 0.571,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 0.251,
+     "p99": 0.512,
+     "max": 0.555
+    },
+    "spec/pow22": {
+     "mean": 0.766,
+     "p99": 1.732,
+     "max": 1.868
+    },
+    "closest": {
+     "mean": 0.251,
+     "p99": 0.512,
+     "max": 0.555,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 0.248,
+     "p99": 0.496,
+     "max": 0.535
+    },
+    "spec/pow22": {
+     "mean": 6.317,
+     "p99": 8.927,
+     "max": 9.046
+    },
+    "closest": {
+     "mean": 0.248,
+     "p99": 0.496,
+     "max": 0.535,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 0.051,
+     "p99": 0.468,
+     "max": 0.505
+    },
+    "spec/pow22": {
+     "mean": 0.184,
+     "p99": 1.818,
+     "max": 2.319
+    },
+    "closest": {
+     "mean": 0.051,
+     "p99": 0.468,
+     "max": 0.505,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 0.097,
+     "p99": 0.496,
+     "max": 0.53
+    },
+    "spec/pow22": {
+     "mean": 0.794,
+     "p99": 7.618,
+     "max": 9.001
+    },
+    "closest": {
+     "mean": 0.097,
+     "p99": 0.496,
+     "max": 0.53,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   }
+  },
+  "blender_cycles": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 4.4,
+     "p99": 8.066,
+     "max": 8.21
+    },
+    "spec/pow22": {
+     "mean": 3.221,
+     "p99": 6.482,
+     "max": 6.755
+    },
+    "closest": {
+     "mean": 3.22,
+     "p99": 6.481,
+     "max": 6.755,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "correlated"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 0.299,
+     "p99": 0.853,
+     "max": 1.22
+    },
+    "spec/pow22": {
+     "mean": 0.926,
+     "p99": 2.06,
+     "max": 2.433
+    },
+    "closest": {
+     "mean": 0.299,
+     "p99": 0.853,
+     "max": 1.22,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 0.348,
+     "p99": 2.227,
+     "max": 4.488
+    },
+    "spec/pow22": {
+     "mean": 6.28,
+     "p99": 8.868,
+     "max": 8.987
+    },
+    "closest": {
+     "mean": 0.348,
+     "p99": 2.227,
+     "max": 4.488,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 38.944,
+     "p99": 92.0,
+     "max": 96.0
+    },
+    "spec/pow22": {
+     "mean": 38.994,
+     "p99": 92.0,
+     "max": 96.0
+    },
+    "closest": {
+     "mean": 38.944,
+     "p99": 92.0,
+     "max": 96.0,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 5.329,
+     "p99": 36.084,
+     "max": 39.555
+    },
+    "spec/pow22": {
+     "mean": 5.409,
+     "p99": 35.767,
+     "max": 39.474
+    },
+    "closest": {
+     "mean": 5.329,
+     "p99": 36.084,
+     "max": 39.555,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   }
+  },
+  "blender_default": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 5.801,
+     "p99": 14.391,
+     "max": 21.273
+    },
+    "spec/pow22": {
+     "mean": 5.273,
+     "p99": 10.597,
+     "max": 19.957
+    },
+    "closest": {
+     "mean": 5.273,
+     "p99": 10.597,
+     "max": 19.957,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 1.426,
+     "p99": 4.724,
+     "max": 5.564
+    },
+    "spec/pow22": {
+     "mean": 0.849,
+     "p99": 3.32,
+     "max": 4.144
+    },
+    "closest": {
+     "mean": 0.849,
+     "p99": 3.32,
+     "max": 4.144,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 6.858,
+     "p99": 39.0,
+     "max": 58.0
+    },
+    "spec/pow22": {
+     "mean": 13.093,
+     "p99": 38.556,
+     "max": 58.0
+    },
+    "closest": {
+     "mean": 6.858,
+     "p99": 39.0,
+     "max": 58.0,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 11.262,
+     "p99": 91.395,
+     "max": 101.194
+    },
+    "spec/pow22": {
+     "mean": 11.258,
+     "p99": 90.879,
+     "max": 100.867
+    },
+    "closest": {
+     "mean": 0.966,
+     "p99": 7.079,
+     "max": 7.539,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "window2",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 5.139,
+     "p99": 35.718,
+     "max": 38.555
+    },
+    "spec/pow22": {
+     "mean": 5.35,
+     "p99": 35.492,
+     "max": 38.474
+    },
+    "closest": {
+     "mean": 5.139,
+     "p99": 35.718,
+     "max": 38.555,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   }
+  },
+  "blender_display": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 57.059,
+     "p99": 73.415,
+     "max": 73.716
+    },
+    "spec/pow22": {
+     "mean": 58.296,
+     "p99": 72.318,
+     "max": 72.611
+    },
+    "closest": {
+     "mean": 57.059,
+     "p99": 73.415,
+     "max": 73.716,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 70.286,
+     "p99": 73.511,
+     "max": 73.655
+    },
+    "spec/pow22": {
+     "mean": 69.66,
+     "p99": 72.319,
+     "max": 72.596
+    },
+    "closest": {
+     "mean": 69.66,
+     "p99": 72.319,
+     "max": 72.596,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "pow22"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 15.883,
+     "p99": 72.581,
+     "max": 73.572
+    },
+    "spec/pow22": {
+     "mean": 22.108,
+     "p99": 71.513,
+     "max": 72.493
+    },
+    "closest": {
+     "mean": 15.883,
+     "p99": 72.581,
+     "max": 73.572,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 13.889,
+     "p99": 73.204,
+     "max": 73.637
+    },
+    "spec/pow22": {
+     "mean": 13.885,
+     "p99": 72.078,
+     "max": 72.536
+    },
+    "closest": {
+     "mean": 3.83,
+     "p99": 31.881,
+     "max": 33.173,
+     "knobs": {
+      "inverse_square": false,
+      "radius": "window2",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 20.51,
+     "p99": 73.475,
+     "max": 73.737
+    },
+    "spec/pow22": {
+     "mean": 21.029,
+     "p99": 72.332,
+     "max": 72.555
+    },
+    "closest": {
+     "mean": 16.038,
+     "p99": 73.411,
+     "max": 73.737,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "gltf",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   }
+  },
+  "blender_srgb_decoded": {
+   "physical-dielectric": {
+    "spec/srgb": {
+     "mean": 0.249,
+     "p99": 0.503,
+     "max": 0.571
+    },
+    "spec/pow22": {
+     "mean": 1.711,
+     "p99": 6.931,
+     "max": 8.339
+    },
+    "closest": {
+     "mean": 0.249,
+     "p99": 0.503,
+     "max": 0.571,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-directional": {
+    "spec/srgb": {
+     "mean": 0.251,
+     "p99": 0.512,
+     "max": 0.555
+    },
+    "spec/pow22": {
+     "mean": 0.766,
+     "p99": 1.732,
+     "max": 1.868
+    },
+    "closest": {
+     "mean": 0.251,
+     "p99": 0.512,
+     "max": 0.555,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-metal": {
+    "spec/srgb": {
+     "mean": 0.248,
+     "p99": 0.496,
+     "max": 0.535
+    },
+    "spec/pow22": {
+     "mean": 6.317,
+     "p99": 8.927,
+     "max": 9.046
+    },
+    "closest": {
+     "mean": 0.248,
+     "p99": 0.496,
+     "max": 0.535,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-radius": {
+    "spec/srgb": {
+     "mean": 0.051,
+     "p99": 0.468,
+     "max": 0.505
+    },
+    "spec/pow22": {
+     "mean": 0.184,
+     "p99": 1.818,
+     "max": 2.319
+    },
+    "closest": {
+     "mean": 0.051,
+     "p99": 0.468,
+     "max": 0.505,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
+    }
+   },
+   "physical-spot": {
+    "spec/srgb": {
+     "mean": 0.097,
+     "p99": 0.496,
+     "max": 0.53
+    },
+    "spec/pow22": {
+     "mean": 0.794,
+     "p99": 7.618,
+     "max": 9.001
+    },
+    "closest": {
+     "mean": 0.097,
+     "p99": 0.496,
+     "max": 0.53,
+     "knobs": {
+      "inverse_square": true,
+      "radius": "hard",
+      "spot": "x3d",
+      "visibility": "separable"
+     },
+     "curve": "srgb"
     }
    }
   }

@@ -11,6 +11,7 @@
 //   x_ite-phong-linear Shading PHONG, ColorSpace LINEAR
 //   x3dom              X3DOM as it ships (Environment gammaCorrectionDefault "linear")
 //   x3dom-none         X3DOM with <Environment gammaCorrectionDefault='none'>
+//   x3dom-physical-renamed  X3DOM as it ships, PhysicalMaterial fields renamed to X3DOM's (see x3domPhysicalNames)
 // out/versions.json names each library's version and the WebGL renderer that drew it.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -22,6 +23,14 @@ const configs = (flags.configs || 'x_ite,x_ite-phong,x_ite-phong-linear,x3dom,x3
 const out = path.resolve(flags.out || 'lighting-out'), SIZE = 64;
 const types = { '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.x3d': 'model/x3d+xml' };
 let current = '';
+
+// x3dom-physical-renamed: X3DOM 1.8.3's PhysicalMaterial is its own node with glTF's names (baseColorFactor,
+// metallicFactor, roughnessFactor, emissiveFactor) and ignores X3D 4.0's; this witness gets the file with them renamed.
+function x3domPhysicalNames(xml) {
+  return xml.replace(/<PhysicalMaterial([^>]*)>/g, (_, attributes) => '<PhysicalMaterial' + attributes
+    .replace(/\bbaseColor='([^']*)'/, (m, v) => `baseColorFactor='${v} 1'`).replace(/\bmetallic=/, 'metallicFactor=')
+    .replace(/\broughness=/, 'roughnessFactor=').replace(/\bemissiveColor=/, 'emissiveFactor=') + '>');
+}
 
 function x3domMarkup(xml, gamma) {
   // the <Scene> children, inline in HTML: HTML has no self-closing elements, so <A .../> becomes <A ...></A>
@@ -37,7 +46,7 @@ function page(config) {
 <body style=margin:0><x3d-canvas id=c style="width:${SIZE}px;height:${SIZE}px;display:block" colorSpace=${colorSpace} contextMenu=false notifications=false splashScreen=false timings=false></x3d-canvas>`;
   }
   return `<!doctype html><meta charset=utf-8><link rel=stylesheet href=/x3dom/x3dom.css><script src=/x3dom/x3dom.js></script>
-<body style=margin:0>${x3domMarkup(current, config === 'x3dom-none' ? 'none' : '')}</body>`;
+<body style=margin:0>${x3domMarkup(config === 'x3dom-physical-renamed' ? x3domPhysicalNames(current) : current, config === 'x3dom-none' ? 'none' : '')}</body>`;
 }
 
 const srv = http.createServer((q, r) => {

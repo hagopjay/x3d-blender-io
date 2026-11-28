@@ -242,22 +242,146 @@ def group():
     return tree
 
 
-def apply_material(bpymat, fields, reading):
-    """Give a classic material its EEVEE "X3D Phong" output; the Principled BSDF output stays for Cycles."""
-    tree = bpymat.node_tree
+PHYSICAL_GROUP_NAME = "X3D Physical"
+PHYSICAL_GROUP_VERSION = 1
+PHYSICAL_PROPERTY = "x3d_physical"   # on a material: the file's PhysicalMaterial fields, as read
+
+
+def physical_fields(mat, ancestry):
+    """A PhysicalMaterial node's lighting fields, with X3D 4.0's defaults (12.4.6)."""
+    return {"baseColor": tuple(mat.getFieldAsFloatTuple("baseColor", (1.0, 1.0, 1.0), ancestry)),
+            "emissiveColor": tuple(mat.getFieldAsFloatTuple("emissiveColor", (0.0, 0.0, 0.0), ancestry)),
+            "metallic": mat.getFieldAsFloat("metallic", 1.0, ancestry),
+            "roughness": mat.getFieldAsFloat("roughness", 1.0, ancestry),
+            "transparency": mat.getFieldAsFloat("transparency", 0.0, ancestry)}
+
+
+def physical_group():
+    """The shared "X3D Physical" node group: X3D 4.0 17.2.2.6, X3D's o_i x color x attenuation_i x spot_i (the same
+    light properties as X3D Phong: hard radius, Table 17.4's spot ramp) around glTF 2.0 Appendix B's BRDF, a mix of
+    the dielectric (f0 0.04) and metal BRDFs, GGX with separable Smith visibility; a point or spot light's candela
+    fall off as 1/d^2 in the light's frame, a DirectionalLight's lux do not. Colours are linear values (glTF's
+    reading) whatever the Phong reading."""
+    tree = bpy.data.node_groups.get(PHYSICAL_GROUP_NAME)
+    if tree is not None and tree.get("x3d_physical_version") == PHYSICAL_GROUP_VERSION:
+        return tree
     if tree is None:
-        return None
-    existing = [node for node in tree.nodes if node.bl_idname == 'ShaderNodeOutputMaterial' and node.target != 'EEVEE']
-    for output in existing:
+        tree = bpy.data.node_groups.new(PHYSICAL_GROUP_NAME, 'ShaderNodeTree')
+    tree.nodes.clear()
+    tree.interface.clear()
+    for name, kind, value in (("Base", 'NodeSocketColor', (1.0, 1.0, 1.0, 1.0)),
+                              ("Metallic", 'NodeSocketFloat', 1.0), ("Roughness", 'NodeSocketFloat', 1.0),
+                              ("Emissive", 'NodeSocketColor', (0.0, 0.0, 0.0, 1.0)), ("Alpha", 'NodeSocketFloat', 1.0)):
+        socket = tree.interface.new_socket(name, in_out='INPUT', socket_type=kind)
+        socket.default_value = value
+    tree.interface.new_socket("Shader", in_out='OUTPUT', socket_type='NodeSocketShader')
+    tree["x3d_physical_version"] = PHYSICAL_GROUP_VERSION
+    g = _Graph(tree)
+    given = g.node("NodeGroupInput").outputs
+    base, metallic, roughness = given["Base"], given["Metallic"], given["Roughness"]
+    geometry = g.node("ShaderNodeNewGeometry").outputs
+    normal, view = geometry["Normal"], geometry["Incoming"]
+    evaluation = g.node("ShaderNodeLightEvaluation", (None, geometry["Position"], normal), mode='DIFFUSE').outputs
+    towards, distance = evaluation["Direction"], evaluation["Distance"]
+    n_dot_l = g.math('MAXIMUM', g.vector('DOT_PRODUCT', normal, towards), 0.0)
+    n_dot_v = g.math('MAXIMUM', g.vector('DOT_PRODUCT', normal, view), 1e-6)
+    half = g.vector('NORMALIZE', g.vector('ADD', towards, view))
+    n_dot_h = g.math('MAXIMUM', g.vector('DOT_PRODUCT', normal, half), 0.0)
+    v_dot_h = g.math('MAXIMUM', g.vector('DOT_PRODUCT', view, half), 0.0)
+    alpha = g.math('MULTIPLY', roughness, roughness)
+    a2 = g.math('MULTIPLY', alpha, alpha)
+    one_minus_a2 = g.math('SUBTRACT', 1.0, a2)
+    # D = a2 / (pi (NH^2 (a2 - 1) + 1)^2)
+    lobe = g.math('ADD', g.math('MULTIPLY', g.math('MULTIPLY', n_dot_h, n_dot_h), g.math('SUBTRACT', a2, 1.0)), 1.0)
+    distribution = g.math('DIVIDE', a2, g.math('MULTIPLY', math.pi, g.math('MULTIPLY', lobe, lobe)))
+    # separable Smith: G1(L) G1(V) / (4 NL NV) = 1 / ((NL + sqrt(a2 + (1 - a2) NL^2)) (NV + sqrt(...NV...)))
+
+    def smith(x):
+        return g.math('ADD', x, g.math('SQRT', g.math('ADD', a2, g.math('MULTIPLY', one_minus_a2,
+                                                                         g.math('MULTIPLY', x, x)))))
+    visibility = g.math('DIVIDE', 1.0, g.math('MULTIPLY', smith(n_dot_l), smith(n_dot_v)))
+    p5 = g.math('POWER', g.math('SUBTRACT', 1.0, v_dot_h), 5.0)
+    # F = f0 + (1 - f0) p5 with f0 = mix(0.04, base, metallic); as a vector: f0 (1 - p5) + p5
+    f0 = g.node("ShaderNodeMix", (None,), data_type='VECTOR', factor_mode='UNIFORM')
+    g.feed(f0.inputs[0], metallic)
+    f0.inputs[4].default_value = (0.04, 0.04, 0.04)
+    g.feed(f0.inputs[5], base)
+    fresnel = g.vector('ADD', g.scale(f0.outputs[1], g.math('SUBTRACT', 1.0, p5)),
+                       g.node("ShaderNodeCombineXYZ", (p5, p5, p5)).outputs[0])
+    specular = g.scale(fresnel, g.math('MULTIPLY', distribution, visibility))
+    dielectric = g.math('ADD', 0.04, g.math('MULTIPLY', 0.96, p5))
+    weight = g.math('MULTIPLY', g.math('SUBTRACT', 1.0, metallic), g.math('SUBTRACT', 1.0, dielectric))
+    diffuse = g.scale(base, g.math('DIVIDE', weight, math.pi))
+    # E: intensity x attenuation x (1 / d^2 unless directional) x reach x spot x on, all in the light's frame
+    local = g.math('DIVIDE', distance, g.light("frame"))
+    c = g.node("ShaderNodeSeparateXYZ", (g.light("attenuation", vector=True),)).outputs
+    falloff = g.math('ADD', g.math('ADD', c[0], g.math('MULTIPLY', c[1], local)),
+                     g.math('MULTIPLY', c[2], g.math('MULTIPLY', local, local)))
+    attenuation = g.math('DIVIDE', 1.0, g.math('MAXIMUM', falloff, 1.0))
+    directional = g.math('LESS_THAN', g.light("kind"), 1.5)
+    inverse_square = g.math('ADD', directional, g.math('DIVIDE', g.math('SUBTRACT', 1.0, directional),
+                                                       g.math('MULTIPLY', local, local)))
+    radius = g.light("radius")
+    in_reach = g.math('MAXIMUM', g.math('LESS_THAN', radius, 0.0),
+                      g.math('SUBTRACT', 1.0, g.math('GREATER_THAN', distance, radius)))
+    along = g.vector('DOT_PRODUCT', g.scale(towards, -1.0), g.light("axis", vector=True))
+    angle = g.math('ARCCOSINE', g.math('MINIMUM', g.math('MAXIMUM', along, -1.0), 1.0))
+    cut_off = g.light("cutoff")
+    spot = g.math('DIVIDE', g.math('SUBTRACT', cut_off, angle), g.math('SUBTRACT', cut_off, g.light("beam")),
+                  clamp=True)
+    level = g.math('MULTIPLY', g.math('MULTIPLY', g.math('MULTIPLY', g.light("on"), in_reach),
+                                      g.math('MULTIPLY', attenuation, spot)),
+                   g.math('MULTIPLY', g.math('MULTIPLY', g.light("intensity"), inverse_square), n_dot_l))
+    contribution = g.vector('MULTIPLY', g.scale(g.vector('ADD', diffuse, specular), level),
+                            g.light("color", vector=True))
+    accumulation = g.node("ShaderNodeLightAccumulation")
+    g.feed(accumulation.inputs["Diffuse Light"], contribution)
+    accumulation.inputs["Diffuse Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+    glow = g.node("ShaderNodeEmission", (given["Emissive"], 1.0)).outputs[0]
+    lit_shader = g.node("ShaderNodeAddShader", (accumulation.outputs["Shader"], glow)).outputs[0]
+    clear = g.node("ShaderNodeBsdfTransparent").outputs[0]
+    surface = g.node("ShaderNodeMixShader", (given["Alpha"], clear, lit_shader)).outputs[0]
+    g.feed(g.node("NodeGroupOutput").inputs[0], surface)
+    return tree
+
+
+def _eevee_output(bpymat, group_tree, name):
+    tree = bpymat.node_tree
+    for output in [node for node in tree.nodes if node.bl_idname == 'ShaderNodeOutputMaterial' and node.target != 'EEVEE']:
         output.target = 'CYCLES'
     node = tree.nodes.new('ShaderNodeGroup')
-    node.node_tree = group()
-    node.name = node.label = GROUP_NAME
+    node.node_tree = group_tree
+    node.name = node.label = name
     node.location = (300, -400)
     output = tree.nodes.new('ShaderNodeOutputMaterial')
     output.target = 'EEVEE'
     output.location = (600, -400)
     tree.links.new(node.outputs[0], output.inputs['Surface'])
+    return node
+
+
+def apply_physical(bpymat, fields):
+    """Give a PhysicalMaterial's material its EEVEE "X3D Physical" output; the Principled output stays for Cycles."""
+    if bpymat.node_tree is None:
+        return None
+    node = _eevee_output(bpymat, physical_group(), PHYSICAL_GROUP_NAME)
+    node.inputs["Base"].default_value = tuple(float(c) for c in tuple(fields["baseColor"])[:3]) + (1.0,)
+    node.inputs["Emissive"].default_value = tuple(float(c) for c in tuple(fields["emissiveColor"])[:3]) + (1.0,)
+    node.inputs["Metallic"].default_value = min(max(float(fields["metallic"]), 0.0), 1.0)
+    node.inputs["Roughness"].default_value = min(max(float(fields["roughness"]), 0.0), 1.0)
+    node.inputs["Alpha"].default_value = 1.0 - min(max(float(fields["transparency"]), 0.0), 1.0)
+    bsdf = next((n for n in bpymat.node_tree.nodes if n.bl_idname == 'ShaderNodeBsdfPrincipled'), None)
+    if bsdf is not None and bsdf.inputs["Base Color"].is_linked:   # a base texture: multiplied in, as linear values
+        bpymat.node_tree.links.new(bsdf.inputs["Base Color"].links[0].from_socket, node.inputs["Base"])
+    return node
+
+
+def apply_material(bpymat, fields, reading):
+    """Give a classic material its EEVEE "X3D Phong" output; the Principled BSDF output stays for Cycles."""
+    tree = bpymat.node_tree
+    if tree is None:
+        return None
+    node = _eevee_output(bpymat, group(), GROUP_NAME)
     for socket, field in (("Diffuse", "diffuseColor"), ("Specular", "specularColor"), ("Emissive", "emissiveColor")):
         node.inputs[socket].default_value = working(fields[field], reading) + (1.0,)
     node.inputs["Exponent"].default_value = max(0.0, float(fields["shininess"])) * 128.0

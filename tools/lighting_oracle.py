@@ -232,7 +232,8 @@ def evaluate_physical(scene, knobs=None, curve="srgb", size=SIZE):
     see docs/LIGHTING.md); the clamped sum is encoded for the display. The BRDF is glTF 2.0 Appendix B:
     c_diff = lerp(base, 0, metallic), f0 = lerp(0.04, base, metallic), alpha = roughness^2,
     F = f0 + (1 - f0)(1 - V.H)^5, D = alpha^2 / (pi ((N.H)^2 (alpha^2 - 1) + 1)^2),
-    f = (1 - F) c_diff / pi + F D Vis, radiance = f x E x (N . L), E = intensity x color (/ d^2 for a point or spot
+    f = (1 - metallic)(1 - F_dielectric) base / pi + F D Vis (Appendix B's mix of the dielectric and metal BRDFs;
+    knob mix 'shortcut': (1 - F) c_diff / pi), radiance = f x E x (N . L), E = intensity x color (/ d^2 for a point or spot
     light when inverse_square). knobs (SPEC_KNOBS is the spec's reading):
       inverse_square  True / False
       radius          'hard' (X3D on_i) / 'window' (KHR_lights_punctual: clamp(1 - (d/r)^4)) / 'window2' (its square)
@@ -305,7 +306,13 @@ def evaluate_physical(scene, knobs=None, curve="srgb", size=SIZE):
         else:
             visibility = 0.5 / (safe_l * np.sqrt(n_dot_v * n_dot_v * (1.0 - a2) + a2)
                                 + n_dot_v * np.sqrt(safe_l * safe_l * (1.0 - a2) + a2))
-        brdf = (1.0 - fresnel) * c_diff / math.pi + fresnel * (distribution * visibility)[..., None]
+        if knobs.get("mix", "appendix") == "appendix":
+            # glTF 2.0 Appendix B as written: mix(dielectric_brdf, metal_brdf, metallic), the dielectric's diffuse
+            # weighted by its own Fresnel (f0 = 0.04), not by the mixed one
+            dielectric = 0.04 + 0.96 * ((1.0 - v_dot_h) ** 5)[..., None]
+            brdf = (1.0 - metallic) * (1.0 - dielectric) * base / math.pi + fresnel * (distribution * visibility)[..., None]
+        else:   # the common shortcut: (1 - F) c_diff / pi with F from the mixed f0
+            brdf = (1.0 - fresnel) * c_diff / math.pi + fresnel * (distribution * visibility)[..., None]
         radiance = brdf * (irradiance * on * n_dot_l)[..., None] * np.asarray(fields["color"], dtype=float)
         total += radiance
         reached.append(on > 0.0 if knobs["radius"] == "hard" else np.ones(point.shape[:2], dtype=bool))
