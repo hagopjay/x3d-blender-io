@@ -93,7 +93,8 @@ class NodeBoardBatch9Tests(unittest.TestCase):
         self.assertEqual(sorted(faces), ["bottomTexture", "frontTexture", "topTexture"])
         self.assertEqual(faces["frontTexture"].tag, "ImageTexture")
         self.assertIn("gap_batch_9_sky.png", faces["frontTexture"].get("url"))
-        self.assertEqual((faces["topTexture"].tag, faces["topTexture"].get("image")), ("PixelTexture", "1 1 3 0x3366CC"))
+        self.assertEqual((faces["topTexture"].tag, faces["topTexture"].get("image")), ("PixelTexture", "1 1 3 3368652"),
+                         "0x3366CC, in decimal as main writes SFImage pixels (x3d.py reads them with float())")
         material = root.find(".//TwoSidedMaterial")
         self.assertIsNotNone(material)
         self.assertIsNone(root.find(".//Appearance/Material"))
