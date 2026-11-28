@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 4.0//EN" "https://www.web3d.org/specifications/x3d-4.0.dtd">
+<X3D profile="Full" version="4.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance" xsd:noNamespaceSchemaLocation="https://www.web3d.org/specifications/x3d-4.0.xsd">
+  <head>
+    <meta name="description" content="SpatialSound at gain 0.5 fed by a Delay of 0.25 s on an 880 Hz oscillator that stops at 1 s: sound from 0.25 s to 1.25 s."/>
+  </head>
+  <Scene>
+    <Transform translation="2 0 0">
+      <SpatialSound DEF="Beep" gain="0.5" referenceDistance="1" maxDistance="50" rolloffFactor="1" coneInnerAngle="1.5708" coneOuterAngle="3.1416" coneOuterGain="0.25" distanceModel="INVERSE">
+        <Delay DEF="Late" delayTime="0.25" maxDelayTime="1">
+          <OscillatorSource DEF="A880" frequency="880" startTime="0" stopTime="1"/>
+        </Delay>
+      </SpatialSound>
+    </Transform>
+  </Scene>
+</X3D>
