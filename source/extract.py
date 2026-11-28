@@ -974,6 +974,12 @@ def extract_humanoid(armature, skinned, *, local_matrix, material_sink, use_tria
     skin_geometries: list[IRMeshGeometry] = []
     humanoid = IRHumanoid(name=armature.name, transform=_matrix_transform(local_matrix), root_joints=roots,
                           standard_joint_count=sum(1 for joint in joints.values() if joint.hanim_name))
+    try:
+        from . import springbone_blender
+        humanoid.spring_plan = springbone_blender.export_plan(armature)
+    except Exception as exc:  # spring bones must never stop an export
+        if diagnostics is not None:
+            diagnostics.append(f"Armature {armature.name!r}: spring bones not written ({exc}).")
     skin_def = f"hanim_{_safe_key(armature.name)}_skinCoord"
     armature_inverse = inverted64(armature.matrix_world, armature.name)
     displacers = {}     # shape key name -> (joint name, IRDisplacer): node board batch 11

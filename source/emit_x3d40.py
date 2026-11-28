@@ -1319,6 +1319,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     rx, ry, rz, ra = instance.transform.rotation_axis_angle
     sx, sy, sz = instance.transform.scale
     transform_def = defs.get("transform", instance.object_name, "OB_")
+    spring_stack = defs.__dict__.setdefault("spring_stack", [])
+    spring_stack.append(transform_def)
     # visible="false" on a Transform hides its whole subtree: only write it there when every descendant is hidden too,
     # else hide just this object's own Shapes
     subtree_hidden = _subtree_hidden(instance)
@@ -1344,6 +1346,8 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
                                 skin_coord=humanoid.skin_coord, skin_shapes=humanoid.skin_shapes,
                                 motions=humanoid.motions)
         xml.append(_humanoid_xml(placed, geometries, materials, defs, indent + "  ", output_dir=output_dir, look=look))
+        if humanoid.spring_plan:
+            xml.append(_spring_xml(humanoid, defs, indent + "  ", output_dir=output_dir))
     if instance.inline is not None:
         inline_def = defs.get("inline", instance.object_name, "IN_")
         xml.append(f"{indent}  <Inline DEF=\"{inline_def}\" url='{_mfstring([instance.inline.url])}' />\n")
@@ -1376,6 +1380,38 @@ def _instance_xml(instance, geometries, materials, defs: _DefNames, indent, *, o
     if carried is not None and instance.carried:
         xml.append(carried.xml(instance.carried, indent + "  "))
     xml.append(f"{indent}</Transform>\n")
+    spring_stack.pop()
+    return "".join(xml)
+
+
+def _spring_xml(humanoid, defs: _DefNames, indent, *, output_dir=None):
+    """SpringBoneChains (x3d.loom x3d.springbone) after their humanoid: ancestors are the Transforms down to the armature's,
+    the HAnimHumanoid and the joints above each root; the library files are copied beside the X3D file once."""
+    from . import springbone_model as sm
+    xml = []
+    if not getattr(defs, "spring_declared", False):
+        defs.spring_declared = True
+        xml.append(sm.extern_declarations(indent=indent))
+        if output_dir:
+            import shutil
+            here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "springbone")
+            for name in ("SpringBone.x3d", "springbone-script.js"):
+                target = os.path.join(output_dir, name)
+                if not os.path.exists(target) and os.path.exists(os.path.join(here, name)):
+                    shutil.copyfile(os.path.join(here, name), target)
+    humanoid_def = defs.get("humanoid", humanoid.name, "hanim_")
+    outer = [("Transform", d) for d in getattr(defs, "spring_stack", [])] + [("HAnimHumanoid", humanoid_def)]
+    def joint_refs(names):
+        return [("HAnimJoint", _joint_def(defs, humanoid.name, n)) for n in names]
+    for chain in humanoid.spring_plan:
+        collider_defs = []
+        for c in chain["colliders"]:
+            cdef = defs.get("springcollider", f"{humanoid.name}:{chain['name']}:{c['name']}", "SB_")
+            collider_defs.append(cdef)
+            xml.append(sm.collider_xml(cdef, c["params"], outer + joint_refs(c["bone_path"]), indent=indent))
+        chain_def = defs.get("springchain", f"{humanoid.name}:{chain['name']}", "SB_")
+        xml.append(sm.chain_xml(chain_def, chain["params"], joint_refs(chain["roots"]), outer + joint_refs(chain["parent_path"]),
+                                collider_defs, joint_refs(chain["exclusions"]), indent=indent))
     return "".join(xml)
 
 

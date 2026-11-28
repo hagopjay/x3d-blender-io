@@ -522,6 +522,8 @@ class IRHumanoid:
     # Joints written under a standard H-Anim name, and the total (the HAnimHumanoid ``info`` says so).
     standard_joint_count: int = 0
     motions: list[IRMotion] = field(default_factory=list)
+    # SpringBoneChains on the armature (springbone_blender.export_plan): written after the humanoid as ProtoInstances
+    spring_plan: list = field(default_factory=list)
 
     def iter_joints(self):
         for root in self.root_joints:

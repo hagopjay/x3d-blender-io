@@ -1526,6 +1526,9 @@ def vrml_parse(path):
 # ====================== X3d Support
 
 # Sane as vrml but replace the parser
+SPRING_PROTOS = frozenset(('SpringBoneChain', 'SpringBoneCollider'))
+
+
 class x3dNode(vrmlNode):
     def __init__(self, parent, node_type, x3dNode):
         vrmlNode.__init__(self, parent, node_type, -1)
@@ -1548,6 +1551,11 @@ class x3dNode(vrmlNode):
                     self.parent.children.remove(self)
 
                 return
+
+        # SpringBoneChain / SpringBoneCollider hold USE references to joints and Transforms in their fields; those are
+        # references, not instances (a USE'd HAnimHumanoid there made a second armature). import_spring_bones reads them.
+        if self.x3dNode.tagName == 'ProtoInstance' and self.x3dNode.getAttribute('name') in SPRING_PROTOS:
+            return
 
         for x3dChildNode in self.x3dNode.childNodes:
             if x3dChildNode.nodeType in {x3dChildNode.TEXT_NODE, x3dChildNode.COMMENT_NODE, x3dChildNode.CDATA_SECTION_NODE}:
@@ -9587,6 +9595,39 @@ def import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, b
     return made
 
 
+def import_spring_bones(bpycontext, root_node, all_nodes):
+    """SpringBoneChain ProtoInstances (x3d.loom x3d.springbone) onto the armatures the HAnim import made, as the armature's
+    ``x3d_springbone`` property; Bake Spring Bones (Armature data tab) then keys them. Losses join ``x3d_import_losses``."""
+    import json
+    element = getattr(root_node, "x3dNode", None)
+    if element is None:
+        return None
+    document = element.ownerDocument.documentElement if element.ownerDocument is not None else element
+    if not any(el.getAttribute("name") == "SpringBoneChain" for el in document.getElementsByTagName("ProtoInstance")):
+        return None
+    from . import springbone_model, springbone_blender
+    chains, losses = springbone_model.read_springbones(document)
+    joints = {}
+    for node, _ancestry in all_nodes:
+        if node.getSpec() == 'HAnimJoint' and node.getDefName():
+            real = node.getRealNode()
+            armature = getattr(real, 'blendData', None)
+            name = _attribute_raw(real, 'name', None) or real.getDefName()
+            if armature is not None and getattr(armature, 'type', '') == 'ARMATURE' and name in armature.data.bones:
+                joints[node.getDefName()] = (armature, name)
+    made = springbone_blender.import_chains(chains, lambda d: joints.get(d, (None, None)), losses)
+    records = [{"kind": "springbone", "node": what, "detail": f"{field}: {why}"} for what, field, why in losses]
+    for record in records:
+        logger.warning("X3D import loss: %s %s: %s", record["kind"], record["node"], record["detail"])
+    if records:
+        try:
+            raw = bpycontext.scene.get("x3d_import_losses")
+            bpycontext.scene["x3d_import_losses"] = json.dumps((json.loads(raw) if raw else []) + records)
+        except Exception:  # pragma: no cover
+            pass
+    return made
+
+
 def load_web3d(
         bpycontext,
         filepath,
@@ -9775,6 +9816,11 @@ def load_web3d(
             import_rigid_body_physics(bpycontext, root_node, all_nodes, global_matrix, bpycollection)
         except Exception as exc:  # physics must never break a geometry import
             logger.error("RigidBodyPhysics import failed, the geometry stays: %s", exc, exc_info=True)
+    if not _INLINE_STACK:
+        try:
+            import_spring_bones(bpycontext, root_node, all_nodes)
+        except Exception as exc:  # spring bones must never break a geometry import
+            logger.error("SpringBoneChain import failed, the rig stays: %s", exc, exc_info=True)
 
     # After we import all nodes, route events - anim paths
     for node, ancestry in all_nodes:
