@@ -29,7 +29,7 @@ from . import matrix_safety
 from . import default_uv
 from .extract import canonical_axis_angle
 from .matrix_safety import inverted64
-from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, is_lod_hidden, light_attenuation,
+from .extract import (LIGHT_INTENSITY_PROPERTY, display_colour, imported_spot_cone, is_lod_hidden, is_phong_headlight, light_attenuation,
                       light_colour, light_intensity, light_radius, resolve_export_colour_space)
 
 # h3d defines
@@ -1835,7 +1835,7 @@ def export(file,
             objects = tuple(obj for obj in objects if obj.visible_get())
 
         # an LOD level the importer hid is not written, as in the X3D 4.0 export
-        objects = [obj for obj in objects if not is_lod_hidden(obj)]
+        objects = [obj for obj in objects if not is_lod_hidden(obj) and not is_phong_headlight(obj)]
 
         light_space['value'] = color_space if any(
             obj.type in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'} and any(slot.material for slot in obj.material_slots)

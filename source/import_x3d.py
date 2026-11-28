@@ -21,7 +21,7 @@ from . import budget
 from . import default_uv
 from math import sin, cos, pi, sqrt, ceil
 from itertools import chain
-from . import geospatial, matrix_safety, mfstring
+from . import geospatial, matrix_safety, mfstring, x3d_phong
 from .extract import (BACKGROUND_PROPERTY, COLOUR_SPACE_PROPERTY, HEAD_META_PROPERTY, LIGHT_AMBIENT_INTENSITY_PROPERTY,
                       HEADLIGHT_PROPERTY, MATERIAL_MODEL_PROPERTY, LIGHT_GLOBAL_PROPERTY, LIGHT_SCOPE_LIT_PROPERTY, LINE_WIDTH_PROPERTY, POINT_PROPERTIES_PROPERTY, COORDINATE_DOUBLE_PROPERTY, SOLID_PROPERTY, LIGHT_ATTENUATION_PROPERTY, LIGHT_COLOR_PROPERTY, LIGHT_ENERGY_PER_INTENSITY_PROPERTY,
                       IMPORTED_ANIMATION_PROPERTY, LOD_HIDDEN_PROPERTY, SWITCH_HIDDEN_PROPERTY, VISIBLE_FALSE_PROPERTY,
@@ -3359,6 +3359,8 @@ LIGHT_UNITS = ('BLENDER', 'X_ITE')
 LIGHT_UNITS_ALIASES = {"LEGACY": "BLENDER", "AS_IS": "BLENDER", "XITE": "X_ITE", "X3D": "X_ITE", "BROWSER": "X_ITE",
                        "AUTO": ""}
 lighting_units = 'BLENDER'   # the resolved light_units of the import in progress
+phong_reading = None   # the X3D lighting option of the import in progress (x3d_phong.READINGS), None when off
+phong_file_version = 4.0   # the X3D version of the file being read, for SpotLight's version-dependent defaults
 # Filled while a file (and its Inlines) is read, used by finalize_light_units once the whole import is in.
 # radius is the file's (X3D units, -1 for unlimited); frame is the Blender length of one unit of the light's own X3D
 # frame (the file unit times its Transforms' scale), the frame X_ITE measures the light's distances in.
@@ -3676,6 +3678,45 @@ def fit_classic_lights(faces, lights, headlight, view, srgb):
         factors = f * ones
     own = {key: float(value) for key, value in zip(keys, factors)}
     return f, {key: value for key, value in own.items() if key is not None}, own.get(None, f)
+
+
+def x3d_file_version(path):
+    """The version attribute of a file's X3D element (4.0 when it has none, or for a VRML file: 2.0 reads as 3.x)."""
+    try:
+        with open(path, 'rb') as handle:
+            head = handle.read(4096).decode('utf-8', 'replace')
+    except OSError:
+        return 4.0
+    found = re.search(r"<X3D[^>]*\bversion\s*=\s*['\"]([0-9.]+)", head) or re.search(r"^#X3D V([0-9.]+)", head)
+    if found is None:
+        return 3.0 if head.startswith('#VRML') else 4.0
+    try:
+        return float(found.group(1))
+    except ValueError:
+        return 4.0
+
+
+def finish_phong_lighting(scene, reading, headlight, camera_for_headlight=None):
+    """X3D lighting (import option): every classic material this import made gets the EEVEE X3D Phong output, with the
+    NavigationInfo headlight (on unless the file turns it off), and the scene the reading's view transform."""
+    if reading is None or scene is None:
+        return
+    for bpymat in bpy.data.materials:
+        fields = bpymat.get(x3d_phong.MATERIAL_PROPERTY)
+        if fields is None or bpymat.node_tree is None:
+            continue
+        if any(node.bl_idname == 'ShaderNodeGroup' and node.node_tree is not None
+               and node.node_tree.name == x3d_phong.GROUP_NAME for node in bpymat.node_tree.nodes):
+            continue   # an earlier import's
+        x3d_phong.apply_material(bpymat, fields.to_dict() if hasattr(fields, 'to_dict') else dict(fields), reading)
+    if headlight:
+        camera = camera_for_headlight if camera_for_headlight is not None else scene.camera
+        try:
+            collection = camera.users_collection[0] if camera is not None and camera.users_collection else None
+        except ReferenceError:
+            camera = collection = None
+        x3d_phong.make_headlight(scene, camera, collection, reading)
+    x3d_phong.finish(scene, reading)
 
 
 def finalize_light_units(scene, units=None):
@@ -4912,6 +4953,9 @@ def appearance_CreateMaterial(vrmlname, mat, ancestry, is_vcol):
     bpymat_wrap.alpha = alpha
     if alpha < 1.0:
         bpymat.surface_render_method = "BLENDED"
+    if phong_reading is not None:   # X3D lighting: finish_phong_lighting gives it the EEVEE X3D Phong output
+        bpymat[x3d_phong.MATERIAL_PROPERTY] = {key: list(value) if isinstance(value, tuple) else value
+                                               for key, value in x3d_phong.material_fields(mat, ancestry).items()}
 
     if is_vcol: # fun fact: this little beast can exist without appearance node in x3d ffs
         node_vertex_color = bpymat.node_tree.nodes.new("ShaderNodeVertexColor")
@@ -6503,6 +6547,9 @@ def importLamp(bpycollection, node, spec, ancestry, global_matrix):
         if radius > 0.0:
             bpylamp.cutoff_distance = radius * frame
     imported_lights.append((bpyob, spec, node.getFieldAsFloat('intensity', 1.0, ancestry), attenuation, radius, frame))
+    if phong_reading is not None:
+        x3d_phong.tag_light(bpyob, x3d_phong.light_fields(node, spec, ancestry, phong_file_version), frame,
+                            phong_reading)
 
 
 # -----------------------------------------------------------------------------------
@@ -9270,6 +9317,7 @@ load_errors: list[str] = []
 def load(context,
          filepath,
          *,
+         x3d_lighting=None,   # 'OFF', 'LINEAR_VALUES', 'DISPLAY', 'SRGB_DECODED' (x3d_phong; None, 'AUTO': BLENDER_X3D_LIGHTING)
          files=None,
          directory=None,
          global_scale=1.0,
@@ -9321,6 +9369,8 @@ def load(context,
         return {'FINISHED'}
 
     paths = [os.path.join(directory, name.name) for name in files] if files else [filepath]
+    global phong_reading, phong_file_version   # X3D lighting in EEVEE for classic Materials (x3d_phong)
+    phong_reading = x3d_phong.resolve(x3d_lighting)
 
     if getattr(context, "scene", None) is not None:
         # a scene whose imported objects were deleted carries the last file's headlight, lighting model, Background and
@@ -9338,6 +9388,7 @@ def load(context,
     _inline_loads = 0
     for file in paths:
         # loadWithProfiler(operator, context, filepath, global_matrix)
+        phong_file_version = x3d_file_version(file)
         try:
             failed = _load_one(context, file, divisions, global_scale, global_matrix, as_collection, solidify,
                                solidify_value, keep_hierarchy)
@@ -9361,7 +9412,10 @@ def load(context,
     matrix_safety.push_scale_to_children(new_objects)
     if resolve_gpu_instances(gpu_instances):
         group_instances(new_objects)
+    headlight, first_view = navigation_headlight is not False, bound_view   # finalize_light_units forgets them
     finalize_light_units(context.scene if context is not None else None, lighting_units)
+    finish_phong_lighting(context.scene if context is not None else None, phong_reading, headlight, first_view)
+    phong_reading = None
     if context is not None and getattr(context, "scene", None) is not None:
         context.scene[COLOUR_SPACE_PROPERTY] = colour_space
         if any(action.name not in actions_before for action in bpy.data.actions):

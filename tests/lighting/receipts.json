@@ -1,0 +1,3549 @@
+{
+ "oracle": "tools/lighting_oracle.py (X3D 4.0, ISO/IEC 19775-1:2023, 17.2.2.5)",
+ "versions": {
+  "browsers": {
+   "chromium": "158.0.8127.36",
+   "x_ite": {
+    "library": "X_ITE 16.8.1",
+    "Shading": "GOURAUD",
+    "ColorSpace": "LINEAR_WHEN_PHYSICAL_MATERIAL",
+    "webgl": "ANGLE (Mesa, Vulkan 1.4.335 (llvmpipe (LLVM 20.1.2 256 bits) (0x00000000)), llvmpipe)"
+   },
+   "x_ite-phong": {
+    "library": "X_ITE 16.8.1",
+    "Shading": "PHONG",
+    "ColorSpace": "LINEAR_WHEN_PHYSICAL_MATERIAL",
+    "webgl": "ANGLE (Mesa, Vulkan 1.4.335 (llvmpipe (LLVM 20.1.2 256 bits) (0x00000000)), llvmpipe)"
+   },
+   "x_ite-phong-linear": {
+    "library": "X_ITE 16.8.1",
+    "Shading": "PHONG",
+    "ColorSpace": "LINEAR",
+    "webgl": "ANGLE (Mesa, Vulkan 1.4.335 (llvmpipe (LLVM 20.1.2 256 bits) (0x00000000)), llvmpipe)"
+   },
+   "x3dom": {
+    "library": "X3DOM 1.8.3 build 7482 (03da6d3870)",
+    "webgl": "ANGLE (Mesa, Vulkan 1.4.335 (llvmpipe (LLVM 20.1.2 256 bits) (0x00000000)), llvmpipe)"
+   },
+   "x3dom-none": {
+    "library": "X3DOM 1.8.3 build 7482 (03da6d3870)",
+    "webgl": "ANGLE (Mesa, Vulkan 1.4.335 (llvmpipe (LLVM 20.1.2 256 bits) (0x00000000)), llvmpipe)"
+   }
+  },
+  "blender": {
+   "blender": "5.3.0",
+   "build": "02f0899d78e3",
+   "blender:ambient-emissive": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:directional": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:headlight": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:point-attenuation": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:point-radius": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:specular": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:spot": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender:two-lights": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:ambient-emissive": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:directional": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:headlight": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:point-attenuation": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:point-radius": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:specular": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:spot": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_display:two-lights": {
+    "view_transform": "Raw",
+    "engine": "BLENDER_EEVEE",
+    "reading": "DISPLAY",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:ambient-emissive": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:directional": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:headlight": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:point-attenuation": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:point-radius": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:specular": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:spot": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_srgb_decoded:two-lights": {
+    "view_transform": "Standard",
+    "engine": "BLENDER_EEVEE",
+    "reading": "SRGB_DECODED",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:ambient-emissive": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:directional": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:headlight": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:point-attenuation": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:point-radius": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:specular": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:spot": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_default:two-lights": {
+    "view_transform": "AgX",
+    "engine": "BLENDER_EEVEE",
+    "reading": "OFF",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:ambient-emissive": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:directional": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:headlight": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:point-attenuation": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:point-radius": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:specular": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:spot": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   },
+   "blender_cycles:two-lights": {
+    "view_transform": "Standard",
+    "engine": "CYCLES",
+    "reading": "LINEAR_VALUES",
+    "field_of_view": 0.785398,
+    "camera": "Viewpoint"
+   }
+  }
+ },
+ "gates": {
+  "blender_exact:blender_srgb_decoded": {
+   "result": "pass",
+   "expected": "pass",
+   "as_expected": true,
+   "worst_scene": "ambient-emissive",
+   "worst": {
+    "mean": 0.251,
+    "p99": 0.52,
+    "max": 0.578
+   },
+   "closest": [
+    "linear/srgb"
+   ]
+  },
+  "blender_display:blender_display": {
+   "result": "pass",
+   "expected": "pass",
+   "as_expected": true,
+   "worst_scene": "ambient-emissive",
+   "worst": {
+    "mean": 0.254,
+    "p99": 0.57,
+    "max": 0.62
+   },
+   "closest": [
+    "display/srgb"
+   ]
+  },
+  "browser_agrees:x_ite": {
+   "result": "pass",
+   "expected": "pass",
+   "as_expected": true,
+   "worst_scene": "point-attenuation",
+   "worst": {
+    "closest": "display/srgb",
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 46.46,
+      "p99": 49.797,
+      "max": 49.89
+     },
+     "linear/pow22": {
+      "mean": 47.725,
+      "p99": 50.859,
+      "max": 50.961
+     },
+     "display/srgb": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 68.287,
+      "p99": 73.574,
+      "max": 73.712
+     },
+     "linear-values/pow22": {
+      "mean": 67.922,
+      "p99": 72.466,
+      "max": 72.597
+     }
+    }
+   },
+   "closest": [
+    "display/srgb"
+   ]
+  },
+  "browser_agrees:x3dom": {
+   "result": "pass",
+   "expected": "pass",
+   "as_expected": true,
+   "worst_scene": "directional",
+   "worst": {
+    "closest": "linear-values/pow22",
+    "mean": 0.252,
+    "p99": 0.347,
+    "max": 0.347,
+    "all": {
+     "linear/srgb": {
+      "mean": 42.768,
+      "p99": 60.027,
+      "max": 60.027
+     },
+     "linear/pow22": {
+      "mean": 42.7,
+      "p99": 59.578,
+      "max": 59.578
+     },
+     "display/srgb": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "display/pow22": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "linear-values/srgb": {
+      "mean": 1.437,
+      "p99": 1.751,
+      "max": 1.751
+     },
+     "linear-values/pow22": {
+      "mean": 0.252,
+      "p99": 0.347,
+      "max": 0.347
+     }
+    }
+   },
+   "closest": [
+    "linear-values/pow22"
+   ]
+  },
+  "wrong_twin_default_import:blender_default": {
+   "result": "fail",
+   "expected": "pass",
+   "as_expected": false,
+   "worst_scene": "spot",
+   "worst": {
+    "mean": 4.933,
+    "p99": 28.83,
+    "max": 32.766
+   },
+   "closest": [
+    "display/srgb",
+    "linear/srgb"
+   ]
+  },
+  "expected_fail_cycles_plain:blender_cycles": {
+   "result": "fail",
+   "expected": "fail",
+   "as_expected": true,
+   "worst_scene": "ambient-emissive",
+   "worst": {
+    "mean": 65.793,
+    "p99": 107.249,
+    "max": 107.886
+   },
+   "closest": [
+    "display/srgb",
+    "linear/pow22",
+    "linear/srgb"
+   ]
+  },
+  "blender_linear_values:blender": {
+   "result": "pass",
+   "expected": "pass",
+   "as_expected": true,
+   "worst_scene": "point-attenuation",
+   "worst": {
+    "mean": 0.254,
+    "p99": 0.51,
+    "max": 0.546
+   },
+   "closest": [
+    "linear-values/srgb"
+   ]
+  }
+ },
+ "witnesses": {
+  "x3dom": {
+   "ambient-emissive": {
+    "closest": "linear-values/pow22",
+    "mean": 0.248,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 59.012,
+      "p99": 98.118,
+      "max": 99.458
+     },
+     "linear/pow22": {
+      "mean": 60.051,
+      "p99": 100.678,
+      "max": 102.08
+     },
+     "display/srgb": {
+      "mean": 47.205,
+      "p99": 65.113,
+      "max": 65.782
+     },
+     "display/pow22": {
+      "mean": 47.205,
+      "p99": 65.113,
+      "max": 65.782
+     },
+     "linear-values/srgb": {
+      "mean": 1.181,
+      "p99": 1.941,
+      "max": 1.988
+     },
+     "linear-values/pow22": {
+      "mean": 0.248,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "directional": {
+    "closest": "linear-values/pow22",
+    "mean": 0.252,
+    "p99": 0.347,
+    "max": 0.347,
+    "all": {
+     "linear/srgb": {
+      "mean": 42.768,
+      "p99": 60.027,
+      "max": 60.027
+     },
+     "linear/pow22": {
+      "mean": 42.7,
+      "p99": 59.578,
+      "max": 59.578
+     },
+     "display/srgb": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "display/pow22": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "linear-values/srgb": {
+      "mean": 1.437,
+      "p99": 1.751,
+      "max": 1.751
+     },
+     "linear-values/pow22": {
+      "mean": 0.252,
+      "p99": 0.347,
+      "max": 0.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "linear-values/pow22",
+    "mean": 0.161,
+    "p99": 0.493,
+    "max": 0.499,
+    "all": {
+     "linear/srgb": {
+      "mean": 60.244,
+      "p99": 74.719,
+      "max": 75.309
+     },
+     "linear/pow22": {
+      "mean": 60.29,
+      "p99": 75.445,
+      "max": 76.029
+     },
+     "display/srgb": {
+      "mean": 17.127,
+      "p99": 55.045,
+      "max": 58.93
+     },
+     "display/pow22": {
+      "mean": 17.127,
+      "p99": 55.045,
+      "max": 58.93
+     },
+     "linear-values/srgb": {
+      "mean": 0.461,
+      "p99": 1.63,
+      "max": 1.804
+     },
+     "linear-values/pow22": {
+      "mean": 0.161,
+      "p99": 0.493,
+      "max": 0.499
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "linear-values/pow22",
+    "mean": 0.251,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.46,
+      "p99": 29.367,
+      "max": 30.06
+     },
+     "linear/pow22": {
+      "mean": 20.194,
+      "p99": 29.385,
+      "max": 30.103
+     },
+     "display/srgb": {
+      "mean": 67.916,
+      "p99": 72.487,
+      "max": 72.594
+     },
+     "display/pow22": {
+      "mean": 67.916,
+      "p99": 72.487,
+      "max": 72.594
+     },
+     "linear-values/srgb": {
+      "mean": 0.838,
+      "p99": 1.933,
+      "max": 2.667
+     },
+     "linear-values/pow22": {
+      "mean": 0.251,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "linear-values/pow22",
+    "mean": 0.053,
+    "p99": 0.48,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 8.339,
+      "p99": 62.77,
+      "max": 64.858
+     },
+     "linear/pow22": {
+      "mean": 8.265,
+      "p99": 61.855,
+      "max": 64.172
+     },
+     "display/srgb": {
+      "mean": 13.385,
+      "p99": 72.042,
+      "max": 72.578
+     },
+     "display/pow22": {
+      "mean": 13.385,
+      "p99": 72.042,
+      "max": 72.578
+     },
+     "linear-values/srgb": {
+      "mean": 0.253,
+      "p99": 1.803,
+      "max": 1.937
+     },
+     "linear-values/pow22": {
+      "mean": 0.053,
+      "p99": 0.48,
+      "max": 0.5
+     }
+    }
+   },
+   "specular": {
+    "closest": "linear-values/pow22",
+    "mean": 0.244,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 51.935,
+      "p99": 64.442,
+      "max": 65.047
+     },
+     "linear/pow22": {
+      "mean": 51.314,
+      "p99": 63.619,
+      "max": 64.316
+     },
+     "display/srgb": {
+      "mean": 63.902,
+      "p99": 72.395,
+      "max": 72.584
+     },
+     "display/pow22": {
+      "mean": 63.902,
+      "p99": 72.395,
+      "max": 72.584
+     },
+     "linear-values/srgb": {
+      "mean": 0.831,
+      "p99": 1.914,
+      "max": 1.988
+     },
+     "linear-values/pow22": {
+      "mean": 0.244,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "spot": {
+    "closest": "linear-values/pow22",
+    "mean": 0.094,
+    "p99": 0.489,
+    "max": 0.741,
+    "all": {
+     "linear/srgb": {
+      "mean": 12.187,
+      "p99": 66.817,
+      "max": 67.718
+     },
+     "linear/pow22": {
+      "mean": 11.5,
+      "p99": 65.468,
+      "max": 66.377
+     },
+     "display/srgb": {
+      "mean": 21.402,
+      "p99": 72.213,
+      "max": 72.58
+     },
+     "display/pow22": {
+      "mean": 21.402,
+      "p99": 72.213,
+      "max": 72.58
+     },
+     "linear-values/srgb": {
+      "mean": 0.548,
+      "p99": 5.592,
+      "max": 8.863
+     },
+     "linear-values/pow22": {
+      "mean": 0.094,
+      "p99": 0.489,
+      "max": 0.741
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "linear-values/pow22",
+    "mean": 0.201,
+    "p99": 0.494,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 51.947,
+      "p99": 119.527,
+      "max": 129.317
+     },
+     "linear/pow22": {
+      "mean": 52.548,
+      "p99": 121.501,
+      "max": 131.762
+     },
+     "display/srgb": {
+      "mean": 34.762,
+      "p99": 71.37,
+      "max": 72.03
+     },
+     "display/pow22": {
+      "mean": 34.762,
+      "p99": 71.37,
+      "max": 72.03
+     },
+     "linear-values/srgb": {
+      "mean": 0.822,
+      "p99": 1.924,
+      "max": 1.987
+     },
+     "linear-values/pow22": {
+      "mean": 0.201,
+      "p99": 0.494,
+      "max": 0.5
+     }
+    }
+   }
+  },
+  "x3dom-none": {
+   "ambient-emissive": {
+    "closest": "display/srgb",
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.103,
+      "p99": 44.759,
+      "max": 48.06
+     },
+     "linear/pow22": {
+      "mean": 22.004,
+      "p99": 47.221,
+      "max": 50.7
+     },
+     "display/srgb": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 48.386,
+      "p99": 66.6,
+      "max": 67.2
+     },
+     "linear-values/pow22": {
+      "mean": 47.206,
+      "p99": 65.112,
+      "max": 65.711
+     }
+    }
+   },
+   "directional": {
+    "closest": "display/srgb",
+    "mean": 0.163,
+    "p99": 0.217,
+    "max": 0.217,
+    "all": {
+     "linear/srgb": {
+      "mean": 15.565,
+      "p99": 21.157,
+      "max": 21.157
+     },
+     "linear/pow22": {
+      "mean": 15.633,
+      "p99": 20.844,
+      "max": 20.844
+     },
+     "display/srgb": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "display/pow22": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "linear-values/srgb": {
+      "mean": 59.77,
+      "p99": 71.751,
+      "max": 71.751
+     },
+     "linear-values/pow22": {
+      "mean": 58.432,
+      "p99": 70.347,
+      "max": 70.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "display/srgb",
+    "mean": 0.155,
+    "p99": 0.496,
+    "max": 0.498,
+    "all": {
+     "linear/srgb": {
+      "mean": 43.107,
+      "p99": 70.227,
+      "max": 71.1
+     },
+     "linear/pow22": {
+      "mean": 43.152,
+      "p99": 70.123,
+      "max": 71.006
+     },
+     "display/srgb": {
+      "mean": 0.155,
+      "p99": 0.496,
+      "max": 0.498
+     },
+     "display/pow22": {
+      "mean": 0.155,
+      "p99": 0.496,
+      "max": 0.498
+     },
+     "linear-values/srgb": {
+      "mean": 17.58,
+      "p99": 56.368,
+      "max": 60.233
+     },
+     "linear-values/pow22": {
+      "mean": 17.128,
+      "p99": 54.986,
+      "max": 58.798
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "display/srgb",
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 46.46,
+      "p99": 49.797,
+      "max": 49.89
+     },
+     "linear/pow22": {
+      "mean": 47.725,
+      "p99": 50.859,
+      "max": 50.961
+     },
+     "display/srgb": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 68.287,
+      "p99": 73.574,
+      "max": 73.712
+     },
+     "linear-values/pow22": {
+      "mean": 67.922,
+      "p99": 72.466,
+      "max": 72.597
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "display/srgb",
+    "mean": 0.052,
+    "p99": 0.477,
+    "max": 0.495,
+    "all": {
+     "linear/srgb": {
+      "mean": 5.042,
+      "p99": 47.255,
+      "max": 48.907
+     },
+     "linear/pow22": {
+      "mean": 5.117,
+      "p99": 46.363,
+      "max": 47.999
+     },
+     "display/srgb": {
+      "mean": 0.052,
+      "p99": 0.477,
+      "max": 0.495
+     },
+     "display/pow22": {
+      "mean": 0.052,
+      "p99": 0.477,
+      "max": 0.495
+     },
+     "linear-values/srgb": {
+      "mean": 13.634,
+      "p99": 73.153,
+      "max": 73.601
+     },
+     "linear-values/pow22": {
+      "mean": 13.39,
+      "p99": 72.21,
+      "max": 72.522
+     }
+    }
+   },
+   "specular": {
+    "closest": "display/srgb",
+    "mean": 0.243,
+    "p99": 0.494,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 14.411,
+      "p99": 31.084,
+      "max": 43.478
+     },
+     "linear/pow22": {
+      "mean": 15.103,
+      "p99": 31.875,
+      "max": 43.625
+     },
+     "display/srgb": {
+      "mean": 0.243,
+      "p99": 0.494,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.243,
+      "p99": 0.494,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 64.602,
+      "p99": 73.504,
+      "max": 73.71
+     },
+     "linear-values/pow22": {
+      "mean": 63.911,
+      "p99": 72.374,
+      "max": 72.585
+     }
+    }
+   },
+   "spot": {
+    "closest": "display/srgb",
+    "mean": 0.094,
+    "p99": 0.487,
+    "max": 0.517,
+    "all": {
+     "linear/srgb": {
+      "mean": 9.234,
+      "p99": 56.92,
+      "max": 57.757
+     },
+     "linear/pow22": {
+      "mean": 9.901,
+      "p99": 57.241,
+      "max": 58.141
+     },
+     "display/srgb": {
+      "mean": 0.094,
+      "p99": 0.487,
+      "max": 0.517
+     },
+     "display/pow22": {
+      "mean": 0.094,
+      "p99": 0.487,
+      "max": 0.517
+     },
+     "linear-values/srgb": {
+      "mean": 21.453,
+      "p99": 73.32,
+      "max": 73.685
+     },
+     "linear-values/pow22": {
+      "mean": 21.402,
+      "p99": 72.198,
+      "max": 72.582
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "display/srgb",
+    "mean": 0.199,
+    "p99": 0.493,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 22.733,
+      "p99": 72.572,
+      "max": 92.317
+     },
+     "linear/pow22": {
+      "mean": 22.835,
+      "p99": 74.501,
+      "max": 94.762
+     },
+     "display/srgb": {
+      "mean": 0.199,
+      "p99": 0.493,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.199,
+      "p99": 0.493,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 35.572,
+      "p99": 72.726,
+      "max": 73.305
+     },
+     "linear-values/pow22": {
+      "mean": 34.759,
+      "p99": 71.389,
+      "max": 72.015
+     }
+    }
+   }
+  },
+  "x_ite": {
+   "ambient-emissive": {
+    "closest": "display/srgb",
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.103,
+      "p99": 44.759,
+      "max": 48.06
+     },
+     "linear/pow22": {
+      "mean": 22.004,
+      "p99": 47.221,
+      "max": 50.7
+     },
+     "display/srgb": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 48.386,
+      "p99": 66.6,
+      "max": 67.2
+     },
+     "linear-values/pow22": {
+      "mean": 47.206,
+      "p99": 65.112,
+      "max": 65.711
+     }
+    }
+   },
+   "directional": {
+    "closest": "display/srgb",
+    "mean": 0.163,
+    "p99": 0.217,
+    "max": 0.217,
+    "all": {
+     "linear/srgb": {
+      "mean": 15.565,
+      "p99": 21.157,
+      "max": 21.157
+     },
+     "linear/pow22": {
+      "mean": 15.633,
+      "p99": 20.844,
+      "max": 20.844
+     },
+     "display/srgb": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "display/pow22": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "linear-values/srgb": {
+      "mean": 59.77,
+      "p99": 71.751,
+      "max": 71.751
+     },
+     "linear-values/pow22": {
+      "mean": 58.432,
+      "p99": 70.347,
+      "max": 70.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "display/srgb",
+    "mean": 0.155,
+    "p99": 0.496,
+    "max": 0.498,
+    "all": {
+     "linear/srgb": {
+      "mean": 43.107,
+      "p99": 70.227,
+      "max": 71.1
+     },
+     "linear/pow22": {
+      "mean": 43.152,
+      "p99": 70.123,
+      "max": 71.006
+     },
+     "display/srgb": {
+      "mean": 0.155,
+      "p99": 0.496,
+      "max": 0.498
+     },
+     "display/pow22": {
+      "mean": 0.155,
+      "p99": 0.496,
+      "max": 0.498
+     },
+     "linear-values/srgb": {
+      "mean": 17.58,
+      "p99": 56.368,
+      "max": 60.233
+     },
+     "linear-values/pow22": {
+      "mean": 17.128,
+      "p99": 54.986,
+      "max": 58.798
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "display/srgb",
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 46.46,
+      "p99": 49.797,
+      "max": 49.89
+     },
+     "linear/pow22": {
+      "mean": 47.725,
+      "p99": 50.859,
+      "max": 50.961
+     },
+     "display/srgb": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 68.287,
+      "p99": 73.574,
+      "max": 73.712
+     },
+     "linear-values/pow22": {
+      "mean": 67.922,
+      "p99": 72.466,
+      "max": 72.597
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "display/srgb",
+    "mean": 0.052,
+    "p99": 0.477,
+    "max": 0.495,
+    "all": {
+     "linear/srgb": {
+      "mean": 5.042,
+      "p99": 47.255,
+      "max": 48.907
+     },
+     "linear/pow22": {
+      "mean": 5.117,
+      "p99": 46.363,
+      "max": 47.999
+     },
+     "display/srgb": {
+      "mean": 0.052,
+      "p99": 0.477,
+      "max": 0.495
+     },
+     "display/pow22": {
+      "mean": 0.052,
+      "p99": 0.477,
+      "max": 0.495
+     },
+     "linear-values/srgb": {
+      "mean": 13.634,
+      "p99": 73.153,
+      "max": 73.601
+     },
+     "linear-values/pow22": {
+      "mean": 13.39,
+      "p99": 72.21,
+      "max": 72.522
+     }
+    }
+   },
+   "specular": {
+    "closest": "display/srgb",
+    "mean": 0.243,
+    "p99": 0.494,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 14.411,
+      "p99": 31.084,
+      "max": 43.478
+     },
+     "linear/pow22": {
+      "mean": 15.103,
+      "p99": 31.875,
+      "max": 43.625
+     },
+     "display/srgb": {
+      "mean": 0.243,
+      "p99": 0.494,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.243,
+      "p99": 0.494,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 64.602,
+      "p99": 73.504,
+      "max": 73.71
+     },
+     "linear-values/pow22": {
+      "mean": 63.911,
+      "p99": 72.374,
+      "max": 72.585
+     }
+    }
+   },
+   "spot": {
+    "closest": "display/srgb",
+    "mean": 0.094,
+    "p99": 0.487,
+    "max": 0.517,
+    "all": {
+     "linear/srgb": {
+      "mean": 9.234,
+      "p99": 56.92,
+      "max": 57.757
+     },
+     "linear/pow22": {
+      "mean": 9.901,
+      "p99": 57.241,
+      "max": 58.141
+     },
+     "display/srgb": {
+      "mean": 0.094,
+      "p99": 0.487,
+      "max": 0.517
+     },
+     "display/pow22": {
+      "mean": 0.094,
+      "p99": 0.487,
+      "max": 0.517
+     },
+     "linear-values/srgb": {
+      "mean": 21.453,
+      "p99": 73.32,
+      "max": 73.685
+     },
+     "linear-values/pow22": {
+      "mean": 21.402,
+      "p99": 72.198,
+      "max": 72.582
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "display/srgb",
+    "mean": 0.199,
+    "p99": 0.493,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 22.733,
+      "p99": 72.572,
+      "max": 92.317
+     },
+     "linear/pow22": {
+      "mean": 22.835,
+      "p99": 74.501,
+      "max": 94.762
+     },
+     "display/srgb": {
+      "mean": 0.199,
+      "p99": 0.493,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.199,
+      "p99": 0.493,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 35.572,
+      "p99": 72.726,
+      "max": 73.305
+     },
+     "linear-values/pow22": {
+      "mean": 34.759,
+      "p99": 71.389,
+      "max": 72.015
+     }
+    }
+   }
+  },
+  "x_ite-phong": {
+   "ambient-emissive": {
+    "closest": "display/srgb",
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.103,
+      "p99": 44.759,
+      "max": 48.06
+     },
+     "linear/pow22": {
+      "mean": 22.004,
+      "p99": 47.221,
+      "max": 50.7
+     },
+     "display/srgb": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 48.386,
+      "p99": 66.6,
+      "max": 67.2
+     },
+     "linear-values/pow22": {
+      "mean": 47.206,
+      "p99": 65.112,
+      "max": 65.711
+     }
+    }
+   },
+   "directional": {
+    "closest": "display/srgb",
+    "mean": 0.163,
+    "p99": 0.217,
+    "max": 0.217,
+    "all": {
+     "linear/srgb": {
+      "mean": 15.565,
+      "p99": 21.157,
+      "max": 21.157
+     },
+     "linear/pow22": {
+      "mean": 15.633,
+      "p99": 20.844,
+      "max": 20.844
+     },
+     "display/srgb": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "display/pow22": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "linear-values/srgb": {
+      "mean": 59.77,
+      "p99": 71.751,
+      "max": 71.751
+     },
+     "linear-values/pow22": {
+      "mean": 58.432,
+      "p99": 70.347,
+      "max": 70.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "display/srgb",
+    "mean": 0.155,
+    "p99": 0.496,
+    "max": 0.498,
+    "all": {
+     "linear/srgb": {
+      "mean": 43.107,
+      "p99": 70.227,
+      "max": 71.1
+     },
+     "linear/pow22": {
+      "mean": 43.152,
+      "p99": 70.123,
+      "max": 71.006
+     },
+     "display/srgb": {
+      "mean": 0.155,
+      "p99": 0.496,
+      "max": 0.498
+     },
+     "display/pow22": {
+      "mean": 0.155,
+      "p99": 0.496,
+      "max": 0.498
+     },
+     "linear-values/srgb": {
+      "mean": 17.58,
+      "p99": 56.368,
+      "max": 60.233
+     },
+     "linear-values/pow22": {
+      "mean": 17.128,
+      "p99": 54.986,
+      "max": 58.798
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "display/srgb",
+    "mean": 0.25,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 46.46,
+      "p99": 49.797,
+      "max": 49.89
+     },
+     "linear/pow22": {
+      "mean": 47.725,
+      "p99": 50.859,
+      "max": 50.961
+     },
+     "display/srgb": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.25,
+      "p99": 0.495,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 68.287,
+      "p99": 73.574,
+      "max": 73.712
+     },
+     "linear-values/pow22": {
+      "mean": 67.922,
+      "p99": 72.466,
+      "max": 72.597
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "display/srgb",
+    "mean": 0.052,
+    "p99": 0.477,
+    "max": 0.495,
+    "all": {
+     "linear/srgb": {
+      "mean": 5.042,
+      "p99": 47.255,
+      "max": 48.907
+     },
+     "linear/pow22": {
+      "mean": 5.117,
+      "p99": 46.363,
+      "max": 47.999
+     },
+     "display/srgb": {
+      "mean": 0.052,
+      "p99": 0.477,
+      "max": 0.495
+     },
+     "display/pow22": {
+      "mean": 0.052,
+      "p99": 0.477,
+      "max": 0.495
+     },
+     "linear-values/srgb": {
+      "mean": 13.634,
+      "p99": 73.153,
+      "max": 73.601
+     },
+     "linear-values/pow22": {
+      "mean": 13.39,
+      "p99": 72.21,
+      "max": 72.522
+     }
+    }
+   },
+   "specular": {
+    "closest": "display/srgb",
+    "mean": 0.243,
+    "p99": 0.494,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 14.411,
+      "p99": 31.084,
+      "max": 43.478
+     },
+     "linear/pow22": {
+      "mean": 15.103,
+      "p99": 31.875,
+      "max": 43.625
+     },
+     "display/srgb": {
+      "mean": 0.243,
+      "p99": 0.494,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.243,
+      "p99": 0.494,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 64.602,
+      "p99": 73.504,
+      "max": 73.71
+     },
+     "linear-values/pow22": {
+      "mean": 63.911,
+      "p99": 72.374,
+      "max": 72.585
+     }
+    }
+   },
+   "spot": {
+    "closest": "display/srgb",
+    "mean": 0.094,
+    "p99": 0.487,
+    "max": 0.517,
+    "all": {
+     "linear/srgb": {
+      "mean": 9.234,
+      "p99": 56.92,
+      "max": 57.757
+     },
+     "linear/pow22": {
+      "mean": 9.901,
+      "p99": 57.241,
+      "max": 58.141
+     },
+     "display/srgb": {
+      "mean": 0.094,
+      "p99": 0.487,
+      "max": 0.517
+     },
+     "display/pow22": {
+      "mean": 0.094,
+      "p99": 0.487,
+      "max": 0.517
+     },
+     "linear-values/srgb": {
+      "mean": 21.453,
+      "p99": 73.32,
+      "max": 73.685
+     },
+     "linear-values/pow22": {
+      "mean": 21.402,
+      "p99": 72.198,
+      "max": 72.582
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "display/srgb",
+    "mean": 0.199,
+    "p99": 0.493,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 22.733,
+      "p99": 72.572,
+      "max": 92.317
+     },
+     "linear/pow22": {
+      "mean": 22.835,
+      "p99": 74.501,
+      "max": 94.762
+     },
+     "display/srgb": {
+      "mean": 0.199,
+      "p99": 0.493,
+      "max": 0.5
+     },
+     "display/pow22": {
+      "mean": 0.199,
+      "p99": 0.493,
+      "max": 0.5
+     },
+     "linear-values/srgb": {
+      "mean": 35.572,
+      "p99": 72.726,
+      "max": 73.305
+     },
+     "linear-values/pow22": {
+      "mean": 34.759,
+      "p99": 71.389,
+      "max": 72.015
+     }
+    }
+   }
+  },
+  "x_ite-phong-linear": {
+   "ambient-emissive": {
+    "closest": "linear-values/pow22",
+    "mean": 0.248,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 59.012,
+      "p99": 98.118,
+      "max": 99.458
+     },
+     "linear/pow22": {
+      "mean": 60.051,
+      "p99": 100.678,
+      "max": 102.08
+     },
+     "display/srgb": {
+      "mean": 47.205,
+      "p99": 65.113,
+      "max": 65.782
+     },
+     "display/pow22": {
+      "mean": 47.205,
+      "p99": 65.113,
+      "max": 65.782
+     },
+     "linear-values/srgb": {
+      "mean": 1.181,
+      "p99": 1.941,
+      "max": 1.988
+     },
+     "linear-values/pow22": {
+      "mean": 0.248,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "directional": {
+    "closest": "linear-values/pow22",
+    "mean": 0.252,
+    "p99": 0.347,
+    "max": 0.347,
+    "all": {
+     "linear/srgb": {
+      "mean": 42.768,
+      "p99": 60.027,
+      "max": 60.027
+     },
+     "linear/pow22": {
+      "mean": 42.7,
+      "p99": 59.578,
+      "max": 59.578
+     },
+     "display/srgb": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "display/pow22": {
+      "mean": 58.171,
+      "p99": 69.892,
+      "max": 69.892
+     },
+     "linear-values/srgb": {
+      "mean": 1.437,
+      "p99": 1.751,
+      "max": 1.751
+     },
+     "linear-values/pow22": {
+      "mean": 0.252,
+      "p99": 0.347,
+      "max": 0.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "linear-values/pow22",
+    "mean": 0.161,
+    "p99": 0.493,
+    "max": 0.499,
+    "all": {
+     "linear/srgb": {
+      "mean": 60.244,
+      "p99": 74.719,
+      "max": 75.309
+     },
+     "linear/pow22": {
+      "mean": 60.29,
+      "p99": 75.445,
+      "max": 76.029
+     },
+     "display/srgb": {
+      "mean": 17.127,
+      "p99": 55.045,
+      "max": 58.93
+     },
+     "display/pow22": {
+      "mean": 17.127,
+      "p99": 55.045,
+      "max": 58.93
+     },
+     "linear-values/srgb": {
+      "mean": 0.461,
+      "p99": 1.63,
+      "max": 1.804
+     },
+     "linear-values/pow22": {
+      "mean": 0.161,
+      "p99": 0.493,
+      "max": 0.499
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "linear-values/pow22",
+    "mean": 0.251,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.46,
+      "p99": 29.367,
+      "max": 30.06
+     },
+     "linear/pow22": {
+      "mean": 20.194,
+      "p99": 29.385,
+      "max": 30.103
+     },
+     "display/srgb": {
+      "mean": 67.916,
+      "p99": 72.487,
+      "max": 72.594
+     },
+     "display/pow22": {
+      "mean": 67.916,
+      "p99": 72.487,
+      "max": 72.594
+     },
+     "linear-values/srgb": {
+      "mean": 0.838,
+      "p99": 1.933,
+      "max": 2.667
+     },
+     "linear-values/pow22": {
+      "mean": 0.251,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "linear-values/pow22",
+    "mean": 0.053,
+    "p99": 0.48,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 8.339,
+      "p99": 62.77,
+      "max": 64.858
+     },
+     "linear/pow22": {
+      "mean": 8.265,
+      "p99": 61.855,
+      "max": 64.172
+     },
+     "display/srgb": {
+      "mean": 13.385,
+      "p99": 72.042,
+      "max": 72.578
+     },
+     "display/pow22": {
+      "mean": 13.385,
+      "p99": 72.042,
+      "max": 72.578
+     },
+     "linear-values/srgb": {
+      "mean": 0.253,
+      "p99": 1.803,
+      "max": 1.937
+     },
+     "linear-values/pow22": {
+      "mean": 0.053,
+      "p99": 0.48,
+      "max": 0.5
+     }
+    }
+   },
+   "specular": {
+    "closest": "linear-values/pow22",
+    "mean": 0.244,
+    "p99": 0.495,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 51.935,
+      "p99": 64.442,
+      "max": 65.047
+     },
+     "linear/pow22": {
+      "mean": 51.314,
+      "p99": 63.619,
+      "max": 64.316
+     },
+     "display/srgb": {
+      "mean": 63.902,
+      "p99": 72.395,
+      "max": 72.584
+     },
+     "display/pow22": {
+      "mean": 63.902,
+      "p99": 72.395,
+      "max": 72.584
+     },
+     "linear-values/srgb": {
+      "mean": 0.831,
+      "p99": 1.914,
+      "max": 1.988
+     },
+     "linear-values/pow22": {
+      "mean": 0.244,
+      "p99": 0.495,
+      "max": 0.5
+     }
+    }
+   },
+   "spot": {
+    "closest": "linear-values/pow22",
+    "mean": 0.094,
+    "p99": 0.489,
+    "max": 0.741,
+    "all": {
+     "linear/srgb": {
+      "mean": 12.187,
+      "p99": 66.817,
+      "max": 67.718
+     },
+     "linear/pow22": {
+      "mean": 11.5,
+      "p99": 65.468,
+      "max": 66.377
+     },
+     "display/srgb": {
+      "mean": 21.402,
+      "p99": 72.213,
+      "max": 72.58
+     },
+     "display/pow22": {
+      "mean": 21.402,
+      "p99": 72.213,
+      "max": 72.58
+     },
+     "linear-values/srgb": {
+      "mean": 0.548,
+      "p99": 5.592,
+      "max": 8.863
+     },
+     "linear-values/pow22": {
+      "mean": 0.094,
+      "p99": 0.489,
+      "max": 0.741
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "linear-values/pow22",
+    "mean": 0.201,
+    "p99": 0.494,
+    "max": 0.5,
+    "all": {
+     "linear/srgb": {
+      "mean": 51.947,
+      "p99": 119.527,
+      "max": 129.317
+     },
+     "linear/pow22": {
+      "mean": 52.548,
+      "p99": 121.501,
+      "max": 131.762
+     },
+     "display/srgb": {
+      "mean": 34.762,
+      "p99": 71.37,
+      "max": 72.03
+     },
+     "display/pow22": {
+      "mean": 34.762,
+      "p99": 71.37,
+      "max": 72.03
+     },
+     "linear-values/srgb": {
+      "mean": 0.822,
+      "p99": 1.924,
+      "max": 1.987
+     },
+     "linear-values/pow22": {
+      "mean": 0.201,
+      "p99": 0.494,
+      "max": 0.5
+     }
+    }
+   }
+  },
+  "blender": {
+   "ambient-emissive": {
+    "closest": "linear-values/srgb",
+    "mean": 0.253,
+    "p99": 0.531,
+    "max": 0.574,
+    "all": {
+     "linear/srgb": {
+      "mean": 60.158,
+      "p99": 99.405,
+      "max": 101.06
+     },
+     "linear/pow22": {
+      "mean": 61.196,
+      "p99": 101.946,
+      "max": 103.7
+     },
+     "display/srgb": {
+      "mean": 48.35,
+      "p99": 66.602,
+      "max": 67.098
+     },
+     "display/pow22": {
+      "mean": 48.35,
+      "p99": 66.602,
+      "max": 67.098
+     },
+     "linear-values/srgb": {
+      "mean": 0.253,
+      "p99": 0.531,
+      "max": 0.574
+     },
+     "linear-values/pow22": {
+      "mean": 1.151,
+      "p99": 1.915,
+      "max": 1.973
+     }
+    }
+   },
+   "directional": {
+    "closest": "linear-values/srgb",
+    "mean": 0.23,
+    "p99": 0.37,
+    "max": 0.37,
+    "all": {
+     "linear/srgb": {
+      "mean": 44.435,
+      "p99": 62.027,
+      "max": 62.027
+     },
+     "linear/pow22": {
+      "mean": 44.367,
+      "p99": 61.578,
+      "max": 61.578
+     },
+     "display/srgb": {
+      "mean": 59.837,
+      "p99": 71.892,
+      "max": 71.892
+     },
+     "display/pow22": {
+      "mean": 59.837,
+      "p99": 71.892,
+      "max": 71.892
+     },
+     "linear-values/srgb": {
+      "mean": 0.23,
+      "p99": 0.37,
+      "max": 0.37
+     },
+     "linear-values/pow22": {
+      "mean": 1.568,
+      "p99": 1.821,
+      "max": 1.821
+     }
+    }
+   },
+   "headlight": {
+    "closest": "linear-values/srgb",
+    "mean": 0.16,
+    "p99": 0.516,
+    "max": 0.544,
+    "all": {
+     "linear/srgb": {
+      "mean": 60.663,
+      "p99": 75.178,
+      "max": 75.719
+     },
+     "linear/pow22": {
+      "mean": 60.708,
+      "p99": 75.92,
+      "max": 76.444
+     },
+     "display/srgb": {
+      "mean": 17.545,
+      "p99": 56.045,
+      "max": 59.93
+     },
+     "display/pow22": {
+      "mean": 17.545,
+      "p99": 56.045,
+      "max": 59.93
+     },
+     "linear-values/srgb": {
+      "mean": 0.16,
+      "p99": 0.516,
+      "max": 0.544
+     },
+     "linear-values/pow22": {
+      "mean": 0.444,
+      "p99": 1.648,
+      "max": 1.779
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "linear-values/srgb",
+    "mean": 0.254,
+    "p99": 0.51,
+    "max": 0.546,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.808,
+      "p99": 30.788,
+      "max": 31.612
+     },
+     "linear/pow22": {
+      "mean": 20.543,
+      "p99": 30.821,
+      "max": 31.66
+     },
+     "display/srgb": {
+      "mean": 68.265,
+      "p99": 73.534,
+      "max": 73.705
+     },
+     "display/pow22": {
+      "mean": 68.265,
+      "p99": 73.534,
+      "max": 73.705
+     },
+     "linear-values/srgb": {
+      "mean": 0.254,
+      "p99": 0.51,
+      "max": 0.546
+     },
+     "linear-values/pow22": {
+      "mean": 0.825,
+      "p99": 1.919,
+      "max": 2.623
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "linear-values/srgb",
+    "mean": 0.056,
+    "p99": 0.491,
+    "max": 0.556,
+    "all": {
+     "linear/srgb": {
+      "mean": 8.581,
+      "p99": 64.187,
+      "max": 65.998
+     },
+     "linear/pow22": {
+      "mean": 8.507,
+      "p99": 63.297,
+      "max": 65.299
+     },
+     "display/srgb": {
+      "mean": 13.627,
+      "p99": 73.152,
+      "max": 73.617
+     },
+     "display/pow22": {
+      "mean": 13.627,
+      "p99": 73.152,
+      "max": 73.617
+     },
+     "linear-values/srgb": {
+      "mean": 0.056,
+      "p99": 0.491,
+      "max": 0.556
+     },
+     "linear-values/pow22": {
+      "mean": 0.234,
+      "p99": 1.739,
+      "max": 1.945
+     }
+    }
+   },
+   "specular": {
+    "closest": "linear-values/srgb",
+    "mean": 0.247,
+    "p99": 0.513,
+    "max": 0.574,
+    "all": {
+     "linear/srgb": {
+      "mean": 52.604,
+      "p99": 64.804,
+      "max": 65.613
+     },
+     "linear/pow22": {
+      "mean": 51.982,
+      "p99": 64.097,
+      "max": 64.844
+     },
+     "display/srgb": {
+      "mean": 64.571,
+      "p99": 73.485,
+      "max": 73.707
+     },
+     "display/pow22": {
+      "mean": 64.571,
+      "p99": 73.485,
+      "max": 73.707
+     },
+     "linear-values/srgb": {
+      "mean": 0.247,
+      "p99": 0.513,
+      "max": 0.574
+     },
+     "linear-values/pow22": {
+      "mean": 0.809,
+      "p99": 1.878,
+      "max": 1.975
+     }
+    }
+   },
+   "spot": {
+    "closest": "linear-values/srgb",
+    "mean": 0.093,
+    "p99": 0.501,
+    "max": 0.717,
+    "all": {
+     "linear/srgb": {
+      "mean": 12.229,
+      "p99": 68.199,
+      "max": 69.369
+     },
+     "linear/pow22": {
+      "mean": 11.602,
+      "p99": 66.828,
+      "max": 68.039
+     },
+     "display/srgb": {
+      "mean": 21.444,
+      "p99": 73.307,
+      "max": 73.691
+     },
+     "display/pow22": {
+      "mean": 21.444,
+      "p99": 73.307,
+      "max": 73.691
+     },
+     "linear-values/srgb": {
+      "mean": 0.093,
+      "p99": 0.501,
+      "max": 0.717
+     },
+     "linear-values/pow22": {
+      "mean": 0.55,
+      "p99": 5.883,
+      "max": 9.045
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "linear-values/srgb",
+    "mean": 0.195,
+    "p99": 0.523,
+    "max": 0.569,
+    "all": {
+     "linear/srgb": {
+      "mean": 52.731,
+      "p99": 120.691,
+      "max": 130.317
+     },
+     "linear/pow22": {
+      "mean": 53.332,
+      "p99": 122.677,
+      "max": 132.762
+     },
+     "display/srgb": {
+      "mean": 35.546,
+      "p99": 72.681,
+      "max": 73.169
+     },
+     "display/pow22": {
+      "mean": 35.546,
+      "p99": 72.681,
+      "max": 73.169
+     },
+     "linear-values/srgb": {
+      "mean": 0.195,
+      "p99": 0.523,
+      "max": 0.569
+     },
+     "linear-values/pow22": {
+      "mean": 0.804,
+      "p99": 1.896,
+      "max": 1.958
+     }
+    }
+   }
+  },
+  "blender_cycles": {
+   "ambient-emissive": {
+    "closest": "linear/pow22",
+    "mean": 64.754,
+    "p99": 107.291,
+    "max": 107.97,
+    "all": {
+     "linear/srgb": {
+      "mean": 65.793,
+      "p99": 107.249,
+      "max": 107.886
+     },
+     "linear/pow22": {
+      "mean": 64.754,
+      "p99": 107.291,
+      "max": 107.97
+     },
+     "display/srgb": {
+      "mean": 77.6,
+      "p99": 112.529,
+      "max": 113.566
+     },
+     "display/pow22": {
+      "mean": 77.6,
+      "p99": 112.529,
+      "max": 113.566
+     },
+     "linear-values/srgb": {
+      "mean": 125.984,
+      "p99": 142.249,
+      "max": 143.049
+     },
+     "linear-values/pow22": {
+      "mean": 124.803,
+      "p99": 141.304,
+      "max": 142.125
+     }
+    }
+   },
+   "directional": {
+    "closest": "display/srgb",
+    "mean": 0.685,
+    "p99": 1.108,
+    "max": 1.108,
+    "all": {
+     "linear/srgb": {
+      "mean": 15.565,
+      "p99": 20.157,
+      "max": 20.157
+     },
+     "linear/pow22": {
+      "mean": 15.633,
+      "p99": 19.844,
+      "max": 19.844
+     },
+     "display/srgb": {
+      "mean": 0.685,
+      "p99": 1.108,
+      "max": 1.108
+     },
+     "display/pow22": {
+      "mean": 0.685,
+      "p99": 1.108,
+      "max": 1.108
+     },
+     "linear-values/srgb": {
+      "mean": 59.77,
+      "p99": 72.751,
+      "max": 72.751
+     },
+     "linear-values/pow22": {
+      "mean": 58.432,
+      "p99": 71.347,
+      "max": 71.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "linear/pow22",
+    "mean": 177.793,
+    "p99": 226.787,
+    "max": 227.926,
+    "all": {
+     "linear/srgb": {
+      "mean": 177.838,
+      "p99": 225.673,
+      "max": 226.775
+     },
+     "linear/pow22": {
+      "mean": 177.793,
+      "p99": 226.787,
+      "max": 227.926
+     },
+     "display/srgb": {
+      "mean": 220.955,
+      "p99": 255.0,
+      "max": 255.0
+     },
+     "display/pow22": {
+      "mean": 220.955,
+      "p99": 255.0,
+      "max": 255.0
+     },
+     "linear-values/srgb": {
+      "mean": 238.525,
+      "p99": 255.0,
+      "max": 255.0
+     },
+     "linear-values/pow22": {
+      "mean": 238.073,
+      "p99": 255.0,
+      "max": 255.0
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "display/srgb",
+    "mean": 1.945,
+    "p99": 7.133,
+    "max": 7.976,
+    "all": {
+     "linear/srgb": {
+      "mean": 46.557,
+      "p99": 49.799,
+      "max": 49.923
+     },
+     "linear/pow22": {
+      "mean": 47.823,
+      "p99": 50.453,
+      "max": 50.559
+     },
+     "display/srgb": {
+      "mean": 1.945,
+      "p99": 7.133,
+      "max": 7.976
+     },
+     "display/pow22": {
+      "mean": 1.945,
+      "p99": 7.133,
+      "max": 7.976
+     },
+     "linear-values/srgb": {
+      "mean": 68.385,
+      "p99": 76.383,
+      "max": 76.57
+     },
+     "linear-values/pow22": {
+      "mean": 68.019,
+      "p99": 74.983,
+      "max": 75.151
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "linear/pow22",
+    "mean": 57.64,
+    "p99": 156.0,
+    "max": 163.0,
+    "all": {
+     "linear/srgb": {
+      "mean": 57.714,
+      "p99": 156.0,
+      "max": 163.0
+     },
+     "linear/pow22": {
+      "mean": 57.64,
+      "p99": 156.0,
+      "max": 163.0
+     },
+     "display/srgb": {
+      "mean": 62.761,
+      "p99": 156.0,
+      "max": 163.0
+     },
+     "display/pow22": {
+      "mean": 62.761,
+      "p99": 156.0,
+      "max": 163.0
+     },
+     "linear-values/srgb": {
+      "mean": 59.788,
+      "p99": 156.0,
+      "max": 163.0
+     },
+     "linear-values/pow22": {
+      "mean": 59.698,
+      "p99": 156.0,
+      "max": 163.0
+     }
+    }
+   },
+   "specular": {
+    "closest": "display/srgb",
+    "mean": 9.907,
+    "p99": 72.048,
+    "max": 84.0,
+    "all": {
+     "linear/srgb": {
+      "mean": 17.802,
+      "p99": 52.759,
+      "max": 56.437
+     },
+     "linear/pow22": {
+      "mean": 18.382,
+      "p99": 51.159,
+      "max": 54.925
+     },
+     "display/srgb": {
+      "mean": 9.907,
+      "p99": 72.048,
+      "max": 84.0
+     },
+     "display/pow22": {
+      "mean": 9.907,
+      "p99": 72.048,
+      "max": 84.0
+     },
+     "linear-values/srgb": {
+      "mean": 70.267,
+      "p99": 87.352,
+      "max": 89.968
+     },
+     "linear-values/pow22": {
+      "mean": 69.576,
+      "p99": 86.431,
+      "max": 88.938
+     }
+    }
+   },
+   "spot": {
+    "closest": "linear/srgb",
+    "mean": 4.062,
+    "p99": 32.986,
+    "max": 42.991,
+    "all": {
+     "linear/srgb": {
+      "mean": 4.062,
+      "p99": 32.986,
+      "max": 42.991
+     },
+     "linear/pow22": {
+      "mean": 4.246,
+      "p99": 32.533,
+      "max": 43.355
+     },
+     "display/srgb": {
+      "mean": 11.569,
+      "p99": 83.786,
+      "max": 95.3
+     },
+     "display/pow22": {
+      "mean": 11.569,
+      "p99": 83.786,
+      "max": 95.3
+     },
+     "linear-values/srgb": {
+      "mean": 11.446,
+      "p99": 73.829,
+      "max": 76.884
+     },
+     "linear-values/pow22": {
+      "mean": 11.477,
+      "p99": 72.365,
+      "max": 75.421
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "linear/pow22",
+    "mean": 23.468,
+    "p99": 67.744,
+    "max": 73.83,
+    "all": {
+     "linear/srgb": {
+      "mean": 23.836,
+      "p99": 69.169,
+      "max": 75.215
+     },
+     "linear/pow22": {
+      "mean": 23.468,
+      "p99": 67.744,
+      "max": 73.83
+     },
+     "display/srgb": {
+      "mean": 36.945,
+      "p99": 67.845,
+      "max": 73.0
+     },
+     "display/pow22": {
+      "mean": 36.945,
+      "p99": 67.845,
+      "max": 73.0
+     },
+     "linear-values/srgb": {
+      "mean": 72.515,
+      "p99": 108.355,
+      "max": 109.79
+     },
+     "linear-values/pow22": {
+      "mean": 71.702,
+      "p99": 106.875,
+      "max": 108.309
+     }
+    }
+   }
+  },
+  "blender_default": {
+   "ambient-emissive": {
+    "closest": "linear/pow22",
+    "mean": 67.735,
+    "p99": 109.037,
+    "max": 109.691,
+    "all": {
+     "linear/srgb": {
+      "mean": 68.765,
+      "p99": 109.016,
+      "max": 109.635
+     },
+     "linear/pow22": {
+      "mean": 67.735,
+      "p99": 109.037,
+      "max": 109.691
+     },
+     "display/srgb": {
+      "mean": 80.57,
+      "p99": 114.0,
+      "max": 115.383
+     },
+     "display/pow22": {
+      "mean": 80.57,
+      "p99": 114.0,
+      "max": 115.383
+     },
+     "linear-values/srgb": {
+      "mean": 128.954,
+      "p99": 147.45,
+      "max": 148.397
+     },
+     "linear-values/pow22": {
+      "mean": 127.774,
+      "p99": 146.515,
+      "max": 147.458
+     }
+    }
+   },
+   "directional": {
+    "closest": "display/srgb",
+    "mean": 3.163,
+    "p99": 5.217,
+    "max": 5.217,
+    "all": {
+     "linear/srgb": {
+      "mean": 18.565,
+      "p99": 26.157,
+      "max": 26.157
+     },
+     "linear/pow22": {
+      "mean": 18.633,
+      "p99": 25.844,
+      "max": 25.844
+     },
+     "display/srgb": {
+      "mean": 3.163,
+      "p99": 5.217,
+      "max": 5.217
+     },
+     "display/pow22": {
+      "mean": 3.163,
+      "p99": 5.217,
+      "max": 5.217
+     },
+     "linear-values/srgb": {
+      "mean": 62.77,
+      "p99": 72.751,
+      "max": 72.751
+     },
+     "linear-values/pow22": {
+      "mean": 61.432,
+      "p99": 71.347,
+      "max": 71.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "linear/pow22",
+    "mean": 177.793,
+    "p99": 226.787,
+    "max": 227.926,
+    "all": {
+     "linear/srgb": {
+      "mean": 177.838,
+      "p99": 225.673,
+      "max": 226.775
+     },
+     "linear/pow22": {
+      "mean": 177.793,
+      "p99": 226.787,
+      "max": 227.926
+     },
+     "display/srgb": {
+      "mean": 220.955,
+      "p99": 255.0,
+      "max": 255.0
+     },
+     "display/pow22": {
+      "mean": 220.955,
+      "p99": 255.0,
+      "max": 255.0
+     },
+     "linear-values/srgb": {
+      "mean": 238.525,
+      "p99": 255.0,
+      "max": 255.0
+     },
+     "linear-values/pow22": {
+      "mean": 238.073,
+      "p99": 255.0,
+      "max": 255.0
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "display/srgb",
+    "mean": 6.142,
+    "p99": 9.186,
+    "max": 9.695,
+    "all": {
+     "linear/srgb": {
+      "mean": 52.599,
+      "p99": 55.922,
+      "max": 56.139
+     },
+     "linear/pow22": {
+      "mean": 53.864,
+      "p99": 56.781,
+      "max": 56.901
+     },
+     "display/srgb": {
+      "mean": 6.142,
+      "p99": 9.186,
+      "max": 9.695
+     },
+     "display/pow22": {
+      "mean": 6.142,
+      "p99": 9.186,
+      "max": 9.695
+     },
+     "linear-values/srgb": {
+      "mean": 74.427,
+      "p99": 80.79,
+      "max": 80.976
+     },
+     "linear-values/pow22": {
+      "mean": 74.061,
+      "p99": 79.562,
+      "max": 79.763
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "display/srgb",
+    "mean": 6.591,
+    "p99": 86.377,
+    "max": 106.993,
+    "all": {
+     "linear/srgb": {
+      "mean": 10.279,
+      "p99": 133.605,
+      "max": 155.907
+     },
+     "linear/pow22": {
+      "mean": 10.327,
+      "p99": 132.714,
+      "max": 154.999
+     },
+     "display/srgb": {
+      "mean": 6.591,
+      "p99": 86.377,
+      "max": 106.993
+     },
+     "display/pow22": {
+      "mean": 6.591,
+      "p99": 86.377,
+      "max": 106.993
+     },
+     "linear-values/srgb": {
+      "mean": 18.32,
+      "p99": 144.693,
+      "max": 166.84
+     },
+     "linear-values/pow22": {
+      "mean": 18.076,
+      "p99": 143.286,
+      "max": 165.41
+     }
+    }
+   },
+   "specular": {
+    "closest": "display/srgb",
+    "mean": 13.015,
+    "p99": 85.0,
+    "max": 94.0,
+    "all": {
+     "linear/srgb": {
+      "mean": 22.315,
+      "p99": 58.739,
+      "max": 68.151
+     },
+     "linear/pow22": {
+      "mean": 22.91,
+      "p99": 58.288,
+      "max": 69.153
+     },
+     "display/srgb": {
+      "mean": 13.015,
+      "p99": 85.0,
+      "max": 94.0
+     },
+     "display/pow22": {
+      "mean": 13.015,
+      "p99": 85.0,
+      "max": 94.0
+     },
+     "linear-values/srgb": {
+      "mean": 74.724,
+      "p99": 94.109,
+      "max": 96.677
+     },
+     "linear-values/pow22": {
+      "mean": 74.033,
+      "p99": 93.013,
+      "max": 95.711
+     }
+    }
+   },
+   "spot": {
+    "closest": "linear/srgb",
+    "mean": 4.933,
+    "p99": 28.83,
+    "max": 32.766,
+    "all": {
+     "linear/srgb": {
+      "mean": 4.933,
+      "p99": 28.83,
+      "max": 32.766
+     },
+     "linear/pow22": {
+      "mean": 5.192,
+      "p99": 29.979,
+      "max": 34.749
+     },
+     "display/srgb": {
+      "mean": 10.831,
+      "p99": 78.513,
+      "max": 88.808
+     },
+     "display/pow22": {
+      "mean": 10.831,
+      "p99": 78.513,
+      "max": 88.808
+     },
+     "linear-values/srgb": {
+      "mean": 13.124,
+      "p99": 67.954,
+      "max": 73.884
+     },
+     "linear-values/pow22": {
+      "mean": 13.124,
+      "p99": 66.475,
+      "max": 72.421
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "linear/pow22",
+    "mean": 35.857,
+    "p99": 87.026,
+    "max": 99.055,
+    "all": {
+     "linear/srgb": {
+      "mean": 36.273,
+      "p99": 85.047,
+      "max": 96.663
+     },
+     "linear/pow22": {
+      "mean": 35.857,
+      "p99": 87.026,
+      "max": 99.055
+     },
+     "display/srgb": {
+      "mean": 37.036,
+      "p99": 86.0,
+      "max": 87.0
+     },
+     "display/pow22": {
+      "mean": 37.036,
+      "p99": 86.0,
+      "max": 87.0
+     },
+     "linear-values/srgb": {
+      "mean": 71.445,
+      "p99": 110.552,
+      "max": 113.823
+     },
+     "linear-values/pow22": {
+      "mean": 70.632,
+      "p99": 109.09,
+      "max": 112.336
+     }
+    }
+   }
+  },
+  "blender_display": {
+   "ambient-emissive": {
+    "closest": "display/srgb",
+    "mean": 0.254,
+    "p99": 0.57,
+    "max": 0.62,
+    "all": {
+     "linear/srgb": {
+      "mean": 21.078,
+      "p99": 44.752,
+      "max": 48.06
+     },
+     "linear/pow22": {
+      "mean": 21.979,
+      "p99": 47.122,
+      "max": 50.7
+     },
+     "display/srgb": {
+      "mean": 0.254,
+      "p99": 0.57,
+      "max": 0.62
+     },
+     "display/pow22": {
+      "mean": 0.254,
+      "p99": 0.57,
+      "max": 0.62
+     },
+     "linear-values/srgb": {
+      "mean": 48.441,
+      "p99": 66.631,
+      "max": 67.234
+     },
+     "linear-values/pow22": {
+      "mean": 47.26,
+      "p99": 65.143,
+      "max": 65.746
+     }
+    }
+   },
+   "directional": {
+    "closest": "display/srgb",
+    "mean": 0.163,
+    "p99": 0.217,
+    "max": 0.217,
+    "all": {
+     "linear/srgb": {
+      "mean": 15.565,
+      "p99": 21.157,
+      "max": 21.157
+     },
+     "linear/pow22": {
+      "mean": 15.633,
+      "p99": 20.844,
+      "max": 20.844
+     },
+     "display/srgb": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "display/pow22": {
+      "mean": 0.163,
+      "p99": 0.217,
+      "max": 0.217
+     },
+     "linear-values/srgb": {
+      "mean": 59.77,
+      "p99": 71.751,
+      "max": 71.751
+     },
+     "linear-values/pow22": {
+      "mean": 58.432,
+      "p99": 70.347,
+      "max": 70.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "display/srgb",
+    "mean": 0.158,
+    "p99": 0.563,
+    "max": 0.623,
+    "all": {
+     "linear/srgb": {
+      "mean": 43.072,
+      "p99": 70.227,
+      "max": 71.1
+     },
+     "linear/pow22": {
+      "mean": 43.118,
+      "p99": 70.123,
+      "max": 71.006
+     },
+     "display/srgb": {
+      "mean": 0.158,
+      "p99": 0.563,
+      "max": 0.623
+     },
+     "display/pow22": {
+      "mean": 0.158,
+      "p99": 0.563,
+      "max": 0.623
+     },
+     "linear-values/srgb": {
+      "mean": 17.615,
+      "p99": 56.399,
+      "max": 60.233
+     },
+     "linear-values/pow22": {
+      "mean": 17.163,
+      "p99": 55.027,
+      "max": 58.798
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "display/srgb",
+    "mean": 0.251,
+    "p99": 0.51,
+    "max": 0.558,
+    "all": {
+     "linear/srgb": {
+      "mean": 46.475,
+      "p99": 49.807,
+      "max": 49.907
+     },
+     "linear/pow22": {
+      "mean": 47.741,
+      "p99": 50.881,
+      "max": 50.989
+     },
+     "display/srgb": {
+      "mean": 0.251,
+      "p99": 0.51,
+      "max": 0.558
+     },
+     "display/pow22": {
+      "mean": 0.251,
+      "p99": 0.51,
+      "max": 0.558
+     },
+     "linear-values/srgb": {
+      "mean": 68.303,
+      "p99": 73.612,
+      "max": 73.718
+     },
+     "linear-values/pow22": {
+      "mean": 67.937,
+      "p99": 72.488,
+      "max": 72.614
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "display/srgb",
+    "mean": 0.053,
+    "p99": 0.505,
+    "max": 0.585,
+    "all": {
+     "linear/srgb": {
+      "mean": 5.054,
+      "p99": 47.315,
+      "max": 48.907
+     },
+     "linear/pow22": {
+      "mean": 5.128,
+      "p99": 46.43,
+      "max": 47.999
+     },
+     "display/srgb": {
+      "mean": 0.053,
+      "p99": 0.505,
+      "max": 0.585
+     },
+     "display/pow22": {
+      "mean": 0.053,
+      "p99": 0.505,
+      "max": 0.585
+     },
+     "linear-values/srgb": {
+      "mean": 13.645,
+      "p99": 73.189,
+      "max": 73.654
+     },
+     "linear-values/pow22": {
+      "mean": 13.401,
+      "p99": 72.217,
+      "max": 72.595
+     }
+    }
+   },
+   "specular": {
+    "closest": "display/srgb",
+    "mean": 0.244,
+    "p99": 0.517,
+    "max": 0.604,
+    "all": {
+     "linear/srgb": {
+      "mean": 14.428,
+      "p99": 31.06,
+      "max": 43.478
+     },
+     "linear/pow22": {
+      "mean": 15.12,
+      "p99": 31.825,
+      "max": 43.625
+     },
+     "display/srgb": {
+      "mean": 0.244,
+      "p99": 0.517,
+      "max": 0.604
+     },
+     "display/pow22": {
+      "mean": 0.244,
+      "p99": 0.517,
+      "max": 0.604
+     },
+     "linear-values/srgb": {
+      "mean": 64.624,
+      "p99": 73.512,
+      "max": 73.734
+     },
+     "linear-values/pow22": {
+      "mean": 63.933,
+      "p99": 72.391,
+      "max": 72.595
+     }
+    }
+   },
+   "spot": {
+    "closest": "display/srgb",
+    "mean": 0.094,
+    "p99": 0.502,
+    "max": 0.611,
+    "all": {
+     "linear/srgb": {
+      "mean": 9.245,
+      "p99": 56.923,
+      "max": 57.757
+     },
+     "linear/pow22": {
+      "mean": 9.914,
+      "p99": 57.241,
+      "max": 58.141
+     },
+     "display/srgb": {
+      "mean": 0.094,
+      "p99": 0.502,
+      "max": 0.611
+     },
+     "display/pow22": {
+      "mean": 0.094,
+      "p99": 0.502,
+      "max": 0.611
+     },
+     "linear-values/srgb": {
+      "mean": 21.467,
+      "p99": 73.345,
+      "max": 73.706
+     },
+     "linear-values/pow22": {
+      "mean": 21.415,
+      "p99": 72.233,
+      "max": 72.603
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "display/srgb",
+    "mean": 0.202,
+    "p99": 0.551,
+    "max": 0.611,
+    "all": {
+     "linear/srgb": {
+      "mean": 22.721,
+      "p99": 72.572,
+      "max": 92.317
+     },
+     "linear/pow22": {
+      "mean": 22.823,
+      "p99": 74.501,
+      "max": 94.762
+     },
+     "display/srgb": {
+      "mean": 0.202,
+      "p99": 0.551,
+      "max": 0.611
+     },
+     "display/pow22": {
+      "mean": 0.202,
+      "p99": 0.551,
+      "max": 0.611
+     },
+     "linear-values/srgb": {
+      "mean": 35.612,
+      "p99": 72.745,
+      "max": 73.305
+     },
+     "linear-values/pow22": {
+      "mean": 34.799,
+      "p99": 71.422,
+      "max": 72.015
+     }
+    }
+   }
+  },
+  "blender_srgb_decoded": {
+   "ambient-emissive": {
+    "closest": "linear/srgb",
+    "mean": 0.251,
+    "p99": 0.52,
+    "max": 0.578,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.251,
+      "p99": 0.52,
+      "max": 0.578
+     },
+     "linear/pow22": {
+      "mean": 1.083,
+      "p99": 2.829,
+      "max": 3.08
+     },
+     "display/srgb": {
+      "mean": 21.114,
+      "p99": 44.851,
+      "max": 47.584
+     },
+     "display/pow22": {
+      "mean": 21.114,
+      "p99": 44.851,
+      "max": 47.584
+     },
+     "linear-values/srgb": {
+      "mean": 60.213,
+      "p99": 99.432,
+      "max": 100.766
+     },
+     "linear-values/pow22": {
+      "mean": 59.032,
+      "p99": 98.071,
+      "max": 99.444
+     }
+    }
+   },
+   "directional": {
+    "closest": "linear/srgb",
+    "mean": 0.207,
+    "p99": 0.435,
+    "max": 0.435,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.207,
+      "p99": 0.435,
+      "max": 0.435
+     },
+     "linear/pow22": {
+      "mean": 0.315,
+      "p99": 0.422,
+      "max": 0.422
+     },
+     "display/srgb": {
+      "mean": 15.504,
+      "p99": 20.783,
+      "max": 20.783
+     },
+     "display/pow22": {
+      "mean": 15.504,
+      "p99": 20.783,
+      "max": 20.783
+     },
+     "linear-values/srgb": {
+      "mean": 44.103,
+      "p99": 61.751,
+      "max": 61.751
+     },
+     "linear-values/pow22": {
+      "mean": 42.765,
+      "p99": 60.347,
+      "max": 60.347
+     }
+    }
+   },
+   "headlight": {
+    "closest": "linear/srgb",
+    "mean": 0.25,
+    "p99": 0.523,
+    "max": 0.563,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.25,
+      "p99": 0.523,
+      "max": 0.563
+     },
+     "linear/pow22": {
+      "mean": 0.608,
+      "p99": 1.41,
+      "max": 1.581
+     },
+     "display/srgb": {
+      "mean": 43.144,
+      "p99": 70.0,
+      "max": 71.0
+     },
+     "display/pow22": {
+      "mean": 43.144,
+      "p99": 70.0,
+      "max": 71.0
+     },
+     "linear-values/srgb": {
+      "mean": 60.714,
+      "p99": 75.226,
+      "max": 75.848
+     },
+     "linear-values/pow22": {
+      "mean": 60.262,
+      "p99": 74.766,
+      "max": 75.461
+     }
+    }
+   },
+   "point-attenuation": {
+    "closest": "linear/srgb",
+    "mean": 0.25,
+    "p99": 0.507,
+    "max": 0.535,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.25,
+      "p99": 0.507,
+      "max": 0.535
+     },
+     "linear/pow22": {
+      "mean": 1.3,
+      "p99": 3.435,
+      "max": 4.198
+     },
+     "display/srgb": {
+      "mean": 46.444,
+      "p99": 49.798,
+      "max": 49.882
+     },
+     "display/pow22": {
+      "mean": 46.444,
+      "p99": 49.798,
+      "max": 49.882
+     },
+     "linear-values/srgb": {
+      "mean": 21.841,
+      "p99": 30.898,
+      "max": 31.604
+     },
+     "linear-values/pow22": {
+      "mean": 21.475,
+      "p99": 29.415,
+      "max": 30.117
+     }
+    }
+   },
+   "point-radius": {
+    "closest": "linear/srgb",
+    "mean": 0.052,
+    "p99": 0.486,
+    "max": 0.537,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.052,
+      "p99": 0.486,
+      "max": 0.537
+     },
+     "linear/pow22": {
+      "mean": 0.179,
+      "p99": 1.781,
+      "max": 2.054
+     },
+     "display/srgb": {
+      "mean": 5.038,
+      "p99": 46.91,
+      "max": 49.007
+     },
+     "display/pow22": {
+      "mean": 5.038,
+      "p99": 46.91,
+      "max": 49.007
+     },
+     "linear-values/srgb": {
+      "mean": 8.599,
+      "p99": 64.079,
+      "max": 66.349
+     },
+     "linear-values/pow22": {
+      "mean": 8.355,
+      "p99": 63.055,
+      "max": 65.233
+     }
+    }
+   },
+   "specular": {
+    "closest": "linear/srgb",
+    "mean": 0.25,
+    "p99": 0.505,
+    "max": 0.551,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.25,
+      "p99": 0.505,
+      "max": 0.551
+     },
+     "linear/pow22": {
+      "mean": 1.103,
+      "p99": 2.846,
+      "max": 3.34
+     },
+     "display/srgb": {
+      "mean": 14.392,
+      "p99": 31.0,
+      "max": 44.0
+     },
+     "display/pow22": {
+      "mean": 14.392,
+      "p99": 31.0,
+      "max": 44.0
+     },
+     "linear-values/srgb": {
+      "mean": 52.643,
+      "p99": 64.958,
+      "max": 65.685
+     },
+     "linear-values/pow22": {
+      "mean": 51.951,
+      "p99": 64.438,
+      "max": 65.159
+     }
+    }
+   },
+   "spot": {
+    "closest": "linear/srgb",
+    "mean": 0.092,
+    "p99": 0.495,
+    "max": 0.62,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.092,
+      "p99": 0.495,
+      "max": 0.62
+     },
+     "linear/pow22": {
+      "mean": 0.741,
+      "p99": 7.649,
+      "max": 9.305
+     },
+     "display/srgb": {
+      "mean": 9.225,
+      "p99": 56.852,
+      "max": 57.799
+     },
+     "display/pow22": {
+      "mean": 9.225,
+      "p99": 56.852,
+      "max": 57.799
+     },
+     "linear-values/srgb": {
+      "mean": 12.251,
+      "p99": 68.353,
+      "max": 69.303
+     },
+     "linear-values/pow22": {
+      "mean": 12.2,
+      "p99": 66.868,
+      "max": 67.817
+     }
+    }
+   },
+   "two-lights": {
+    "closest": "linear/srgb",
+    "mean": 0.245,
+    "p99": 0.518,
+    "max": 0.575,
+    "all": {
+     "linear/srgb": {
+      "mean": 0.245,
+      "p99": 0.518,
+      "max": 0.575
+     },
+     "linear/pow22": {
+      "mean": 0.706,
+      "p99": 1.954,
+      "max": 2.8
+     },
+     "display/srgb": {
+      "mean": 22.75,
+      "p99": 72.788,
+      "max": 92.16
+     },
+     "display/pow22": {
+      "mean": 22.75,
+      "p99": 72.788,
+      "max": 92.16
+     },
+     "linear-values/srgb": {
+      "mean": 52.779,
+      "p99": 121.02,
+      "max": 130.282
+     },
+     "linear-values/pow22": {
+      "mean": 51.966,
+      "p99": 119.813,
+      "max": 129.298
+     }
+    }
+   }
+  }
+ }
+}

@@ -88,6 +88,13 @@ SCENES = {
                     "intensity": 0.8}],
         "material": {"diffuseColor": (0.9, 0.9, 0.9), "specularColor": (0.5, 0.5, 0.5), "shininess": 0.1},
     },
+    "headlight": {
+        "what": "the NavigationInfo headlight alone (a DirectionalLight of 1 along the view) on a shiny Material. Added "
+                "after the first Blender run, outside the committed ladder",
+        "headlight": True,
+        "lights": [{"type": "DirectionalLight", "direction": (0.0, 0.0, -1.0)}],   # the headlight, for this view
+        "material": {"diffuseColor": (0.5, 0.7, 0.3), "specularColor": (0.6, 0.6, 0.6), "shininess": 0.25},
+    },
 }
 
 READINGS = ("linear", "display", "linear-values")
@@ -207,7 +214,7 @@ def fixture(scene):
     """The probe scene as an X3D 4.0 file: no headlight, a black background, the quad with explicit normals."""
     spec = SCENES[scene]
     lights = []
-    for light in spec["lights"]:
+    for light in ([] if spec.get("headlight") else spec["lights"]):
         fields = {key: value for key, value in light.items() if key != "type"}
         attributes = " ".join(f"{key}='{_vec(value) if isinstance(value, (tuple, list)) else f'{value:g}'}'"
                               for key, value in fields.items())
@@ -223,7 +230,7 @@ def fixture(scene):
     <meta name='generator' content='tools/lighting_oracle.py'/>
   </head>
   <Scene>
-    <NavigationInfo headlight='false'/>
+    <NavigationInfo headlight='{"true" if spec.get("headlight") else "false"}'/>
     <Background skyColor='0 0 0'/>
     <Viewpoint position='0 0 4' fieldOfView='{FIELD_OF_VIEW:g}' description='probe'/>
 {chr(10).join(lights)}

@@ -53,6 +53,47 @@ def judge(folders):
     return witnesses
 
 
+READING_KEYS = {"linear": "linear", "display": "display", "linear-values": "linear-values"}
+
+
+def gates(witnesses, limits):
+    """Every gate of limits.json on the committed scenes: pass or fail, the worst scene, and whether that was expected."""
+    scenes, verdicts = limits["scenes"], {}
+    for name, gate in limits["gates"].items():
+        names = gate["witness"] if isinstance(gate["witness"], list) else [gate["witness"]]
+        for witness in names:
+            rows = witnesses.get(witness)
+            if rows is None:
+                verdicts[f"{name}:{witness}"] = {"result": None, "why": "not recorded"}
+                continue
+            if gate["reading"].startswith("best"):
+                measured = {scene: rows[scene] for scene in scenes}
+            else:
+                key = f"{gate['reading']}/{gate['curve']}"
+                measured = {scene: rows[scene]["all"][key] for scene in gate.get("scenes", scenes)}
+            if "mean_min" in gate:   # a wrong twin: must miss by at least this much everywhere it is held
+                passed = all(row["mean"] >= gate["mean_min"] for row in measured.values())
+                worst = min(measured, key=lambda scene: measured[scene]["mean"])
+            else:
+                passed = all(row["mean"] <= gate["mean_max"] and row["p99"] <= gate.get("p99_max", float("inf"))
+                             for row in measured.values())
+                worst = max(measured, key=lambda scene: measured[scene]["mean"])
+            expected = gate.get("expected", "pass")
+            verdicts[f"{name}:{witness}"] = {
+                "result": "pass" if passed else "fail", "expected": expected,
+                "as_expected": (passed and expected == "pass") or (not passed and expected == "fail"),
+                "worst_scene": worst, "worst": measured[worst],
+                "closest": sorted({row.get("closest") for row in (rows[s] for s in measured)} - {None})}
+    return verdicts
+
+
 if __name__ == "__main__":
-    json.dump({"limits": json.loads((ROOT / "tests/lighting/limits.json").read_text()),
-               "witnesses": judge(sys.argv[1:])}, sys.stdout, indent=1)
+    limits = json.loads((ROOT / "tests/lighting/limits.json").read_text())
+    witnesses = judge(sys.argv[1:])
+    versions = {}
+    for folder in sys.argv[1:]:
+        notes = Path(folder) / "versions.json"
+        if notes.exists():
+            versions[Path(folder).name] = json.loads(notes.read_text())
+    json.dump({"oracle": "tools/lighting_oracle.py (X3D 4.0, ISO/IEC 19775-1:2023, 17.2.2.5)",
+               "versions": versions, "gates": gates(witnesses, limits), "witnesses": witnesses}, sys.stdout, indent=1)
