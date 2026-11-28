@@ -8711,6 +8711,9 @@ def _joint(joint, objects, axes, global_matrix, bpycontext, scene):
     scene.collection.objects.link(empty)
     empty.empty_display_type, empty.empty_display_size = 'ARROWS', 0.3
     empty.matrix_world = Matrix.Translation(anchor) @ rotation.to_4x4()
+    # the operator reads the view layer's active object: an override alone leaves the joint without a constraint on
+    # Blender 5.1 and older (or crashes it), so the empty is made active there too
+    scene.view_layers[0].objects.active = empty
     with bpycontext.temp_override(scene=scene, object=empty, active_object=empty, selected_objects=[empty]):
         bpy.ops.rigidbody.constraint_add(type=JOINT_CONSTRAINT[spec])
     con = empty.rigid_body_constraint
